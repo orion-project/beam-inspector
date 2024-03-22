@@ -25,3 +25,9 @@ Install requirements:
 ```bash
 pip install -r requirements.txt
 ```
+
+Run Jupyter (port is optional, default is 8888):
+
+```bash
+jupyter notebook --port 9999
+```

@@ -1,2 +1,2 @@
-numpy
-matplotlib
+laserbeamsize
+jupyter
