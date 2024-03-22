@@ -3,6 +3,7 @@ Measuring and learning from the Laserbeamsize package which is taken as referenc
 https://pypi.org/project/laserbeamsize/
 https://laserbeamsize.readthedocs.io/en/latest/01-Definitions.html
 
+--------------------------------------
 
 The function basic_beam_size_naive() is not public in the laserbeamsize package.
 It uses raw python loops over image data and very-very slow and impractical.
@@ -13,6 +14,24 @@ __all__ = ('basic_beam_size',
            'beam_size',
            'basic_beam_size_naive' # <----- add the name into __all__
            )
+
+--------------------------------------
+
+Image: ../beams/beam_8b_ast.pgm
+Frames: 30
+
+calc_bullseye
+29: center=[1534,981], diam=[1474,1120], angle=-11.8°
+Elapsed: 1.703, FPS: 17.6
+
+lbs.basic_beam_size
+29: center=[1534,981], diam=[1474,1120], angle=11.8°
+Elapsed: 3.031, FPS: 9.9
+
+lbs.beam_size
+29: center=[1573,964], diam=[889,724], angle=0.3°
+Elapsed: 120.422, FPS: 0.2
+
 '''
 
 import numpy as np
@@ -20,7 +39,7 @@ import imageio.v3 as iio
 import laserbeamsize as lbs
 import time
 
-SAMPLES = 30
+FRAMES = 30
 
 # dot* files are tiny and do not have practical meaning but they allows to track calculations in each pixel
 #FILENAME = "../beams/dot_8b.pgm"
@@ -35,7 +54,7 @@ FILENAME = "../beams/beam_8b_ast.pgm"
 def calc_bullseye(im):
     #print(f"Image=\n{im}")
     #print(f"Shape={im.shape}")
-    
+
     y, x = np.ogrid[:im.shape[0], :im.shape[1]]
 
     imx = im.sum(axis=0)[None, :]
@@ -46,7 +65,7 @@ def calc_bullseye(im):
 
     p = float(imx.sum()) or 1.
     #print(f"Total energy: p={p}")
-    
+
     xc = (imx * x).sum() / p
     yc = (imy * y).sum() / p
     x = x - xc
@@ -61,18 +80,28 @@ def calc_bullseye(im):
     phi = 0.5 * np.arctan2(2 * xy, (xx - yy))
     return xc, yc, dx, dy, phi
 
+def measure(func):
+    tm = time.process_time()
+    for i in range(FRAMES):
+        x, y, dx, dy, phi = func(image)
+        print(f"{i}: center=[{x:.0f},{y:.0f}], diam=[{dx:.0f},{dy:.0f}], angle={(phi * 180/3.1416):.1f}°")
+    elapsed = time.process_time() - tm
+    print(f"Elapsed: {elapsed:.3f}, FPS: {(FRAMES / elapsed) if elapsed > 0 else 0:.1f}")
+
 if __name__ == "__main__":
+    print(f"Image: {FILENAME}")
     image = iio.imread(FILENAME)
 
-    t = time.process_time()
+    print(f"Frames: {FRAMES}")
 
-    for i in range(SAMPLES):
-        x, y, dx, dy, phi = calc_bullseye(image)
-        print(f"{i}: center=[{x:.0f},{y:.0f}], diam=[{dx:.0f},{dy:.0f}], angle={(phi * 180/3.1416):.1f}°")
-        
-        #x, y, dx, dy, phi = lbs.basic_beam_size_naive(image)
-        #x, y, dx, dy, phi = lbs.basic_beam_size(image)
-        #print(f"{i}: center=[{x:.0f},{y:.0f}], diam=[{dx:.0f},{dy:.0f}], angle={(phi * 180/3.1416):.1f}°")
+    print("\ncalc_bullseye")
+    measure(calc_bullseye)
 
-    elapsed = time.process_time() - t
-    print(f"Elapsed: {elapsed:.3f}, FPS: {(SAMPLES / elapsed) if elapsed > 0 else 0:.1f}")
+    print("\nlbs.basic_beam_size")
+    measure(lbs.basic_beam_size)
+
+    print("\nlbs.beam_size")
+    measure(lbs.beam_size)
+
+    #print("\nlbs.basic_beam_size_naive")
+    #measure(lbs.basic_beam_size_naive)
