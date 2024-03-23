@@ -4,6 +4,7 @@ Comparison of single and double precision gemm implementaion of centroid calcula
 
 Also there is measurement of effect of copying data to an external plottings buffer.
 
+Intel i7-2600 CPU 3.40GHz
 --------------------------------------
 FLOAT
 FPS: 72.6 avg

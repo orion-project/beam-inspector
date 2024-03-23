@@ -14,6 +14,7 @@ Seems can be accelerated even more with OpenMP but more experiments required.
 The performance of "no_rotation_fast_exp" mode is alredy enough for demo and test purposes.
 
 --------------------------------------
+Intel i7-2600 CPU 3.40GHz
 
 Image size: 2592x2048
 Beam widths: 1474x1120

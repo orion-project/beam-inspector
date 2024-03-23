@@ -16,6 +16,7 @@ __all__ = ('basic_beam_size',
            )
 
 --------------------------------------
+Intel i7-2600 CPU 3.40GHz
 
 Image: ../beams/beam_8b_ast.pgm
 Frames: 30
