@@ -4,3 +4,4 @@ __pycache__
 libs/openblas
 tmp
 *.exe
+calc/*.pgm
