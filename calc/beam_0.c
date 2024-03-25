@@ -156,6 +156,12 @@ void calc_bytes_single_loop(uint8_t *d, int w, int h)
     printf("center=[%.0f,%.0f], diam=[%.0f,%.0f], angle=%.1f\n", xc, yc, dx, dy, phi);
 }
 
+void pixel_to_real_buf(uint8_t *b, real *d, int sz) {
+    for (int i = 0; i < sz; i++) {
+        d[i] = (real)b[i];
+    }
+}
+
 int main() {
     int w, h, offset;
     uint8_t *buf = read_pgm(FILENAME, &w, &h, &offset);
@@ -170,9 +176,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    for (int i = 0; i < w*h; i++) {
-        data[i] = (real)buf[offset+i];
-    }
+    pixel_to_real_buf(buf+offset, data, w*h);
 
     printf("Frames: %d\n", FRAMES);
     printf("\ncalc_real\n"); 
@@ -198,6 +202,15 @@ int main() {
         clock_t tm = clock();
         for (int i = 0; i < FRAMES; i++) {
             calc_bytes_single_loop(buf+offset, w, h);
+        }
+        double elapsed = (clock() - tm)/(double)CLOCKS_PER_SEC;
+        printf("Elapsed: %.3fs, FPS: %.1f\n", elapsed, FRAMES/elapsed);
+    }
+    printf("\npixel_to_real_buf\n");
+    {
+        clock_t tm = clock();
+        for (int i = 0; i < FRAMES; i++) {
+            pixel_to_real_buf(buf+offset, data, w*h);
         }
         double elapsed = (clock() - tm)/(double)CLOCKS_PER_SEC;
         printf("Elapsed: %.3fs, FPS: %.1f\n", elapsed, FRAMES/elapsed);

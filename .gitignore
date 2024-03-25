@@ -5,3 +5,4 @@ libs/openblas
 tmp
 *.exe
 calc/*.pgm
+CMakeLists.txt.user*

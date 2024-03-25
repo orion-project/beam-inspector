@@ -36,6 +36,8 @@ render_no_rotation_fast_exp   Elapsed: 0.518s, FPS: 57.9
 #include <time.h>
 
 #define sqr(s) ((s)*(s))
+#define min(a,b) ((a) < (b) ? (a) : (b))
+#define max(a,b) ((a) > (b) ? (a) : (b))
 
 #define FILENAME "render_1.pgm"
 #define FRAMES 30
@@ -61,6 +63,7 @@ struct Beam {
     void render_fast_exp();
     void render_no_rotation();
     void render_no_rotation_fast_exp();
+    void render_no_rotation_fast_exp_center();
     void write();
 };
 
@@ -157,6 +160,24 @@ void Beam::render_no_rotation_fast_exp() {
     }
 }
 
+void Beam::render_no_rotation_fast_exp_center() {
+    memset(buf, 0, sizeof(pixel)*w*h);
+    real r2 = sqr(dx/2.0);
+    real el = dx / (real)dy; // elliptisity
+    real p = p0;
+    int x_min = xc - dx*0.6; x_min = max(x_min, 0);
+    int x_max = xc + dx*0.6; x_max = min(x_max, w);
+    int y_min = yc - dy*0.6; y_min = max(y_min, 0);
+    int y_max = yc + dy*0.6; y_max = min(y_max, h);
+    for (int y = y_min; y < y_max; y++) {
+        real y2 = sqr((y-yc)*el);
+        for (int x = x_min; x < x_max; x++) {
+            real t = 1+ (-2*(sqr(x-xc) + y2)/r2) /5.0;
+            buf[y*w + x] = p * t*t*t*t*t;
+        }
+    }
+}
+
 void Beam::write() {
     FILE *f = fopen(FILENAME, "wb");
     if (!f) {
@@ -210,6 +231,7 @@ int main() {
     MEASURE(render_fast_exp)
     MEASURE(render_no_rotation)
     MEASURE(render_no_rotation_fast_exp)
+    MEASURE(render_no_rotation_fast_exp_center)
 
     b.write();
 

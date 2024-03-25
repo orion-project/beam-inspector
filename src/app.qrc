@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/toolbar">
+        <file alias="bug">../img/toolbar/bug.svg</file>
+        <file alias="home">../img/toolbar/home.svg</file>
+    </qresource>
+    <qresource prefix="/window_icons">
+        <file alias="main">../img/icons/cignus.svg</file>
+    </qresource>
+</RCC>

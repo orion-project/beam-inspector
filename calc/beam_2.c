@@ -79,6 +79,7 @@ Elapsed: 0.668s, FPS: 44.9
 
 #define FRAMES 30
 //#define DOUBLE
+#define AUX_BUF
 
 #ifdef DOUBLE
 typedef double real;
@@ -147,8 +148,10 @@ void Calc::calc(Result *r)
     for (int i = 0; i < w*h; i++) {
         d[i] = p[i];
 
+    #ifdef AUX_BUF
         // Emulate copying frame into plotting buffer
         dd[i] = p[i];
+    #endif
     }
 
     GEMVT(h, w, d, u, tx);
