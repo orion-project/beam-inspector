@@ -35,6 +35,9 @@ set(PROJECT_SOURCES
     src/windows/PlotWindow.cpp
 )
 
+add_subdirectory(libs/qcustomplot)
+add_subdirectory(libs/beam_render)
+
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(${PROJECT_NAME}
         MANUAL_FINALIZATION
@@ -45,10 +48,13 @@ else()
     add_executable(${PROJECT_NAME}
         ${PROJECT_SOURCES}
         ${LIB_RESOURCES}
+        src/widgets/Plot.h src/widgets/Plot.cpp
     )
 endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
+    qcustomplot
+    beam_render
     Qt::Widgets
 )
 
