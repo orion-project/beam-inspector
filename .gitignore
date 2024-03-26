@@ -1,7 +1,7 @@
 .venv
 .ipynb_checkpoints
 __pycache__
-libs/openblas
+libs/openblas*
 tmp
 *.exe
 calc/*.pgm

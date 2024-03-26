@@ -14,7 +14,7 @@ Seems can be accelerated even more with OpenMP but more experiments required.
 The performance of "no_rotation_fast_exp" mode is alredy enough for demo and test purposes.
 
 --------------------------------------
-Intel i7-2600 CPU 3.40GHz
+GCC 8.1x32 Intel i7-2600 CPU 3.40GHz
 
 Image size: 2592x2048
 Beam widths: 1474x1120
@@ -128,7 +128,7 @@ void Beam::render_fast_exp() {
             int x1 = xc + x*cos_phi - y*sin_phi;
             int y1 = yc + x*sin_phi + y*cos_phi;
             if (y1 >= 0 && y1 < h && x1 >= 0 && x1 < w) {
-                real t = 1+ (-2*(sqr(x-xc) + y2)/r2) /10.0;
+                real t = 1+ (-2*(sqr(x) + y2)/r2) /10.0;
                 buf[y1*w + x1] = p * t*t*t*t*t*t*t*t*t*t;
             }
         }

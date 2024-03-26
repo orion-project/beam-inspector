@@ -1,0 +1,1 @@
+gcc -O3 -ffast-math -funsafe-math-optimizations -msse4.2 -o beam_calc beam_calc.c main.c -I ../openblas/include ../openblas/lib/libopenblas.a && beam_calc

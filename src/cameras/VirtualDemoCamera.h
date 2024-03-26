@@ -16,7 +16,7 @@ public:
 
 signals:
     void ready();
-    void stats(const double& fps);
+    void stats(int fps);
 
 protected:
     void run() override;

@@ -4,7 +4,7 @@ Comparison of different naive implementation of centroid calculation.
 The algorithm is in calc\.venv\Lib\site-packages\laserbeamsize\analysis.py
 
 --------------------------------------
-Intel i7-2600 CPU 3.40GHz
+GCC 8.1x32 Intel i7-2600 CPU 3.40GHz
 
 Image: ../beams/beam_8b_ast.pgm
 Image size 2592x2048

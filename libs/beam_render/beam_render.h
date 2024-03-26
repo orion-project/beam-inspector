@@ -1,5 +1,5 @@
-#ifndef _BEAM_RENDER_H_
-#define _BEAM_RENDER_H_
+#ifndef _CGN_BEAM_RENDER_H_
+#define _CGN_BEAM_RENDER_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,14 +13,16 @@ typedef struct {
     int xc;
     int yc;
     int p0;
+    int phi;
     unsigned char *buf;
-} RenderBeamParams;
+} CgnBeamRender;
 
-void render_beam(RenderBeamParams *b);
-void copy_pixels_to_doubles(RenderBeamParams *b, double *d);
+void cgn_render_beam(CgnBeamRender *b);
+void cgn_render_beam_tilted(CgnBeamRender *b);
+void cgn_render_beam_to_doubles(CgnBeamRender *b, double *d);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // _BEAM_RENDER_H_
+#endif // _CGN_BEAM_RENDER_H_

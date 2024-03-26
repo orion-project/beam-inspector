@@ -5,10 +5,10 @@ add_compile_options(
     -msse4.2
 )
 
-add_library(beam_render STATIC
+add_library(cgn_beam_render STATIC
     beam_render.c
 )
 
-target_include_directories(beam_render INTERFACE
+target_include_directories(cgn_beam_render INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}
 )

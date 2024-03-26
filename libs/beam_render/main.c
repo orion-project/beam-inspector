@@ -18,8 +18,16 @@ Elapsed: 0.210s, FPS: 142.9
 
 #define FRAMES 30
 
+#define MEASURE(func) { \
+    printf("\n" #func "\n"); \
+    clock_t tm = clock(); \
+    for (int i = 0; i < FRAMES; i++) func(&b); \
+    double elapsed = (clock() - tm)/(double)CLOCKS_PER_SEC; \
+    printf("Elapsed: %.3fs, FPS: %.1f, %.2fms/frame\n", elapsed, FRAMES/elapsed, elapsed/(double)FRAMES*1000); \
+}
+
 int main() {
-   RenderBeamParams b;
+   CgnBeamRender b;
    b.w = 2592;
    b.h = 2048;
    b.dx = 1474;
@@ -37,12 +45,8 @@ int main() {
    printf("Center position: %dx%d\n", b.xc, b.yc);
    printf("Max intensity: %d\n", b.p0);
    printf("Frames: %d\n", FRAMES);
-   clock_t tm = clock();
-   for (int i = 0; i < FRAMES; i++) {
-       render_beam(&b);
-   }
-   double elapsed = (clock() - tm)/(double)CLOCKS_PER_SEC;
-   printf("Elapsed: %.3fs, FPS: %.1f\n", elapsed, FRAMES/elapsed);
+   MEASURE(cgn_render_beam)
+   MEASURE(cgn_render_beam_tilted)
    free(b.buf);
    return 0;
 }

@@ -38,7 +38,7 @@ private:
     void stopCapture();
 
     void captureStopped();
-    void statsReceived(const double& fps);
+    void statsReceived(int fps);
 };
 
 #endif // PLOT_WINDOW_H

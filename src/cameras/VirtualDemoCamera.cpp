@@ -2,6 +2,7 @@
 
 #include "plot/BeamGraphIntf.h"
 
+#include "beam_calc.h"
 #include "beam_render.h"
 
 #include <QDebug>
@@ -41,12 +42,15 @@ struct RandomOffset
 class BeamRenderer
 {
 public:
-    RenderBeamParams b;
+    CgnBeamRender b;
+    CgnBeamCalc c;
+    CgnBeamResult r;
     QVector<uint8_t> d;
     RandomOffset dx_offset;
     RandomOffset dy_offset;
     RandomOffset xc_offset;
     RandomOffset yc_offset;
+    RandomOffset phi_offset;
     qint64 prevFrame = 0;
     qint64 prevReady = 0;
     qint64 prevStat = 0;
@@ -54,7 +58,8 @@ public:
     VirtualDemoCamera *thread;
     double avgFrameTime = 0;
 #ifdef TRACK_FRAME_LEN
-    double avgFrameLen = 0;
+    double avgRenderTime = 0;
+    double avgCalcTime = 0;
 #endif
 
     BeamRenderer(QSharedPointer<BeamGraphIntf> beam, VirtualDemoCamera *thread) : beam(beam), thread(thread)
@@ -66,13 +71,23 @@ public:
         b.xc = 1534;
         b.yc = 981;
         b.p0 = 255;
+        b.phi = 12;
         d = QVector<uint8_t>(b.w * b.h);
         b.buf = d.data();
+
+        c.w = b.w;
+        c.h = b.h;
+        c.buf = b.buf;
+        if (cgn_calc_beam_init(&c)) {
+            cgn_calc_beam_free(&c);
+            qCritical() << "Failed to initialize calc buffers";
+        }
 
         dx_offset = RandomOffset(b.dx, b.dx-20, b.dx+20);
         dy_offset = RandomOffset(b.dy, b.dy-20, b.dy+20);
         xc_offset = RandomOffset(b.xc, b.xc-20, b.xc+20);
         yc_offset = RandomOffset(b.yc, b.yc-20, b.yc+20);
+        phi_offset = RandomOffset(b.phi, b.phi-12, b.phi+12);
 
         beam->init(b.w, b.h);
     }
@@ -94,31 +109,43 @@ public:
             avgFrameTime = avgFrameTime*0.9 + (tm - prevFrame)*0.1;
             prevFrame = tm;
 
-            render_beam(&b);
+        #ifdef TRACK_FRAME_LEN
+            tm = timer.elapsed();
+        #endif
+            cgn_render_beam_tilted(&b);
+        #ifdef TRACK_FRAME_LEN
+            avgRenderTime = avgRenderTime*0.9 + (timer.elapsed() - tm)*0.1;
+        #endif
+
             b.dx = dx_offset.next();
             b.dy = dy_offset.next();
             b.xc = xc_offset.next();
             b.yc = yc_offset.next();
+            b.phi = phi_offset.next();
 
-            // TODO: calc centroid
-            // TODO: calc stats
+        #ifdef TRACK_FRAME_LEN
+            tm = timer.elapsed();
+        #endif
+            cgn_calc_beam(&c, &r);
+        #ifdef TRACK_FRAME_LEN
+            avgCalcTime = avgCalcTime*0.9 + (timer.elapsed() - tm)*0.1;
+        #endif
 
             if (tm - prevReady >= PLOT_FRAME_DELAY_MS) {
                 prevReady = tm;
-                copy_pixels_to_doubles(&b, beam->rawData());
+                cgn_render_beam_to_doubles(&b, beam->rawData());
                 beam->invalidate();
                 emit thread->ready();
             }
 
-        #ifdef TRACK_FRAME_LEN
-            avgFrameLen = avgFrameLen*0.9 + (timer.elapsed() - tm)*0.1;
-        #endif
-
             if (tm - prevStat >= STAT_DELAY_MS) {
                 prevStat = tm;
-                emit thread->stats(1000.0/avgFrameTime);
+                emit thread->stats(qRound(1000.0/avgFrameTime));
             #ifdef TRACK_FRAME_LEN
-                qDebug() << 1000.0/avgFrameTime << avgFrameTime << avgFrameLen;
+                qDebug() << "FPS:" << qRound(1000.0/avgFrameTime)
+                    << "avgFrameTime:" << qRound(avgFrameTime)
+                    << "avgRenderTime:" << qRound(avgRenderTime)
+                    << "avgCalcTime:" << qRound(avgCalcTime);
             #endif
                 if (thread->isInterruptionRequested()) {
                     qDebug() << "VirtualDemoCamera::interrupted";

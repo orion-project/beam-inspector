@@ -56,6 +56,13 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     };
 
     _plot = new QCustomPlot;
+
+    // Have to add
+    // target_link_libraries: opengl32 and Qt::OpenGL
+    // target_compile_definitions: QCUSTOMPLOT_USE_OPENGL
+    // But it crashes...
+    //_plot->setOpenGl(true, 0);
+
     _plot->yAxis->setRangeReversed(true);
     setDefaultAxisFormat(_plot->xAxis);
     setDefaultAxisFormat(_plot->yAxis);

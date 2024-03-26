@@ -3,7 +3,7 @@
 Comparison between naive and gemm implementation of centroid calculation.
 
 --------------------------------------
-Intel i7-2600 CPU 3.40GHz
+GCC 8.1x32 Intel i7-2600 CPU 3.40GHz
 
 Image: ../beams/beam_8b_ast.pgm
 Image size 2592x2048

@@ -147,7 +147,7 @@ void PlotWindow::captureStopped()
     _cameraThread = nullptr;
 }
 
-void PlotWindow::statsReceived(const double& fps)
+void PlotWindow::statsReceived(int fps)
 {
-    _labelFps->setText(QStringLiteral("FPS: ") % QString::number(fps, 'f', 1));
+    _labelFps->setText(QStringLiteral("FPS: ") % QString::number(fps));
 }
