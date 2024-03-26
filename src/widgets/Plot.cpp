@@ -1,5 +1,7 @@
 #include "Plot.h"
 
+#include "plot/BeamGraphIntf.h"
+
 #include "qcustomplot.h"
 
 struct Beam
@@ -12,12 +14,12 @@ struct Beam
 Beam renderDemoBeam()
 {
     Beam b;
-    b.w = 150;
-    b.h = 150;
+    b.w = 64;
+    b.h = 64;
     b.p = 255;
     b.data = QVector<uint8_t>(b.w * b.h);
     auto d = b.data.data();
-    const double w2 = 30*30;
+    const double w2 = 10*10;
     const double ellips = 1;
     for (int i = 0; i < b.h; i++) {
         const double y = (i - b.h/2.0) / ellips;
@@ -39,6 +41,20 @@ void setDefaultAxisFormat(QCPAxis *axis)
 
 Plot::Plot(QWidget *parent) : QWidget{parent}
 {
+    QMap<double, QColor> rainbowColors {
+        { 0.0, QColor(0x2b053e) },
+        { 0.1, QColor(0xc2077c) },
+        { 0.15, QColor(0xbe05f3) },
+        { 0.2, QColor(0x2306fb) },
+        { 0.3, QColor(0x0675db) },
+        { 0.4, QColor(0x05f9ee) },
+        { 0.5, QColor(0x04ca04) },
+        { 0.65, QColor(0xfafd05) },
+        { 0.8, QColor(0xfc8705) },
+        { 0.9, QColor(0xfc4d06) },
+        { 1.0, QColor(0xfc5004) },
+    };
+
     _plot = new QCustomPlot;
     _plot->yAxis->setRangeReversed(true);
     setDefaultAxisFormat(_plot->xAxis);
@@ -48,7 +64,7 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _plot->axisRect()->setupFullAxesBox(true);
     _plot->xAxis->setTickLabels(false);
     _plot->xAxis2->setTickLabels(true);
-    _plot->axisRect()->setBackground(QColor(0, 0, 100)); // set gradient lowest color
+    _plot->axisRect()->setBackground(rainbowColors[0]);
 
     auto gridLayer = _plot->xAxis->grid()->layer();
     _plot->addLayer("beam", gridLayer, QCustomPlot::limBelow);
@@ -60,7 +76,10 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
 
     _graph = new QCPColorMap(_plot->xAxis, _plot->yAxis);
     _graph->setColorScale(_colorScale);
-    _graph->setGradient(QCPColorGradient::gpJet);
+    _graph->setInterpolate(false);
+    QCPColorGradient rainbow;
+    rainbow.setColorStops(rainbowColors);
+    _graph->setGradient(rainbow);
     _graph->setLayer("beam");
 
     // Make sure the axis rect and color scale synchronize their bottom and top margins:
@@ -83,7 +102,14 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     l->setContentsMargins(0, 0, 0, 0);
     l->addWidget(_plot);
 
-    QTimer::singleShot(0, this, [this]{ recalcLimits(true); });
+    recalcLimits(true);
+}
+
+void Plot::prepare()
+{
+    _imageW = _graph->data()->keyRange().upper;
+    _imageH = _graph->data()->valueRange().upper;
+    recalcLimits(false);
 }
 
 void Plot::resizeEvent(QResizeEvent *event)
@@ -109,4 +135,14 @@ void Plot::recalcLimits(bool replot)
     _plot->yAxis->setRange(0, newImgH);
     if (replot)
         _plot->replot();
+}
+
+void Plot::replot()
+{
+    _plot->replot();
+}
+
+QSharedPointer<BeamGraphIntf> Plot::graphIntf() const
+{
+    return QSharedPointer<BeamGraphIntf>(new BeamGraphIntf(_graph));
 }

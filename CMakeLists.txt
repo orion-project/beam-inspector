@@ -32,6 +32,10 @@ set(PROJECT_SOURCES
     src/app.qrc
     src/main.cpp
     src/app/HelpSystem.cpp
+    src/cameras/VirtualDemoCamera.cpp
+    src/plot/BeamGraph.cpp
+    src/plot/BeamGraphIntf.cpp
+    src/widgets/Plot.cpp
     src/windows/PlotWindow.cpp
 )
 
@@ -42,13 +46,10 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(${PROJECT_NAME}
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
-        ${LIB_RESOURCES}
     )
 else()
     add_executable(${PROJECT_NAME}
         ${PROJECT_SOURCES}
-        ${LIB_RESOURCES}
-        src/widgets/Plot.h src/widgets/Plot.cpp
     )
 endif()
 

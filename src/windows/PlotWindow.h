@@ -3,9 +3,12 @@
 
 #include <QMainWindow>
 
+class QAction;
 class QLabel;
 
+class CameraStats;
 class Plot;
+class VirtualDemoCamera;
 
 class PlotWindow : public QMainWindow
 {
@@ -15,13 +18,27 @@ public:
     PlotWindow(QWidget *parent = nullptr);
     ~PlotWindow();
 
+protected:
+    void closeEvent(class QCloseEvent*) override;
+
 private:
     Plot *_plot;
+    VirtualDemoCamera *_cameraThread = nullptr;
+    QAction *_actionStart, *_actionStop;
     QLabel *_labelCamera, *_labelResolution, *_labelFps;
 
     void createMenuBar();
+    void createToolBar();
     void createStatusBar();
     void createDockPanel();
     void createPlot();
+
+    void updateActions(bool started);
+    void startCapture();
+    void stopCapture();
+
+    void captureStopped();
+    void statsReceived(const double& fps);
 };
+
 #endif // PLOT_WINDOW_H

@@ -2,6 +2,8 @@
     <qresource prefix="/toolbar">
         <file alias="bug">../img/toolbar/bug.svg</file>
         <file alias="home">../img/toolbar/home.svg</file>
+        <file alias="start">../img/toolbar/start.svg</file>
+        <file alias="stop">../img/toolbar/pause.svg</file>
     </qresource>
     <qresource prefix="/window_icons">
         <file alias="main">../img/icons/cignus.svg</file>

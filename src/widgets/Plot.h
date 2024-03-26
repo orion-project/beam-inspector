@@ -7,12 +7,19 @@ class QCustomPlot;
 class QCPColorMap;
 class QCPColorScale;
 
+class BeamGraphIntf;
+
 class Plot : public QWidget
 {
     Q_OBJECT
 
 public:
     explicit Plot(QWidget *parent = nullptr);
+
+    QSharedPointer<BeamGraphIntf> graphIntf() const;
+
+    void prepare();
+    void replot();
 
 protected:
     void resizeEvent(QResizeEvent*) override;
