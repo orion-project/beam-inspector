@@ -6,13 +6,14 @@
 
 class BeamGraphIntf;
 class BeamRenderer;
+class TableIntf;
 
 class VirtualDemoCamera : public QThread
 {
     Q_OBJECT
 
 public:
-    explicit VirtualDemoCamera(QSharedPointer<BeamGraphIntf> beam, QObject *parent = nullptr);
+    explicit VirtualDemoCamera(QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table, QObject *parent = nullptr);
 
 signals:
     void ready();

@@ -5,9 +5,11 @@
 
 class QAction;
 class QLabel;
+class QTableWidget;
 
 class CameraStats;
 class Plot;
+class TableIntf;
 class VirtualDemoCamera;
 
 class PlotWindow : public QMainWindow
@@ -26,6 +28,8 @@ private:
     VirtualDemoCamera *_cameraThread = nullptr;
     QAction *_actionStart, *_actionStop;
     QLabel *_labelCamera, *_labelResolution, *_labelFps;
+    QTableWidget *_table;
+    QSharedPointer<TableIntf> _tableIntf;
 
     void createMenuBar();
     void createToolBar();
@@ -38,6 +42,7 @@ private:
     void stopCapture();
 
     void captureStopped();
+    void dataReady();
     void statsReceived(int fps);
 };
 

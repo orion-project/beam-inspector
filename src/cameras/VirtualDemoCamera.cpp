@@ -1,5 +1,6 @@
 #include "VirtualDemoCamera.h"
 
+#include "cameras/TableIntf.h"
 #include "plot/BeamGraphIntf.h"
 
 #include "beam_calc.h"
@@ -12,8 +13,7 @@
 #define CAMERA_FRAME_DELAY_MS 30
 #define PLOT_FRAME_DELAY_MS 200
 #define STAT_DELAY_MS 1000
-// Calc and log how long it takes to process each frame (averaged)
-#define TRACK_FRAME_TIME
+//#define LOG_FRAME_TIME
 
 struct RandomOffset
 {
@@ -57,14 +57,13 @@ public:
     qint64 prevReady = 0;
     qint64 prevStat = 0;
     QSharedPointer<BeamGraphIntf> beam;
+    QSharedPointer<TableIntf> table;
     VirtualDemoCamera *thread;
     double avgFrameTime = 0;
-#ifdef TRACK_FRAME_TIME
     double avgRenderTime = 0;
     double avgCalcTime = 0;
-#endif
 
-    BeamRenderer(QSharedPointer<BeamGraphIntf> beam, VirtualDemoCamera *thread) : beam(beam), thread(thread)
+    BeamRenderer(QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table, VirtualDemoCamera *thread) : beam(beam), table(table), thread(thread)
     {
         b.w = 2592;
         b.h = 2048;
@@ -111,13 +110,9 @@ public:
             avgFrameTime = avgFrameTime*0.9 + (tm - prevFrame)*0.1;
             prevFrame = tm;
 
-        #ifdef TRACK_FRAME_TIME
             tm = timer.elapsed();
-        #endif
             cgn_render_beam_tilted(&b);
-        #ifdef TRACK_FRAME_TIME
             avgRenderTime = avgRenderTime*0.9 + (timer.elapsed() - tm)*0.1;
-        #endif
 
             b.dx = dx_offset.next();
             b.dy = dy_offset.next();
@@ -125,18 +120,15 @@ public:
             b.yc = yc_offset.next();
             b.phi = phi_offset.next();
 
-        #ifdef TRACK_FRAME_TIME
             tm = timer.elapsed();
-        #endif
             cgn_calc_beam_naive(&c, &r);
             //cgn_calc_beam_blas(&c, &r);
-        #ifdef TRACK_FRAME_TIME
             avgCalcTime = avgCalcTime*0.9 + (timer.elapsed() - tm)*0.1;
-        #endif
 
             if (tm - prevReady >= PLOT_FRAME_DELAY_MS) {
                 prevReady = tm;
                 cgn_render_beam_to_doubles(&b, beam->rawData());
+                table->setResult(r, avgRenderTime, avgCalcTime);
                 beam->setResult(r);
                 beam->invalidate();
                 emit thread->ready();
@@ -144,15 +136,14 @@ public:
 
             if (tm - prevStat >= STAT_DELAY_MS) {
                 prevStat = tm;
+                // TODO: average FPS over STAT_DELAY_MS
                 emit thread->stats(qRound(1000.0/avgFrameTime));
-            #ifdef TRACK_FRAME_TIME
+            #ifdef LOG_FRAME_TIME
                 qDebug()
                     << "FPS:" << qRound(1000.0/avgFrameTime)
                     << "avgFrameTime:" << qRound(avgFrameTime)
                     << "avgRenderTime:" << qRound(avgRenderTime)
                     << "avgCalcTime:" << qRound(avgCalcTime);
-                qDebug()
-                    << r.xc << r.yc << r.dx << r.dy << r.phi*180/3.14;
             #endif
                 if (thread->isInterruptionRequested()) {
                     qDebug() << "VirtualDemoCamera::interrupted";
@@ -163,9 +154,9 @@ public:
     }
 };
 
-VirtualDemoCamera::VirtualDemoCamera(QSharedPointer<BeamGraphIntf> beam, QObject *parent) : QThread{parent}
+VirtualDemoCamera::VirtualDemoCamera(QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table, QObject *parent) : QThread{parent}
 {
-    _render.reset(new BeamRenderer(beam, this));
+    _render.reset(new BeamRenderer(beam, table, this));
 }
 
 void VirtualDemoCamera::run()

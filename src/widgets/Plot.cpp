@@ -78,7 +78,7 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     l->addWidget(_plot);
 
     renderDemoBeam();
-    recalcLimits(true);
+    QTimer::singleShot(0, this, [this]{ recalcLimits(true); });
 }
 
 void Plot::renderDemoBeam()
