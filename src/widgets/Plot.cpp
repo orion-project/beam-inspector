@@ -1,35 +1,11 @@
 #include "Plot.h"
 
+#include "plot/BeamGraph.h"
 #include "plot/BeamGraphIntf.h"
 
+#include "beam_render.h"
+
 #include "qcustomplot.h"
-
-struct Beam
-{
-    int w, h;
-    uint8_t p;
-    QVector<uint8_t> data;
-};
-
-Beam renderDemoBeam()
-{
-    Beam b;
-    b.w = 64;
-    b.h = 64;
-    b.p = 255;
-    b.data = QVector<uint8_t>(b.w * b.h);
-    auto d = b.data.data();
-    const double w2 = 10*10;
-    const double ellips = 1;
-    for (int i = 0; i < b.h; i++) {
-        const double y = (i - b.h/2.0) / ellips;
-        for (int j = 0; j < b.w; j++) {
-            const double x = j - b.w/2.0;
-            d[i*b.w + j] = b.p * exp(-2.0 * (x*x + y*y)/w2);
-        }
-    }
-    return b;
-}
 
 void setDefaultAxisFormat(QCPAxis *axis)
 {
@@ -37,6 +13,7 @@ void setDefaultAxisFormat(QCPAxis *axis)
     axis->setTickLengthOut(6);
     axis->setSubTickLengthIn(0);
     axis->setSubTickLengthOut(3);
+    axis->grid()->setPen(QPen(QColor(100, 100, 100), 0, Qt::DotLine));
 }
 
 Plot::Plot(QWidget *parent) : QWidget{parent}
@@ -72,43 +49,73 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _colorScale = new QCPColorScale(_plot);
     _colorScale->setBarWidth(10);
     _colorScale->axis()->setPadding(10);
+    setDefaultAxisFormat(_colorScale->axis());
     _plot->plotLayout()->addElement(0, 1, _colorScale);
 
-    _graph = new QCPColorMap(_plot->xAxis, _plot->yAxis);
-    _graph->setColorScale(_colorScale);
-    _graph->setInterpolate(false);
+    _colorMap = new QCPColorMap(_plot->xAxis, _plot->yAxis);
+    _colorMap->setColorScale(_colorScale);
+    _colorMap->setInterpolate(false);
     QCPColorGradient rainbow;
     rainbow.setColorStops(rainbowColors);
-    _graph->setGradient(rainbow);
-    _graph->setLayer("beam");
+    _colorMap->setGradient(rainbow);
+    _colorMap->setLayer("beam");
+
+    _beamShape = new BeamEllipse(_plot);
+    _beamShape->pen = QPen(Qt::white);
+
+    _lineX = new QCPItemStraightLine(_plot);
+    _lineY = new QCPItemStraightLine(_plot);
+    _lineX->setPen(QPen(Qt::white));
+    _lineY->setPen(QPen(Qt::white));
 
     // Make sure the axis rect and color scale synchronize their bottom and top margins:
     QCPMarginGroup *marginGroup = new QCPMarginGroup(_plot);
     _plot->axisRect()->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
     _colorScale->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
 
-    auto b = renderDemoBeam();
-    _imageW = b.w;
-    _imageH = b.h;
-    auto data = _graph->data();
-    data->setSize(b.w, b.h);
-    data->setRange(QCPRange(0, b.w), QCPRange(0, b.h));
-    for (int y = 0; y < b.h; y++)
-        for (int x = 0; x < b.w; x++)
-            data->setCell(x, y, b.data.at(y * b.w + x));
-    _colorScale->setDataRange(QCPRange(0, b.p));
-
     auto l = new QVBoxLayout(this);
     l->setContentsMargins(0, 0, 0, 0);
     l->addWidget(_plot);
 
+    renderDemoBeam();
     recalcLimits(true);
+}
+
+void Plot::renderDemoBeam()
+{
+    CgnBeamRender b;
+    b.w = 64;
+    b.h = 64;
+    b.dx = 20;
+    b.dy = 20;
+    b.xc = 32;
+    b.yc = 32;
+    b.phi = 0;
+    b.p = 255;
+    QVector<uint8_t> buf(b.w*b.h);
+    b.buf = buf.data();
+    cgn_render_beam(&b);
+
+    CgnBeamResult r;
+    r.xc = b.xc;
+    r.yc = b.yc;
+    r.dx = b.dx;
+    r.dy = b.dy;
+    r.phi = b.phi;
+
+    auto g = graphIntf();
+    g->init(b.w, b.h, b.p);
+    g->setResult(r);
+    cgn_render_beam_to_doubles(&b, g->rawData());
+
+    _imageW = b.w;
+    _imageH = b.h;
 }
 
 void Plot::prepare()
 {
-    _imageW = _graph->data()->keyRange().upper;
-    _imageH = _graph->data()->valueRange().upper;
+    _imageW = _colorMap->data()->keyRange().upper;
+    _imageH = _colorMap->data()->valueRange().upper;
     recalcLimits(false);
 }
 
@@ -144,5 +151,5 @@ void Plot::replot()
 
 QSharedPointer<BeamGraphIntf> Plot::graphIntf() const
 {
-    return QSharedPointer<BeamGraphIntf>(new BeamGraphIntf(_graph));
+    return QSharedPointer<BeamGraphIntf>(new BeamGraphIntf(_colorMap, _colorScale, _beamShape, _lineX, _lineY));
 }

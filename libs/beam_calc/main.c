@@ -5,7 +5,7 @@
 
 #include "../../calc/pgm.h"
 
-#define FRAMES 1
+#define FRAMES 30
 #define FILENAME "../../beams/beam_8b_ast.pgm"
 
 #define MEASURE(func) { \
@@ -13,7 +13,7 @@
     clock_t tm = clock(); \
     for (int i = 0; i < FRAMES; i++) func(&c, &r); \
     double elapsed = (clock() - tm)/(double)CLOCKS_PER_SEC; \
-    printf("center=[%.0f,%.0f], diam=[%.0f,%.0f], angle=%.1f\n", r.xc, r.yc, r.dx, r.dy, r.phi*180/3.14); \
+    printf("center=[%.0f,%.0f], diam=[%.0f,%.0f], angle=%.1f\n", r.xc, r.yc, r.dx, r.dy, r.phi); \
     printf("Elapsed: %.3fs, FPS: %.1f, %.1fms/frame\n", elapsed, FRAMES/elapsed, elapsed/(double)FRAMES*1000); \
 }
 

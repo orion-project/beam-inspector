@@ -10,7 +10,7 @@
 
 #define CAMERA_LOOP_TICK_MS 5
 #define CAMERA_FRAME_DELAY_MS 30
-#define PLOT_FRAME_DELAY_MS 100
+#define PLOT_FRAME_DELAY_MS 200
 #define STAT_DELAY_MS 1000
 // Calc and log how long it takes to process each frame (averaged)
 #define TRACK_FRAME_TIME
@@ -72,7 +72,7 @@ public:
         b.dy = 1120;
         b.xc = 1534;
         b.yc = 981;
-        b.p0 = 255;
+        b.p = 255;
         b.phi = 12;
         d = QVector<uint8_t>(b.w * b.h);
         b.buf = d.data();
@@ -91,7 +91,7 @@ public:
         yc_offset = RandomOffset(b.yc, b.yc-20, b.yc+20);
         phi_offset = RandomOffset(b.phi, b.phi-12, b.phi+12);
 
-        beam->init(b.w, b.h);
+        beam->init(b.w, b.h, b.p);
     }
 
     void run() {
@@ -137,6 +137,7 @@ public:
             if (tm - prevReady >= PLOT_FRAME_DELAY_MS) {
                 prevReady = tm;
                 cgn_render_beam_to_doubles(&b, beam->rawData());
+                beam->setResult(r);
                 beam->invalidate();
                 emit thread->ready();
             }

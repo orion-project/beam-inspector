@@ -34,7 +34,7 @@ int main() {
    b.dy = 1120;
    b.xc = 1534;
    b.yc = 981;
-   b.p0 = 255;
+   b.p = 255;
    b.buf = (unsigned char*)malloc(b.w * b.h);
    if (!b.buf) {
        perror("Unable to allocate pixels");
@@ -43,7 +43,7 @@ int main() {
    printf("Image size: %dx%d\n", b.w, b.h);
    printf("Beam widths: %dx%d\n", b.dx, b.dy);
    printf("Center position: %dx%d\n", b.xc, b.yc);
-   printf("Max intensity: %d\n", b.p0);
+   printf("Max intensity: %d\n", b.p);
    printf("Frames: %d\n", FRAMES);
    MEASURE(cgn_render_beam)
    MEASURE(cgn_render_beam_tilted)

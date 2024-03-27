@@ -49,7 +49,7 @@ void cgn_calc_beam_naive(CgnBeamCalc *c, CgnBeamResult *r) {
     double ss = sign(xx - yy) * sqrt(sqr(xx - yy) + 4*sqr(xy));
     r->dx = 2.8284271247461903 * sqrt(xx + yy + ss);
     r->dy = 2.8284271247461903 * sqrt(xx + yy - ss);
-    r->phi = 0.5 * atan2(2 * xy, xx - yy);
+    r->phi = 0.5 * atan2(2 * xy, xx - yy) * 57.29577951308232;
     r->xc = xc;
     r->yc = yc;
 }
@@ -157,7 +157,7 @@ void cgn_calc_beam_blas(CgnBeamCalcBlas *c, CgnBeamResultBlas *r) {
     float ss = sign(xx - yy) * sqrt(sqr(xx - yy) + 4*sqr(xy));
     dx = 2.8284271247461903 * sqrt(xx + yy + ss);
     dy = 2.8284271247461903 * sqrt(xx + yy - ss);
-    phi = 0.5 * atan2(2 * xy, xx - yy);
+    phi = 0.5 * atan2(2 * xy, xx - yy) * 57.29577951308232;
 }
 
 #endif // USE_BLAS

@@ -1,8 +1,13 @@
 #ifndef BEAM_GRAPH_INTF_H
 #define BEAM_GRAPH_INTF_H
 
+#include "beam_calc.h"
+
 class BeamColorMapData;
+class BeamEllipse;
 class QCPColorMap;
+class QCPColorScale;
+class QCPItemStraightLine;
 
 /**
  * Provides access to graph data for camera threads
@@ -12,15 +17,20 @@ class QCPColorMap;
 class BeamGraphIntf
 {
 public:
-    BeamGraphIntf(QCPColorMap *graph);
+    BeamGraphIntf(QCPColorMap *colorMap, QCPColorScale *colorScale,
+        BeamEllipse *shape, QCPItemStraightLine *lineX, QCPItemStraightLine *lineY);
 
-    void init(int w, int h);
+    void init(int w, int h, int p);
     double* rawData() const;
+    void setResult(const CgnBeamResult& r);
     void invalidate() const;
 
 private:
-    QCPColorMap *_graph;
-    BeamColorMapData *_graphData;
+    QCPColorMap *_colorMap;
+    QCPColorScale *_colorScale;
+    BeamColorMapData *_beamData;
+    BeamEllipse *_shape;
+    QCPItemStraightLine *_lineX, *_lineY;
 };
 
 #endif // BEAM_GRAPH_INTF_H

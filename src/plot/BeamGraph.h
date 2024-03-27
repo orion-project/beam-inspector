@@ -15,4 +15,18 @@ public:
     inline void invalidate() { mDataModified = true; }
 };
 
+class BeamEllipse : public QCPAbstractItem
+{
+public:
+    explicit BeamEllipse(QCustomPlot *parentPlot);
+
+    QPen pen;
+    double xc, yc, dx, dy, phi;
+
+    double selectTest(const QPointF &pos, bool onlySelectable, QVariant *details=nullptr) const override;
+
+protected:
+    void draw(QCPPainter *painter) override;
+};
+
 #endif // BEAM_COLOR_MAP_H

@@ -6,8 +6,10 @@
 class QCustomPlot;
 class QCPColorMap;
 class QCPColorScale;
+class QCPItemStraightLine;
 
 class BeamGraphIntf;
+class BeamEllipse;
 
 class Plot : public QWidget
 {
@@ -26,10 +28,13 @@ protected:
 
 private:
     QCustomPlot *_plot;
-    QCPColorMap *_graph;
+    QCPColorMap *_colorMap;
     QCPColorScale *_colorScale;
+    QCPItemStraightLine *_lineX, *_lineY;
+    BeamEllipse *_beamShape;
     int _imageW, _imageH;
 
+    void renderDemoBeam();
     void recalcLimits(bool replot);
 };
 

@@ -8,9 +8,10 @@
 #define max(a,b) ((a) > (b) ? (a) : (b))
 
 void cgn_render_beam(CgnBeamRender *b) {
+    memset(b->buf, 0, b->w*b->h);
     double r2 = sqr(b->dx/2.0);
     double el = b->dx / (double)(b->dy);
-    double p = b->p0;
+    double p = b->p;
     int x_min = b->xc - b->dx*0.6; x_min = max(x_min, 0);
     int x_max = b->xc + b->dx*0.6; x_max = min(x_max, b->w);
     int y_min = b->yc - b->dy*0.6; y_min = max(y_min, 0);
@@ -33,7 +34,7 @@ void cgn_render_beam_tilted(CgnBeamRender *b) {
     double el = b->dx / (double)(b->dy);
     int x_min = -b->dx*0.6, x_max = b->dx*0.6;
     int y_min = -b->dy*0.6, y_max = b->dy*0.6;
-    double p = b->p0;
+    double p = b->p;
     for (int y = y_min; y < y_max; y++) {
         double y2 = sqr(y*el);
         for (int x = x_min; x < x_max; x++) {

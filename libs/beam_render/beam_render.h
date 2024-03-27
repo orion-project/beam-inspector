@@ -12,7 +12,7 @@ typedef struct {
     int dy;
     int xc;
     int yc;
-    int p0;
+    int p;
     int phi;
     unsigned char *buf;
 } CgnBeamRender;
