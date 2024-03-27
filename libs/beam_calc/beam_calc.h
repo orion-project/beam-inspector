@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+#ifdef USE_BLAS
+
 typedef struct {
     int w;
     int h;
@@ -17,7 +19,7 @@ typedef struct {
     float *u;
     float *s;
     float *t;
-} CgnBeamCalc;
+} CgnBeamCalcBlas;
 
 typedef struct {
     float xc;
@@ -28,11 +30,29 @@ typedef struct {
     float dx;
     float dy;
     float phi;
+} CgnBeamResultBlas;
+
+int cgn_calc_beam_blas_init(CgnBeamCalcBlas *c);
+void cgn_calc_beam_blas_free(CgnBeamCalcBlas *c);
+void cgn_calc_beam_blas(CgnBeamCalcBlas *c, CgnBeamResultBlas *r);
+
+#endif // USE_BLAS
+
+typedef struct {
+    int w;
+    int h;
+    unsigned char *buf;
+} CgnBeamCalc;
+
+typedef struct {
+    double xc;
+    double yc;
+    double dx;
+    double dy;
+    double phi;
 } CgnBeamResult;
 
-int cgn_calc_beam_init(CgnBeamCalc *c);
-void cgn_calc_beam_free(CgnBeamCalc *c);
-void cgn_calc_beam(CgnBeamCalc *c, CgnBeamResult *r);
+void cgn_calc_beam_naive(CgnBeamCalc *c, CgnBeamResult *r);
 
 #ifdef __cplusplus
 }

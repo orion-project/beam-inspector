@@ -13,7 +13,7 @@
 #define PLOT_FRAME_DELAY_MS 100
 #define STAT_DELAY_MS 1000
 // Calc and log how long it takes to process each frame (averaged)
-//#define TRACK_FRAME_LEN
+#define TRACK_FRAME_TIME
 
 struct RandomOffset
 {
@@ -45,6 +45,8 @@ public:
     CgnBeamRender b;
     CgnBeamCalc c;
     CgnBeamResult r;
+    //CgnBeamCalcBlas c;
+    //CgnBeamResultBlas r;
     QVector<uint8_t> d;
     RandomOffset dx_offset;
     RandomOffset dy_offset;
@@ -57,7 +59,7 @@ public:
     QSharedPointer<BeamGraphIntf> beam;
     VirtualDemoCamera *thread;
     double avgFrameTime = 0;
-#ifdef TRACK_FRAME_LEN
+#ifdef TRACK_FRAME_TIME
     double avgRenderTime = 0;
     double avgCalcTime = 0;
 #endif
@@ -78,10 +80,10 @@ public:
         c.w = b.w;
         c.h = b.h;
         c.buf = b.buf;
-        if (cgn_calc_beam_init(&c)) {
-            cgn_calc_beam_free(&c);
-            qCritical() << "Failed to initialize calc buffers";
-        }
+//        if (cgn_calc_beam_blas_init(&c)) {
+//            cgn_calc_beam_blas_free(&c);
+//            qCritical() << "Failed to initialize calc buffers";
+//        }
 
         dx_offset = RandomOffset(b.dx, b.dx-20, b.dx+20);
         dy_offset = RandomOffset(b.dy, b.dy-20, b.dy+20);
@@ -109,11 +111,11 @@ public:
             avgFrameTime = avgFrameTime*0.9 + (tm - prevFrame)*0.1;
             prevFrame = tm;
 
-        #ifdef TRACK_FRAME_LEN
+        #ifdef TRACK_FRAME_TIME
             tm = timer.elapsed();
         #endif
             cgn_render_beam_tilted(&b);
-        #ifdef TRACK_FRAME_LEN
+        #ifdef TRACK_FRAME_TIME
             avgRenderTime = avgRenderTime*0.9 + (timer.elapsed() - tm)*0.1;
         #endif
 
@@ -123,11 +125,12 @@ public:
             b.yc = yc_offset.next();
             b.phi = phi_offset.next();
 
-        #ifdef TRACK_FRAME_LEN
+        #ifdef TRACK_FRAME_TIME
             tm = timer.elapsed();
         #endif
-            cgn_calc_beam(&c, &r);
-        #ifdef TRACK_FRAME_LEN
+            cgn_calc_beam_naive(&c, &r);
+            //cgn_calc_beam_blas(&c, &r);
+        #ifdef TRACK_FRAME_TIME
             avgCalcTime = avgCalcTime*0.9 + (timer.elapsed() - tm)*0.1;
         #endif
 
@@ -141,11 +144,14 @@ public:
             if (tm - prevStat >= STAT_DELAY_MS) {
                 prevStat = tm;
                 emit thread->stats(qRound(1000.0/avgFrameTime));
-            #ifdef TRACK_FRAME_LEN
-                qDebug() << "FPS:" << qRound(1000.0/avgFrameTime)
+            #ifdef TRACK_FRAME_TIME
+                qDebug()
+                    << "FPS:" << qRound(1000.0/avgFrameTime)
                     << "avgFrameTime:" << qRound(avgFrameTime)
                     << "avgRenderTime:" << qRound(avgRenderTime)
                     << "avgCalcTime:" << qRound(avgCalcTime);
+                qDebug()
+                    << r.xc << r.yc << r.dx << r.dy << r.phi*180/3.14;
             #endif
                 if (thread->isInterruptionRequested()) {
                     qDebug() << "VirtualDemoCamera::interrupted";

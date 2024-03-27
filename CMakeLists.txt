@@ -23,12 +23,12 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_compile_options(
-    -O3
-    -ffast-math
-    -funsafe-math-optimizations
-    -msse4.2
-)
+#add_compile_options(
+#    -O3
+#    -ffast-math
+#    -funsafe-math-optimizations
+#    -msse4.2
+#)
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets PrintSupport)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets PrintSupport)

@@ -42,4 +42,4 @@ It's supposed that GCC is used for code compilation. On Windows be sure you have
 set PATH=c:\Qt\Tools\mingw810_32\bin;%PATH%
 ```
 
-[OpenBLAS](https://github.com/OpenMathLib/OpenBLAS) must be [downloaded](https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.26/OpenBLAS-0.3.26-x86.zip) and unpacked into `$RPOJECT_ROOT/libs/openblas`.
+[OpenBLAS](https://github.com/OpenMathLib/OpenBLAS) must be downloaded and unpacked into `$RPOJECT_ROOT/libs/openblas`. Be sure you have a version ([x32](https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.26/OpenBLAS-0.3.26-x86.zip) or [x64](https://github.com/OpenMathLib/OpenBLAS/releases/download/v0.3.26/OpenBLAS-0.3.26-x64.zip)) that fits the bitness of used GCC.

@@ -1,13 +1,60 @@
 #include "beam_calc.h"
 
+#include <math.h>
+
+#ifdef USE_BLAS
 #include "cblas.h"
 
-#include <math.h>
 #include <stdlib.h>
+#endif
 
 #define sign(s) ((s) < 0 ? -1 : ((s) > 0 ? 1 : 0))
 #define sqr(s) ((s)*(s))
 #define max(a,b) ((a > b) ? a : b)
+
+#define w c->w
+#define h c->h
+#define buf c->buf
+
+void cgn_calc_beam_naive(CgnBeamCalc *c, CgnBeamResult *r) {
+    double p = 0;
+    double xc = 0;
+    double yc = 0;
+    for (int i = 0; i < h; i++) {
+        int offset = i*w;
+        for (int j = 0; j < w; j++) {
+            p += buf[offset + j];
+            xc += buf[offset + j] * j;
+            yc += buf[offset + j] * i;
+        }
+    }
+    xc /= p;
+    yc /= p;
+
+    double xx = 0;
+    double yy = 0;
+    double xy = 0;
+    for (int i = 0; i < h; i++) {
+        int offset = i*w;
+        for (int j = 0; j < w; j++) {
+            xx += buf[offset + j] * sqr(j - xc);
+            xy += buf[offset + j] * (j - xc)*(i - yc);
+            yy += buf[offset + j] * sqr(i - yc);
+        }
+    }
+    xx /= p;
+    xy /= p;
+    yy /= p;
+
+    double ss = sign(xx - yy) * sqrt(sqr(xx - yy) + 4*sqr(xy));
+    r->dx = 2.8284271247461903 * sqrt(xx + yy + ss);
+    r->dy = 2.8284271247461903 * sqrt(xx + yy - ss);
+    r->phi = 0.5 * atan2(2 * xy, xx - yy);
+    r->xc = xc;
+    r->yc = yc;
+}
+
+#ifdef USE_BLAS
 
 #define ALLOC(var, size) \
     var = (float*)malloc(sizeof(float) * size); \
@@ -23,9 +70,6 @@
 #define GEMVT(m, n, a, x, y) cblas_sgemv(CblasRowMajor, CblasTrans,   m, n, 1, a, n, x, 1, 0, y, 1)
 #define DOT(s, x, y) cblas_sdot(s, x, 1, y, 1)
 
-#define w c->w
-#define h c->h
-#define buf c->buf
 #define d c->d
 #define tx c->tx
 #define ty c->ty
@@ -44,7 +88,7 @@
 #define dy r->dy
 #define phi r->phi
 
-int cgn_calc_beam_init(CgnBeamCalc *c) {
+int cgn_calc_beam_blas_init(CgnBeamCalcBlas *c) {
     d = NULL;
     tx = NULL;
     ty = NULL;
@@ -71,7 +115,7 @@ int cgn_calc_beam_init(CgnBeamCalc *c) {
     return 0;
 }
 
-void cgn_calc_beam_free(CgnBeamCalc *c) {
+void cgn_calc_beam_blas_free(CgnBeamCalcBlas *c) {
     if (d) free(d);
     if (tx) free(tx);
     if (ty) free(ty);
@@ -82,7 +126,7 @@ void cgn_calc_beam_free(CgnBeamCalc *c) {
     if (t) free(t);
 }
 
-void cgn_calc_beam(CgnBeamCalc *c, CgnBeamResult *r) {
+void cgn_calc_beam_blas(CgnBeamCalcBlas *c, CgnBeamResultBlas *r) {
     SCAL(w, 0, tx);
     SCAL(h, 0, ty);
     COPY(w, s, x);
@@ -115,3 +159,5 @@ void cgn_calc_beam(CgnBeamCalc *c, CgnBeamResult *r) {
     dy = 2.8284271247461903 * sqrt(xx + yy - ss);
     phi = 0.5 * atan2(2 * xy, xx - yy);
 }
+
+#endif // USE_BLAS
