@@ -13,7 +13,9 @@
 #include <QLabel>
 #include <QMenuBar>
 #include <QStatusBar>
+#include <QStyleHints>
 #include <QTableWidget>
+#include <QTimer>
 #include <QToolBar>
 
 PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
@@ -26,6 +28,12 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     createPlot();
     updateActions(false);
     setCentralWidget(_plot);
+
+    connect(qApp->styleHints(), &QStyleHints::colorSchemeChanged, this, &PlotWindow::updateThemeColors);
+    setThemeColors();
+
+    _plot->setFocus();
+
     resize(800, 600);
 }
 
@@ -97,7 +105,6 @@ class DataTableWidget : public QTableWidget {
 void PlotWindow::createDockPanel()
 {
     _table = new DataTableWidget;
-    qDebug() << _table->sizeHint();
     _table->setColumnCount(2);
     _table->setHorizontalHeaderLabels({ tr("Name"), tr("Value") });
     _table->verticalHeader()->setVisible(false);
@@ -117,7 +124,6 @@ void PlotWindow::createDockPanel()
         if (!header)
             f.setPointSize(f.pointSize()+1);
         it->setFont(f);
-        it->setBackground(palette().brush(QPalette::Button));
         _table->setItem(row, 0, it);
 
         if (header) {
@@ -142,8 +148,6 @@ void PlotWindow::createDockPanel()
     makeItem(tr(" Debug "), true);
     _tableIntf->itRenderTime = makeItem(tr(" Render time "));
     _tableIntf->itCalcTime = makeItem(tr(" Calc time "));
-//    _tableIntf->itRenderTime->setToolTip("ms/frame");
-//    _tableIntf->itCalcTime->setToolTip("ms/frame");
 
     auto dock = new QDockWidget(tr("Results"));
     dock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
@@ -211,4 +215,20 @@ void PlotWindow::dataReady()
 void PlotWindow::statsReceived(int fps)
 {
     _labelFps->setText(QStringLiteral("FPS: ") % QString::number(fps));
+}
+
+void PlotWindow::setThemeColors()
+{
+    auto bg = palette().brush(QPalette::Button);
+    for (int row = 0; row < _table->rowCount(); row++)
+        _table->item(row, 0)->setBackground(bg);
+}
+
+void PlotWindow::updateThemeColors()
+{
+    // Right now new palette is not ready yet, it returns old colors
+    QTimer::singleShot(100, this, [this]{
+        setThemeColors();
+        _plot->setThemeColors(true);
+    });
 }

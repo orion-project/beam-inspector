@@ -44,6 +44,9 @@ private:
     void captureStopped();
     void dataReady();
     void statsReceived(int fps);
+
+    void updateThemeColors();
+    void setThemeColors();
 };
 
 #endif // PLOT_WINDOW_H
