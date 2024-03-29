@@ -7,13 +7,23 @@
 
 #include "qcustomplot.h"
 
-void setDefaultAxisFormat(QCPAxis *axis)
+static QColor themeAxisColor()
+{
+    return qApp->palette().color(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Shadow);
+}
+
+static void setDefaultAxisFormat(QCPAxis *axis)
 {
     axis->setTickLengthIn(0);
     axis->setTickLengthOut(6);
     axis->setSubTickLengthIn(0);
     axis->setSubTickLengthOut(3);
     axis->grid()->setPen(QPen(QColor(100, 100, 100), 0, Qt::DotLine));
+    axis->setTickLabelColor(qApp->palette().color(QPalette::WindowText));
+    auto pen = QPen(themeAxisColor(), 0, Qt::SolidLine);
+    axis->setTickPen(pen);
+    axis->setSubTickPen(pen);
+    axis->setBasePen(pen);
 }
 
 Plot::Plot(QWidget *parent) : QWidget{parent}
@@ -34,10 +44,6 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
 
     _plot = new QCustomPlot;
     _plot->yAxis->setRangeReversed(true);
-    setDefaultAxisFormat(_plot->xAxis);
-    setDefaultAxisFormat(_plot->yAxis);
-    setDefaultAxisFormat(_plot->xAxis2);
-    setDefaultAxisFormat(_plot->yAxis2);
     _plot->axisRect()->setupFullAxesBox(true);
     _plot->xAxis->setTickLabels(false);
     _plot->xAxis2->setTickLabels(true);
@@ -46,10 +52,9 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     auto gridLayer = _plot->xAxis->grid()->layer();
     _plot->addLayer("beam", gridLayer, QCustomPlot::limBelow);
 
-    _colorScale = new QCPColorScale(_plot);
+    _colorScale = new BeamColorScale(_plot);
     _colorScale->setBarWidth(10);
     _colorScale->axis()->setPadding(10);
-    setDefaultAxisFormat(_colorScale->axis());
     _plot->plotLayout()->addElement(0, 1, _colorScale);
 
     _colorMap = new QCPColorMap(_plot->xAxis, _plot->yAxis);
@@ -72,6 +77,8 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     QCPMarginGroup *marginGroup = new QCPMarginGroup(_plot);
     _plot->axisRect()->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
     _colorScale->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
+
+    setThemeColors(false);
 
     auto l = new QVBoxLayout(this);
     l->setContentsMargins(0, 0, 0, 0);
@@ -152,4 +159,17 @@ void Plot::replot()
 QSharedPointer<BeamGraphIntf> Plot::graphIntf() const
 {
     return QSharedPointer<BeamGraphIntf>(new BeamGraphIntf(_colorMap, _colorScale, _beamShape, _lineX, _lineY));
+}
+
+void Plot::setThemeColors(bool replot)
+{
+    _plot->setBackground(palette().brush(QPalette::Base));
+    setDefaultAxisFormat(_plot->xAxis);
+    setDefaultAxisFormat(_plot->yAxis);
+    setDefaultAxisFormat(_plot->xAxis2);
+    setDefaultAxisFormat(_plot->yAxis2);
+    setDefaultAxisFormat(_colorScale->axis());
+    _colorScale->setFrameColor(themeAxisColor());
+    if (replot)
+        _plot->replot();
 }

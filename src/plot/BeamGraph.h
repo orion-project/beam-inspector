@@ -29,4 +29,12 @@ protected:
     void draw(QCPPainter *painter) override;
 };
 
+class BeamColorScale : public QCPColorScale
+{
+public:
+    explicit BeamColorScale(QCustomPlot *parentPlot);
+
+    void setFrameColor(const QColor& c);
+};
+
 #endif // BEAM_COLOR_MAP_H

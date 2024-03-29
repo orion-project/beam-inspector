@@ -5,9 +5,9 @@
 
 class QCustomPlot;
 class QCPColorMap;
-class QCPColorScale;
 class QCPItemStraightLine;
 
+class BeamColorScale;
 class BeamGraphIntf;
 class BeamEllipse;
 
@@ -23,13 +23,15 @@ public:
     void prepare();
     void replot();
 
+    void setThemeColors(bool replot);
+
 protected:
     void resizeEvent(QResizeEvent*) override;
 
 private:
     QCustomPlot *_plot;
     QCPColorMap *_colorMap;
-    QCPColorScale *_colorScale;
+    BeamColorScale *_colorScale;
     QCPItemStraightLine *_lineX, *_lineY;
     BeamEllipse *_beamShape;
     int _imageW, _imageH;

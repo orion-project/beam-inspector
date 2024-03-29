@@ -1,10 +1,17 @@
 #include "BeamGraph.h"
 
+//------------------------------------------------------------------------------
+//                               BeamColorMapData
+//------------------------------------------------------------------------------
+
 BeamColorMapData::BeamColorMapData(int w, int h)
     : QCPColorMapData(w, h, QCPRange(0, w), QCPRange(0, h))
 {
 }
 
+//------------------------------------------------------------------------------
+//                                BeamEllipse
+//------------------------------------------------------------------------------
 
 BeamEllipse::BeamEllipse(QCustomPlot *parentPlot) : QCPAbstractItem(parentPlot)
 {
@@ -27,4 +34,18 @@ void BeamEllipse::draw(QCPPainter *painter)
 double BeamEllipse::selectTest(const QPointF &pos, bool onlySelectable, QVariant *details) const
 {
     return 0;
+}
+
+//------------------------------------------------------------------------------
+//                               BeamColorScale
+//------------------------------------------------------------------------------
+
+BeamColorScale::BeamColorScale(QCustomPlot *parentPlot) : QCPColorScale(parentPlot)
+{
+}
+
+void BeamColorScale::setFrameColor(const QColor& c)
+{
+    for (auto a : mAxisRect->axes())
+        a->setBasePen(QPen(c, 0, Qt::SolidLine));
 }
