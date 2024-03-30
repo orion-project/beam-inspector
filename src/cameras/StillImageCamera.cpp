@@ -5,6 +5,9 @@
 
 #include "beam_calc.h"
 
+#include "tools/OriSettings.h"
+#include "helpers/OriDialogs.h"
+
 #include <QApplication>
 #include <QDebug>
 #include <QFileDialog>
@@ -12,19 +15,34 @@
 
 std::optional<StillImageCamera::ImageInfo> StillImageCamera::start(QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table)
 {
+    Ori::Settings s;
+    s.beginGroup("StillImageCamera");
+
     QString fileName = QFileDialog::getOpenFileName(qApp->activeWindow(),
-                                qApp->tr("Open Beam Image"), "",
+                                qApp->tr("Open Beam Image"),
+                                s.strValue("recentDir"),
                                 qApp->tr("Images (*.png *.pgm *.jpg);;All Files (*.*)"));
     if (fileName.isEmpty())
         return {};
 
+    s.setValue("recentDir", QFileInfo(fileName).dir().absolutePath());
+
+    return start(fileName, beam, table);
+}
+
+std::optional<StillImageCamera::ImageInfo> StillImageCamera::start(const QString& fileName, QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table)
+{
     QImage img(fileName);
     if (img.isNull()) {
-        QMessageBox::critical(qApp->activeWindow(), qApp->tr("Open Beam Image"), qApp->tr("Unable to to load image file"));
+        Ori::Dlg::error(qApp->tr("Unable to to load image file"));
         return {};
     }
 
-    qDebug() << fileName << img.bitPlaneCount() << img.isGrayscale() << img.allGray() << img.format();
+    auto fmt = img.format();
+    if (fmt != QImage::Format_Grayscale8 && fmt != QImage::Format_Grayscale16) {
+        Ori::Dlg::error(qApp->tr("Unsupported image format, only grayscale images are supported"));
+        return {};
+    }
 
     // declare explicitly as const to avoid deep copy
     const uchar* buf = img.bits();
