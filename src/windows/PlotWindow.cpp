@@ -1,12 +1,14 @@
 #include "PlotWindow.h"
 
 #include "app/HelpSystem.h"
+#include "cameras/CameraBase.h"
 #include "cameras/StillImageCamera.h"
-#include "cameras/TableIntf.h"
 #include "cameras/VirtualDemoCamera.h"
 #include "widgets/Plot.h"
+#include "widgets/TableIntf.h"
 
 #include "helpers/OriWidgets.h"
+#include "helpers/OriDialogs.h"
 #include "tools/OriMruList.h"
 #include "widgets/OriFlatToolBar.h"
 #include "widgets/OriMruMenu.h"
@@ -70,9 +72,9 @@ void PlotWindow::createMenuBar()
 #define A_ Ori::Gui::action
 #define M_ Ori::Gui::menu
     auto actnNew = A_(tr("New Window"), this, &PlotWindow::newWindow, ":/toolbar/new", QKeySequence::New);
-    _actionOpen = A_(tr("Open Beam Image..."), this, &PlotWindow::openImageDlg, ":/toolbar/open", QKeySequence::Open);
+    _actionOpen = A_(tr("Open Image..."), this, &PlotWindow::openImageDlg, ":/toolbar/open", QKeySequence::Open);
     auto actnClose = A_(tr("Exit"), this, &PlotWindow::close);
-    auto menuFile = M_(tr("File"), {actnNew, 0, _actionOpen, 0, actnClose});
+    auto menuFile = M_(tr("File"), {actnNew, 0, _actionOpen, actnClose});
     new Ori::Widgets::MruMenuPart(_mru, menuFile, actnClose, this);
     menuBar()->addMenu(menuFile);
 
@@ -96,6 +98,8 @@ void PlotWindow::createToolBar()
     tb->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     tb->addAction(_actionStart);
     tb->addAction(_actionStop);
+    tb->addSeparator();
+    tb->addAction(_actionOpen);
 }
 
 void PlotWindow::createStatusBar()
@@ -106,6 +110,7 @@ void PlotWindow::createStatusBar()
     _statusBar->setText(STATUS_RESOLUTION, "2592 × 2048 × 8bit");
     _statusBar->setText(STATUS_SEPARATOR_1, "|");
     _statusBar->setText(STATUS_SEPARATOR_2, "|");
+    showInfo(VirtualDemoCamera::info());
     showFps(0);
     setStatusBar(_statusBar);
 }
@@ -128,37 +133,43 @@ void PlotWindow::createDockPanel()
     h->setHighlightSections(false);
 
     int row = 0;
-    auto makeItem = [this, &row](const QString& title, bool header=false) {
+    auto makeHeader = [this, &row](const QString& title) {
         _table->setRowCount(row+1);
         auto it = new QTableWidgetItem(title);
         auto f = it->font();
         f.setBold(true);
-        if (!header)
-            f.setPointSize(f.pointSize()+1);
+        it->setFont(f);
+        it->setTextAlignment(Qt::AlignCenter);
+        _table->setItem(row, 0, it);
+        _table->setSpan(row, 0, 1, 2);
+        row++;
+    };
+    auto makeItem = [this, &row](const QString& title, QTableWidgetItem **headerItem = nullptr) {
+        _table->setRowCount(row+1);
+        auto it = new QTableWidgetItem(title);
+        auto f = it->font();
+        f.setBold(true);
+        f.setPointSize(f.pointSize()+1);
         it->setFont(f);
         _table->setItem(row, 0, it);
+        if (headerItem)
+            *headerItem = it;
 
-        if (header) {
-            it->setTextAlignment(Qt::AlignCenter);
-            _table->setSpan(row, 0, 1, 2);
-        } else {
-            it = new QTableWidgetItem("---");
-            f.setBold(false);
-            it->setFont(f);
-            _table->setItem(row, 1, it);
-        }
-        row++;
+        it = new QTableWidgetItem("---");
+        f.setBold(false);
+        it->setFont(f);
+        _table->setItem(row++, 1, it);
         return it;
     };
     _tableIntf.reset(new TableIntf);
-    makeItem(tr(" Centroid "), true);
+    makeHeader(tr(" Centroid "));
     _tableIntf->itXc = makeItem(tr(" Center X "));
     _tableIntf->itYc = makeItem(tr(" Center Y "));
     _tableIntf->itDx = makeItem(tr(" Width X "));
     _tableIntf->itDy = makeItem(tr(" Width Y "));
     _tableIntf->itPhi = makeItem(tr(" Azimuth "));
-    makeItem(tr(" Debug "), true);
-    _tableIntf->itRenderTime = makeItem(tr(" Render time "));
+    makeHeader(tr(" Debug "));
+    _tableIntf->itRenderTime = makeItem(tr(" Render time "), &_itemRenderTime);
     _tableIntf->itCalcTime = makeItem(tr(" Calc time "));
 
     auto dock = new QDockWidget(tr("Results"));
@@ -181,6 +192,41 @@ void PlotWindow::closeEvent(QCloseEvent* ce)
     }
 }
 
+void PlotWindow::newWindow()
+{
+    if (!QProcess::startDetached(qApp->applicationFilePath(), {}))
+        qWarning() << "Unable to start another instance";
+}
+
+void PlotWindow::showFps(int fps)
+{
+    if (fps <= 0)
+        _statusBar->setText(STATUS_FPS, QStringLiteral("FPS: NA"));
+    else _statusBar->setText(STATUS_FPS, QStringLiteral("FPS: ") % QString::number(fps));
+}
+
+void PlotWindow::showInfo(const CameraInfo& info)
+{
+    _statusBar->setText(STATUS_CAMERA, info.name, info.descr);
+    _statusBar->setText(STATUS_RESOLUTION, info.resolutionStr());
+}
+
+void PlotWindow::setThemeColors()
+{
+    auto bg = palette().brush(QPalette::Button);
+    for (int row = 0; row < _table->rowCount(); row++)
+        _table->item(row, 0)->setBackground(bg);
+}
+
+void PlotWindow::updateThemeColors()
+{
+    // Right now new palette is not ready yet, it returns old colors
+    QTimer::singleShot(100, this, [this]{
+        setThemeColors();
+        _plot->setThemeColors(true);
+    });
+}
+
 void PlotWindow::updateActions(bool started)
 {
     _actionOpen->setDisabled(started);
@@ -192,6 +238,8 @@ void PlotWindow::updateActions(bool started)
 
 void PlotWindow::startCapture()
 {
+    showInfo(VirtualDemoCamera::info());
+    _itemRenderTime->setText(tr(" Render Time "));
     _cameraThread = new VirtualDemoCamera(_plot->graphIntf(), _tableIntf, this);
     connect(_cameraThread, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
     connect(_cameraThread, &VirtualDemoCamera::stats, this, &PlotWindow::showFps);
@@ -225,55 +273,28 @@ void PlotWindow::dataReady()
     _tableIntf->showData();
 }
 
-void PlotWindow::showFps(int fps)
-{
-    if (fps <= 0)
-        _statusBar->setText(STATUS_FPS, QStringLiteral("FPS: NA"));
-    else _statusBar->setText(STATUS_FPS, QStringLiteral("FPS: ") % QString::number(fps));
-}
-
-void PlotWindow::setThemeColors()
-{
-    auto bg = palette().brush(QPalette::Button);
-    for (int row = 0; row < _table->rowCount(); row++)
-        _table->item(row, 0)->setBackground(bg);
-}
-
-void PlotWindow::updateThemeColors()
-{
-    // Right now new palette is not ready yet, it returns old colors
-    QTimer::singleShot(100, this, [this]{
-        setThemeColors();
-        _plot->setThemeColors(true);
-    });
-}
-
-void PlotWindow::newWindow()
-{
-    if (!QProcess::startDetached(qApp->applicationFilePath(), {}))
-        qWarning() << "Unable to start another instance";
-}
-
 void PlotWindow::openImageDlg()
 {
     auto info = StillImageCamera::start(_plot->graphIntf(), _tableIntf);
-    if (!info) return;
-    _mru->append(info->filePath);
-    _statusBar->setText(STATUS_CAMERA, info->fileName, info->filePath);
-    _statusBar->setText(STATUS_RESOLUTION, QString("%1 × %2 × %3bit").arg(info->width).arg(info->height).arg(info->bits));
-    showFps(0);
-    _plot->prepare();
-    dataReady();
+    if (info) imageReady(*info);
 }
 
 void PlotWindow::openImage(const QString& fileName)
 {
+    if (_cameraThread && _cameraThread->isRunning()) {
+        Ori::Dlg::info(tr("Can not open file while capture is in progress"));
+        return;
+    }
     auto info = StillImageCamera::start(fileName, _plot->graphIntf(), _tableIntf);
-    if (!info) return;
-    _mru->append(info->filePath);
-    _statusBar->setText(STATUS_CAMERA, info->fileName, info->filePath);
-    _statusBar->setText(STATUS_RESOLUTION, QString("%1 × %2 × %3bit").arg(info->width).arg(info->height).arg(info->bits));
-    showFps(0);
+    if (info) imageReady(*info);
+}
+
+void PlotWindow::imageReady(const CameraInfo& info)
+{
+    _itemRenderTime->setText(tr(" Load Time "));
+    _mru->append(info.descr);
     _plot->prepare();
     dataReady();
+    showInfo(info);
+    showFps(0);
 }
