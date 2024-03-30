@@ -41,7 +41,7 @@ void cgn_calc_beam_blas(CgnBeamCalcBlas *c, CgnBeamResultBlas *r);
 typedef struct {
     int w;
     int h;
-    unsigned char *buf;
+    const unsigned char *buf;
 } CgnBeamCalc;
 
 typedef struct {

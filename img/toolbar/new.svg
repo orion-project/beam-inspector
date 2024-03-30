@@ -1,0 +1,17 @@
+<svg height="24" width="24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<linearGradient id="a">
+<stop offset="0" stop-color="#92b1de"/>
+<stop offset="1" stop-color="#525f96"/>
+</linearGradient>
+<linearGradient id="b">
+<stop offset="0" stop-color="#fdffff"/>
+<stop offset="1" stop-color="#b2d3fa"/>
+</linearGradient>
+<linearGradient id="c" gradientTransform="matrix(1 0 0 .9 -.5 -.29)" gradientUnits="userSpaceOnUse" x1="5" x2="20" xlink:href="#b" y1="3" y2="21"/>
+<linearGradient id="d" gradientUnits="userSpaceOnUse" x1="18.1" x2="15.1" xlink:href="#a" y1="4.9" y2="7.9"/>
+<linearGradient id="e" gradientUnits="userSpaceOnUse" x1="15" x2="18" xlink:href="#b" y1="8" y2="5"/>
+<linearGradient id="f" gradientTransform="matrix(1 0 0 .9 -.5 -.29)" gradientUnits="userSpaceOnUse" x1="17.56" x2="4.4" xlink:href="#a" y1="5.82" y2="23.8"/>
+<path d="m20.5 8.62v12.88h-17v-19h10.87" style="fill-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-dashoffset:21.44;fill:url(#c);stroke:url(#f)"/>
+<path d="m21 8.5h-6.5v-6.5" fill="url(#e)" fill-rule="evenodd"/>
+<path d="m20.5 8.5h-6v-6" fill="none" stroke="url(#d)" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

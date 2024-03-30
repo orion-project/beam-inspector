@@ -26,10 +26,11 @@ protected:
 private:
     Plot *_plot;
     VirtualDemoCamera *_cameraThread = nullptr;
-    QAction *_actionStart, *_actionStop;
+    QAction *_actionStart, *_actionStop, *_actionOpen;
     QLabel *_labelCamera, *_labelResolution, *_labelFps;
     QTableWidget *_table;
     QSharedPointer<TableIntf> _tableIntf;
+    QString imageFile;
 
     void createMenuBar();
     void createToolBar();
@@ -37,14 +38,16 @@ private:
     void createDockPanel();
     void createPlot();
 
-    void updateActions(bool started);
     void startCapture();
     void stopCapture();
+    void newWindow();
+    void openImage();
 
     void captureStopped();
     void dataReady();
     void statsReceived(int fps);
 
+    void updateActions(bool started);
     void updateThemeColors();
     void setThemeColors();
 };

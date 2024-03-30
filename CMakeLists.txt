@@ -38,13 +38,22 @@ set(PROJECT_SOURCES
     src/app.rc
     src/app.qrc
     src/main.cpp
-    src/app/HelpSystem.cpp src/app/HelpSystem.h
-    src/cameras/TableIntf.cpp src/cameras/TableIntf.h
-    src/cameras/VirtualDemoCamera.cpp src/cameras/VirtualDemoCamera.h
-    src/plot/BeamGraph.cpp src/plot/BeamGraph.h
-    src/plot/BeamGraphIntf.cpp src/plot/BeamGraphIntf.h
-    src/widgets/Plot.cpp src/widgets/Plot.h
-    src/windows/PlotWindow.cpp src/windows/PlotWindow.h
+    src/app/HelpSystem.h
+    src/app/HelpSystem.cpp
+    src/cameras/StillImageCamera.h
+    src/cameras/StillImageCamera.cpp
+    src/cameras/TableIntf.h
+    src/cameras/TableIntf.cpp
+    src/cameras/VirtualDemoCamera.h
+    src/cameras/VirtualDemoCamera.cpp
+    src/plot/BeamGraph.h
+    src/plot/BeamGraph.cpp
+    src/plot/BeamGraphIntf.h
+    src/plot/BeamGraphIntf.cpp
+    src/widgets/Plot.h
+    src/widgets/Plot.cpp
+    src/windows/PlotWindow.h
+    src/windows/PlotWindow.cpp
 )
 
 add_subdirectory(libs/qcustomplot)
