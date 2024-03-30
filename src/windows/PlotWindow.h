@@ -4,13 +4,18 @@
 #include <QMainWindow>
 
 class QAction;
-class QLabel;
 class QTableWidget;
 
 class CameraStats;
 class Plot;
 class TableIntf;
 class VirtualDemoCamera;
+
+namespace Ori {
+class MruFileList;
+namespace Widgets {
+class StatusBar;
+}}
 
 class PlotWindow : public QMainWindow
 {
@@ -27,10 +32,11 @@ private:
     Plot *_plot;
     VirtualDemoCamera *_cameraThread = nullptr;
     QAction *_actionStart, *_actionStop, *_actionOpen;
-    QLabel *_labelCamera, *_labelResolution, *_labelFps;
     QTableWidget *_table;
     QSharedPointer<TableIntf> _tableIntf;
     QString imageFile;
+    Ori::MruFileList *_mru;
+    Ori::Widgets::StatusBar *_statusBar;
 
     void createMenuBar();
     void createToolBar();
@@ -38,18 +44,19 @@ private:
     void createDockPanel();
     void createPlot();
 
+    void newWindow();
+    void openImageDlg();
     void startCapture();
     void stopCapture();
-    void newWindow();
-    void openImage();
 
     void captureStopped();
     void dataReady();
-    void statsReceived(int fps);
 
+    void openImage(const QString& fileName);
     void updateActions(bool started);
     void updateThemeColors();
     void setThemeColors();
+    void showFps(int fps);
 };
 
 #endif // PLOT_WINDOW_H

@@ -20,6 +20,7 @@ public:
     };
 
     static std::optional<ImageInfo> start(QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table);
+    static std::optional<ImageInfo> start(const QString& fileName, QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table);
 };
 
 #endif // STILL_IMAGE_CAMERA_H

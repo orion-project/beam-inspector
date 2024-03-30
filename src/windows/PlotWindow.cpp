@@ -6,6 +6,12 @@
 #include "cameras/VirtualDemoCamera.h"
 #include "widgets/Plot.h"
 
+#include "helpers/OriWidgets.h"
+#include "tools/OriMruList.h"
+#include "widgets/OriFlatToolBar.h"
+#include "widgets/OriMruMenu.h"
+#include "widgets/OriStatusBar.h"
+
 #include <QAction>
 #include <QApplication>
 #include <QDebug>
@@ -20,9 +26,25 @@
 #include <QTimer>
 #include <QToolBar>
 
+enum StatusPanels
+{
+    STATUS_CAMERA,
+    STATUS_SEPARATOR_1,
+    STATUS_RESOLUTION,
+    STATUS_SEPARATOR_2,
+    STATUS_FPS,
+
+    STATUS_PANEL_COUNT,
+};
+
 PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
 {
     setWindowTitle(qApp->applicationName() + " [VirtualDemo]");
+
+    _mru = new Ori::MruFileList(this);
+    connect(_mru, &Ori::MruFileList::clicked, this, &PlotWindow::openImage);
+    _mru->load();
+
     createMenuBar();
     createToolBar();
     createStatusBar();
@@ -45,34 +67,30 @@ PlotWindow::~PlotWindow()
 
 void PlotWindow::createMenuBar()
 {
-    QMenu *m;
+#define A_ Ori::Gui::action
+#define M_ Ori::Gui::menu
+    auto actnNew = A_(tr("New Window"), this, &PlotWindow::newWindow, ":/toolbar/new", QKeySequence::New);
+    _actionOpen = A_(tr("Open Beam Image..."), this, &PlotWindow::openImageDlg, ":/toolbar/open", QKeySequence::Open);
+    auto actnClose = A_(tr("Exit"), this, &PlotWindow::close);
+    auto menuFile = M_(tr("File"), {actnNew, 0, _actionOpen, 0, actnClose});
+    new Ori::Widgets::MruMenuPart(_mru, menuFile, actnClose, this);
+    menuBar()->addMenu(menuFile);
 
-    m = menuBar()->addMenu(tr("File"));
-    m->addAction(QIcon(":/toolbar/new"), tr("New Window"), QKeySequence::New, this, &PlotWindow::newWindow);
-    m->addSeparator();
-    _actionOpen = m->addAction(QIcon(":/toolbar/open"), tr("Open Beam Image..."), QKeySequence::Open, this, &PlotWindow::openImage);
-    m->addSeparator();
-    m->addAction(tr("Exit"), this, &PlotWindow::close);
+    _actionStart = A_(tr("Start Capture"), this, &PlotWindow::startCapture, ":/toolbar/start");
+    _actionStop = A_(tr("Stop Capture"), this, &PlotWindow::stopCapture, ":/toolbar/stop");
+    menuBar()->addMenu(M_(tr("Camera"), {_actionStart, _actionStop}));
 
-    m = menuBar()->addMenu(tr("Camera"));
-    _actionStart = m->addAction(QIcon(":/toolbar/start"), tr("Start Capture"), this, &PlotWindow::startCapture);
-    _actionStop = m->addAction(QIcon(":/toolbar/stop"), tr("Stop Capture"), this, &PlotWindow::stopCapture);
-
-    m = menuBar()->addMenu(tr("Help"));
+    auto m = menuBar()->addMenu(tr("Help"));
     auto help = HelpSystem::instance();
     m->addAction(QIcon(":/toolbar/home"), tr("Visit Homepage"), help, &HelpSystem::visitHomePage);
     m->addAction(QIcon(":/toolbar/bug"), tr("Send Bug Report"), help, &HelpSystem::sendBugReport);
+#undef M_
+#undef A_
 }
-
-class FlatToolBar : public QToolBar
-{
-protected:
-    void paintEvent(QPaintEvent*) { /* do nothing */ }
-};
 
 void PlotWindow::createToolBar()
 {
-    auto tb = new FlatToolBar;
+    auto tb = new Ori::Widgets::FlatToolBar;
     addToolBar(tb);
     tb->setMovable(false);
     tb->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
@@ -82,27 +100,14 @@ void PlotWindow::createToolBar()
 
 void PlotWindow::createStatusBar()
 {
-    auto sb = statusBar();
-
-    _labelCamera = new QLabel("Camera: VirtualDemo");
-    _labelCamera->setContentsMargins(0, 0, 6, 0);
-    sb->addWidget(_labelCamera);
-
-    sb->addWidget(new QLabel("|"));
-
-    _labelResolution = new QLabel("2592 × 2048 × 8bit");
-    _labelResolution->setContentsMargins(6, 0, 6, 0);
-    sb->addWidget(_labelResolution);
-
-    sb->addWidget(new QLabel("|"));
-
-    _labelFps = new QLabel(QStringLiteral("FPS: NA"));
-    _labelFps->setContentsMargins(6, 0, 6, 0);
-    sb->addWidget(_labelFps);
-
-    sb->addWidget(new QLabel("|"));
-
-    sb->addPermanentWidget(new QLabel(qApp->applicationVersion()));
+    _statusBar = new Ori::Widgets::StatusBar(STATUS_PANEL_COUNT);
+    _statusBar->addVersionLabel();
+    _statusBar->setText(STATUS_CAMERA, "VirtualDemo");
+    _statusBar->setText(STATUS_RESOLUTION, "2592 × 2048 × 8bit");
+    _statusBar->setText(STATUS_SEPARATOR_1, "|");
+    _statusBar->setText(STATUS_SEPARATOR_2, "|");
+    showFps(0);
+    setStatusBar(_statusBar);
 }
 
 class DataTableWidget : public QTableWidget {
@@ -189,7 +194,7 @@ void PlotWindow::startCapture()
 {
     _cameraThread = new VirtualDemoCamera(_plot->graphIntf(), _tableIntf, this);
     connect(_cameraThread, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
-    connect(_cameraThread, &VirtualDemoCamera::stats, this, &PlotWindow::statsReceived);
+    connect(_cameraThread, &VirtualDemoCamera::stats, this, &PlotWindow::showFps);
     connect(_cameraThread, &VirtualDemoCamera::started, this, [this]{ _plot->prepare(); });
     connect(_cameraThread, &VirtualDemoCamera::finished, this, &PlotWindow::captureStopped);
     _cameraThread->start();
@@ -209,7 +214,7 @@ void PlotWindow::stopCapture()
 void PlotWindow::captureStopped()
 {
     updateActions(false);
-    _labelFps->setText(QStringLiteral("FPS: NA"));
+    showFps(0);
     _cameraThread->deleteLater();
     _cameraThread = nullptr;
 }
@@ -220,9 +225,11 @@ void PlotWindow::dataReady()
     _tableIntf->showData();
 }
 
-void PlotWindow::statsReceived(int fps)
+void PlotWindow::showFps(int fps)
 {
-    _labelFps->setText(QStringLiteral("FPS: ") % QString::number(fps));
+    if (fps <= 0)
+        _statusBar->setText(STATUS_FPS, QStringLiteral("FPS: NA"));
+    else _statusBar->setText(STATUS_FPS, QStringLiteral("FPS: ") % QString::number(fps));
 }
 
 void PlotWindow::setThemeColors()
@@ -247,13 +254,26 @@ void PlotWindow::newWindow()
         qWarning() << "Unable to start another instance";
 }
 
-void PlotWindow::openImage()
+void PlotWindow::openImageDlg()
 {
-   auto info = StillImageCamera::start(_plot->graphIntf(), _tableIntf);
-   if (!info) return;
-   _labelCamera->setText(info->fileName);
-   _labelCamera->setToolTip(info->filePath);
-   _labelResolution->setText(QString("%1 × %2 × %3bit").arg(info->width).arg(info->height).arg(info->bits));
-   _plot->prepare();
-   dataReady();
+    auto info = StillImageCamera::start(_plot->graphIntf(), _tableIntf);
+    if (!info) return;
+    _mru->append(info->filePath);
+    _statusBar->setText(STATUS_CAMERA, info->fileName, info->filePath);
+    _statusBar->setText(STATUS_RESOLUTION, QString("%1 × %2 × %3bit").arg(info->width).arg(info->height).arg(info->bits));
+    showFps(0);
+    _plot->prepare();
+    dataReady();
+}
+
+void PlotWindow::openImage(const QString& fileName)
+{
+    auto info = StillImageCamera::start(fileName, _plot->graphIntf(), _tableIntf);
+    if (!info) return;
+    _mru->append(info->filePath);
+    _statusBar->setText(STATUS_CAMERA, info->fileName, info->filePath);
+    _statusBar->setText(STATUS_RESOLUTION, QString("%1 × %2 × %3bit").arg(info->width).arg(info->height).arg(info->bits));
+    showFps(0);
+    _plot->prepare();
+    dataReady();
 }

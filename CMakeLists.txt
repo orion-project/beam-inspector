@@ -59,15 +59,22 @@ set(PROJECT_SOURCES
 add_subdirectory(libs/qcustomplot)
 add_subdirectory(libs/beam_render)
 add_subdirectory(libs/beam_calc)
+add_subdirectory(libs/orion)
+
+set(LIB_RESOURCES
+    libs/orion/resources.qrc
+)
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(${PROJECT_NAME}
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
+        ${LIB_RESOURCES}
     )
 else()
     add_executable(${PROJECT_NAME}
         ${PROJECT_SOURCES}
+        ${LIB_RESOURCES}
     )
 endif()
 
@@ -75,6 +82,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     qcustomplot
     cgn_beam_render
     cgn_beam_calc
+    orion
     Qt::Widgets
 )
 
