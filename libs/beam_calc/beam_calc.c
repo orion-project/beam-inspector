@@ -16,42 +16,45 @@
 #define h c->h
 #define buf c->buf
 
-void cgn_calc_beam_naive(CgnBeamCalc *c, CgnBeamResult *r) {
-    double p = 0;
-    double xc = 0;
-    double yc = 0;
-    for (int i = 0; i < h; i++) {
-        int offset = i*w;
-        for (int j = 0; j < w; j++) {
-            p += buf[offset + j];
-            xc += buf[offset + j] * j;
-            yc += buf[offset + j] * i;
-        }
-    }
-    xc /= p;
-    yc /= p;
+#define cgn_calc_beam_naive                                        \
+    double p = 0;                                                  \
+    double xc = 0;                                                 \
+    double yc = 0;                                                 \
+    for (int i = 0; i < h; i++) {                                  \
+        int offset = i*w;                                          \
+        for (int j = 0; j < w; j++) {                              \
+            p += buf[offset + j];                                  \
+            xc += buf[offset + j] * j;                             \
+            yc += buf[offset + j] * i;                             \
+        }                                                          \
+    }                                                              \
+    xc /= p;                                                       \
+    yc /= p;                                                       \
+    double xx = 0, yy = 0, xy = 0;                                 \
+    for (int i = 0; i < h; i++) {                                  \
+        int offset = i*w;                                          \
+        for (int j = 0; j < w; j++) {                              \
+            xx += buf[offset + j] * sqr(j - xc);                   \
+            xy += buf[offset + j] * (j - xc)*(i - yc);             \
+            yy += buf[offset + j] * sqr(i - yc);                   \
+        }                                                          \
+    }                                                              \
+    xx /= p;                                                       \
+    xy /= p;                                                       \
+    yy /= p;                                                       \
+    double ss = sign(xx - yy) * sqrt(sqr(xx - yy) + 4*sqr(xy));    \
+    r->dx = 2.8284271247461903 * sqrt(xx + yy + ss);               \
+    r->dy = 2.8284271247461903 * sqrt(xx + yy - ss);               \
+    r->phi = 0.5 * atan2(2 * xy, xx - yy) * 57.29577951308232;     \
+    r->xc = xc;                                                    \
+    r->yc = yc;                                                    \
 
-    double xx = 0;
-    double yy = 0;
-    double xy = 0;
-    for (int i = 0; i < h; i++) {
-        int offset = i*w;
-        for (int j = 0; j < w; j++) {
-            xx += buf[offset + j] * sqr(j - xc);
-            xy += buf[offset + j] * (j - xc)*(i - yc);
-            yy += buf[offset + j] * sqr(i - yc);
-        }
-    }
-    xx /= p;
-    xy /= p;
-    yy /= p;
+void cgn_calc_beam_8_naive(CgnBeamCalc8 *c, CgnBeamResult *r) {
+    cgn_calc_beam_naive
+}
 
-    double ss = sign(xx - yy) * sqrt(sqr(xx - yy) + 4*sqr(xy));
-    r->dx = 2.8284271247461903 * sqrt(xx + yy + ss);
-    r->dy = 2.8284271247461903 * sqrt(xx + yy - ss);
-    r->phi = 0.5 * atan2(2 * xy, xx - yy) * 57.29577951308232;
-    r->xc = xc;
-    r->yc = yc;
+void cgn_calc_beam_16_naive(CgnBeamCalc16 *c, CgnBeamResult *r) {
+    cgn_calc_beam_naive
 }
 
 #ifdef USE_BLAS

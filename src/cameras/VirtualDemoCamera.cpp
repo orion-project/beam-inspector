@@ -43,7 +43,7 @@ class BeamRenderer
 {
 public:
     CgnBeamRender b;
-    CgnBeamCalc c;
+    CgnBeamCalc8 c;
     CgnBeamResult r;
     //CgnBeamCalcBlas c;
     //CgnBeamResultBlas r;
@@ -121,7 +121,7 @@ public:
             b.phi = phi_offset.next();
 
             tm = timer.elapsed();
-            cgn_calc_beam_naive(&c, &r);
+            cgn_calc_beam_8_naive(&c, &r);
             //cgn_calc_beam_blas(&c, &r);
             avgCalcTime = avgCalcTime*0.9 + (timer.elapsed() - tm)*0.1;
 

@@ -53,3 +53,25 @@ void cgn_render_beam_to_doubles(CgnBeamRender *b, double *d) {
         d[i] = (double)b->buf[i];
     }
 }
+
+void cgn_render_beam_to_doubles_norm_8(const uint8_t *b, int sz, double *d) {
+    double max = 0;
+    for (int i = 0; i < sz; i++) {
+        d[i] = (double)b[i];
+        if (d[i] > max) max = d[i];
+    }
+    for (int i = 0; i < sz; i++) {
+        d[i] /= max;
+    }
+}
+
+void cgn_render_beam_to_doubles_norm_16(const uint16_t *b, int sz, double *d) {
+    double max = 0;
+    for (int i = 0; i < sz; i++) {
+        d[i] = (double)b[i];
+        if (d[i] > max) max = d[i];
+    }
+    for (int i = 0; i < sz; i++) {
+        d[i] /= max;
+    }
+}
