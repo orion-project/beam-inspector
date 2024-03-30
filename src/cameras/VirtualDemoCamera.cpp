@@ -159,6 +159,11 @@ VirtualDemoCamera::VirtualDemoCamera(QSharedPointer<BeamGraphIntf> beam, QShared
     _render.reset(new BeamRenderer(beam, table, this));
 }
 
+VirtualDemoCamera::~VirtualDemoCamera()
+{
+    qDebug() << "~VirtualDemoCamera";
+}
+
 void VirtualDemoCamera::run()
 {
     _render->run();

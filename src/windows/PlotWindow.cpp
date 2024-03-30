@@ -1,6 +1,7 @@
 #include "PlotWindow.h"
 
 #include "app/HelpSystem.h"
+#include "cameras/StillImageCamera.h"
 #include "cameras/TableIntf.h"
 #include "cameras/VirtualDemoCamera.h"
 #include "widgets/Plot.h"
@@ -12,6 +13,7 @@
 #include <QHeaderView>
 #include <QLabel>
 #include <QMenuBar>
+#include <QProcess>
 #include <QStatusBar>
 #include <QStyleHints>
 #include <QTableWidget>
@@ -45,11 +47,16 @@ void PlotWindow::createMenuBar()
 {
     QMenu *m;
 
+    m = menuBar()->addMenu(tr("File"));
+    m->addAction(QIcon(":/toolbar/new"), tr("New Window"), QKeySequence::New, this, &PlotWindow::newWindow);
+    m->addSeparator();
+    _actionOpen = m->addAction(QIcon(":/toolbar/open"), tr("Open Beam Image..."), QKeySequence::Open, this, &PlotWindow::openImage);
+    m->addSeparator();
+    m->addAction(tr("Exit"), this, &PlotWindow::close);
+
     m = menuBar()->addMenu(tr("Camera"));
     _actionStart = m->addAction(QIcon(":/toolbar/start"), tr("Start Capture"), this, &PlotWindow::startCapture);
     _actionStop = m->addAction(QIcon(":/toolbar/stop"), tr("Stop Capture"), this, &PlotWindow::stopCapture);
-    m->addSeparator();
-    m->addAction(tr("Exit"), this, &PlotWindow::close);
 
     m = menuBar()->addMenu(tr("Help"));
     auto help = HelpSystem::instance();
@@ -171,6 +178,7 @@ void PlotWindow::closeEvent(QCloseEvent* ce)
 
 void PlotWindow::updateActions(bool started)
 {
+    _actionOpen->setDisabled(started);
     _actionStart->setDisabled(started);
     _actionStart->setVisible(!started);
     _actionStop->setDisabled(!started);
@@ -231,4 +239,21 @@ void PlotWindow::updateThemeColors()
         setThemeColors();
         _plot->setThemeColors(true);
     });
+}
+
+void PlotWindow::newWindow()
+{
+    if (!QProcess::startDetached(qApp->applicationFilePath(), {}))
+        qWarning() << "Unable to start another instance";
+}
+
+void PlotWindow::openImage()
+{
+   auto info = StillImageCamera::start(_plot->graphIntf(), _tableIntf);
+   if (!info) return;
+   _labelCamera->setText(info->fileName);
+   _labelCamera->setToolTip(info->filePath);
+   _labelResolution->setText(QString("%1 × %2 × %3bit").arg(info->width).arg(info->height).arg(info->bits));
+   _plot->prepare();
+   dataReady();
 }

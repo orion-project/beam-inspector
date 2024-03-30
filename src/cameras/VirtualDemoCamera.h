@@ -14,6 +14,7 @@ class VirtualDemoCamera : public QThread
 
 public:
     explicit VirtualDemoCamera(QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table, QObject *parent = nullptr);
+    ~VirtualDemoCamera();
 
 signals:
     void ready();
