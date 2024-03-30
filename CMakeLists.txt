@@ -40,10 +40,10 @@ set(PROJECT_SOURCES
     src/main.cpp
     src/app/HelpSystem.h
     src/app/HelpSystem.cpp
+    src/cameras/CameraBase.h
+    src/cameras/CameraBase.cpp
     src/cameras/StillImageCamera.h
     src/cameras/StillImageCamera.cpp
-    src/cameras/TableIntf.h
-    src/cameras/TableIntf.cpp
     src/cameras/VirtualDemoCamera.h
     src/cameras/VirtualDemoCamera.cpp
     src/plot/BeamGraph.h
@@ -54,6 +54,8 @@ set(PROJECT_SOURCES
     src/widgets/Plot.cpp
     src/windows/PlotWindow.h
     src/windows/PlotWindow.cpp
+    src/widgets/TableIntf.h
+    src/widgets/TableIntf.cpp
 )
 
 add_subdirectory(libs/qcustomplot)

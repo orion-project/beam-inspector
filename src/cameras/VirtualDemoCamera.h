@@ -1,6 +1,8 @@
 #ifndef VIRTUAL_DEMO_CAMERA_H
 #define VIRTUAL_DEMO_CAMERA_H
 
+#include "cameras/CameraBase.h"
+
 #include <QThread>
 #include <QSharedPointer>
 
@@ -14,6 +16,8 @@ class VirtualDemoCamera : public QThread
 
 public:
     explicit VirtualDemoCamera(QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table, QObject *parent = nullptr);
+
+    static CameraInfo info();
 
 signals:
     void ready();

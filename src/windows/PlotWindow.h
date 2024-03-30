@@ -5,8 +5,9 @@
 
 class QAction;
 class QTableWidget;
+class QTableWidgetItem;
 
-class CameraStats;
+class CameraInfo;
 class Plot;
 class TableIntf;
 class VirtualDemoCamera;
@@ -33,6 +34,7 @@ private:
     VirtualDemoCamera *_cameraThread = nullptr;
     QAction *_actionStart, *_actionStop, *_actionOpen;
     QTableWidget *_table;
+    QTableWidgetItem *_itemRenderTime;
     QSharedPointer<TableIntf> _tableIntf;
     QString imageFile;
     Ori::MruFileList *_mru;
@@ -51,12 +53,14 @@ private:
 
     void captureStopped();
     void dataReady();
+    void imageReady(const CameraInfo& info);
 
     void openImage(const QString& fileName);
     void updateActions(bool started);
     void updateThemeColors();
     void setThemeColors();
     void showFps(int fps);
+    void showInfo(const CameraInfo& info);
 };
 
 #endif // PLOT_WINDOW_H

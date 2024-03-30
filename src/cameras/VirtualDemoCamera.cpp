@@ -1,7 +1,7 @@
 #include "VirtualDemoCamera.h"
 
-#include "cameras/TableIntf.h"
 #include "plot/BeamGraphIntf.h"
+#include "widgets/TableIntf.h"
 
 #include "beam_calc.h"
 #include "beam_render.h"
@@ -65,12 +65,14 @@ public:
 
     BeamRenderer(QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table, VirtualDemoCamera *thread) : beam(beam), table(table), thread(thread)
     {
-        b.w = 2592;
-        b.h = 2048;
-        b.dx = 1474;
-        b.dy = 1120;
-        b.xc = 1534;
-        b.yc = 981;
+        auto info = VirtualDemoCamera::info();
+
+        b.w = info.width;
+        b.h = info.height;
+        b.dx = b.w/2;
+        b.dy = b.dx*0.75;
+        b.xc = b.w/2;
+        b.yc = b.h/2;
         b.p = 255;
         b.phi = 12;
         d = QVector<uint8_t>(b.w * b.h);
@@ -162,4 +164,14 @@ VirtualDemoCamera::VirtualDemoCamera(QSharedPointer<BeamGraphIntf> beam, QShared
 void VirtualDemoCamera::run()
 {
     _render->run();
+}
+
+CameraInfo VirtualDemoCamera::info()
+{
+    return {
+        .name = "Camera: VirtualDemo",
+        .width = 2592,
+        .height = 2048,
+        .bits = 8,
+    };
 }
