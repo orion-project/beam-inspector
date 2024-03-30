@@ -6,7 +6,9 @@
 #include "../../calc/pgm.h"
 
 #define FRAMES 30
-#define FILENAME "../../beams/beam_8b_ast.pgm"
+//#define FILENAME "../../beams/beam_8b_ast.pgm"
+#define FILENAME "../../beams/beam_16b_ast.pgm"
+#define HRD
 
 #define MEASURE(func) { \
     printf("\n" #func "\n"); \
@@ -24,7 +26,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
     printf("Frames: %d\n", FRAMES);
-    {
+    /*{
         CgnBeamCalcBlas c;
         c.w = w;
         c.h = h;
@@ -36,14 +38,22 @@ int main() {
         CgnBeamResultBlas r;
         MEASURE(cgn_calc_beam_blas);
         cgn_calc_beam_blas_free(&c);
-    }
+    }*/
     {
-        CgnBeamCalc c;
+        CgnBeamResult r;
+    #ifdef HRD
+        CgnBeamCalc16 c;
         c.w = w;
         c.h = h;
-        c.buf = (unsigned char*)(buf+offset);
-        CgnBeamResult r;
-        MEASURE(cgn_calc_beam_naive);
+        c.buf = (uint16_t*)(buf+offset);
+        MEASURE(cgn_calc_beam_16_naive);
+    #else
+        CgnBeamCalc8 c;
+        c.w = w;
+        c.h = h;
+        c.buf = (uint8_t*)(buf+offset);
+        MEASURE(cgn_calc_beam_8_naive);
+    #endif
     }
     free(buf);
     return EXIT_SUCCESS;

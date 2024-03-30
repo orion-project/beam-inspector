@@ -4,6 +4,7 @@
 #include "plot/BeamGraphIntf.h"
 
 #include "beam_calc.h"
+#include "beam_render.h"
 
 #include "tools/OriSettings.h"
 #include "helpers/OriDialogs.h"
@@ -47,14 +48,26 @@ std::optional<StillImageCamera::ImageInfo> StillImageCamera::start(const QString
     // declare explicitly as const to avoid deep copy
     const uchar* buf = img.bits();
 
-    CgnBeamCalc c;
-    c.w = img.width();
-    c.h = img.height();
-    c.buf = buf;
+    beam->init(img.width(), img.height(), 1);
 
     CgnBeamResult r;
-    cgn_calc_beam_naive(&c, &r);
-    beam->init(c.w, c.h, 255);
+
+    if (fmt == QImage::Format_Grayscale8) {
+        CgnBeamCalc8 c;
+        c.w = img.width();
+        c.h = img.height();
+        c.buf = (const uint8_t*)buf;
+        cgn_calc_beam_8_naive(&c, &r);
+        cgn_render_beam_to_doubles_norm_8(c.buf, c.w*c.h, beam->rawData());
+    } else {
+        CgnBeamCalc16 c;
+        c.w = img.width();
+        c.h = img.height();
+        c.buf = (const uint16_t*)buf;
+        cgn_calc_beam_16_naive(&c, &r);
+        cgn_render_beam_to_doubles_norm_16(c.buf, c.w*c.h, beam->rawData());
+    }
+
     beam->setResult(r);
     table->setResult(r, 0, 0);
 

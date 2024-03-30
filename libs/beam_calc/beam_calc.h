@@ -1,6 +1,8 @@
 #ifndef _CIGNUS_BEAM_CALC_H_
 #define _CIGNUS_BEAM_CALC_H_
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -41,8 +43,14 @@ void cgn_calc_beam_blas(CgnBeamCalcBlas *c, CgnBeamResultBlas *r);
 typedef struct {
     int w;
     int h;
-    const unsigned char *buf;
-} CgnBeamCalc;
+    const uint8_t *buf;
+} CgnBeamCalc8;
+
+typedef struct {
+    int w;
+    int h;
+    const uint16_t *buf;
+} CgnBeamCalc16;
 
 typedef struct {
     double xc;
@@ -52,7 +60,8 @@ typedef struct {
     double phi;
 } CgnBeamResult;
 
-void cgn_calc_beam_naive(CgnBeamCalc *c, CgnBeamResult *r);
+void cgn_calc_beam_8_naive(CgnBeamCalc8 *c, CgnBeamResult *r);
+void cgn_calc_beam_16_naive(CgnBeamCalc16 *c, CgnBeamResult *r);
 
 #ifdef __cplusplus
 }
