@@ -3,3 +3,7 @@ history:
     date: 2024-03-28
     changes:
       - text: First demo with virtual camera
+  - version: 0.0.2
+    date: 2024-04-??
+    changes:
+      - text: Can load and process single photo

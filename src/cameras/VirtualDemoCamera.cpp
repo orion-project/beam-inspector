@@ -92,7 +92,7 @@ public:
         yc_offset = RandomOffset(b.yc, b.yc-20, b.yc+20);
         phi_offset = RandomOffset(b.phi, b.phi-12, b.phi+12);
 
-        beam->init(b.w, b.h, b.p);
+        beam->init(b.w, b.h, 1);
     }
 
     void run() {
@@ -129,7 +129,7 @@ public:
 
             if (tm - prevReady >= PLOT_FRAME_DELAY_MS) {
                 prevReady = tm;
-                cgn_render_beam_to_doubles(&b, beam->rawData());
+                cgn_render_beam_to_doubles_norm_8(b.buf, b.w*b.h, beam->rawData());
                 table->setResult(r, avgRenderTime, avgCalcTime);
                 beam->setResult(r);
                 beam->invalidate();
