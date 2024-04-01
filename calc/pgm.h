@@ -95,6 +95,19 @@ uint8_t* read_pgm(const char* filename, int *w, int *h, int *offset) {
     ch++;
 
     *offset = ch - buf;
+
+    if (max_val > 255) {
+        // The most significant byte is first in PGM file
+        // while the memory has the opposite layout
+        // so we need to swap bytes before processing 16-bit images
+        char *d = buf + *offset;
+        for (int i = 0; i < (*w)*(*h); i++) {
+            char c = d[2*i];
+            d[2*i] = d[2*i+1];
+            d[2*i+1] = c;
+        }
+    }
+
     return (uint8_t*)buf;
 }
 

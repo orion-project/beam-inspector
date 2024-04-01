@@ -239,7 +239,7 @@ void PlotWindow::updateActions(bool started)
 void PlotWindow::startCapture()
 {
     showInfo(VirtualDemoCamera::info());
-    _itemRenderTime->setText(tr(" Render Time "));
+    _itemRenderTime->setText(tr(" Render time "));
     _cameraThread = new VirtualDemoCamera(_plot->graphIntf(), _tableIntf, this);
     connect(_cameraThread, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
     connect(_cameraThread, &VirtualDemoCamera::stats, this, &PlotWindow::showFps);
@@ -291,7 +291,7 @@ void PlotWindow::openImage(const QString& fileName)
 
 void PlotWindow::imageReady(const CameraInfo& info)
 {
-    _itemRenderTime->setText(tr(" Load Time "));
+    _itemRenderTime->setText(tr(" Load time "));
     _mru->append(info.descr);
     _plot->prepare();
     dataReady();

@@ -12,7 +12,6 @@ extern "C" {
 typedef struct {
     int w;
     int h;
-    unsigned char *buf;
     float *d;
     float *tx;
     float *ty;
@@ -37,8 +36,11 @@ typedef struct {
 int cgn_calc_beam_blas_init(CgnBeamCalcBlas *c);
 void cgn_calc_beam_blas_free(CgnBeamCalcBlas *c);
 void cgn_calc_beam_blas(CgnBeamCalcBlas *c, CgnBeamResultBlas *r);
+void cgn_calc_beam_blas_8(uint8_t *b, CgnBeamCalcBlas *c, CgnBeamResultBlas *r);
+void cgn_calc_beam_blas_16(uint16_t *b, CgnBeamCalcBlas *c, CgnBeamResultBlas *r);
 
 #endif // USE_BLAS
+
 
 typedef struct {
     int w;
