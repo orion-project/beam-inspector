@@ -135,10 +135,6 @@ void cgn_calc_beam_blas(CgnBeamCalcBlas *c, CgnBeamResultBlas *r) {
     COPY(w, s, x);
     COPY(h, s, y);
 
-    for (int i = 0; i < w*h; i++) {
-        d[i] = buf[i];
-    }
-
     GEMVT(h, w, d, u, tx);
     GEMV (h, w, d, u, ty);
     float p = SUM(w, tx);
@@ -161,6 +157,20 @@ void cgn_calc_beam_blas(CgnBeamCalcBlas *c, CgnBeamResultBlas *r) {
     dx = 2.8284271247461903 * sqrt(xx + yy + ss);
     dy = 2.8284271247461903 * sqrt(xx + yy - ss);
     phi = 0.5 * atan2(2 * xy, xx - yy) * 57.29577951308232;
+}
+
+void cgn_calc_beam_blas_8(uint8_t *b, CgnBeamCalcBlas *c, CgnBeamResultBlas *r) {
+    for (int i = 0; i < w*h; i++) {
+        d[i] = b[i];
+    }
+    cgn_calc_beam_blas(c, r);
+}
+
+void cgn_calc_beam_blas_16(uint16_t *b, CgnBeamCalcBlas *c, CgnBeamResultBlas *r) {
+    for (int i = 0; i < w*h; i++) {
+        d[i] = b[i];
+    }
+    cgn_calc_beam_blas(c, r);
 }
 
 #endif // USE_BLAS

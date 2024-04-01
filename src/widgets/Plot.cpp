@@ -84,6 +84,8 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     l->setContentsMargins(0, 0, 0, 0);
     l->addWidget(_plot);
 
+    setCursor(Qt::ArrowCursor);
+
     renderDemoBeam();
     QTimer::singleShot(0, this, [this]{ recalcLimits(true); });
 }
