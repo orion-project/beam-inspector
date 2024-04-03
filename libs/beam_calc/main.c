@@ -19,13 +19,6 @@
 }
 
 int main() {
-    // {
-    // uint16_t v = 256;
-    // uint8_t *b = &v;
-    // printf("%d %d\n", b[0], b[1]);
-    // return;
-    // }
-
     int w8, h8, offset8;
     uint8_t *buf8 = read_pgm(FILENAME_8, &w8, &h8, &offset8);
     if (!buf8) {
