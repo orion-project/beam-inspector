@@ -40,7 +40,8 @@ import imageio.v3 as iio
 import laserbeamsize as lbs
 import time
 
-FRAMES = 30
+#FRAMES = 30
+FRAMES = 1
 
 # dot* files are tiny and do not have practical meaning but they allows to track calculations in each pixel
 #FILENAME = "../beams/dot_8b.pgm"
@@ -84,7 +85,10 @@ def calc_bullseye(im):
 def measure(func):
     tm = time.process_time()
     for i in range(FRAMES):
-        x, y, dx, dy, phi = func(image)
+        x, y, dx, dy, phi = func(image, 
+                                #corner_fraction=0.2,
+                                #iso_noise=False,
+                                )
         print(f"{i}: center=[{x:.0f},{y:.0f}], diam=[{dx:.0f},{dy:.0f}], angle={(phi * 180/3.1416):.1f}°")
     elapsed = time.process_time() - tm
     print(f"Elapsed: {elapsed:.3f}, FPS: {(FRAMES / elapsed) if elapsed > 0 else 0:.1f}")
@@ -95,11 +99,11 @@ if __name__ == "__main__":
 
     print(f"Frames: {FRAMES}")
 
-    print("\ncalc_bullseye")
-    measure(calc_bullseye)
+    #print("\ncalc_bullseye")
+    #measure(calc_bullseye)
 
-    print("\nlbs.basic_beam_size")
-    measure(lbs.basic_beam_size)
+    #print("\nlbs.basic_beam_size")
+    #measure(lbs.basic_beam_size)
 
     print("\nlbs.beam_size")
     measure(lbs.beam_size)
