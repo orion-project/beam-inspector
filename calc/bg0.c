@@ -1,3 +1,32 @@
+/*
+
+Comparison of the Approximation method for baseline offset correction (ISO 11146-3 [3.4.3])
+with the Statistical method (ISO 11146-3 [3.4.2]) which is mostly the same but includes
+an additional step for averaging over all unlluminated pixels.
+
+This averaging takes additional time but probably does not increase the accuracy a lot.
+ISO 11146-3 [3.4.2] says:
+This method (the approximation) may not only provide guess-values for the statistical method.
+In many cases the accuracy of this offset fine correction will be __sufficient__
+
+--------------------------------------
+GCC 11.2x64 Intel i7-2600 CPU 3.40GHz
+
+Image: ../tmp/real_beams/test_image_45.pgm
+Image size: 2592x2048
+Max gray: 65535
+Frames: 1
+
+lbs_calc_beam (statistical)
+center=[1348,1058], diam=[968,1173], angle=-55.4, iters=1
+Elapsed: 0.047s, FPS: 21.3, 47.00ms/frame
+
+cgn_calc_beam (approximation)
+center=[1348,1058], diam=[975,1174], angle=-54.4, iters=1
+Elapsed: 0.030s, FPS: 33.3, 30.00ms/frame
+
+*/
+
 #include <math.h>
 #include <time.h>
 #include "pgm.h"
@@ -26,7 +55,7 @@ typedef struct {
     double *subtracted, *subtracted_no_noise;
     int x1, x2, y1, y2, iters;
 
-    double mean, stdev, min, max;
+    double mean, sdev, min, max;
     double dx, dy, xc, yc, phi;
 } BeamCalc;
 
@@ -78,7 +107,7 @@ void lbs_corner_background(BeamCalc *c) {
     s = sqrt(s / (double)k);
 
     c->mean = m;
-    c->stdev = s;
+    c->sdev = s;
 }
 
 void lbs_iso_background(BeamCalc *c) {
@@ -88,7 +117,7 @@ void lbs_iso_background(BeamCalc *c) {
     pixel *buf = c->buf;
     double *tmp = c->subtracted;
 
-    // Mean and stdev of background in corners of image
+    // Mean and sdev of background in corners of image
     int k = 0;
     double m = 0;
     for (int i = 0; i < h; i++) {
@@ -132,17 +161,24 @@ void lbs_iso_background(BeamCalc *c) {
     s = sqrt(s / (double)k);
 
     c->mean = m;
-    c->stdev = s;
+    c->sdev = s;
 }
 
 void lbs_subtract_iso_background(BeamCalc *c) {
+    // The algorithm is from laserbeamsize package
+
     int w = c->w, h = c->h;
     int dw = w * c->corner_fraction;
     int dh = h * c->corner_fraction;
     pixel *buf = c->buf;
     double *tmp = c->subtracted;
 
-    // Mean and stdev of background in corners of image
+    // ISO 11146-3 [3.4.2]:
+    // Guess-values for the baseline offset and the noise,
+    // may be either extracted from a non-illuminated dark image
+    // or from non-illuminated areas within the measured distribution
+    //
+    // Mean and sdev of background in corners of image:
     int k = 0;
     double m = 0;
     for (int i = 0; i < h; i++) {
@@ -166,13 +202,13 @@ void lbs_subtract_iso_background(BeamCalc *c) {
     s = sqrt(s / (double)k);
     
     c->mean = m;
-    c->stdev = s;
+    c->sdev = s;
 
-    // The algorithm is from laserbeamsize package
-    // Not sure why they do additional background calculation over all unilluminated pixels
-    // It seems ISO 11146-3 claims that corner pixels are enough
-
-    // Background for unilluminated pixels in an image
+    // All pixels whose grey values exceed the threshold assumed to be illuminated
+    // and which must be included in beam width calculations.
+    // The other pixels are assumed to be non-illuminated,
+    // their average gives the baseline offset value,
+    // which has to be subtracted from the measured data:
     double th = m + c->nT * s;
 
     k = 0;
@@ -193,7 +229,7 @@ void lbs_subtract_iso_background(BeamCalc *c) {
     s = sqrt(s / (double)k);
     
     c->mean = m;
-    c->stdev = s;
+    c->sdev = s;
 
     // Image with ISO 11146 background subtracted.
     th = c->nT * s;
@@ -282,7 +318,10 @@ void cgn_subtract_background(BeamCalc *c) {
     pixel *buf = c->buf;
     double *tmp = c->subtracted;
 
-    // Mean and stdev of background in corners of image
+    // ISO 11146-3 [3.4.3]:
+    // Determining the baseline offset by averaging a sample of N non-illuminated points
+    // (for example arrays of n × m pixels in each of the four corners) within the image
+    // directly gives the offset, which has to be subtracted from the measured distribution.
     int k = 0;
     double m = 0;
     for (int i = 0; i < h; i++) {
@@ -306,7 +345,7 @@ void cgn_subtract_background(BeamCalc *c) {
     s = sqrt(s / (double)k);
 
     c->mean = m;
-    c->stdev = s;
+    c->sdev = s;
 
     double th = m + c->nT * s;
     c->min = 1e10;
@@ -401,15 +440,15 @@ int main() {
 
 #ifdef measure_lbs_corner_background
     MEASURE(lbs_corner_background(&c));
-    printf("mean=%f stdev=%f\n", c.mean, c.stdev);
+    printf("mean=%f sdev=%f\n", c.mean, c.sdev);
 #endif
 #ifdef measure_cgn_calc_background
     MEASURE(cgn_calc_background(&c));
-    printf("mean=%f stdev=%f\n", c.mean, c.stdev);
+    printf("mean=%f sdev=%f\n", c.mean, c.sdev);
 #endif
 #ifdef measure_lbs_iso_background
     MEASURE(lbs_iso_background(&c));
-    printf("mean=%f stdev=%f\n", c.mean, c.stdev);
+    printf("mean=%f sdev=%f\n", c.mean, c.sdev);
 #endif
 #ifdef measure_lbs_subtract_iso_background
     printf("\nlbs_subtract_iso_background\n");

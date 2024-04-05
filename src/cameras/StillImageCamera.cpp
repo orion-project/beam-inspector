@@ -56,32 +56,26 @@ std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, QShar
     // declare explicitly as const to avoid deep copy
     const uchar* buf = img.bits();
 
-    timer.restart();
-    qint64 calcTime;
+    CgnBeamCalc c;
+    c.w = img.width();
+    c.h = img.height();
+    c.bits = fmt == QImage::Format_Grayscale8 ? 8 : 16;
+    c.buf = (uint8_t*)buf;
 
     CgnBeamResult r;
+    r.x1 = 0, r.x2 = c.w;
+    r.y1 = 0, r.y2 = c.h;
+
+    timer.restart();
+    cgn_calc_beam_naive(&c, &r);
+    auto calcTime = timer.elapsed();
+
+    timer.restart();
     if (fmt == QImage::Format_Grayscale8) {
-        CgnBeamCalc8 c;
-        c.w = img.width();
-        c.h = img.height();
-        c.buf = (const uint8_t*)buf;
-        cgn_calc_beam_8_naive(&c, &r);
-        calcTime = timer.elapsed();
-
-        timer.restart();
-        cgn_render_beam_to_doubles_norm_8(c.buf, c.w*c.h, beam->rawData());
+        cgn_render_beam_to_doubles_norm_8((const uint8_t*)buf, c.w*c.h, beam->rawData());
     } else {
-        CgnBeamCalc16 c;
-        c.w = img.width();
-        c.h = img.height();
-        c.buf = (const uint16_t*)buf;
-        cgn_calc_beam_16_naive(&c, &r);
-        calcTime = timer.elapsed();
-
-        timer.restart();
-        cgn_render_beam_to_doubles_norm_16(c.buf, c.w*c.h, beam->rawData());
+        cgn_render_beam_to_doubles_norm_16((const uint16_t*)buf, c.w*c.h, beam->rawData());
     }
-
     auto copyTime = timer.elapsed();
 
     qDebug() << "loadTime" << loadTime << "calcTime" << calcTime << "copyTime" << copyTime;

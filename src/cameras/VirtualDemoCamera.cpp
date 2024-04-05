@@ -43,7 +43,7 @@ class BeamRenderer
 {
 public:
     CgnBeamRender b;
-    CgnBeamCalc8 c;
+    CgnBeamCalc c;
     CgnBeamResult r;
     //CgnBeamCalcBlas c;
     //CgnBeamResultBlas r;
@@ -81,10 +81,14 @@ public:
         c.w = b.w;
         c.h = b.h;
         c.buf = b.buf;
+        c.bits = 8;
 //        if (cgn_calc_beam_blas_init(&c)) {
 //            cgn_calc_beam_blas_free(&c);
 //            qCritical() << "Failed to initialize calc buffers";
 //        }
+
+        r.x1 = 0, r.x2 = c.w;
+        r.y1 = 0, r.y2 = c.h;
 
         dx_offset = RandomOffset(b.dx, b.dx-20, b.dx+20);
         dy_offset = RandomOffset(b.dy, b.dy-20, b.dy+20);
@@ -123,7 +127,7 @@ public:
             b.phi = phi_offset.next();
 
             tm = timer.elapsed();
-            cgn_calc_beam_8_naive(&c, &r);
+            cgn_calc_beam_naive(&c, &r);
             //cgn_calc_beam_blas(&c, &r);
             avgCalcTime = avgCalcTime*0.9 + (timer.elapsed() - tm)*0.1;
 
