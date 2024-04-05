@@ -10,19 +10,16 @@
 
 #define sign(s) ((s) < 0 ? -1 : ((s) > 0 ? 1 : 0))
 #define sqr(s) ((s)*(s))
-#define max(a,b) ((a > b) ? a : b)
+#define min(a,b) ((a) < (b) ? (a) : (b))
+#define max(a,b) ((a) > (b) ? (a) : (b))
 
-#define w c->w
-#define h c->h
-#define buf c->buf
-
-#define cgn_calc_beam_naive                                        \
+#define cgn_calc_beam                                              \
     double p = 0;                                                  \
     double xc = 0;                                                 \
     double yc = 0;                                                 \
-    for (int i = 0; i < h; i++) {                                  \
-        int offset = i*w;                                          \
-        for (int j = 0; j < w; j++) {                              \
+    for (int i = r->y1; i < r->y2; i++) {                          \
+        int offset = i * c->w;                                     \
+        for (int j = r->x1; j < r->x2; j++) {                      \
             p += buf[offset + j];                                  \
             xc += buf[offset + j] * j;                             \
             yc += buf[offset + j] * i;                             \
@@ -30,10 +27,12 @@
     }                                                              \
     xc /= p;                                                       \
     yc /= p;                                                       \
-    double xx = 0, yy = 0, xy = 0;                                 \
-    for (int i = 0; i < h; i++) {                                  \
-        int offset = i*w;                                          \
-        for (int j = 0; j < w; j++) {                              \
+    double xx = 0;                                                 \
+    double yy = 0;                                                 \
+    double xy = 0;                                                 \
+    for (int i = r->y1; i < r->y2; i++) {                          \
+        int offset = i * c->w;                                     \
+        for (int j = r->x1; j < r->x2; j++) {                      \
             xx += buf[offset + j] * sqr(j - xc);                   \
             xy += buf[offset + j] * (j - xc)*(i - yc);             \
             yy += buf[offset + j] * sqr(i - yc);                   \
@@ -49,12 +48,103 @@
     r->xc = xc;                                                    \
     r->yc = yc;                                                    \
 
-void cgn_calc_beam_8_naive(CgnBeamCalc8 *c, CgnBeamResult *r) {
-    cgn_calc_beam_naive
+void cgn_calc_beam_u8(const uint8_t *buf, const CgnBeamCalc *c, CgnBeamResult *r) {
+    cgn_calc_beam
 }
 
-void cgn_calc_beam_16_naive(CgnBeamCalc16 *c, CgnBeamResult *r) {
-    cgn_calc_beam_naive
+void cgn_calc_beam_u16(const uint16_t *buf, const CgnBeamCalc *c, CgnBeamResult *r) {
+    cgn_calc_beam
+}
+
+void cgn_calc_beam_f64(const double *buf, const CgnBeamCalc *c, CgnBeamResult *r) {
+    cgn_calc_beam
+}
+
+void cgn_calc_beam_naive(const CgnBeamCalc *c, CgnBeamResult *r) {
+    if (c->bits > 8) {
+        cgn_calc_beam_u16((const uint16_t*)(c->buf), c, r);
+    } else {
+        cgn_calc_beam_u8((const uint8_t*)(c->buf), c, r);
+    }
+}
+
+#define cgn_subtract_bkgnd                              \
+    int w = c->w;                                       \
+    int h = c->h;                                       \
+    int dw = w * b->corner_fraction;                    \
+    int dh = h * b->corner_fraction;                    \
+    double *t = b->subtracted;                          \
+                                                        \
+    int k = 0;                                          \
+    double m = 0;                                       \
+    for (int i = 0; i < h; i++) {                       \
+        if (i < dh || i >= h-dh) {                      \
+            int offset = i*w;                           \
+            for (int j = 0; j < w; j++) {               \
+                if (j < dw || j >= w-dw) {              \
+                    t[k] = buf[offset + j];             \
+                    m += t[k];                          \
+                    k++;                                \
+                }                                       \
+            }                                           \
+        }                                               \
+    }                                                   \
+    m /= (double)k;                                     \
+                                                        \
+    double s = 0;                                       \
+    for (int i = 0; i < k; i++) {                       \
+        s += sqr(t[i] - m);                             \
+    }                                                   \
+    s = sqrt(s / (double)k);                            \
+                                                        \
+    b->mean = m;                                        \
+    b->sdev = s;                                        \
+                                                        \
+    double th = m + b->nT * s;                          \
+    b->min = 1e10;                                      \
+    b->max = -1e10;                                     \
+    for (int i = 0; i < w*h; i++) {                     \
+        t[i] = (buf[i] > th) ? (buf[i] - m) : 0;        \
+        if (t[i] > b->max) b->max = t[i];               \
+        else if (t[i] < b->min) b->min = t[i];          \
+    }
+
+void cgn_subtract_bkgnd_u8(const uint8_t *buf, const CgnBeamCalc *c, CgnBeamBkgnd *b) {
+    cgn_subtract_bkgnd
+}
+
+void cgn_subtract_bkgnd_u16(const uint16_t *buf, const CgnBeamCalc *c, CgnBeamBkgnd *b) {
+    cgn_subtract_bkgnd
+}
+
+void cgn_calc_beam_bkgnd(const CgnBeamCalc *c, CgnBeamBkgnd *b, CgnBeamResult *r) {
+    if (c->bits > 8) {
+        cgn_subtract_bkgnd_u16((const uint16_t*)(c->buf), c, b);
+    } else {
+        cgn_subtract_bkgnd_u8((const uint8_t*)(c->buf), c, b);
+    }
+
+    r->x1 = 0, r->x2 = c->w;
+    r->y1 = 0, r->y2 = c->h;
+    cgn_calc_beam_f64(b->subtracted, c, r);
+
+    for (b->iters = 0; b->iters < b->max_iter; b->iters++) {
+        double xc0 = r->xc, yc0 = r->yc;
+        double dx0 = r->dx, dy0 = r->dy;
+        r->x1 = xc0 - dx0/2.0 * b->mask_diam; r->x1 = max(r->x1, 0);
+        r->x2 = xc0 + dx0/2.0 * b->mask_diam; r->x2 = min(r->x2, c->w);
+        r->y1 = yc0 - dy0/2.0 * b->mask_diam; r->y1 = max(r->y1, 0);
+        r->y2 = yc0 + dy0/2.0 * b->mask_diam; r->y2 = min(r->y2, c->h);
+
+        cgn_calc_beam_f64(b->subtracted, c, r);
+
+        double th = min(dx0, dy0) * b->precision;
+        if (fabs(r->xc - xc0) < th && fabs(r->yc - yc0) < th &&
+            fabs(r->dx - dx0) < th && fabs(r->dy - dy0) < th) {
+            b->iters++;
+            break;
+        }
+    }
 }
 
 #ifdef USE_BLAS
@@ -73,6 +163,9 @@ void cgn_calc_beam_16_naive(CgnBeamCalc16 *c, CgnBeamResult *r) {
 #define GEMVT(m, n, a, x, y) cblas_sgemv(CblasRowMajor, CblasTrans,   m, n, 1, a, n, x, 1, 0, y, 1)
 #define DOT(s, x, y) cblas_sdot(s, x, 1, y, 1)
 
+#define w c->w
+#define h c->h
+#define buf c->buf
 #define d c->d
 #define tx c->tx
 #define ty c->ty
@@ -159,14 +252,14 @@ void cgn_calc_beam_blas(CgnBeamCalcBlas *c, CgnBeamResultBlas *r) {
     phi = 0.5 * atan2(2 * xy, xx - yy) * 57.29577951308232;
 }
 
-void cgn_calc_beam_blas_8(uint8_t *b, CgnBeamCalcBlas *c, CgnBeamResultBlas *r) {
+void cgn_calc_beam_blas_u8(const uint8_t *b, CgnBeamCalcBlas *c, CgnBeamResultBlas *r) {
     for (int i = 0; i < w*h; i++) {
         d[i] = b[i];
     }
     cgn_calc_beam_blas(c, r);
 }
 
-void cgn_calc_beam_blas_16(uint16_t *b, CgnBeamCalcBlas *c, CgnBeamResultBlas *r) {
+void cgn_calc_beam_blas_u16(const uint16_t *b, CgnBeamCalcBlas *c, CgnBeamResultBlas *r) {
     for (int i = 0; i < w*h; i++) {
         d[i] = b[i];
     }
