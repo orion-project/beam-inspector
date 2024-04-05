@@ -157,10 +157,10 @@ int main() {
         MEASURE("naive_16", cgn_calc_beam_naive(&c, &r));
 
         CgnBeamBkgnd b;
-        b.max_iter = 25;
-        b.precision = 0.001;
-        //b.max_iter = 0;
-        //b.precision = 0.05;
+        //b.max_iter = 25;
+        b.max_iter = 0;
+        //b.precision = 0.001;
+        b.precision = 0.05;
         b.corner_fraction = 0.035;
         b.nT = 3;
         b.mask_diam = 3;

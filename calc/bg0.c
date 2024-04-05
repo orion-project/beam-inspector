@@ -34,7 +34,8 @@ Elapsed: 0.030s, FPS: 33.3, 30.00ms/frame
 #define FRAMES 1
 //#define FILENAME "../beams/beam_8b_ast.pgm"
 //#define FILENAME "../beams/dot_8b_ast.pgm"
-#define FILENAME "../tmp/real_beams/test_image_45.pgm"
+//#define FILENAME "../tmp/real_beams/test_image_45.pgm"
+#define FILENAME "../tmp/real_beams/test_image_35.pgm"
 //#define CORNER_FRACTION 0.2
 #define CORNER_FRACTION 0.035
 
@@ -276,7 +277,7 @@ void calc_beam_basic(double *buf, BeamCalc *c) {
     double ss = sign(xx - yy) * sqrt(sqr(xx - yy) + 4*sqr(xy));
     c->dx = 2.8284271247461903 * sqrt(xx + yy + ss);
     c->dy = 2.8284271247461903 * sqrt(xx + yy - ss);
-    c->phi = 0.5 * atan2(2 * xy, xx - yy);
+    c->phi = 0.5 * atan(2 * xy / (xx - yy));
     c->xc = xc;
     c->yc = yc;
 }

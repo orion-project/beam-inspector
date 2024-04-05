@@ -44,7 +44,7 @@
     double ss = sign(xx - yy) * sqrt(sqr(xx - yy) + 4*sqr(xy));    \
     r->dx = 2.8284271247461903 * sqrt(xx + yy + ss);               \
     r->dy = 2.8284271247461903 * sqrt(xx + yy - ss);               \
-    r->phi = 0.5 * atan2(2 * xy, xx - yy) * 57.29577951308232;     \
+    r->phi = 0.5 * atan(2 * xy / (xx - yy)) * 57.29577951308232;   \
     r->xc = xc;                                                    \
     r->yc = yc;                                                    \
 
@@ -144,6 +144,29 @@ void cgn_calc_beam_bkgnd(const CgnBeamCalc *c, CgnBeamBkgnd *b, CgnBeamResult *r
             b->iters++;
             break;
         }
+    }
+}
+
+#define cgn_copy_to                             \
+    *max = 0;                                   \
+    for (int i = 0; i < sz; i++) {              \
+        tgt[i] = buf[i];                        \
+        if (tgt[i] > *max) *max = tgt[i];       \
+    }
+
+void cgn_copy_u8_to_f64(const uint8_t *buf, int sz, double *tgt, double *max) {
+    cgn_copy_to
+}
+
+void cgn_copy_u16_to_f64(const uint16_t *buf, int sz, double *tgt, double *max) {
+    cgn_copy_to
+}
+
+void cgn_copy_to_f64(const CgnBeamCalc *c, double *tgt, double *max) {
+    if (c->bits > 8) {
+        cgn_copy_u16_to_f64((const uint16_t*)(c->buf), c->w*c->h, tgt, max);
+    } else {
+        cgn_copy_u8_to_f64((const uint8_t*)(c->buf), c->w*c->h, tgt, max);
     }
 }
 

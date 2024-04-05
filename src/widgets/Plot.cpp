@@ -28,9 +28,25 @@ static void setDefaultAxisFormat(QCPAxis *axis)
 
 Plot::Plot(QWidget *parent) : QWidget{parent}
 {
+//    Grad0 in img/gradient.svg
+//    QMap<double, QColor> rainbowColors {
+//        { 0.0, QColor(0x2b053e) },
+//        { 0.1, QColor(0xc2077c) },
+//        { 0.15, QColor(0xbe05f3) },
+//        { 0.2, QColor(0x2306fb) },
+//        { 0.3, QColor(0x0675db) },
+//        { 0.4, QColor(0x05f9ee) },
+//        { 0.5, QColor(0x04ca04) },
+//        { 0.65, QColor(0xfafd05) },
+//        { 0.8, QColor(0xfc8705) },
+//        { 0.9, QColor(0xfc4d06) },
+//        { 1.0, QColor(0xfc5004) },
+//    };
+
+    // Grad2 in img/gradient.svg
     QMap<double, QColor> rainbowColors {
         { 0.0, QColor(0x2b053e) },
-        { 0.1, QColor(0xc2077c) },
+        { 0.075, QColor(0xd60c8a) },
         { 0.15, QColor(0xbe05f3) },
         { 0.2, QColor(0x2306fb) },
         { 0.3, QColor(0x0675db) },
@@ -41,6 +57,22 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
         { 0.9, QColor(0xfc4d06) },
         { 1.0, QColor(0xfc5004) },
     };
+
+//    Grad1 in img/gradient.svg
+//    QMap<double, QColor> rainbowColors {
+//        { 0.00, QColor(0x2b053e) },
+//        { 0.05, QColor(0xc4138a) },
+//        { 0.10, QColor(0x9e0666) },
+//        { 0.15, QColor(0xbe05f3) },
+//        { 0.20, QColor(0x2306fb) },
+//        { 0.30, QColor(0x0675db) },
+//        { 0.40, QColor(0x05f9ee) },
+//        { 0.50, QColor(0x04ca04) },
+//        { 0.65, QColor(0xfafd05) },
+//        { 0.80, QColor(0xfc8705) },
+//        { 0.90, QColor(0xfc4d06) },
+//        { 1.00, QColor(0xfc5004) },
+//    };
 
     _plot = new QCustomPlot;
     _plot->yAxis->setRangeReversed(true);
@@ -70,7 +102,7 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
 
     _lineX = new QCPItemStraightLine(_plot);
     _lineY = new QCPItemStraightLine(_plot);
-    _lineX->setPen(QPen(Qt::white));
+    _lineX->setPen(QPen(Qt::yellow));
     _lineY->setPen(QPen(Qt::white));
 
     // Make sure the axis rect and color scale synchronize their bottom and top margins:
@@ -113,8 +145,8 @@ void Plot::renderDemoBeam()
     r.phi = b.phi;
 
     auto g = graphIntf();
-    g->init(b.w, b.h, b.p);
-    g->setResult(r);
+    g->init(b.w, b.h);
+    g->setResult(r, 0, b.p);
     cgn_render_beam_to_doubles(&b, g->rawData());
 
     _imageW = b.w;

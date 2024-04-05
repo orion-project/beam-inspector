@@ -8,11 +8,10 @@ BeamGraphIntf::BeamGraphIntf(QCPColorMap *colorMap, QCPColorScale *colorScale,
 {
 }
 
-void BeamGraphIntf::init(int w, int h, int p)
+void BeamGraphIntf::init(int w, int h)
 {
     _beamData = new BeamColorMapData(w, h);
     _colorMap->setData(_beamData);
-    _colorScale->setDataRange(QCPRange(0, p));
 }
 
 double* BeamGraphIntf::rawData() const
@@ -25,7 +24,7 @@ void BeamGraphIntf::invalidate() const
     _beamData->invalidate();
 }
 
-void BeamGraphIntf::setResult(const CgnBeamResult& r)
+void BeamGraphIntf::setResult(const CgnBeamResult& r, double min, double max)
 {
     auto phi = qDegreesToRadians(r.phi);
     auto cos_phi = cos(phi);
@@ -42,4 +41,6 @@ void BeamGraphIntf::setResult(const CgnBeamResult& r)
     _shape->dx = r.dx;
     _shape->dy = r.dy;
     _shape->phi = r.phi;
+
+    _colorScale->setDataRange(QCPRange(min, max));
 }

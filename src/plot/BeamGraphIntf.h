@@ -20,9 +20,9 @@ public:
     BeamGraphIntf(QCPColorMap *colorMap, QCPColorScale *colorScale,
         BeamEllipse *shape, QCPItemStraightLine *lineX, QCPItemStraightLine *lineY);
 
-    void init(int w, int h, int p);
+    void init(int w, int h);
     double* rawData() const;
-    void setResult(const CgnBeamResult& r);
+    void setResult(const CgnBeamResult& r, double min, double max);
     void invalidate() const;
 
 private:
