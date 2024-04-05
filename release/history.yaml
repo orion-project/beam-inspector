@@ -7,3 +7,4 @@ history:
     date: 2024-04-??
     changes:
       - text: Can load and process single photo
+      - text: Background subtraction added

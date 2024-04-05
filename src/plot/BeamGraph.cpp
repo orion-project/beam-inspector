@@ -21,8 +21,8 @@ void BeamEllipse::draw(QCPPainter *painter)
 {
     double x = parentPlot()->xAxis->coordToPixel(xc);
     double y = parentPlot()->yAxis->coordToPixel(yc);
-    double rx = parentPlot()->xAxis->coordToPixel(dx/2.0);
-    double ry = parentPlot()->yAxis->coordToPixel(dy/2.0);
+    double rx = parentPlot()->xAxis->coordToPixel(xc + dx/2.0) - x;
+    double ry = parentPlot()->yAxis->coordToPixel(yc + dy/2.0) - y;
     auto t = painter->transform();
     painter->translate(x, y);
     painter->rotate(phi);

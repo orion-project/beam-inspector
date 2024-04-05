@@ -14,4 +14,11 @@ struct CameraInfo
     QString resolutionStr() const;
 };
 
+struct CameraSettings
+{
+    bool subtractBackground = true;
+
+    void print();
+};
+
 #endif // CAMERA_BASE_H

@@ -89,6 +89,7 @@ typedef struct {
 
 void cgn_calc_beam_naive(const CgnBeamCalc *c, CgnBeamResult *r);
 void cgn_calc_beam_bkgnd(const CgnBeamCalc *c, CgnBeamBkgnd *b, CgnBeamResult *r);
+void cgn_copy_to_f64(const CgnBeamCalc *c, double *tgt, double *max);
 
 #ifdef __cplusplus
 }

@@ -47,8 +47,8 @@ FRAMES = 1
 #FILENAME = "../beams/dot_8b.pgm"
 #FILENAME = "../beams/dot_8b_ast.pgm"
 #FILENAME = "../beams/beam_8b.pgm"
-FILENAME = "../beams/beam_8b_ast.pgm"
-
+#FILENAME = "../beams/beam_8b_ast.pgm"
+FILENAME = "../tmp/real_beams/test_image_45.pgm"
 
 # Alternative version is taken from Bullseye projects
 # https://github.com/jordens/bullseye
