@@ -32,13 +32,14 @@ protected:
 private:
     Plot *_plot;
     VirtualDemoCamera *_cameraThread = nullptr;
-    QAction *_actionStart, *_actionStop, *_actionOpen;
+    QAction *_actionStart, *_actionStop, *_actionOpen, *_actionCamSettings;
     QTableWidget *_table;
     QTableWidgetItem *_itemRenderTime;
     QSharedPointer<TableIntf> _tableIntf;
     QString imageFile;
     Ori::MruFileList *_mru;
     Ori::Widgets::StatusBar *_statusBar;
+    QString _stillImageFile;
 
     void createMenuBar();
     void createToolBar();
@@ -50,6 +51,7 @@ private:
     void openImageDlg();
     void startCapture();
     void stopCapture();
+    void editCamSettings();
 
     void captureStopped();
     void dataReady();

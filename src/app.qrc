@@ -4,6 +4,7 @@
         <file alias="home">../img/toolbar/home.svg</file>
         <file alias="new">../img/toolbar/new.svg</file>
         <file alias="open">../img/toolbar/open_beam.svg</file>
+        <file alias="settings">../img/toolbar/settings.svg</file>
         <file alias="start">../img/toolbar/start.svg</file>
         <file alias="stop">../img/toolbar/pause.svg</file>
     </qresource>

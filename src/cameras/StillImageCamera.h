@@ -12,6 +12,7 @@ class TableIntf;
 class StillImageCamera
 {
 public:
+    static bool editSettings();
     static std::optional<CameraInfo> start(QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table);
     static std::optional<CameraInfo> start(const QString& fileName, QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table);
 };
