@@ -10,11 +10,13 @@
 #include "helpers/OriWidgets.h"
 #include "helpers/OriDialogs.h"
 #include "tools/OriMruList.h"
+#include "tools/OriSettings.h"
 #include "widgets/OriFlatToolBar.h"
 #include "widgets/OriMruMenu.h"
 #include "widgets/OriStatusBar.h"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QApplication>
 #include <QDebug>
 #include <QDockWidget>
@@ -44,6 +46,7 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     setWindowTitle(qApp->applicationName() + " [VirtualDemo]");
 
     _mru = new Ori::MruFileList(this);
+    _mru->setMaxCount(20);
     connect(_mru, &Ori::MruFileList::clicked, this, &PlotWindow::openImage);
     _mru->load();
 
@@ -58,6 +61,12 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     connect(qApp->styleHints(), &QStyleHints::colorSchemeChanged, this, &PlotWindow::updateThemeColors);
     setThemeColors();
 
+    Ori::Settings s;
+    s.beginGroup("Plot");
+    bool useRainbow = s.value("rainbow", true).toBool();
+
+    _actionRainbow->setChecked(useRainbow);
+    _plot->setRainbowEnabled(useRainbow, false);
     _plot->setFocus();
 
     resize(800, 600);
@@ -65,6 +74,9 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
 
 PlotWindow::~PlotWindow()
 {
+    Ori::Settings s;
+    s.beginGroup("Plot");
+    s.setValue("rainbow", _actionRainbow->isChecked());
 }
 
 void PlotWindow::createMenuBar()
@@ -81,7 +93,17 @@ void PlotWindow::createMenuBar()
     _actionStart = A_(tr("Start Capture"), this, &PlotWindow::startCapture, ":/toolbar/start");
     _actionStop = A_(tr("Stop Capture"), this, &PlotWindow::stopCapture, ":/toolbar/stop");
     _actionCamSettings = A_(tr("Settings..."), this, &PlotWindow::editCamSettings, ":/toolbar/settings");
-    menuBar()->addMenu(M_(tr("Camera"), {_actionStart, _actionStop, 0, _actionCamSettings}));
+    auto colorGroup = new QActionGroup(this);
+    _actionGrayscale = A_(tr("Grayscale View"), colorGroup, [this]{ _plot->setRainbowEnabled(false, true); });
+    _actionRainbow = A_(tr("Rainbow View"), colorGroup, [this]{ _plot->setRainbowEnabled(true, true); });
+    _actionGrayscale->setCheckable(true);
+    _actionRainbow->setCheckable(true);
+    //auto actnSelectBgColor = A_(tr("Select Background..."), this, [this]{ _plot->selectBackgroundColor(); });
+    menuBar()->addMenu(M_(tr("Camera"), {_actionStart, _actionStop, 0,
+        _actionGrayscale, _actionRainbow, 0,
+        //actnSelectBgColor, 0,
+        _actionCamSettings
+    }));
 
     auto m = menuBar()->addMenu(tr("Help"));
     auto help = HelpSystem::instance();
@@ -290,13 +312,13 @@ void PlotWindow::openImage(const QString& fileName)
         Ori::Dlg::info(tr("Can not open file while capture is in progress"));
         return;
     }
-    _stillImageFile = fileName;
     auto info = StillImageCamera::start(fileName, _plot->graphIntf(), _tableIntf);
     if (info) imageReady(*info);
 }
 
 void PlotWindow::imageReady(const CameraInfo& info)
 {
+    _stillImageFile = info.descr;
     _itemRenderTime->setText(tr(" Load time "));
     _mru->append(info.descr);
     _plot->prepare();

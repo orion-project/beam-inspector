@@ -4,6 +4,7 @@
 #include "widgets/TableIntf.h"
 
 #include "beam_calc.h"
+#include "beam_render.h"
 
 #include "tools/OriSettings.h"
 #include "helpers/OriDialogs.h"
@@ -71,6 +72,9 @@ std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, QShar
     c.bits = fmt == QImage::Format_Grayscale8 ? 8 : 16;
     c.buf = (uint8_t*)buf;
 
+    int sz = c.w*c.h;
+    double *plot = beam->rawData();
+
     CgnBeamResult r;
     r.x1 = 0, r.x2 = c.w;
     r.y1 = 0, r.y2 = c.h;
@@ -86,7 +90,7 @@ std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, QShar
     g.max = 0;
     QVector<double> subtracted;
     if (settings.subtractBackground) {
-        subtracted = QVector<double>(c.w*c.h);
+        subtracted = QVector<double>(sz);
         g.subtracted = subtracted.data();
     }
 
@@ -100,15 +104,29 @@ std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, QShar
 
     timer.restart();
     if (settings.subtractBackground) {
-        memcpy(beam->rawData(), g.subtracted, sizeof(double)*c.w*c.h);
+        if (settings.normalize) {
+            cgn_copy_normalized_f46(g.subtracted, plot, sz, g.min, g.max);
+        } else {
+            memcpy(plot, g.subtracted, sizeof(double)*sz);
+        }
     } else {
-        cgn_copy_to_f64(&c, beam->rawData(), &g.max);
+        if (settings.normalize) {
+            if (c.bits > 8) {
+                cgn_render_beam_to_doubles_norm_16((const uint16_t*)c.buf, sz, plot);
+            } else {
+                cgn_render_beam_to_doubles_norm_8((const uint8_t*)c.buf, sz, plot);
+            }
+        } else {
+            cgn_copy_to_f64(&c, plot, &g.max);
+        }
     }
     auto copyTime = timer.elapsed();
 
     qDebug() << "loadTime:" << loadTime << "calcTime:" << calcTime << "copyTime:" << copyTime << "iters:" << g.iters;
 
-    beam->setResult(r, g.min, g.max);
+    if (settings.normalize)
+        beam->setResult(r, 0, 1);
+    else beam->setResult(r, g.min, g.max);
     table->setResult(r, loadTime, calcTime);
 
     QFileInfo fi(fileName);

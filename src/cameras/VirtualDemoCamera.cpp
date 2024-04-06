@@ -65,6 +65,8 @@ public:
     double avgCalcTime = 0;
     QVector<double> subtracted;
     bool subtract;
+    bool normalize;
+    double *plot;
 
     BeamRenderer(QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table, VirtualDemoCamera *thread) : beam(beam), table(table), thread(thread)
     {
@@ -117,7 +119,10 @@ public:
             g.subtracted = subtracted.data();
         }
 
+        normalize = settings.normalize;
+
         beam->init(b.w, b.h);
+        plot = beam->rawData();
     }
 
     void run() {
@@ -159,12 +164,22 @@ public:
             if (tm - prevReady >= PLOT_FRAME_DELAY_MS) {
                 prevReady = tm;
                 if (subtract) {
-                    memcpy(beam->rawData(), g.subtracted, sizeof(double)*c.w*c.h);
+                    if (normalize) {
+                        cgn_copy_normalized_f46(g.subtracted, plot, c.w*c.h, g.min, g.max);
+                    } else {
+                        memcpy(plot, g.subtracted, sizeof(double)*c.w*c.h);
+                    }
                 } else {
-                    cgn_copy_to_f64(&c, beam->rawData(), &g.max);
+                    if (normalize) {
+                        cgn_render_beam_to_doubles_norm_8(c.buf, c.w*c.h, plot);
+                    } else {
+                        cgn_copy_to_f64(&c, plot, &g.max);
+                    }
                 }
                 table->setResult(r, avgRenderTime, avgCalcTime);
-                beam->setResult(r, g.min, g.max);
+                if (normalize)
+                    beam->setResult(r, 0, 1);
+                else beam->setResult(r, g.min, g.max);
                 beam->invalidate();
                 emit thread->ready();
             }

@@ -16,6 +16,7 @@ struct CameraInfo
 
 struct CameraSettings
 {
+    bool normalize = true;
     bool subtractBackground = true;
     int maxIters = 0;
     double precision = 0.05;

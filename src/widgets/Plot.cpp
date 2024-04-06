@@ -28,58 +28,11 @@ static void setDefaultAxisFormat(QCPAxis *axis)
 
 Plot::Plot(QWidget *parent) : QWidget{parent}
 {
-//    Grad0 in img/gradient.svg
-//    QMap<double, QColor> rainbowColors {
-//        { 0.0, QColor(0x2b053e) },
-//        { 0.1, QColor(0xc2077c) },
-//        { 0.15, QColor(0xbe05f3) },
-//        { 0.2, QColor(0x2306fb) },
-//        { 0.3, QColor(0x0675db) },
-//        { 0.4, QColor(0x05f9ee) },
-//        { 0.5, QColor(0x04ca04) },
-//        { 0.65, QColor(0xfafd05) },
-//        { 0.8, QColor(0xfc8705) },
-//        { 0.9, QColor(0xfc4d06) },
-//        { 1.0, QColor(0xfc5004) },
-//    };
-
-    // Grad2 in img/gradient.svg
-    QMap<double, QColor> rainbowColors {
-        { 0.0, QColor(0x2b053e) },
-        { 0.075, QColor(0xd60c8a) },
-        { 0.15, QColor(0xbe05f3) },
-        { 0.2, QColor(0x2306fb) },
-        { 0.3, QColor(0x0675db) },
-        { 0.4, QColor(0x05f9ee) },
-        { 0.5, QColor(0x04ca04) },
-        { 0.65, QColor(0xfafd05) },
-        { 0.8, QColor(0xfc8705) },
-        { 0.9, QColor(0xfc4d06) },
-        { 1.0, QColor(0xfc5004) },
-    };
-
-//    Grad1 in img/gradient.svg
-//    QMap<double, QColor> rainbowColors {
-//        { 0.00, QColor(0x2b053e) },
-//        { 0.05, QColor(0xc4138a) },
-//        { 0.10, QColor(0x9e0666) },
-//        { 0.15, QColor(0xbe05f3) },
-//        { 0.20, QColor(0x2306fb) },
-//        { 0.30, QColor(0x0675db) },
-//        { 0.40, QColor(0x05f9ee) },
-//        { 0.50, QColor(0x04ca04) },
-//        { 0.65, QColor(0xfafd05) },
-//        { 0.80, QColor(0xfc8705) },
-//        { 0.90, QColor(0xfc4d06) },
-//        { 1.00, QColor(0xfc5004) },
-//    };
-
     _plot = new QCustomPlot;
     _plot->yAxis->setRangeReversed(true);
     _plot->axisRect()->setupFullAxesBox(true);
     _plot->xAxis->setTickLabels(false);
     _plot->xAxis2->setTickLabels(true);
-    _plot->axisRect()->setBackground(rainbowColors[0]);
 
     auto gridLayer = _plot->xAxis->grid()->layer();
     _plot->addLayer("beam", gridLayer, QCustomPlot::limBelow);
@@ -92,9 +45,6 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _colorMap = new QCPColorMap(_plot->xAxis, _plot->yAxis);
     _colorMap->setColorScale(_colorScale);
     _colorMap->setInterpolate(false);
-    QCPColorGradient rainbow;
-    rainbow.setColorStops(rainbowColors);
-    _colorMap->setGradient(rainbow);
     _colorMap->setLayer("beam");
 
     _beamShape = new BeamEllipse(_plot);
@@ -206,4 +156,77 @@ void Plot::setThemeColors(bool replot)
     _colorScale->setFrameColor(themeAxisColor());
     if (replot)
         _plot->replot();
+}
+
+void Plot::setRainbowEnabled(bool on, bool replot)
+{
+    if (!on) {
+        _colorMap->setGradient(QCPColorGradient::GradientPreset::gpGrayscale);
+        _plot->axisRect()->setBackground(QColor(0x2b053e));
+        if (replot)
+            _plot->replot();
+        return;
+    }
+
+//    Grad0 in img/gradient.svg
+//    QMap<double, QColor> rainbowColors {
+//        { 0.0, QColor(0x2b053e) },
+//        { 0.1, QColor(0xc2077c) },
+//        { 0.15, QColor(0xbe05f3) },
+//        { 0.2, QColor(0x2306fb) },
+//        { 0.3, QColor(0x0675db) },
+//        { 0.4, QColor(0x05f9ee) },
+//        { 0.5, QColor(0x04ca04) },
+//        { 0.65, QColor(0xfafd05) },
+//        { 0.8, QColor(0xfc8705) },
+//        { 0.9, QColor(0xfc4d06) },
+//        { 1.0, QColor(0xfc5004) },
+//    };
+
+//    Grad1 in img/gradient.svg
+//    QMap<double, QColor> rainbowColors {
+//        { 0.00, QColor(0x2b053e) },
+//        { 0.05, QColor(0xc4138a) },
+//        { 0.10, QColor(0x9e0666) },
+//        { 0.15, QColor(0xbe05f3) },
+//        { 0.20, QColor(0x2306fb) },
+//        { 0.30, QColor(0x0675db) },
+//        { 0.40, QColor(0x05f9ee) },
+//        { 0.50, QColor(0x04ca04) },
+//        { 0.65, QColor(0xfafd05) },
+//        { 0.80, QColor(0xfc8705) },
+//        { 0.90, QColor(0xfc4d06) },
+//        { 1.00, QColor(0xfc5004) },
+//    };
+
+    // Grad2 in img/gradient.svg
+    QMap<double, QColor> rainbowColors {
+        { 0.0, QColor(0x2b053e) },
+        { 0.075, QColor(0xd60c8a) },
+        { 0.15, QColor(0xbe05f3) },
+        { 0.2, QColor(0x2306fb) },
+        { 0.3, QColor(0x0675db) },
+        { 0.4, QColor(0x05f9ee) },
+        { 0.5, QColor(0x04ca04) },
+        { 0.65, QColor(0xfafd05) },
+        { 0.8, QColor(0xfc8705) },
+        { 0.9, QColor(0xfc4d06) },
+        { 1.0, QColor(0xfc5004) },
+    };
+
+    QCPColorGradient rainbow;
+    rainbow.setColorStops(rainbowColors);
+    _colorMap->setGradient(rainbow);
+    _plot->axisRect()->setBackground(Qt::black);
+    if (replot)
+        _plot->replot();
+}
+
+void Plot::selectBackgroundColor()
+{
+    auto c = QColorDialog::getColor(_plot->axisRect()->backgroundBrush().color(), this);
+    if (c.isValid()) {
+        _plot->axisRect()->setBackground(c);
+        _plot->replot();
+    }
 }

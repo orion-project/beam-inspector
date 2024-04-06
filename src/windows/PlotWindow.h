@@ -32,7 +32,8 @@ protected:
 private:
     Plot *_plot;
     VirtualDemoCamera *_cameraThread = nullptr;
-    QAction *_actionStart, *_actionStop, *_actionOpen, *_actionCamSettings;
+    QAction *_actionStart, *_actionStop, *_actionOpen, *_actionCamSettings,
+        *_actionGrayscale, *_actionRainbow;
     QTableWidget *_table;
     QTableWidgetItem *_itemRenderTime;
     QSharedPointer<TableIntf> _tableIntf;
