@@ -170,6 +170,18 @@ void cgn_copy_to_f64(const CgnBeamCalc *c, double *tgt, double *max) {
     }
 }
 
+void cgn_normalize_f64(double *buf, int sz, double min, double max) {
+    for (int i = 0; i < sz; i++) {
+        buf[i] = (buf[i] - min) / max;
+    }
+}
+
+void cgn_copy_normalized_f46(double *src, double *tgt, int sz, double min, double max) {
+    for (int i = 0; i < sz; i++) {
+        tgt[i] = (src[i] - min) / max;
+    }
+}
+
 #ifdef USE_BLAS
 
 #define ALLOC(var, size) \

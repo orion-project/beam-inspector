@@ -24,6 +24,8 @@ public:
     void replot();
 
     void setThemeColors(bool replot);
+    void setRainbowEnabled(bool on, bool replot);
+    void selectBackgroundColor();
 
 protected:
     void resizeEvent(QResizeEvent*) override;

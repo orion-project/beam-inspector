@@ -41,6 +41,7 @@ void CameraSettings::load(const QString &group)
     Ori::Settings s;
     s.beginGroup(group);
 
+    normalize = s.value("normalize", true).toBool();
     subtractBackground = s.value("subtractBackground", true).toBool();
 
     maxIters = s.value("maxIters", 0).toInt();
@@ -63,6 +64,7 @@ void CameraSettings::save(const QString &group)
 {
     Ori::Settings s;
     s.beginGroup(group);
+    s.setValue("normalize", normalize);
     s.setValue("subtractBackground", subtractBackground);
     s.setValue("maxIters", maxIters);
     s.setValue("precision", precision);
@@ -76,6 +78,7 @@ bool CameraSettings::editDlg(const QString &group)
     CameraSettings s;
     s.load(group);
 
+    auto normalize = new QCheckBox(qApp->tr("Normalize data"));
     auto subtractBackground = new QCheckBox(qApp->tr("Subtract background"));
     auto maxIters = Ori::Gui::spinBox(0, 50);
     auto precision = new Ori::Widgets::ValueEdit;
@@ -83,6 +86,7 @@ bool CameraSettings::editDlg(const QString &group)
     auto nT = new Ori::Widgets::ValueEdit;
     auto maskDiam = new Ori::Widgets::ValueEdit;
 
+    normalize->setChecked(s.normalize);
     subtractBackground->setChecked(s.subtractBackground);
     maxIters->setValue(s.maxIters);
     precision->setValue(s.precision);
@@ -98,6 +102,7 @@ bool CameraSettings::editDlg(const QString &group)
     };
 
     auto w = LayoutV({
+        normalize,
         subtractBackground, Space(12),
         qApp->tr("Max Iterations:"), maxIters, Space(12),
         qApp->tr("Precision:"), precision, Space(12),
@@ -122,6 +127,7 @@ bool CameraSettings::editDlg(const QString &group)
     bool ok = Ori::Dlg::Dialog(w).withPersistenceId(group).exec();
 
     if (ok) {
+        s.normalize = normalize->isChecked();
         s.subtractBackground = subtractBackground->isChecked();
         s.maxIters = maxIters->value();
         s.precision = precision->value();
