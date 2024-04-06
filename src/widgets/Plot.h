@@ -26,6 +26,7 @@ public:
     void setThemeColors(bool replot);
     void setRainbowEnabled(bool on, bool replot);
     void selectBackgroundColor();
+    void recalcLimits(bool replot);
 
 protected:
     void resizeEvent(QResizeEvent*) override;
@@ -39,7 +40,6 @@ private:
     int _imageW, _imageH;
 
     void renderDemoBeam();
-    void recalcLimits(bool replot);
 };
 
 #endif // PLOT_H

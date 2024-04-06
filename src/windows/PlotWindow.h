@@ -28,6 +28,7 @@ public:
 
 protected:
     void closeEvent(class QCloseEvent*) override;
+    void changeEvent(QEvent* e) override;
 
 private:
     Plot *_plot;
