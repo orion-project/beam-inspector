@@ -4,7 +4,7 @@ history:
     changes:
       - text: First demo with virtual camera
   - version: 0.0.2
-    date: 2024-04-??
+    date: 2024-04-07
     changes:
       - text: Load and process single photo
       - text: Background subtraction with editable settings

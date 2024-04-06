@@ -67,6 +67,7 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     bool useRainbow = s.value("rainbow", true).toBool();
 
     _actionRainbow->setChecked(useRainbow);
+    _actionGrayscale->setChecked(not useRainbow);
     _plot->setRainbowEnabled(useRainbow, false);
     _plot->setFocus();
 
