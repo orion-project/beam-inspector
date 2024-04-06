@@ -29,6 +29,7 @@
 #include <QTableWidget>
 #include <QTimer>
 #include <QToolBar>
+#include <QWindowStateChangeEvent>
 
 enum StatusPanels
 {
@@ -214,6 +215,15 @@ void PlotWindow::closeEvent(QCloseEvent* ce)
     QMainWindow::closeEvent(ce);
     if (_cameraThread && _cameraThread->isRunning()) {
         stopCapture();
+    }
+}
+
+void PlotWindow::changeEvent(QEvent* e)
+{
+    QMainWindow::changeEvent(e);
+    if (e->type() == QEvent::WindowStateChange) {
+        // resizeEvent is not called when window gets maximized or restored
+        _plot->recalcLimits(true);
     }
 }
 
