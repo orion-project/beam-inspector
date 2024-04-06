@@ -14,10 +14,17 @@
 #include <QFileDialog>
 #include <QMessageBox>
 
+#define SETTINGS_KEY "StillImageCamera"
+
+bool StillImageCamera::editSettings()
+{
+    return CameraSettings::editDlg(SETTINGS_KEY);
+}
+
 std::optional<CameraInfo> StillImageCamera::start(QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table)
 {
     Ori::Settings s;
-    s.beginGroup("StillImageCamera");
+    s.beginGroup(SETTINGS_KEY);
 
     QString fileName = QFileDialog::getOpenFileName(qApp->activeWindow(),
                                 qApp->tr("Open Beam Image"),
@@ -34,6 +41,7 @@ std::optional<CameraInfo> StillImageCamera::start(QSharedPointer<BeamGraphIntf> 
 std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table)
 {
     auto settings = CameraSettings();
+    settings.load(SETTINGS_KEY);
     settings.print();
 
     QElapsedTimer timer;
@@ -67,24 +75,24 @@ std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, QShar
     r.x1 = 0, r.x2 = c.w;
     r.y1 = 0, r.y2 = c.h;
 
-    CgnBeamBkgnd b;
-    b.iters = 0;
-    b.max_iter = 25;
-    b.precision = 0.05;
-    b.corner_fraction = 0.035;
-    b.nT = 3;
-    b.mask_diam = 3;
-    b.min = 0;
-    b.max = 0;
+    CgnBeamBkgnd g;
+    g.iters = 0;
+    g.max_iter = settings.maxIters;
+    g.precision = settings.precision;
+    g.corner_fraction = settings.cornerFraction;
+    g.nT = settings.nT;
+    g.mask_diam = settings.maskDiam;
+    g.min = 0;
+    g.max = 0;
     QVector<double> subtracted;
     if (settings.subtractBackground) {
         subtracted = QVector<double>(c.w*c.h);
-        b.subtracted = subtracted.data();
+        g.subtracted = subtracted.data();
     }
 
     timer.restart();
     if (settings.subtractBackground) {
-        cgn_calc_beam_bkgnd(&c, &b, &r);
+        cgn_calc_beam_bkgnd(&c, &g, &r);
     } else {
         cgn_calc_beam_naive(&c, &r);
     }
@@ -92,15 +100,15 @@ std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, QShar
 
     timer.restart();
     if (settings.subtractBackground) {
-        memcpy(beam->rawData(), b.subtracted, sizeof(double)*c.w*c.h);
+        memcpy(beam->rawData(), g.subtracted, sizeof(double)*c.w*c.h);
     } else {
-        cgn_copy_to_f64(&c, beam->rawData(), &b.max);
+        cgn_copy_to_f64(&c, beam->rawData(), &g.max);
     }
     auto copyTime = timer.elapsed();
 
-    qDebug() << "loadTime:" << loadTime << "calcTime:" << calcTime << "copyTime:" << copyTime << "iters:" << b.iters;
+    qDebug() << "loadTime:" << loadTime << "calcTime:" << calcTime << "copyTime:" << copyTime << "iters:" << g.iters;
 
-    beam->setResult(r, b.min, b.max);
+    beam->setResult(r, g.min, g.max);
     table->setResult(r, loadTime, calcTime);
 
     QFileInfo fi(fileName);

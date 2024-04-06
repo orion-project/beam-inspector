@@ -80,7 +80,8 @@ void PlotWindow::createMenuBar()
 
     _actionStart = A_(tr("Start Capture"), this, &PlotWindow::startCapture, ":/toolbar/start");
     _actionStop = A_(tr("Stop Capture"), this, &PlotWindow::stopCapture, ":/toolbar/stop");
-    menuBar()->addMenu(M_(tr("Camera"), {_actionStart, _actionStop}));
+    _actionCamSettings = A_(tr("Settings..."), this, &PlotWindow::editCamSettings, ":/toolbar/settings");
+    menuBar()->addMenu(M_(tr("Camera"), {_actionStart, _actionStop, 0, _actionCamSettings}));
 
     auto m = menuBar()->addMenu(tr("Help"));
     auto help = HelpSystem::instance();
@@ -100,6 +101,8 @@ void PlotWindow::createToolBar()
     tb->addAction(_actionStop);
     tb->addSeparator();
     tb->addAction(_actionOpen);
+    tb->addSeparator();
+    tb->addAction(_actionCamSettings);
 }
 
 void PlotWindow::createStatusBar()
@@ -229,6 +232,7 @@ void PlotWindow::updateThemeColors()
 
 void PlotWindow::updateActions(bool started)
 {
+    _actionCamSettings->setDisabled(started);
     _actionOpen->setDisabled(started);
     _actionStart->setDisabled(started);
     _actionStart->setVisible(!started);
@@ -238,6 +242,7 @@ void PlotWindow::updateActions(bool started)
 
 void PlotWindow::startCapture()
 {
+    _stillImageFile.clear();
     showInfo(VirtualDemoCamera::info());
     _itemRenderTime->setText(tr(" Render time "));
     _cameraThread = new VirtualDemoCamera(_plot->graphIntf(), _tableIntf, this);
@@ -285,6 +290,7 @@ void PlotWindow::openImage(const QString& fileName)
         Ori::Dlg::info(tr("Can not open file while capture is in progress"));
         return;
     }
+    _stillImageFile = fileName;
     auto info = StillImageCamera::start(fileName, _plot->graphIntf(), _tableIntf);
     if (info) imageReady(*info);
 }
@@ -297,4 +303,10 @@ void PlotWindow::imageReady(const CameraInfo& info)
     dataReady();
     showInfo(info);
     showFps(0);
+}
+
+void PlotWindow::editCamSettings()
+{
+    if (StillImageCamera::editSettings() and !_stillImageFile.isEmpty())
+        openImage(_stillImageFile);
 }

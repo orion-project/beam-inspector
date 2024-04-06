@@ -45,6 +45,7 @@ public:
     CgnBeamRender b;
     CgnBeamCalc c;
     CgnBeamResult r;
+    CgnBeamBkgnd g;
     //CgnBeamCalcBlas c;
     //CgnBeamResultBlas r;
     QVector<uint8_t> d;
@@ -62,9 +63,15 @@ public:
     double avgFrameTime = 0;
     double avgRenderTime = 0;
     double avgCalcTime = 0;
+    QVector<double> subtracted;
+    bool subtract;
 
     BeamRenderer(QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table, VirtualDemoCamera *thread) : beam(beam), table(table), thread(thread)
     {
+        auto settings = CameraSettings();
+        settings.load("StillImageCamera");
+        settings.print();
+
         auto info = VirtualDemoCamera::info();
 
         b.w = info.width;
@@ -95,6 +102,20 @@ public:
         xc_offset = RandomOffset(b.xc, b.xc-20, b.xc+20);
         yc_offset = RandomOffset(b.yc, b.yc-20, b.yc+20);
         phi_offset = RandomOffset(b.phi, b.phi-12, b.phi+12);
+
+        g.iters = 0;
+        g.max_iter = settings.maxIters;
+        g.precision = settings.precision;
+        g.corner_fraction = settings.cornerFraction;
+        g.nT = settings.nT;
+        g.mask_diam = settings.maskDiam;
+        g.min = 0;
+        g.max = 0;
+        subtract = settings.subtractBackground;
+        if (subtract) {
+            subtracted = QVector<double>(c.w*c.h);
+            g.subtracted = subtracted.data();
+        }
 
         beam->init(b.w, b.h);
     }
@@ -127,16 +148,23 @@ public:
             b.phi = phi_offset.next();
 
             tm = timer.elapsed();
-            cgn_calc_beam_naive(&c, &r);
-            //cgn_calc_beam_blas(&c, &r);
+            if (subtract) {
+                cgn_calc_beam_bkgnd(&c, &g, &r);
+            } else {
+                cgn_calc_beam_naive(&c, &r);
+                //cgn_calc_beam_blas(&c, &r);
+            }
             avgCalcTime = avgCalcTime*0.9 + (timer.elapsed() - tm)*0.1;
 
             if (tm - prevReady >= PLOT_FRAME_DELAY_MS) {
                 prevReady = tm;
-                double max;
-                cgn_copy_to_f64(&c, beam->rawData(), &max);
+                if (subtract) {
+                    memcpy(beam->rawData(), g.subtracted, sizeof(double)*c.w*c.h);
+                } else {
+                    cgn_copy_to_f64(&c, beam->rawData(), &g.max);
+                }
                 table->setResult(r, avgRenderTime, avgCalcTime);
-                beam->setResult(r, 0, max);
+                beam->setResult(r, g.min, g.max);
                 beam->invalidate();
                 emit thread->ready();
             }
