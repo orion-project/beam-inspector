@@ -1,7 +1,7 @@
 #include "BeamGraph.h"
 
-#include "qcustomplot/core.h"
-#include "qcustomplot/painter.h"
+#include "qcp/src/core.h"
+#include "qcp/src/painter.h"
 
 //------------------------------------------------------------------------------
 //                               BeamColorMapData

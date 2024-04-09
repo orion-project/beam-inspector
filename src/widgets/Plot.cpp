@@ -6,10 +6,10 @@
 
 #include "beam_render.h"
 
-#include "qcustomplot/core.h"
-#include "qcustomplot/layoutelements/layoutelement-axisrect.h"
-#include "qcustomplot/items/item-straightline.h"
-#include "qcustomplot/items/item-text.h"
+#include "qcp/src/core.h"
+#include "qcp/src/layoutelements/layoutelement-axisrect.h"
+#include "qcp/src/items/item-straightline.h"
+#include "qcp/src/items/item-text.h"
 
 static QColor themeAxisColor(Plot::Theme theme)
 {
