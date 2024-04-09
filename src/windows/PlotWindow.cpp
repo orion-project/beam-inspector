@@ -86,9 +86,10 @@ void PlotWindow::createMenuBar()
 #define A_ Ori::Gui::action
 #define M_ Ori::Gui::menu
     auto actnNew = A_(tr("New Window"), this, &PlotWindow::newWindow, ":/toolbar/new", QKeySequence::New);
-    _actionOpen = A_(tr("Open Image..."), this, &PlotWindow::openImageDlg, ":/toolbar/open", QKeySequence::Open);
+    _actionOpen = A_(tr("Open Image..."), this, &PlotWindow::openImageDlg, ":/toolbar/open_img", QKeySequence::Open);
+    auto actnExport = A_(tr("Export Image..."), this, [this]{ _plot->exportImageDlg(); }, ":/toolbar/export_img");
     auto actnClose = A_(tr("Exit"), this, &PlotWindow::close);
-    auto menuFile = M_(tr("File"), {actnNew, 0, _actionOpen, actnClose});
+    auto menuFile = M_(tr("File"), {actnNew, 0, actnExport, _actionOpen, actnClose});
     new Ori::Widgets::MruMenuPart(_mru, menuFile, actnClose, this);
     menuBar()->addMenu(menuFile);
 
@@ -259,7 +260,7 @@ void PlotWindow::updateThemeColors()
     // Right now new palette is not ready yet, it returns old colors
     QTimer::singleShot(100, this, [this]{
         setThemeColors();
-        _plot->setThemeColors(true);
+        _plot->setThemeColors(Plot::SYSTEM, true);
     });
 }
 

@@ -2,25 +2,27 @@
 
 #include "plot/BeamGraph.h"
 #include "plot/BeamGraphIntf.h"
+#include "plot/PlotExport.h"
 
 #include "beam_render.h"
 
 #include "qcustomplot.h"
 
-static QColor themeAxisColor()
+static QColor themeAxisColor(Plot::Theme theme)
 {
-    return qApp->palette().color(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Shadow);
+    bool dark = theme == Plot::SYSTEM && qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+    return qApp->palette().color(dark ? QPalette::Light : QPalette::Shadow);
 }
 
-static void setDefaultAxisFormat(QCPAxis *axis)
+static void setDefaultAxisFormat(QCPAxis *axis, Plot::Theme theme)
 {
     axis->setTickLengthIn(0);
     axis->setTickLengthOut(6);
     axis->setSubTickLengthIn(0);
     axis->setSubTickLengthOut(3);
     axis->grid()->setPen(QPen(QColor(100, 100, 100), 0, Qt::DotLine));
-    axis->setTickLabelColor(qApp->palette().color(QPalette::WindowText));
-    auto pen = QPen(themeAxisColor(), 0, Qt::SolidLine);
+    axis->setTickLabelColor(theme == Plot::LIGHT ? Qt::black : qApp->palette().color(QPalette::WindowText));
+    auto pen = QPen(themeAxisColor(theme), 0, Qt::SolidLine);
     axis->setTickPen(pen);
     axis->setSubTickPen(pen);
     axis->setBasePen(pen);
@@ -60,7 +62,7 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _plot->axisRect()->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
     _colorScale->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
 
-    setThemeColors(false);
+    setThemeColors(SYSTEM, false);
 
     auto l = new QVBoxLayout(this);
     l->setContentsMargins(0, 0, 0, 0);
@@ -145,15 +147,15 @@ QSharedPointer<BeamGraphIntf> Plot::graphIntf() const
     return QSharedPointer<BeamGraphIntf>(new BeamGraphIntf(_colorMap, _colorScale, _beamShape, _lineX, _lineY));
 }
 
-void Plot::setThemeColors(bool replot)
+void Plot::setThemeColors(Theme theme, bool replot)
 {
-    _plot->setBackground(palette().brush(QPalette::Base));
-    setDefaultAxisFormat(_plot->xAxis);
-    setDefaultAxisFormat(_plot->yAxis);
-    setDefaultAxisFormat(_plot->xAxis2);
-    setDefaultAxisFormat(_plot->yAxis2);
-    setDefaultAxisFormat(_colorScale->axis());
-    _colorScale->setFrameColor(themeAxisColor());
+    _plot->setBackground(theme == LIGHT ? QBrush(Qt::white) : palette().brush(QPalette::Base));
+    setDefaultAxisFormat(_plot->xAxis, theme);
+    setDefaultAxisFormat(_plot->yAxis, theme);
+    setDefaultAxisFormat(_plot->xAxis2, theme);
+    setDefaultAxisFormat(_plot->yAxis2, theme);
+    setDefaultAxisFormat(_colorScale->axis(), theme);
+    _colorScale->setFrameColor(themeAxisColor(theme));
     if (replot)
         _plot->replot();
 }
@@ -229,4 +231,9 @@ void Plot::selectBackgroundColor()
         _plot->axisRect()->setBackground(c);
         _plot->replot();
     }
+}
+
+void Plot::exportImageDlg()
+{
+    ::exportImageDlg(_plot, [this]{setThemeColors(LIGHT, false);}, [this]{setThemeColors(SYSTEM, false);});
 }

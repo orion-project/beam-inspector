@@ -1,0 +1,25 @@
+<svg height="24" width="24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<linearGradient id="a" gradientTransform="matrix(1 0 0 .89 -2.48 -1.27)" gradientUnits="userSpaceOnUse" x1="4.59" x2="16.45" y1="2.66" y2="16.98">
+<stop offset="0" stop-color="#fdffff"/>
+<stop offset="1" stop-color="#b2d3fa"/>
+</linearGradient>
+<linearGradient id="b" gradientTransform="matrix(1 0 0 .89 -2.48 -1.27)" gradientUnits="userSpaceOnUse" x1="16.45" x2="3.7" y1="2.66" y2="19.06">
+<stop offset="0" stop-color="#92b1de"/>
+<stop offset="1" stop-color="#525f96"/>
+</linearGradient>
+<g fill-rule="evenodd">
+<path d="m17.5.5v17h-17v-17z" fill="url(#a)" stroke="url(#b)" stroke-dashoffset="21.44" stroke-linecap="round" stroke-linejoin="round"/>
+<ellipse cx="3.18" cy="12.22" fill="#b235ff" rx="7.38" ry="5.47" transform="matrix(.87 -.49 .51 .86 0 0)"/>
+<ellipse cx="3.18" cy="12.22" fill="#ffc500" rx="5.73" ry="4.25" transform="matrix(.87 -.49 .51 .86 0 0)"/>
+<ellipse cx="3.18" cy="12.22" fill="#f00" rx="2.78" ry="2.05" transform="matrix(.87 -.49 .51 .86 0 0)"/>
+</g>
+<path d="m18 18v-10h-8c-1.11 0-2 .69-2 2v8z" fill="#fff" fill-opacity=".65"/>
+<rect height="14" rx=".59" ry=".51" style="fill:#6565d0;fill-rule:evenodd;stroke:#3f4397;stroke-linecap:square;stroke-linejoin:round;stroke-dashoffset:21.44" transform="scale(1 -1)" width="14" x="9.5" y="-23.5"/>
+<path d="m21 10v7h-9v-7z" fill="#fff" fill-opacity=".93"/>
+<path d="m13.5-23.5h6v5h-6z" fill="#e5e5f1" stroke="#a7aada" stroke-linecap="square" transform="scale(1 -1)"/>
+<path d="m15 22h1v-2h-1z" fill="#373a6c" fill-opacity=".72"/>
+<g fill="#fafafa" stroke="#b6b7cb">
+<path d="m12 9.5h9m-8 2h4m-4 2h7"/>
+<path d="m12 9.5h9m-8 2h4m-4 4h5"/>
+</g>
+</svg>
