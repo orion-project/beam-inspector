@@ -216,7 +216,7 @@ void VirtualDemoCamera::run()
 
 CameraInfo VirtualDemoCamera::info()
 {
-    return {
+    return CameraInfo {
         .name = "Camera: VirtualDemo",
         .width = 2592,
         .height = 2048,

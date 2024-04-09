@@ -6,7 +6,7 @@
 #include "tools/OriSettings.h"
 #include "widgets/OriValueEdit.h"
 
-#include "qcustomplot.h"
+#include "qcustomplot/core.h"
 
 #include <QCheckBox>
 #include <QFormLayout>

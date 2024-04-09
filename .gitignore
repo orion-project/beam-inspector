@@ -7,3 +7,4 @@ out
 *.exe
 calc/*.pgm
 CMakeLists.txt.user*
+CMakeLists.txt.autosave
