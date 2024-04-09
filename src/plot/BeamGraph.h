@@ -1,8 +1,8 @@
 #ifndef BEAM_COLOR_MAP_H
 #define BEAM_COLOR_MAP_H
 
-#include "qcustomplot/item.h"
-#include "qcustomplot/plottables/plottable-colormap.h"
+#include "qcp/src/item.h"
+#include "qcp/src/plottables/plottable-colormap.h"
 
 /**
  * A thin wrapper around QCPColorMapData providing access to protected fields
