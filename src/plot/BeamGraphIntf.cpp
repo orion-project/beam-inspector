@@ -2,6 +2,9 @@
 
 #include "plot/BeamGraph.h"
 
+#include "qcustomplot/items/item-straightline.h"
+#include "qcustomplot/items/item-text.h"
+
 BeamGraphIntf::BeamGraphIntf(QCPColorMap *colorMap, QCPColorScale *colorScale, BeamEllipse *beamShape,
     QCPItemText *beamInfo, QCPItemStraightLine *lineX, QCPItemStraightLine *lineY)
     : _colorMap(colorMap), _colorScale(colorScale), _beamShape(beamShape), _beamInfo(beamInfo), _lineX(lineX), _lineY(lineY)
