@@ -47,9 +47,7 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     setWindowTitle(qApp->applicationName() + " [VirtualDemo]");
 
     _mru = new Ori::MruFileList(this);
-    _mru->setMaxCount(20);
     connect(_mru, &Ori::MruFileList::clicked, this, &PlotWindow::openImage);
-    _mru->load();
 
     createMenuBar();
     createToolBar();
@@ -62,23 +60,40 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     connect(qApp->styleHints(), &QStyleHints::colorSchemeChanged, this, &PlotWindow::updateThemeColors);
     setThemeColors();
 
-    Ori::Settings s;
-    s.beginGroup("Plot");
-    bool useRainbow = s.value("rainbow", true).toBool();
-
-    _actionRainbow->setChecked(useRainbow);
-    _actionGrayscale->setChecked(not useRainbow);
-    _plot->setRainbowEnabled(useRainbow, false);
-    _plot->setFocus();
-
+    restoreState();
     resize(800, 600);
+
+    _plot->setFocus();
 }
 
 PlotWindow::~PlotWindow()
 {
+    storeState();
+}
+
+void PlotWindow::restoreState()
+{
+    Ori::Settings s;
+
+    _mru->setMaxCount(20);
+    _mru->load(s.settings());
+
+    s.beginGroup("Plot");
+    bool useRainbow = s.value("rainbow", true).toBool();
+    bool showBeamInfo = s.value("beamInfo", false).toBool();
+    _actionRainbow->setChecked(useRainbow);
+    _actionGrayscale->setChecked(not useRainbow);
+    _actionBeamInfo->setChecked(showBeamInfo);
+    _plot->setRainbowEnabled(useRainbow, false);
+    _plot->setBeamInfoVisible(showBeamInfo, false);
+}
+
+void PlotWindow::storeState()
+{
     Ori::Settings s;
     s.beginGroup("Plot");
     s.setValue("rainbow", _actionRainbow->isChecked());
+    s.setValue("beamInfo", _actionBeamInfo->isChecked());
 }
 
 void PlotWindow::createMenuBar()
@@ -93,17 +108,21 @@ void PlotWindow::createMenuBar()
     new Ori::Widgets::MruMenuPart(_mru, menuFile, actnClose, this);
     menuBar()->addMenu(menuFile);
 
+    _actionBeamInfo = A_(tr("Plot Beam Info"), this, [this]{ _plot->setBeamInfoVisible(_actionBeamInfo->isChecked(), true); });
+    _actionBeamInfo->setCheckable(true);
+
+    auto colorGroup = new QActionGroup(this);
+    _actionGrayscale = A_(tr("Grayscale"), colorGroup, [this]{ _plot->setRainbowEnabled(false, true); });
+    _actionRainbow = A_(tr("Rainbow"), colorGroup, [this]{ _plot->setRainbowEnabled(true, true); });
+    _actionGrayscale->setCheckable(true);
+    _actionRainbow->setCheckable(true);
+    menuBar()->addMenu(M_(tr("View"), {_actionBeamInfo, 0, _actionGrayscale, _actionRainbow}));
+
     _actionStart = A_(tr("Start Capture"), this, &PlotWindow::startCapture, ":/toolbar/start");
     _actionStop = A_(tr("Stop Capture"), this, &PlotWindow::stopCapture, ":/toolbar/stop");
     _actionCamSettings = A_(tr("Settings..."), this, &PlotWindow::editCamSettings, ":/toolbar/settings");
-    auto colorGroup = new QActionGroup(this);
-    _actionGrayscale = A_(tr("Grayscale View"), colorGroup, [this]{ _plot->setRainbowEnabled(false, true); });
-    _actionRainbow = A_(tr("Rainbow View"), colorGroup, [this]{ _plot->setRainbowEnabled(true, true); });
-    _actionGrayscale->setCheckable(true);
-    _actionRainbow->setCheckable(true);
     //auto actnSelectBgColor = A_(tr("Select Background..."), this, [this]{ _plot->selectBackgroundColor(); });
     menuBar()->addMenu(M_(tr("Camera"), {_actionStart, _actionStop, 0,
-        _actionGrayscale, _actionRainbow, 0,
         //actnSelectBgColor, 0,
         _actionCamSettings
     }));

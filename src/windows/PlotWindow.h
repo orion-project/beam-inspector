@@ -34,7 +34,7 @@ private:
     Plot *_plot;
     VirtualDemoCamera *_cameraThread = nullptr;
     QAction *_actionStart, *_actionStop, *_actionOpen, *_actionCamSettings,
-        *_actionGrayscale, *_actionRainbow;
+        *_actionGrayscale, *_actionRainbow, *_actionBeamInfo;
     QTableWidget *_table;
     QTableWidgetItem *_itemRenderTime;
     QSharedPointer<TableIntf> _tableIntf;
@@ -48,6 +48,8 @@ private:
     void createStatusBar();
     void createDockPanel();
     void createPlot();
+    void restoreState();
+    void storeState();
 
     void newWindow();
     void openImageDlg();
