@@ -23,10 +23,12 @@ public:
     void prepare();
     void replot();
 
-    void setThemeColors(bool replot);
+    enum Theme { SYSTEM, LIGHT };
+    void setThemeColors(Theme theme, bool replot);
     void setRainbowEnabled(bool on, bool replot);
     void selectBackgroundColor();
     void recalcLimits(bool replot);
+    void exportImageDlg();
 
 protected:
     void resizeEvent(QResizeEvent*) override;

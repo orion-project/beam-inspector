@@ -50,6 +50,8 @@ set(PROJECT_SOURCES
     src/plot/BeamGraph.cpp
     src/plot/BeamGraphIntf.h
     src/plot/BeamGraphIntf.cpp
+    src/plot/PlotExport.h
+    src/plot/PlotExport.cpp
     src/widgets/Plot.h
     src/widgets/Plot.cpp
     src/windows/PlotWindow.h
