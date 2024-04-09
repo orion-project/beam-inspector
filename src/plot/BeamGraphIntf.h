@@ -8,6 +8,7 @@ class BeamEllipse;
 class QCPColorMap;
 class QCPColorScale;
 class QCPItemStraightLine;
+class QCPItemText;
 
 /**
  * Provides access to graph data for camera threads
@@ -17,8 +18,10 @@ class QCPItemStraightLine;
 class BeamGraphIntf
 {
 public:
-    BeamGraphIntf(QCPColorMap *colorMap, QCPColorScale *colorScale,
-        BeamEllipse *shape, QCPItemStraightLine *lineX, QCPItemStraightLine *lineY);
+    BeamGraphIntf(
+        QCPColorMap *colorMap, QCPColorScale *colorScale,
+        BeamEllipse *beamShape, QCPItemText *beamInfo,
+        QCPItemStraightLine *lineX, QCPItemStraightLine *lineY);
 
     void init(int w, int h);
     double* rawData() const;
@@ -26,10 +29,11 @@ public:
     void invalidate() const;
 
 private:
+    QCPItemText *_beamInfo;
     QCPColorMap *_colorMap;
     QCPColorScale *_colorScale;
     BeamColorMapData *_beamData;
-    BeamEllipse *_shape;
+    BeamEllipse *_beamShape;
     QCPItemStraightLine *_lineX, *_lineY;
 };
 

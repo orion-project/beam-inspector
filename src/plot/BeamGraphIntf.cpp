@@ -2,9 +2,9 @@
 
 #include "plot/BeamGraph.h"
 
-BeamGraphIntf::BeamGraphIntf(QCPColorMap *colorMap, QCPColorScale *colorScale,
-    BeamEllipse *shape, QCPItemStraightLine *lineX, QCPItemStraightLine *lineY)
-    : _colorMap(colorMap), _colorScale(colorScale), _shape(shape), _lineX(lineX), _lineY(lineY)
+BeamGraphIntf::BeamGraphIntf(QCPColorMap *colorMap, QCPColorScale *colorScale, BeamEllipse *beamShape,
+    QCPItemText *beamInfo, QCPItemStraightLine *lineX, QCPItemStraightLine *lineY)
+    : _colorMap(colorMap), _colorScale(colorScale), _beamShape(beamShape), _beamInfo(beamInfo), _lineX(lineX), _lineY(lineY)
 {
 }
 
@@ -36,11 +36,14 @@ void BeamGraphIntf::setResult(const CgnBeamResult& r, double min, double max)
     _lineY->point1->setCoords(r.xc, r.yc);
     _lineY->point2->setCoords(r.xc + r.dy*sin_phi, r.yc - r.dy*cos_phi);
 
-    _shape->xc = r.xc;
-    _shape->yc = r.yc;
-    _shape->dx = r.dx;
-    _shape->dy = r.dy;
-    _shape->phi = r.phi;
+    _beamShape->xc = r.xc;
+    _beamShape->yc = r.yc;
+    _beamShape->dx = r.dx;
+    _beamShape->dy = r.dy;
+    _beamShape->phi = r.phi;
+
+    _beamInfo->setText(QStringLiteral("Xc=%1\nYc=%2\nDx=%3\nDy=%4\nφ=%5°")
+        .arg(int(r.xc)).arg(int(r.yc)).arg(int(r.dx)).arg(int(r.dy)).arg(r.phi, 0, 'f', 1));
 
     _colorScale->setDataRange(QCPRange(min, max));
 }

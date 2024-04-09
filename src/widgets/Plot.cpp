@@ -49,6 +49,11 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _colorMap->setInterpolate(false);
     _colorMap->setLayer("beam");
 
+    // Make sure the axis rect and color scale synchronize their bottom and top margins:
+    QCPMarginGroup *marginGroup = new QCPMarginGroup(_plot);
+    _plot->axisRect()->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
+    _colorScale->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
+
     _beamShape = new BeamEllipse(_plot);
     _beamShape->pen = QPen(Qt::white);
 
@@ -57,10 +62,11 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _lineX->setPen(QPen(Qt::yellow));
     _lineY->setPen(QPen(Qt::white));
 
-    // Make sure the axis rect and color scale synchronize their bottom and top margins:
-    QCPMarginGroup *marginGroup = new QCPMarginGroup(_plot);
-    _plot->axisRect()->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
-    _colorScale->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
+    _beamInfo = new QCPItemText(_plot);
+    _beamInfo->position->setType(QCPItemPosition::ptAxisRectRatio);
+    _beamInfo->position->setCoords(0.075, 0.1);
+    _beamInfo->setColor(Qt::white);
+    _beamInfo->setTextAlignment(Qt::AlignLeft);
 
     setThemeColors(SYSTEM, false);
 
@@ -144,7 +150,7 @@ void Plot::replot()
 
 QSharedPointer<BeamGraphIntf> Plot::graphIntf() const
 {
-    return QSharedPointer<BeamGraphIntf>(new BeamGraphIntf(_colorMap, _colorScale, _beamShape, _lineX, _lineY));
+    return QSharedPointer<BeamGraphIntf>(new BeamGraphIntf(_colorMap, _colorScale, _beamShape, _beamInfo, _lineX, _lineY));
 }
 
 void Plot::setThemeColors(Theme theme, bool replot)
@@ -156,8 +162,7 @@ void Plot::setThemeColors(Theme theme, bool replot)
     setDefaultAxisFormat(_plot->yAxis2, theme);
     setDefaultAxisFormat(_colorScale->axis(), theme);
     _colorScale->setFrameColor(themeAxisColor(theme));
-    if (replot)
-        _plot->replot();
+    if (replot) _plot->replot();
 }
 
 void Plot::setRainbowEnabled(bool on, bool replot)
@@ -220,8 +225,13 @@ void Plot::setRainbowEnabled(bool on, bool replot)
     rainbow.setColorStops(rainbowColors);
     _colorMap->setGradient(rainbow);
     _plot->axisRect()->setBackground(Qt::black);
-    if (replot)
-        _plot->replot();
+    if (replot) _plot->replot();
+}
+
+void Plot::setBeamInfoVisible(bool on, bool replot)
+{
+    _beamInfo->setVisible(on);
+    if (replot) _plot->replot();
 }
 
 void Plot::selectBackgroundColor()
