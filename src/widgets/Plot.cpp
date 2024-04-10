@@ -71,6 +71,9 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _beamInfo->setColor(Qt::white);
     _beamInfo->setTextAlignment(Qt::AlignLeft | Qt::AlignTop);
 
+    _aperture = new ApertureRect(_plot);
+    _aperture->setAperture({20, 20, 60, 60}, false);
+
     setThemeColors(SYSTEM, false);
 
     auto l = new QVBoxLayout(this);
@@ -93,12 +96,12 @@ Plot::~Plot()
 void Plot::renderDemoBeam()
 {
     CgnBeamRender b;
-    b.w = 64;
-    b.h = 64;
+    b.w = 80;
+    b.h = 80;
     b.dx = 20;
     b.dy = 20;
-    b.xc = 32;
-    b.yc = 32;
+    b.xc = 40;
+    b.yc = 40;
     b.phi = 0;
     b.p = 255;
     QVector<uint8_t> buf(b.w*b.h);
@@ -251,4 +254,19 @@ void Plot::selectBackgroundColor()
 void Plot::exportImageDlg()
 {
     ::exportImageDlg(_plot, [this]{setThemeColors(LIGHT, false);}, [this]{setThemeColors(SYSTEM, false);});
+}
+
+void Plot::startEditAperture()
+{
+    _aperture->startEdit();
+}
+
+void Plot::stopEditAperture(bool apply)
+{
+    _aperture->stopEdit(apply);
+}
+
+bool Plot::isApertureEditing() const
+{
+    return _aperture->isEditing();
 }

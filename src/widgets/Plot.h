@@ -8,6 +8,7 @@ class QCPColorMap;
 class QCPItemStraightLine;
 class QCPItemText;
 
+class ApertureRect;
 class BeamColorScale;
 class BeamEllipse;
 class PlotIntf;
@@ -32,6 +33,9 @@ public:
     void selectBackgroundColor();
     void recalcLimits(bool replot);
     void exportImageDlg();
+    void startEditAperture();
+    void stopEditAperture(bool apply);
+    bool isApertureEditing() const;
 
 protected:
     void resizeEvent(QResizeEvent*) override;
@@ -44,6 +48,7 @@ private:
     QCPItemStraightLine *_lineX, *_lineY;
     QCPItemText *_beamInfo;
     BeamEllipse *_beamShape;
+    ApertureRect *_aperture;
     int _imageW, _imageH;
 
     void renderDemoBeam();

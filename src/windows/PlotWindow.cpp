@@ -125,10 +125,12 @@ void PlotWindow::createMenuBar()
 
     _actionStart = A_(tr("Start Capture"), this, &PlotWindow::startCapture, ":/toolbar/start");
     _actionStop = A_(tr("Stop Capture"), this, &PlotWindow::stopCapture, ":/toolbar/stop");
+    _actionEditAperture = A_(tr("Edit Soft Aperture"), this, [this]{ _plot->startEditAperture(); });
     _actionCamSettings = A_(tr("Settings..."), this, &PlotWindow::editCamSettings, ":/toolbar/settings");
     //auto actnSelectBgColor = A_(tr("Select Background..."), this, [this]{ _plot->selectBackgroundColor(); });
     menuBar()->addMenu(M_(tr("Camera"), {_actionStart, _actionStop, 0,
         //actnSelectBgColor, 0,
+        _actionEditAperture, 0,
         _actionCamSettings
     }));
 
@@ -294,6 +296,7 @@ void PlotWindow::updateThemeColors()
 void PlotWindow::updateActions(bool started)
 {
     _actionCamSettings->setDisabled(started);
+    _actionEditAperture->setDisabled(started);
     _actionOpen->setDisabled(started);
     _actionStart->setDisabled(started);
     _actionStart->setVisible(!started);

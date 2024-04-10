@@ -1,8 +1,10 @@
-#ifndef BEAM_COLOR_MAP_H
-#define BEAM_COLOR_MAP_H
+#ifndef BEAM_GRAPH_H
+#define BEAM_GRAPH_H
 
 #include "qcp/src/item.h"
 #include "qcp/src/plottables/plottable-colormap.h"
+
+#include "cameras/Aperture.h"
 
 /**
  * A thin wrapper around QCPColorMapData providing access to protected fields
@@ -14,6 +16,14 @@ public:
 
     inline double* rawData() { return mData; }
     inline void invalidate() { mDataModified = true; }
+};
+
+class BeamColorScale : public QCPColorScale
+{
+public:
+    explicit BeamColorScale(QCustomPlot *parentPlot);
+
+    void setFrameColor(const QColor& c);
 };
 
 class BeamEllipse : public QCPAbstractItem
@@ -30,12 +40,36 @@ protected:
     void draw(QCPPainter *painter) override;
 };
 
-class BeamColorScale : public QCPColorScale
-{
+class ApertureRect : public QCPAbstractItem {
 public:
-    explicit BeamColorScale(QCustomPlot *parentPlot);
+    explicit ApertureRect(QCustomPlot *parentPlot);
 
-    void setFrameColor(const QColor& c);
+    void startEdit();
+    void stopEdit(bool apply);
+    bool isEditing() const { return _editing; }
+
+    SoftAperture aperture() const { return _aperture; }
+    void setAperture(const SoftAperture &aperture, bool replot);
+
+    double selectTest(const QPointF &pos, bool onlySelectable, QVariant *details=nullptr) const override;
+
+protected:
+    void draw(QCPPainter *painter) override;
+
+private:
+    QPen _pen, _editPen;
+    SoftAperture _aperture;
+    bool _editing = false;
+    bool _dragging = false;
+    double _x1, _y1, _x2, _y2, _dragX, _dragY;
+    bool _drag0, _dragX1, _dragX2, _dragY1, _dragY2;
+    Qt::CursorShape _dragCursor = Qt::ArrowCursor;
+
+    void mouseMove(QMouseEvent*);
+    void mousePress(QMouseEvent*);
+    void mouseRelease(QMouseEvent*);
+    void mouseDoubleClick(QMouseEvent*);
+    void showDragCursor(Qt::CursorShape c);
 };
 
-#endif // BEAM_COLOR_MAP_H
+#endif // BEAM_GRAPH_H
