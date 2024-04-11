@@ -16,3 +16,4 @@ history:
     changes:
       - text: Command for exporting plot image
       - text: Calc and show ellipticity
+      - text: Warning icon when background not subtracted
