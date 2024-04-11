@@ -11,7 +11,7 @@ public:
     void setResult(const CgnBeamResult& r, double renderTime, double calcTime);
     void showData();
 
-    QTableWidgetItem *itXc, *itYc, *itDx, *itDy, *itPhi;
+    QTableWidgetItem *itXc, *itYc, *itDx, *itDy, *itPhi, *itEps;
     QTableWidgetItem *itRenderTime, *itCalcTime;
 
 private:

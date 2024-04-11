@@ -67,9 +67,9 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
 
     _beamInfo = new QCPItemText(_plot);
     _beamInfo->position->setType(QCPItemPosition::ptAxisRectRatio);
-    _beamInfo->position->setCoords(0.075, 0.1);
+    _beamInfo->position->setCoords(0.075, 0.11);
     _beamInfo->setColor(Qt::white);
-    _beamInfo->setTextAlignment(Qt::AlignLeft);
+    _beamInfo->setTextAlignment(Qt::AlignLeft | Qt::AlignTop);
 
     setThemeColors(SYSTEM, false);
 
@@ -78,6 +78,8 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     l->addWidget(_plot);
 
     setCursor(Qt::ArrowCursor);
+
+    _graphIntf.reset(new BeamGraphIntf(_colorMap, _colorScale, _beamShape, _beamInfo, _lineX, _lineY));
 
     renderDemoBeam();
     QTimer::singleShot(0, this, [this]{ recalcLimits(true); });
@@ -105,10 +107,9 @@ void Plot::renderDemoBeam()
     r.dy = b.dy;
     r.phi = b.phi;
 
-    auto g = graphIntf();
-    g->init(b.w, b.h);
-    g->setResult(r, 0, b.p);
-    cgn_render_beam_to_doubles(&b, g->rawData());
+    _graphIntf->init(b.w, b.h);
+    _graphIntf->setResult(r, 0, b.p);
+    cgn_render_beam_to_doubles(&b, _graphIntf->rawData());
 
     _imageW = b.w;
     _imageH = b.h;
@@ -149,11 +150,6 @@ void Plot::recalcLimits(bool replot)
 void Plot::replot()
 {
     _plot->replot();
-}
-
-QSharedPointer<BeamGraphIntf> Plot::graphIntf() const
-{
-    return QSharedPointer<BeamGraphIntf>(new BeamGraphIntf(_colorMap, _colorScale, _beamShape, _beamInfo, _lineX, _lineY));
 }
 
 void Plot::setThemeColors(Theme theme, bool replot)
@@ -234,6 +230,7 @@ void Plot::setRainbowEnabled(bool on, bool replot)
 void Plot::setBeamInfoVisible(bool on, bool replot)
 {
     _beamInfo->setVisible(on);
+    if (on) _graphIntf->refreshResult();
     if (replot) _plot->replot();
 }
 
