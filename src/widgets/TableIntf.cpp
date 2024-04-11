@@ -9,7 +9,7 @@ void TableIntf::setResult(const CgnBeamResult& r, double renderTime, double calc
     _calcTime = calcTime;
 }
 
-void TableIntf::showData()
+void TableIntf::showResult()
 {
     double eps = qMin(_res.dx, _res.dy) / qMax(_res.dx, _res.dy);
 

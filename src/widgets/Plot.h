@@ -9,8 +9,8 @@ class QCPItemStraightLine;
 class QCPItemText;
 
 class BeamColorScale;
-class BeamGraphIntf;
 class BeamEllipse;
+class PlotIntf;
 
 class Plot : public QWidget
 {
@@ -18,8 +18,9 @@ class Plot : public QWidget
 
 public:
     explicit Plot(QWidget *parent = nullptr);
+    ~Plot();
 
-    QSharedPointer<BeamGraphIntf> graphIntf() { return _graphIntf; }
+    PlotIntf* plotIntf() { return _plotIntf; }
 
     void prepare();
     void replot();
@@ -37,12 +38,12 @@ protected:
 
 private:
     QCustomPlot *_plot;
+    PlotIntf *_plotIntf;
     QCPColorMap *_colorMap;
     BeamColorScale *_colorScale;
     QCPItemStraightLine *_lineX, *_lineY;
     QCPItemText *_beamInfo;
     BeamEllipse *_beamShape;
-    QSharedPointer<BeamGraphIntf> _graphIntf;
     int _imageW, _imageH;
 
     void renderDemoBeam();

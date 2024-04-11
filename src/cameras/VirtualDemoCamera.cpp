@@ -1,6 +1,6 @@
 #include "VirtualDemoCamera.h"
 
-#include "plot/BeamGraphIntf.h"
+#include "widgets/PlotIntf.h"
 #include "widgets/TableIntf.h"
 
 #include "beam_calc.h"
@@ -57,8 +57,8 @@ public:
     qint64 prevFrame = 0;
     qint64 prevReady = 0;
     qint64 prevStat = 0;
-    QSharedPointer<BeamGraphIntf> beam;
-    QSharedPointer<TableIntf> table;
+    PlotIntf *plot;
+    TableIntf *table;
     VirtualDemoCamera *thread;
     double avgFrameTime = 0;
     double avgRenderTime = 0;
@@ -66,9 +66,9 @@ public:
     QVector<double> subtracted;
     bool subtract;
     bool normalize;
-    double *plot;
+    double *graph;
 
-    BeamRenderer(QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table, VirtualDemoCamera *thread) : beam(beam), table(table), thread(thread)
+    BeamRenderer(PlotIntf *plot, TableIntf *table, VirtualDemoCamera *thread) : plot(plot), table(table), thread(thread)
     {
         auto settings = CameraSettings();
         settings.load("StillImageCamera");
@@ -121,8 +121,8 @@ public:
 
         normalize = settings.normalize;
 
-        beam->init(b.w, b.h);
-        plot = beam->rawData();
+        plot->initGraph(b.w, b.h);
+        graph = plot->rawGraph();
     }
 
     void run() {
@@ -165,22 +165,22 @@ public:
                 prevReady = tm;
                 if (subtract) {
                     if (normalize) {
-                        cgn_copy_normalized_f46(g.subtracted, plot, c.w*c.h, g.min, g.max);
+                        cgn_copy_normalized_f46(g.subtracted, graph, c.w*c.h, g.min, g.max);
                     } else {
                         memcpy(plot, g.subtracted, sizeof(double)*c.w*c.h);
                     }
                 } else {
                     if (normalize) {
-                        cgn_render_beam_to_doubles_norm_8(c.buf, c.w*c.h, plot);
+                        cgn_render_beam_to_doubles_norm_8(c.buf, c.w*c.h, graph);
                     } else {
-                        cgn_copy_to_f64(&c, plot, &g.max);
+                        cgn_copy_to_f64(&c, graph, &g.max);
                     }
                 }
-                table->setResult(r, avgRenderTime, avgCalcTime);
+                plot->invalidateGraph();
                 if (normalize)
-                    beam->setResult(r, 0, 1);
-                else beam->setResult(r, g.min, g.max);
-                beam->invalidate();
+                    plot->setResult(r, 0, 1);
+                else plot->setResult(r, g.min, g.max);
+                table->setResult(r, avgRenderTime, avgCalcTime);
                 emit thread->ready();
             }
 
@@ -204,9 +204,9 @@ public:
     }
 };
 
-VirtualDemoCamera::VirtualDemoCamera(QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table, QObject *parent) : QThread{parent}
+VirtualDemoCamera::VirtualDemoCamera(PlotIntf *plot, TableIntf *table, QObject *parent) : QThread{parent}
 {
-    _render.reset(new BeamRenderer(beam, table, this));
+    _render.reset(new BeamRenderer(plot, table, this));
 }
 
 void VirtualDemoCamera::run()

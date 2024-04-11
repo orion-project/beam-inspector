@@ -1,5 +1,5 @@
-#ifndef BEAM_GRAPH_INTF_H
-#define BEAM_GRAPH_INTF_H
+#ifndef PLOT_INTF_H
+#define PLOT_INTF_H
 
 #include "beam_calc.h"
 
@@ -15,19 +15,20 @@ class QCPItemText;
  * without knowledge about specific graph implementation
  * and avoiding necessity to include whole qcustomplot.h into camera modules
  */
-class BeamGraphIntf
+class PlotIntf
 {
 public:
-    BeamGraphIntf(
+    PlotIntf(
         QCPColorMap *colorMap, QCPColorScale *colorScale,
         BeamEllipse *beamShape, QCPItemText *beamInfo,
         QCPItemStraightLine *lineX, QCPItemStraightLine *lineY);
 
-    void init(int w, int h);
-    double* rawData() const;
     void setResult(const CgnBeamResult& r, double min, double max);
-    void refreshResult();
-    void invalidate() const;
+    void showResult();
+
+    void initGraph(int w, int h);
+    double* rawGraph() const;
+    void invalidateGraph() const;
 
 private:
     CgnBeamResult _res;
@@ -37,6 +38,7 @@ private:
     BeamColorMapData *_beamData;
     BeamEllipse *_beamShape;
     QCPItemStraightLine *_lineX, *_lineY;
+    double _min, _max;
 };
 
-#endif // BEAM_GRAPH_INTF_H
+#endif // PLOT_INTF_H

@@ -9,6 +9,7 @@ class QTableWidgetItem;
 
 class CameraInfo;
 class Plot;
+class PlotIntf;
 class TableIntf;
 class VirtualDemoCamera;
 
@@ -37,7 +38,8 @@ private:
         *_actionGrayscale, *_actionRainbow, *_actionBeamInfo;
     QTableWidget *_table;
     QTableWidgetItem *_itemRenderTime;
-    QSharedPointer<TableIntf> _tableIntf;
+    TableIntf *_tableIntf;
+    PlotIntf *_plotIntf;
     QString imageFile;
     Ori::MruFileList *_mru;
     Ori::Widgets::StatusBar *_statusBar;
