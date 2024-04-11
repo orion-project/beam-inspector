@@ -1,8 +1,8 @@
 #include "Plot.h"
 
 #include "plot/BeamGraph.h"
-#include "plot/BeamGraphIntf.h"
 #include "plot/PlotExport.h"
+#include "widgets/PlotIntf.h"
 
 #include "beam_render.h"
 
@@ -79,10 +79,15 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
 
     setCursor(Qt::ArrowCursor);
 
-    _graphIntf.reset(new BeamGraphIntf(_colorMap, _colorScale, _beamShape, _beamInfo, _lineX, _lineY));
+    _plotIntf = new PlotIntf(_colorMap, _colorScale, _beamShape, _beamInfo, _lineX, _lineY);
 
     renderDemoBeam();
     QTimer::singleShot(0, this, [this]{ recalcLimits(true); });
+}
+
+Plot::~Plot()
+{
+    delete _plotIntf;
 }
 
 void Plot::renderDemoBeam()
@@ -107,9 +112,9 @@ void Plot::renderDemoBeam()
     r.dy = b.dy;
     r.phi = b.phi;
 
-    _graphIntf->init(b.w, b.h);
-    _graphIntf->setResult(r, 0, b.p);
-    cgn_render_beam_to_doubles(&b, _graphIntf->rawData());
+    _plotIntf->initGraph(b.w, b.h);
+    _plotIntf->setResult(r, 0, b.p);
+    cgn_render_beam_to_doubles(&b, _plotIntf->rawGraph());
 
     _imageW = b.w;
     _imageH = b.h;
@@ -230,7 +235,7 @@ void Plot::setRainbowEnabled(bool on, bool replot)
 void Plot::setBeamInfoVisible(bool on, bool replot)
 {
     _beamInfo->setVisible(on);
-    if (on) _graphIntf->refreshResult();
+    if (on) _plotIntf->showResult();
     if (replot) _plot->replot();
 }
 

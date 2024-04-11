@@ -1,6 +1,6 @@
 #include "StillImageCamera.h"
 
-#include "plot/BeamGraphIntf.h"
+#include "widgets/PlotIntf.h"
 #include "widgets/TableIntf.h"
 
 #include "beam_calc.h"
@@ -22,7 +22,7 @@ bool StillImageCamera::editSettings()
     return CameraSettings::editDlg(SETTINGS_KEY);
 }
 
-std::optional<CameraInfo> StillImageCamera::start(QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table)
+std::optional<CameraInfo> StillImageCamera::start(PlotIntf *plot, TableIntf *table)
 {
     Ori::Settings s;
     s.beginGroup(SETTINGS_KEY);
@@ -36,10 +36,10 @@ std::optional<CameraInfo> StillImageCamera::start(QSharedPointer<BeamGraphIntf> 
 
     s.setValue("recentDir", QFileInfo(fileName).dir().absolutePath());
 
-    return start(fileName, beam, table);
+    return start(fileName, plot, table);
 }
 
-std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table)
+std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, PlotIntf *plot, TableIntf *table)
 {
     auto settings = CameraSettings();
     settings.load(SETTINGS_KEY);
@@ -61,7 +61,7 @@ std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, QShar
         return {};
     }
 
-    beam->init(img.width(), img.height());
+    plot->initGraph(img.width(), img.height());
 
     // declare explicitly as const to avoid deep copy
     const uchar* buf = img.bits();
@@ -73,7 +73,7 @@ std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, QShar
     c.buf = (uint8_t*)buf;
 
     int sz = c.w*c.h;
-    double *plot = beam->rawData();
+    double *graph = plot->rawGraph();
 
     CgnBeamResult r;
     r.x1 = 0, r.x2 = c.w;
@@ -105,28 +105,29 @@ std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, QShar
     timer.restart();
     if (settings.subtractBackground) {
         if (settings.normalize) {
-            cgn_copy_normalized_f46(g.subtracted, plot, sz, g.min, g.max);
+            cgn_copy_normalized_f46(g.subtracted, graph, sz, g.min, g.max);
         } else {
             memcpy(plot, g.subtracted, sizeof(double)*sz);
         }
     } else {
         if (settings.normalize) {
             if (c.bits > 8) {
-                cgn_render_beam_to_doubles_norm_16((const uint16_t*)c.buf, sz, plot);
+                cgn_render_beam_to_doubles_norm_16((const uint16_t*)c.buf, sz, graph);
             } else {
-                cgn_render_beam_to_doubles_norm_8((const uint8_t*)c.buf, sz, plot);
+                cgn_render_beam_to_doubles_norm_8((const uint8_t*)c.buf, sz, graph);
             }
         } else {
-            cgn_copy_to_f64(&c, plot, &g.max);
+            cgn_copy_to_f64(&c, graph, &g.max);
         }
     }
     auto copyTime = timer.elapsed();
 
     qDebug() << "loadTime:" << loadTime << "calcTime:" << calcTime << "copyTime:" << copyTime << "iters:" << g.iters;
 
+    plot->invalidateGraph();
     if (settings.normalize)
-        beam->setResult(r, 0, 1);
-    else beam->setResult(r, g.min, g.max);
+        plot->setResult(r, 0, 1);
+    else plot->setResult(r, g.min, g.max);
     table->setResult(r, loadTime, calcTime);
 
     QFileInfo fi(fileName);

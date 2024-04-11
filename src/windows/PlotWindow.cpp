@@ -5,6 +5,7 @@
 #include "cameras/StillImageCamera.h"
 #include "cameras/VirtualDemoCamera.h"
 #include "widgets/Plot.h"
+#include "widgets/PlotIntf.h"
 #include "widgets/TableIntf.h"
 
 #include "helpers/OriWidgets.h"
@@ -69,6 +70,7 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
 PlotWindow::~PlotWindow()
 {
     storeState();
+    delete _tableIntf;
 }
 
 void PlotWindow::restoreState()
@@ -208,7 +210,7 @@ void PlotWindow::createDockPanel()
         _table->setItem(row++, 1, it);
         return it;
     };
-    _tableIntf.reset(new TableIntf);
+    _tableIntf = new TableIntf;
     makeHeader(tr(" Centroid "));
     _tableIntf->itXc = makeItem(tr("Center X"));
     _tableIntf->itYc = makeItem(tr("Center Y"));
@@ -230,6 +232,7 @@ void PlotWindow::createDockPanel()
 void PlotWindow::createPlot()
 {
     _plot = new Plot;
+    _plotIntf = _plot->plotIntf();
 }
 
 void PlotWindow::closeEvent(QCloseEvent* ce)
@@ -299,7 +302,7 @@ void PlotWindow::startCapture()
     _stillImageFile.clear();
     showInfo(VirtualDemoCamera::info());
     _itemRenderTime->setText(tr(" Render time "));
-    _cameraThread = new VirtualDemoCamera(_plot->graphIntf(), _tableIntf, this);
+    _cameraThread = new VirtualDemoCamera(_plotIntf, _tableIntf, this);
     connect(_cameraThread, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
     connect(_cameraThread, &VirtualDemoCamera::stats, this, &PlotWindow::showFps);
     connect(_cameraThread, &VirtualDemoCamera::started, this, [this]{ _plot->prepare(); });
@@ -328,13 +331,14 @@ void PlotWindow::captureStopped()
 
 void PlotWindow::dataReady()
 {
+    _tableIntf->showResult();
+    _plotIntf->showResult();
     _plot->replot();
-    _tableIntf->showData();
 }
 
 void PlotWindow::openImageDlg()
 {
-    auto info = StillImageCamera::start(_plot->graphIntf(), _tableIntf);
+    auto info = StillImageCamera::start(_plotIntf, _tableIntf);
     if (info) imageReady(*info);
 }
 
@@ -344,7 +348,7 @@ void PlotWindow::openImage(const QString& fileName)
         Ori::Dlg::info(tr("Can not open file while capture is in progress"));
         return;
     }
-    auto info = StillImageCamera::start(fileName, _plot->graphIntf(), _tableIntf);
+    auto info = StillImageCamera::start(fileName, _plotIntf, _tableIntf);
     if (info) imageReady(*info);
 }
 

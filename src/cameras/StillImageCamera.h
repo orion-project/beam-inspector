@@ -6,15 +6,15 @@
 #include <QSharedPointer>
 #include <QString>
 
-class BeamGraphIntf;
+class PlotIntf;
 class TableIntf;
 
 class StillImageCamera
 {
 public:
     static bool editSettings();
-    static std::optional<CameraInfo> start(QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table);
-    static std::optional<CameraInfo> start(const QString& fileName, QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table);
+    static std::optional<CameraInfo> start(PlotIntf *plot, TableIntf *table);
+    static std::optional<CameraInfo> start(const QString& fileName, PlotIntf *plot, TableIntf *table);
 };
 
 #endif // STILL_IMAGE_CAMERA_H

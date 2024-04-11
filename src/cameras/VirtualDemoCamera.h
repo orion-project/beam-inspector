@@ -6,8 +6,8 @@
 #include <QThread>
 #include <QSharedPointer>
 
-class BeamGraphIntf;
 class BeamRenderer;
+class PlotIntf;
 class TableIntf;
 
 class VirtualDemoCamera : public QThread
@@ -15,7 +15,7 @@ class VirtualDemoCamera : public QThread
     Q_OBJECT
 
 public:
-    explicit VirtualDemoCamera(QSharedPointer<BeamGraphIntf> beam, QSharedPointer<TableIntf> table, QObject *parent = nullptr);
+    explicit VirtualDemoCamera(PlotIntf *plot, TableIntf *table, QObject *parent = nullptr);
 
     static CameraInfo info();
 

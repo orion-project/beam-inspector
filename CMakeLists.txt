@@ -43,11 +43,11 @@ set(PROJECT_SOURCES
     src/cameras/StillImageCamera.cpp
     src/cameras/VirtualDemoCamera.cpp
     src/plot/BeamGraph.cpp
-    src/plot/BeamGraphIntf.cpp
     src/plot/PlotExport.cpp
     src/widgets/Plot.cpp
-    src/windows/PlotWindow.cpp
+    src/widgets/PlotIntf.cpp
     src/widgets/TableIntf.cpp
+    src/windows/PlotWindow.cpp
 )
 
 add_subdirectory(libs/qcustomplot)
