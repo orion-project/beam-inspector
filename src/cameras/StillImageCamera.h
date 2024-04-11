@@ -3,7 +3,6 @@
 
 #include "cameras/CameraBase.h"
 
-#include <QSharedPointer>
 #include <QString>
 
 class PlotIntf;
@@ -13,6 +12,7 @@ class StillImageCamera
 {
 public:
     static bool editSettings();
+    static CameraSettings loadSettings();
     static std::optional<CameraInfo> start(PlotIntf *plot, TableIntf *table);
     static std::optional<CameraInfo> start(const QString& fileName, PlotIntf *plot, TableIntf *table);
 };

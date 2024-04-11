@@ -39,6 +39,8 @@ enum StatusPanels
     STATUS_RESOLUTION,
     STATUS_SEPARATOR_2,
     STATUS_FPS,
+    STATUS_SEPARATOR_3,
+    STATUS_WARNING,
 
     STATUS_PANEL_COUNT,
 };
@@ -56,6 +58,7 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     createDockPanel();
     createPlot();
     updateActions(false);
+    updateIsoWarning();
     setCentralWidget(_plot);
 
     connect(qApp->styleHints(), &QStyleHints::colorSchemeChanged, this, &PlotWindow::updateThemeColors);
@@ -159,6 +162,7 @@ void PlotWindow::createStatusBar()
     _statusBar->setText(STATUS_RESOLUTION, "2592 × 2048 × 8bit");
     _statusBar->setText(STATUS_SEPARATOR_1, "|");
     _statusBar->setText(STATUS_SEPARATOR_2, "|");
+    _statusBar->setText(STATUS_SEPARATOR_3, "|");
     showInfo(VirtualDemoCamera::info());
     showFps(0);
     setStatusBar(_statusBar);
@@ -365,6 +369,20 @@ void PlotWindow::imageReady(const CameraInfo& info)
 
 void PlotWindow::editCamSettings()
 {
-    if (StillImageCamera::editSettings() and !_stillImageFile.isEmpty())
+    if (!StillImageCamera::editSettings())
+        return;
+
+    updateIsoWarning();
+
+    if (!_stillImageFile.isEmpty())
         openImage(_stillImageFile);
+}
+
+void PlotWindow::updateIsoWarning()
+{
+    auto s = StillImageCamera::loadSettings();
+    if (!s.subtractBackground) {
+        _statusBar->setIcon(STATUS_WARNING, ":/toolbar/exclame");
+        _statusBar->setHint(STATUS_WARNING, tr("Background subtraction disabled"));
+    } else _statusBar->clear(STATUS_WARNING);
 }
