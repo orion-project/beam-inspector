@@ -65,6 +65,7 @@ private:
 
     void openImage(const QString& fileName);
     void updateActions(bool started);
+    void updateIsoWarning();
     void updateThemeColors();
     void setThemeColors();
     void showFps(int fps);

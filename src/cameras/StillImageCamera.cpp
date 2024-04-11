@@ -22,6 +22,14 @@ bool StillImageCamera::editSettings()
     return CameraSettings::editDlg(SETTINGS_KEY);
 }
 
+CameraSettings StillImageCamera::loadSettings()
+{
+    auto settings = CameraSettings();
+    settings.load(SETTINGS_KEY);
+    //settings.print();
+    return settings;
+}
+
 std::optional<CameraInfo> StillImageCamera::start(PlotIntf *plot, TableIntf *table)
 {
     Ori::Settings s;
@@ -41,9 +49,7 @@ std::optional<CameraInfo> StillImageCamera::start(PlotIntf *plot, TableIntf *tab
 
 std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, PlotIntf *plot, TableIntf *table)
 {
-    auto settings = CameraSettings();
-    settings.load(SETTINGS_KEY);
-    settings.print();
+    auto settings = loadSettings();
 
     QElapsedTimer timer;
 

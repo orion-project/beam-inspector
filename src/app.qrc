@@ -4,6 +4,7 @@
         <file alias="home">../img/toolbar/home.svg</file>
         <file alias="new">../img/toolbar/new.svg</file>
         <file alias="open_img">../img/toolbar/open_img.svg</file>
+        <file alias="exclame">../img/toolbar/exclame.svg</file>
         <file alias="export_img">../img/toolbar/save_img.svg</file>
         <file alias="settings">../img/toolbar/settings.svg</file>
         <file alias="start">../img/toolbar/start.svg</file>
