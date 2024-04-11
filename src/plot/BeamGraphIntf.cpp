@@ -13,8 +13,13 @@ BeamGraphIntf::BeamGraphIntf(QCPColorMap *colorMap, QCPColorScale *colorScale, B
 
 void BeamGraphIntf::init(int w, int h)
 {
-    _beamData = new BeamColorMapData(w, h);
-    _colorMap->setData(_beamData);
+    auto d = _colorMap->data();
+    if (d->keySize() != w or d->valueSize() != h) {
+        _beamData = new BeamColorMapData(w, h);
+        _colorMap->setData(_beamData);
+    } else {
+        _beamData = static_cast<BeamColorMapData*>(d);
+    }
 }
 
 double* BeamGraphIntf::rawData() const
@@ -29,24 +34,33 @@ void BeamGraphIntf::invalidate() const
 
 void BeamGraphIntf::setResult(const CgnBeamResult& r, double min, double max)
 {
-    auto phi = qDegreesToRadians(r.phi);
+    _res = r;
+    refreshResult();
+    _colorScale->setDataRange(QCPRange(min, max));
+}
+
+void BeamGraphIntf::refreshResult()
+{
+    auto phi = qDegreesToRadians(_res.phi);
     auto cos_phi = cos(phi);
     auto sin_phi = sin(phi);
 
-    _lineX->point1->setCoords(r.xc, r.yc);
-    _lineX->point2->setCoords(r.xc + r.dx*cos_phi, r.yc + r.dx*sin_phi);
+    _lineX->point1->setCoords(_res.xc, _res.yc);
+    _lineX->point2->setCoords(_res.xc + _res.dx*cos_phi, _res.yc + _res.dx*sin_phi);
 
-    _lineY->point1->setCoords(r.xc, r.yc);
-    _lineY->point2->setCoords(r.xc + r.dy*sin_phi, r.yc - r.dy*cos_phi);
+    _lineY->point1->setCoords(_res.xc, _res.yc);
+    _lineY->point2->setCoords(_res.xc + _res.dy*sin_phi, _res.yc - _res.dy*cos_phi);
 
-    _beamShape->xc = r.xc;
-    _beamShape->yc = r.yc;
-    _beamShape->dx = r.dx;
-    _beamShape->dy = r.dy;
-    _beamShape->phi = r.phi;
+    _beamShape->xc = _res.xc;
+    _beamShape->yc = _res.yc;
+    _beamShape->dx = _res.dx;
+    _beamShape->dy = _res.dy;
+    _beamShape->phi = _res.phi;
 
-    _beamInfo->setText(QStringLiteral("Xc=%1\nYc=%2\nDx=%3\nDy=%4\nφ=%5°")
-        .arg(int(r.xc)).arg(int(r.yc)).arg(int(r.dx)).arg(int(r.dy)).arg(r.phi, 0, 'f', 1));
-
-    _colorScale->setDataRange(QCPRange(min, max));
+    if (_beamInfo->visible()) {
+        double eps = qMin(_res.dx, _res.dy) / qMax(_res.dx, _res.dy);
+        _beamInfo->setText(QStringLiteral("Xc=%1\nYc=%2\nDx=%3\nDy=%4\nφ=%5°\nε=%6")
+            .arg(int(_res.xc)).arg(int(_res.yc)).arg(int(_res.dx)).arg(int(_res.dy))
+            .arg(_res.phi, 0, 'f', 1).arg(eps, 0, 'f', 3));
+    }
 }

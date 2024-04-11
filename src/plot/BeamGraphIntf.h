@@ -26,9 +26,11 @@ public:
     void init(int w, int h);
     double* rawData() const;
     void setResult(const CgnBeamResult& r, double min, double max);
+    void refreshResult();
     void invalidate() const;
 
 private:
+    CgnBeamResult _res;
     QCPItemText *_beamInfo;
     QCPColorMap *_colorMap;
     QCPColorScale *_colorScale;

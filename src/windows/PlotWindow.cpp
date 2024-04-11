@@ -193,7 +193,7 @@ void PlotWindow::createDockPanel()
     };
     auto makeItem = [this, &row](const QString& title, QTableWidgetItem **headerItem = nullptr) {
         _table->setRowCount(row+1);
-        auto it = new QTableWidgetItem(title);
+        auto it = new QTableWidgetItem(" " + title + " ");
         auto f = it->font();
         f.setBold(true);
         f.setPointSize(f.pointSize()+1);
@@ -210,14 +210,15 @@ void PlotWindow::createDockPanel()
     };
     _tableIntf.reset(new TableIntf);
     makeHeader(tr(" Centroid "));
-    _tableIntf->itXc = makeItem(tr(" Center X "));
-    _tableIntf->itYc = makeItem(tr(" Center Y "));
-    _tableIntf->itDx = makeItem(tr(" Width X "));
-    _tableIntf->itDy = makeItem(tr(" Width Y "));
-    _tableIntf->itPhi = makeItem(tr(" Azimuth "));
+    _tableIntf->itXc = makeItem(tr("Center X"));
+    _tableIntf->itYc = makeItem(tr("Center Y"));
+    _tableIntf->itDx = makeItem(tr("Width X"));
+    _tableIntf->itDy = makeItem(tr("Width Y"));
+    _tableIntf->itPhi = makeItem(tr("Azimuth"));
+    _tableIntf->itEps = makeItem(tr("Ellipticity"));
     makeHeader(tr(" Debug "));
-    _tableIntf->itRenderTime = makeItem(tr(" Render time "), &_itemRenderTime);
-    _tableIntf->itCalcTime = makeItem(tr(" Calc time "));
+    _tableIntf->itRenderTime = makeItem(tr("Render time"), &_itemRenderTime);
+    _tableIntf->itCalcTime = makeItem(tr("Calc time"));
 
     auto dock = new QDockWidget(tr("Results"));
     dock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);

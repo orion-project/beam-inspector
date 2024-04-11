@@ -19,7 +19,7 @@ class Plot : public QWidget
 public:
     explicit Plot(QWidget *parent = nullptr);
 
-    QSharedPointer<BeamGraphIntf> graphIntf() const;
+    QSharedPointer<BeamGraphIntf> graphIntf() { return _graphIntf; }
 
     void prepare();
     void replot();
@@ -42,6 +42,7 @@ private:
     QCPItemStraightLine *_lineX, *_lineY;
     QCPItemText *_beamInfo;
     BeamEllipse *_beamShape;
+    QSharedPointer<BeamGraphIntf> _graphIntf;
     int _imageW, _imageH;
 
     void renderDemoBeam();
