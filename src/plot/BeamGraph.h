@@ -4,7 +4,7 @@
 #include "qcp/src/item.h"
 #include "qcp/src/plottables/plottable-colormap.h"
 
-#include "cameras/Aperture.h"
+#include "cameras/Camera.h"
 
 /**
  * A thin wrapper around QCPColorMapData providing access to protected fields
@@ -40,7 +40,8 @@ protected:
     void draw(QCPPainter *painter) override;
 };
 
-class ApertureRect : public QCPAbstractItem {
+class ApertureRect : public QCPAbstractItem
+{
 public:
     explicit ApertureRect(QCustomPlot *parentPlot);
 
@@ -52,6 +53,10 @@ public:
     void setAperture(const SoftAperture &aperture, bool replot);
 
     double selectTest(const QPointF &pos, bool onlySelectable, QVariant *details=nullptr) const override;
+
+    std::function<void()> onEdited;
+    double maxX = 0;
+    double maxY = 0;
 
 protected:
     void draw(QCPPainter *painter) override;
@@ -70,6 +75,8 @@ private:
     void mouseRelease(QMouseEvent*);
     void mouseDoubleClick(QMouseEvent*);
     void showDragCursor(Qt::CursorShape c);
+    void resetDragCusrsor() { showDragCursor(Qt::ArrowCursor); }
+    void showCoordTooltip(const QPoint &p);
 };
 
 #endif // BEAM_GRAPH_H

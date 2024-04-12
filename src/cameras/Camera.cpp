@@ -1,4 +1,4 @@
-#include "CameraBase.h"
+#include "Camera.h"
 
 #include "helpers/OriDialogs.h"
 #include "helpers/OriLayouts.h"
@@ -26,6 +26,20 @@ QString CameraInfo::resolutionStr() const
 }
 
 //------------------------------------------------------------------------------
+//                               SoftAperture
+//------------------------------------------------------------------------------
+
+bool SoftAperture::isValid(int w, int h) const
+{
+    return x1 >= 0 && x2 > x1 && x2 <= w && y1 >= 0 && y2 > y1 && y2 <= h;
+}
+
+QString SoftAperture::sizeStr() const
+{
+    return QStringLiteral("%1 × %2").arg(x2-x1).arg(y2-y1);
+}
+
+//------------------------------------------------------------------------------
 //                                CameraSettings
 //------------------------------------------------------------------------------
 
@@ -38,6 +52,8 @@ void CameraSettings::print()
 
 void CameraSettings::load(const QString &group)
 {
+    this->group = group;
+
     Ori::Settings s;
     s.beginGroup(group);
 
@@ -58,12 +74,23 @@ void CameraSettings::load(const QString &group)
 
     maskDiam = s.value("maskDiam", 3).toDouble();
     if (maskDiam <= 0) maskDiam = 3;
+
+    aperture.enabled = s.value("aperture/on", false).toBool();
+    aperture.x1 = s.value("aperture/x1", 0).toInt();
+    aperture.y1 = s.value("aperture/y1", 0).toInt();
+    aperture.x2 = s.value("aperture/x2", 0).toInt();
+    aperture.y2 = s.value("aperture/y2", 0).toInt();
 }
 
 void CameraSettings::save(const QString &group)
 {
+    if (group.isEmpty() && this->group.isEmpty()) {
+        qWarning() << "Unable to save camera settings, groups is not set";
+        return;
+    }
+
     Ori::Settings s;
-    s.beginGroup(group);
+    s.beginGroup(group.isEmpty() ? this->group : group);
     s.setValue("normalize", normalize);
     s.setValue("subtractBackground", subtractBackground);
     s.setValue("maxIters", maxIters);
@@ -71,6 +98,11 @@ void CameraSettings::save(const QString &group)
     s.setValue("cornerFraction", cornerFraction);
     s.setValue("nT", nT);
     s.setValue("maskDiam", maskDiam);
+    s.setValue("aperture/on", aperture.enabled);
+    s.setValue("aperture/x1", aperture.x1);
+    s.setValue("aperture/y1", aperture.y1);
+    s.setValue("aperture/x2", aperture.x2);
+    s.setValue("aperture/y2", aperture.y2);
 }
 
 bool CameraSettings::editDlg(const QString &group)
@@ -134,7 +166,7 @@ bool CameraSettings::editDlg(const QString &group)
         s.cornerFraction = cornerFraction->value() / 100.0;
         s.nT = nT->value();
         s.maskDiam = maskDiam->value();
-        s.save(group);
+        s.save();
     }
 
     return ok;

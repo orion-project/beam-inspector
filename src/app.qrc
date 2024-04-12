@@ -1,5 +1,7 @@
 <RCC>
     <qresource prefix="/toolbar">
+        <file alias="aperture">../img/toolbar/aperture.svg</file>
+        <file alias="aperture_warn">../img/toolbar/aperture_warn.svg</file>
         <file alias="bug">../img/toolbar/bug.svg</file>
         <file alias="home">../img/toolbar/home.svg</file>
         <file alias="new">../img/toolbar/new.svg</file>

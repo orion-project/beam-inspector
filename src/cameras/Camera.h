@@ -14,8 +14,21 @@ struct CameraInfo
     QString resolutionStr() const;
 };
 
+struct SoftAperture
+{
+    bool enabled = false;
+    int x1 = 0;
+    int y1 = 0;
+    int x2 = 0;
+    int y2 = 0;
+
+    bool isValid(int w, int h) const;
+    QString sizeStr() const;
+};
+
 struct CameraSettings
 {
+    QString group;
     bool normalize = true;
     bool subtractBackground = true;
     int maxIters = 0;
@@ -23,10 +36,11 @@ struct CameraSettings
     double cornerFraction = 0.035;
     double nT = 3;
     double maskDiam = 3;
+    SoftAperture aperture;
 
     void print();
     void load(const QString &group);
-    void save(const QString &group);
+    void save(const QString &group = QString());
 
     static bool editDlg(const QString &group);
 };

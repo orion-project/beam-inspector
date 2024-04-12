@@ -72,7 +72,7 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _beamInfo->setTextAlignment(Qt::AlignLeft | Qt::AlignTop);
 
     _aperture = new ApertureRect(_plot);
-    _aperture->setAperture({20, 20, 60, 60}, false);
+    _aperture->onEdited = [this]{ emit apertureEdited(); };
 
     setThemeColors(SYSTEM, false);
 
@@ -84,8 +84,7 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
 
     _plotIntf = new PlotIntf(_colorMap, _colorScale, _beamShape, _beamInfo, _lineX, _lineY);
 
-    renderDemoBeam();
-    QTimer::singleShot(0, this, [this]{ recalcLimits(true); });
+    QTimer::singleShot(0, this, [this]{ renderDemoBeam(); });
 }
 
 Plot::~Plot()
@@ -117,22 +116,35 @@ void Plot::renderDemoBeam()
 
     _plotIntf->initGraph(b.w, b.h);
     _plotIntf->setResult(r, 0, b.p);
+    _plotIntf->showResult();
     cgn_render_beam_to_doubles(&b, _plotIntf->rawGraph());
+    prepare();
 
-    _imageW = b.w;
-    _imageH = b.h;
+    _plot->replot();
 }
 
 void Plot::prepare()
 {
     _imageW = _colorMap->data()->keyRange().upper;
     _imageH = _colorMap->data()->valueRange().upper;
+    _aperture->maxX = _imageW;
+    _aperture->maxY = _imageH;
     recalcLimits(false);
 }
 
 void Plot::resizeEvent(QResizeEvent *event)
 {
     recalcLimits(false);
+}
+
+void Plot::keyPressEvent(QKeyEvent *event)
+{
+    if (!_aperture->isEditing())
+        return;
+    if (event->matches(QKeySequence::Cancel))
+        _aperture->stopEdit(false);
+    else if (event->key() == Qt::Key_Return)
+        _aperture->stopEdit(true);
 }
 
 void Plot::recalcLimits(bool replot)
@@ -269,4 +281,14 @@ void Plot::stopEditAperture(bool apply)
 bool Plot::isApertureEditing() const
 {
     return _aperture->isEditing();
+}
+
+void Plot::setAperture(const SoftAperture& a, bool replot)
+{
+    _aperture->setAperture(a, replot);
+}
+
+SoftAperture Plot::aperture() const
+{
+    return _aperture->aperture();
 }

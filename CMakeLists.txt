@@ -39,7 +39,7 @@ set(PROJECT_SOURCES
     src/app.qrc
     src/main.cpp
     src/app/HelpSystem.cpp
-    src/cameras/CameraBase.cpp
+    src/cameras/Camera.cpp
     src/cameras/StillImageCamera.cpp
     src/cameras/VirtualDemoCamera.cpp
     src/plot/BeamGraph.cpp
