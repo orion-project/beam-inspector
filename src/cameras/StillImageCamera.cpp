@@ -82,8 +82,6 @@ std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, PlotI
     double *graph = plot->rawGraph();
 
     CgnBeamResult r;
-    r.x1 = 0, r.x2 = c.w;
-    r.y1 = 0, r.y2 = c.h;
 
     CgnBeamBkgnd g;
     g.iters = 0;
@@ -94,6 +92,8 @@ std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, PlotI
     g.mask_diam = settings.maskDiam;
     g.min = 0;
     g.max = 0;
+    g.ax1 = 0, g.ax2 = c.w;
+    g.ay1 = 0, g.ay2 = c.h;
     QVector<double> subtracted;
     if (settings.subtractBackground) {
         subtracted = QVector<double>(sz);
@@ -111,7 +111,7 @@ std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, PlotI
     timer.restart();
     if (settings.subtractBackground) {
         if (settings.normalize) {
-            cgn_copy_normalized_f46(g.subtracted, graph, sz, g.min, g.max);
+            cgn_copy_normalized_f64(g.subtracted, graph, sz, g.min, g.max);
         } else {
             memcpy(plot, g.subtracted, sizeof(double)*sz);
         }

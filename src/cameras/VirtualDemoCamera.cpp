@@ -96,9 +96,6 @@ public:
 //            qCritical() << "Failed to initialize calc buffers";
 //        }
 
-        r.x1 = 0, r.x2 = c.w;
-        r.y1 = 0, r.y2 = c.h;
-
         dx_offset = RandomOffset(b.dx, b.dx-20, b.dx+20);
         dy_offset = RandomOffset(b.dy, b.dy-20, b.dy+20);
         xc_offset = RandomOffset(b.xc, b.xc-20, b.xc+20);
@@ -113,6 +110,8 @@ public:
         g.mask_diam = settings.maskDiam;
         g.min = 0;
         g.max = 0;
+        g.ax1 = 0, g.ax2 = c.w;
+        g.ay1 = 0, g.ay2 = c.h;
         subtract = settings.subtractBackground;
         if (subtract) {
             subtracted = QVector<double>(c.w*c.h);
@@ -165,7 +164,7 @@ public:
                 prevReady = tm;
                 if (subtract) {
                     if (normalize) {
-                        cgn_copy_normalized_f46(g.subtracted, graph, c.w*c.h, g.min, g.max);
+                        cgn_copy_normalized_f64(g.subtracted, graph, c.w*c.h, g.min, g.max);
                     } else {
                         memcpy(plot, g.subtracted, sizeof(double)*c.w*c.h);
                     }

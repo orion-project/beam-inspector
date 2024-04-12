@@ -50,7 +50,10 @@ typedef struct {
 } CgnBeamCalc;
 
 typedef struct {
-    // The maximum number of iterations done before giving up.
+    // Aperture bounds inside that calculations should be carried out.
+    int ax1, ay1, ax2, ay2;
+
+    // The maximum number of iterations that should be done before giving up.
     int max_iter;
 
     // Min relative difference in beam diameter between interations
@@ -70,10 +73,21 @@ typedef struct {
     // ISO 11146 states that it should be 3.
     double mask_diam;
 
+    // Pixel values with background subtracted.
+    // Only pixes inside aperture bonds have valid values.
     double *subtracted;
-    int x1, x2, y1, y2, iters;
 
+    // The latest calculation aperture inside that the beam diameter has been calculated with required precision.
+    // Can not be larger and clamped to initial aperture bounds.
+    int x1, x2, y1, y2;
+
+    // The iteration number at which the required precision has been achieved.
+    int iters;
+
+    // Background and noise values.
     double mean, sdev;
+
+    // Min and max pixel values after backgdound subtracted.
     double min, max;
 } CgnBeamBkgnd;
 
@@ -91,7 +105,7 @@ void cgn_calc_beam_naive(const CgnBeamCalc *c, CgnBeamResult *r);
 void cgn_calc_beam_bkgnd(const CgnBeamCalc *c, CgnBeamBkgnd *b, CgnBeamResult *r);
 void cgn_copy_to_f64(const CgnBeamCalc *c, double *tgt, double *max);
 void cgn_normalize_f64(double *buf, int sz, double min, double max);
-void cgn_copy_normalized_f46(double *src, double *tgt, int sz, double min, double max);
+void cgn_copy_normalized_f64(double *src, double *tgt, int sz, double min, double max);
 
 #ifdef __cplusplus
 }
