@@ -23,6 +23,7 @@ public:
         BeamEllipse *beamShape, QCPItemText *beamInfo,
         QCPItemStraightLine *lineX, QCPItemStraightLine *lineY);
 
+    void cleanResult();
     void setResult(const CgnBeamResult& r, double min, double max);
     void showResult();
 

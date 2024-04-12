@@ -7,17 +7,20 @@
 #include <QSharedPointer>
 
 class BeamRenderer;
-class PlotIntf;
-class TableIntf;
 
-class VirtualDemoCamera : public QThread
+class VirtualDemoCamera : public QThread, public Camera
 {
     Q_OBJECT
 
 public:
-    explicit VirtualDemoCamera(PlotIntf *plot, TableIntf *table, QObject *parent = nullptr);
+    VirtualDemoCamera(PlotIntf *plot, TableIntf *table, QObject *parent);
 
-    static CameraInfo info();
+    QString name() const override { return "VirtualDemo"; }
+    int width() const override;
+    int height() const override;
+    int bits() const override { return 8; }
+
+    void capture() override;
 
 signals:
     void ready();

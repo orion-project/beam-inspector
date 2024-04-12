@@ -80,7 +80,7 @@ void ApertureRect::setAperture(const SoftAperture &aperture, bool replot)
     _y1 = _aperture.y1;
     _x2 = _aperture.x2;
     _y2 = _aperture.y2;
-    setVisible(_aperture.enabled && _aperture.isValid(maxX, maxY));
+    setVisible(_aperture.enabled);
     if (replot)
         parentPlot()->replot();
 }

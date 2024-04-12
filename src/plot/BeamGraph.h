@@ -4,7 +4,7 @@
 #include "qcp/src/item.h"
 #include "qcp/src/plottables/plottable-colormap.h"
 
-#include "cameras/Camera.h"
+#include "cameras/CameraTypes.h"
 
 /**
  * A thin wrapper around QCPColorMapData providing access to protected fields

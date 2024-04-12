@@ -4,8 +4,6 @@
 #include "plot/PlotExport.h"
 #include "widgets/PlotIntf.h"
 
-#include "beam_render.h"
-
 #include "qcp/src/core.h"
 #include "qcp/src/layoutelements/layoutelement-axisrect.h"
 #include "qcp/src/items/item-straightline.h"
@@ -83,44 +81,11 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     setCursor(Qt::ArrowCursor);
 
     _plotIntf = new PlotIntf(_colorMap, _colorScale, _beamShape, _beamInfo, _lineX, _lineY);
-
-    QTimer::singleShot(0, this, [this]{ renderDemoBeam(); });
 }
 
 Plot::~Plot()
 {
     delete _plotIntf;
-}
-
-void Plot::renderDemoBeam()
-{
-    CgnBeamRender b;
-    b.w = 80;
-    b.h = 80;
-    b.dx = 20;
-    b.dy = 20;
-    b.xc = 40;
-    b.yc = 40;
-    b.phi = 0;
-    b.p = 255;
-    QVector<uint8_t> buf(b.w*b.h);
-    b.buf = buf.data();
-    cgn_render_beam(&b);
-
-    CgnBeamResult r;
-    r.xc = b.xc;
-    r.yc = b.yc;
-    r.dx = b.dx;
-    r.dy = b.dy;
-    r.phi = b.phi;
-
-    _plotIntf->initGraph(b.w, b.h);
-    _plotIntf->setResult(r, 0, b.p);
-    _plotIntf->showResult();
-    cgn_render_beam_to_doubles(&b, _plotIntf->rawGraph());
-    prepare();
-
-    _plot->replot();
 }
 
 void Plot::prepare()

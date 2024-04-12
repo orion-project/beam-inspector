@@ -3,18 +3,27 @@
 
 #include "cameras/Camera.h"
 
-#include <QString>
+#include <QImage>
 
-class PlotIntf;
-class TableIntf;
-
-class StillImageCamera
+class StillImageCamera : public Camera
 {
 public:
-    static bool editSettings();
-    static CameraSettings loadSettings();
-    static std::optional<CameraInfo> start(PlotIntf *plot, TableIntf *table);
-    static std::optional<CameraInfo> start(const QString& fileName, PlotIntf *plot, TableIntf *table);
+    StillImageCamera(PlotIntf *plot, TableIntf *table);
+    StillImageCamera(PlotIntf *plot, TableIntf *table, const QString& fileName);
+
+    QString name() const override;
+    QString descr() const override;
+    int width() const override;
+    int height() const override;
+    int bits() const override;
+
+    QString fileName() const { return _fileName; }
+
+    void capture() override;
+
+private:
+    QString _fileName;
+    QImage _image;
 };
 
 #endif // STILL_IMAGE_CAMERA_H

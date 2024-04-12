@@ -2,6 +2,13 @@
 
 #include <QTableWidgetItem>
 
+void TableIntf::cleanResult()
+{
+    memset(&_res, 0, sizeof(CgnBeamResult));
+    _renderTime = 0;
+    _calcTime = 0;
+}
+
 void TableIntf::setResult(const CgnBeamResult& r, double renderTime, double calcTime)
 {
     _res = r;

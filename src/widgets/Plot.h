@@ -1,7 +1,7 @@
-#ifndef PLOT_H
-#define PLOT_H
+#ifndef PLOT_WIDGET_H
+#define PLOT_WIDGET_H
 
-#include "cameras/Camera.h"
+#include "cameras/CameraTypes.h"
 
 #include <QWidget>
 
@@ -62,4 +62,4 @@ private:
     void renderDemoBeam();
 };
 
-#endif // PLOT_H
+#endif // PLOT_WIDGET_H
