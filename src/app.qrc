@@ -11,6 +11,9 @@
         <file alias="settings">../img/toolbar/settings.svg</file>
         <file alias="start">../img/toolbar/start.svg</file>
         <file alias="stop">../img/toolbar/pause.svg</file>
+        <file alias="zoom_aperture">../img/toolbar/zoom_aperture.svg</file>
+        <file alias="zoom_full">../img/toolbar/zoom_full.svg</file>
+        <file alias="zoom_sensor">../img/toolbar/zoom_sensor.svg</file>
     </qresource>
     <qresource prefix="/window_icons">
         <file alias="main">../img/icons/cignus.svg</file>

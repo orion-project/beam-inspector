@@ -1,0 +1,32 @@
+<svg height="24" width="24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<linearGradient id="a" gradientTransform="matrix(0 -1 1 0 -19 24)" gradientUnits="userSpaceOnUse" x1="-.5" x2="24.5" xlink:href="#c" y1="21.5" y2="21.5"/>
+<linearGradient id="b" gradientTransform="matrix(0 -1 1 0 -19 23)" gradientUnits="userSpaceOnUse" x1="22.41" x2="19.5" xlink:href="#c" y1="21.5" y2="21.5"/>
+<linearGradient id="c">
+<stop offset="0" stop-color="#305080"/>
+<stop offset="1" stop-color="#5b79a4"/>
+</linearGradient>
+<linearGradient id="d" gradientUnits="userSpaceOnUse" x1="-.5" x2="24.5" xlink:href="#c" y1="21.5" y2="21.5"/>
+<linearGradient id="e" gradientUnits="userSpaceOnUse" x1="23.41" x2="20.5" xlink:href="#c" y1="21.5" y2="21.5"/>
+<path d="m0 21.5h23" fill="none" stroke="url(#d)"/>
+<path d="m21 19.5 3 2-3 2" fill="url(#e)" fill-rule="evenodd"/>
+<path d="m2.5 24v-23" fill="none" stroke="url(#a)"/>
+<path d="m.5 3 2-3 2 3" fill="url(#b)" fill-rule="evenodd"/>
+<g transform="translate(40 1)">
+<path d="m12.5 18v-15" fill="none" stroke="#000"/>
+<g fill-rule="evenodd">
+<path d="m8.5 5 4-6 4 6"/>
+<path d="m8.5 16 4 6 4-6"/>
+</g>
+</g>
+<g transform="matrix(0 -1 1 0 42 24)">
+<path d="m12.5 18v-15" fill="none" stroke="#000"/>
+<g fill-rule="evenodd">
+<path d="m8.5 5 4-6 4 6"/>
+<path d="m8.5 16 4 6 4-6"/>
+</g>
+</g>
+<g stroke="#7f8c98" stroke-width=".37" transform="matrix(2.65 0 0 2.63 5.1 2.16)">
+<path d="m3.18.13a3.04 3.04 0 0 0 -3.05 3.05 3.04 3.04 0 0 0 3.05 3.04 3.04 3.04 0 0 0 3.04-3.04 3.04 3.04 0 0 0 -3.04-3.05zm-.53 1.99h1.14l.61 1.05-.62 1.06h-1.25l-.57-1.06z" fill="#c6d4e2" fill-rule="evenodd"/>
+<path d="m2.68 6.15 1.72-2.98m-2.44 0 1.71-2.97m-2.83 1.05 1.69 2.93m1.26-2.06 1.71 2.97m-5.16-.86h3.44m-1.13-2.11h3.36" fill="#ffb843" stroke-linecap="round"/>
+</g>
+</svg>

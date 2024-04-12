@@ -29,6 +29,7 @@
 #include <QTableWidget>
 #include <QTimer>
 #include <QToolBar>
+#include <QToolButton>
 #include <QWindowStateChangeEvent>
 
 enum StatusPanels
@@ -129,16 +130,16 @@ void PlotWindow::createMenuBar()
     _actionRainbow = A_(tr("Rainbow"), colorGroup, [this]{ _plot->setRainbowEnabled(true, true); });
     _actionGrayscale->setCheckable(true);
     _actionRainbow->setCheckable(true);
-    auto actnZoomFull = A_(tr("Zoom to Sensor"), this, [this]{ _plot->zoomFull(true); });
-    _actionZoomAperture = A_(tr("Zoom to Aperture"), this, [this]{ _plot->zoomAperture(true); });
+    _actionZoomFull = A_(tr("Zoom to Sensor"), this, [this]{ _plot->zoomFull(true); }, ":/toolbar/zoom_sensor", QKeySequence("Ctrl+0"));
+    _actionZoomAperture = A_(tr("Zoom to Aperture"), this, [this]{ _plot->zoomAperture(true); }, ":/toolbar/zoom_aperture", QKeySequence("Ctrl+1"));
     menuBar()->addMenu(M_(tr("View"), {
         _actionBeamInfo, 0,
         _actionGrayscale, _actionRainbow, 0,
-        actnZoomFull, _actionZoomAperture,
+        _actionZoomFull, _actionZoomAperture,
     }));
 
-    _actionStart = A_(tr("Start Capture"), this, &PlotWindow::startCapture, ":/toolbar/start");
-    _actionStop = A_(tr("Stop Capture"), this, &PlotWindow::stopCapture, ":/toolbar/stop");
+    _actionStart = A_(tr("Start Capture"), this, &PlotWindow::startCapture, ":/toolbar/start", Qt::Key_F9);
+    _actionStop = A_(tr("Stop Capture"), this, &PlotWindow::stopCapture, ":/toolbar/stop", Qt::Key_F9);
     _actionEditAperture = A_(tr("Edit Soft Aperture"), this, [this]{ _plot->startEditAperture(); }, ":/toolbar/aperture");
     _actionUseAperture = A_(tr("Use Soft Aperture"), this, &PlotWindow::toggleAperture);
     _actionUseAperture->setCheckable(true);
@@ -163,13 +164,17 @@ void PlotWindow::createToolBar()
     auto tb = new Ori::Widgets::FlatToolBar;
     addToolBar(tb);
     tb->setMovable(false);
-    tb->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    tb->addAction(_actionStart);
-    tb->addAction(_actionStop);
+    //tb->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    _buttonStart = tb->addWidget(Ori::Gui::textToolButton(_actionStart));
+    _buttonStop = tb->addWidget(Ori::Gui::textToolButton(_actionStop));
     tb->addSeparator();
-    tb->addAction(_actionOpen);
+    tb->addWidget(Ori::Gui::textToolButton(_actionOpen));
     tb->addSeparator();
     tb->addAction(_actionCamConfig);
+    tb->addAction(_actionEditAperture);
+    tb->addSeparator();
+    tb->addAction(_actionZoomFull);
+    tb->addAction(_actionZoomAperture);
 }
 
 void PlotWindow::createStatusBar()
@@ -348,6 +353,8 @@ void PlotWindow::updateActions(bool started)
     _actionStart->setVisible(!started);
     _actionStop->setDisabled(!started);
     _actionStop->setVisible(started);
+    _buttonStart->setVisible(!started);
+    _buttonStop->setVisible(started);
 }
 
 void PlotWindow::startCapture()
