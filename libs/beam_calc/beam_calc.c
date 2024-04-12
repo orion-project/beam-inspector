@@ -18,7 +18,7 @@
     double xc = 0;                                                 \
     double yc = 0;                                                 \
     for (int i = r->y1; i < r->y2; i++) {                          \
-        int offset = i * c->w;                                     \
+        const int offset = i * c->w;                               \
         for (int j = r->x1; j < r->x2; j++) {                      \
             p += buf[offset + j];                                  \
             xc += buf[offset + j] * j;                             \
@@ -31,7 +31,7 @@
     double yy = 0;                                                 \
     double xy = 0;                                                 \
     for (int i = r->y1; i < r->y2; i++) {                          \
-        int offset = i * c->w;                                     \
+        const int offset = i * c->w;                               \
         for (int j = r->x1; j < r->x2; j++) {                      \
             xx += buf[offset + j] * sqr(j - xc);                   \
             xy += buf[offset + j] * (j - xc)*(i - yc);             \
@@ -69,19 +69,22 @@ void cgn_calc_beam_naive(const CgnBeamCalc *c, CgnBeamResult *r) {
 }
 
 #define cgn_subtract_bkgnd                              \
-    int w = c->w;                                       \
-    int h = c->h;                                       \
-    int dw = w * b->corner_fraction;                    \
-    int dh = h * b->corner_fraction;                    \
+    const int w = c->w;                                 \
+    const int x1 = b->ax1, x2 = b->ax2;                 \
+    const int y1 = b->ay1, y2 = b->ay2;                 \
+    const int dw = (x2 - x1) * b->corner_fraction;      \
+    const int dh = (y2 - y1) * b->corner_fraction;      \
+    const int bx1 = x1 + dw, bx2 = x2 - dw;             \
+    const int by1 = y1 + dh, by2 = y2 - dh;             \
     double *t = b->subtracted;                          \
                                                         \
     int k = 0;                                          \
     double m = 0;                                       \
-    for (int i = 0; i < h; i++) {                       \
-        if (i < dh || i >= h-dh) {                      \
-            int offset = i*w;                           \
-            for (int j = 0; j < w; j++) {               \
-                if (j < dw || j >= w-dw) {              \
+    for (int i = y1; i < y2; i++) {                     \
+        if (i < by1 || i >= by2) {                      \
+            const int offset = i*w;                     \
+            for (int j = x1; j < x2; j++) {             \
+                if (j < bx1 || j >= bx2) {              \
                     t[k] = buf[offset + j];             \
                     m += t[k];                          \
                     k++;                                \
@@ -100,14 +103,18 @@ void cgn_calc_beam_naive(const CgnBeamCalc *c, CgnBeamResult *r) {
     b->mean = m;                                        \
     b->sdev = s;                                        \
                                                         \
-    double th = m + b->nT * s;                          \
+    const double th = m + b->nT * s;                    \
     b->min = 1e10;                                      \
     b->max = -1e10;                                     \
-    for (int i = 0; i < w*h; i++) {                     \
-        t[i] = (buf[i] > th) ? (buf[i] - m) : 0;        \
-        if (t[i] > b->max) b->max = t[i];               \
-        else if (t[i] < b->min) b->min = t[i];          \
-    }
+    for (int i = y1; i < y2; i++) {                     \
+        const int offset = i*w;                         \
+        for (int j = x1; j < x2; j++) {                 \
+            const int k = offset + j;                   \
+            t[k] = (buf[k] > th) ? (buf[k] - m) : 0;    \
+            if (t[k] > b->max) b->max = t[k];           \
+            else if (t[k] < b->min) b->min = t[k];      \
+        }                                               \
+    }                                                   \
 
 void cgn_subtract_bkgnd_u8(const uint8_t *buf, const CgnBeamCalc *c, CgnBeamBkgnd *b) {
     cgn_subtract_bkgnd
@@ -124,17 +131,17 @@ void cgn_calc_beam_bkgnd(const CgnBeamCalc *c, CgnBeamBkgnd *b, CgnBeamResult *r
         cgn_subtract_bkgnd_u8((const uint8_t*)(c->buf), c, b);
     }
 
-    r->x1 = 0, r->x2 = c->w;
-    r->y1 = 0, r->y2 = c->h;
+    r->x1 = b->ax1, r->x2 = b->ax2;
+    r->y1 = b->ay1, r->y2 = b->ay2;
     cgn_calc_beam_f64(b->subtracted, c, r);
 
     for (b->iters = 0; b->iters < b->max_iter; b->iters++) {
         double xc0 = r->xc, yc0 = r->yc;
         double dx0 = r->dx, dy0 = r->dy;
-        r->x1 = xc0 - dx0/2.0 * b->mask_diam; r->x1 = max(r->x1, 0);
-        r->x2 = xc0 + dx0/2.0 * b->mask_diam; r->x2 = min(r->x2, c->w);
-        r->y1 = yc0 - dy0/2.0 * b->mask_diam; r->y1 = max(r->y1, 0);
-        r->y2 = yc0 + dy0/2.0 * b->mask_diam; r->y2 = min(r->y2, c->h);
+        r->x1 = xc0 - dx0/2.0 * b->mask_diam; r->x1 = max(r->x1, b->ax1);
+        r->x2 = xc0 + dx0/2.0 * b->mask_diam; r->x2 = min(r->x2, b->ax2);
+        r->y1 = yc0 - dy0/2.0 * b->mask_diam; r->y1 = max(r->y1, b->ay1);
+        r->y2 = yc0 + dy0/2.0 * b->mask_diam; r->y2 = min(r->y2, b->ay2);
 
         cgn_calc_beam_f64(b->subtracted, c, r);
 
@@ -176,7 +183,7 @@ void cgn_normalize_f64(double *buf, int sz, double min, double max) {
     }
 }
 
-void cgn_copy_normalized_f46(double *src, double *tgt, int sz, double min, double max) {
+void cgn_copy_normalized_f64(double *src, double *tgt, int sz, double min, double max) {
     for (int i = 0; i < sz; i++) {
         tgt[i] = (src[i] - min) / max;
     }

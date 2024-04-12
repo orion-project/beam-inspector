@@ -75,7 +75,7 @@ mean=927.29, sdev=324.80, min=0.00, max=53555.71, iters=2
 
 #include "../../calc/pgm.h"
 
-#define FRAMES 30
+#define FRAMES 1
 #define FILENAME_8 "../../beams/beam_8b_ast.pgm"
 #define FILENAME_16 "../../beams/beam_16b_ast.pgm"
 
@@ -126,6 +126,7 @@ int main() {
     }
 
     printf("Frames: %d\n", FRAMES);
+#ifdef USE_BLAS
     {
         CgnBeamCalcBlas c;
         c.w = w;
@@ -139,6 +140,7 @@ int main() {
         MEASURE("blas_16", cgn_calc_beam_blas_u16((const uint16_t*)(buf16+offset16), &c, &r));
         cgn_calc_beam_blas_free(&c);
     }
+#endif
     {
         CgnBeamResult r;
         r.x1 = 0, r.x2 = w;
@@ -165,6 +167,10 @@ int main() {
         b.nT = 3;
         b.mask_diam = 3;
         b.subtracted = subtracted;
+        b.ax1 = 0;
+        b.ay1 = 0;
+        b.ax2 = w;
+        b.ay2 = h;
         printf("\nmax_iter=%d, precision=%.3f, corner_fraction=%.3f, nT=%.1f, mask_diam=%.1f\n",
             b.max_iter, b.precision, b.corner_fraction, b.nT, b.mask_diam);
 

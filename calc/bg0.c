@@ -31,11 +31,11 @@ Elapsed: 0.030s, FPS: 33.3, 30.00ms/frame
 #include <time.h>
 #include "pgm.h"
 
-#define FRAMES 1
-//#define FILENAME "../beams/beam_8b_ast.pgm"
+#define FRAMES 30
+#define FILENAME "../beams/beam_8b_ast.pgm"
 //#define FILENAME "../beams/dot_8b_ast.pgm"
 //#define FILENAME "../tmp/real_beams/test_image_45.pgm"
-#define FILENAME "../tmp/real_beams/test_image_35.pgm"
+//#define FILENAME "../tmp/real_beams/test_image_35.pgm"
 //#define CORNER_FRACTION 0.2
 #define CORNER_FRACTION 0.035
 
@@ -44,8 +44,8 @@ Elapsed: 0.030s, FPS: 33.3, 30.00ms/frame
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #define max(a,b) ((a) > (b) ? (a) : (b))
 
-//typedef uint8_t pixel;
-typedef uint16_t pixel;
+typedef uint8_t pixel;
+//typedef uint16_t pixel;
 
 typedef struct {
     int w, h;
@@ -246,14 +246,14 @@ void lbs_subtract_iso_background(BeamCalc *c) {
 }
 
 void calc_beam_basic(double *buf, BeamCalc *c) {
-    int w = c->w, h = c->h;
-    int x1 = c->x1, x2 = c->x2;
-    int y1 = c->y1, y2 = c->y2;
+    const int w = c->w, h = c->h;
+    const int x1 = c->x1, x2 = c->x2;
+    const int y1 = c->y1, y2 = c->y2;
     double p = 0;
     double xc = 0;
     double yc = 0;
     for (int i = y1; i < y2; i++) {
-        int offset = i*w;
+        const int offset = i*w;
         for (int j = x1; j < x2; j++) {
             p += buf[offset + j];
             xc += buf[offset + j] * j;
@@ -264,7 +264,7 @@ void calc_beam_basic(double *buf, BeamCalc *c) {
     yc /= p;
     double xx = 0, yy = 0, xy = 0;
     for (int i = y1; i < y2; i++) {
-        int offset = i*w;
+        const int offset = i*w;
         for (int j = x1; j < x2; j++) {
             xx += buf[offset + j] * sqr(j - xc);
             xy += buf[offset + j] * (j - xc)*(i - yc);
@@ -313,10 +313,10 @@ void lbs_calc_beam(BeamCalc *c) {
 }
 
 void cgn_subtract_background(BeamCalc *c) {
-    int w = c->w, h = c->h;
-    int dw = w * c->corner_fraction;
-    int dh = h * c->corner_fraction;
-    pixel *buf = c->buf;
+    const int w = c->w, h = c->h;
+    const int dw = w * c->corner_fraction;
+    const int dh = h * c->corner_fraction;
+    const pixel *buf = c->buf;
     double *tmp = c->subtracted;
 
     // ISO 11146-3 [3.4.3]:
@@ -327,7 +327,7 @@ void cgn_subtract_background(BeamCalc *c) {
     double m = 0;
     for (int i = 0; i < h; i++) {
         if (i < dh || i >= h-dh) {
-            int offset = i*w;
+            const int offset = i*w;
             for (int j = 0; j < w; j++) {
                 if (j < dw || j >= w-dw) {
                     tmp[k] = buf[offset + j];
@@ -424,7 +424,7 @@ int main() {
     c.buf = (pixel*)(buf+offset);
     c.corner_fraction = CORNER_FRACTION;
     c.nT = 3;
-    c.iso_noise = 1; // True by default in laserbeamsize
+    c.iso_noise = 0; // True by default in laserbeamsize
     c.max_iter = 25;
     c.mask_diam = 3;
     c.subtracted = subtracted;
@@ -436,7 +436,7 @@ int main() {
 // #define measure_cgn_calc_background
 // #define measure_lbs_iso_background
 // #define measure_lbs_subtract_iso_background
-#define measure_lbs_calc_beam
+// #define measure_lbs_calc_beam
 #define measure_cgn_calc_beam
 
 #ifdef measure_lbs_corner_background
@@ -494,8 +494,8 @@ int main() {
             //printf("center=[%.0f,%.0f], diam=[%.0f,%.0f], angle=%.1f\n", c.xc, c.yc, c.dx, c.dy, c.phi * 180/3.1416);
             memcpy(c.buf, backup, sizeof(pixel)*w*h); // restore image outside of measurement
         }
-        printf("center=[%.0f,%.0f], diam=[%.0f,%.0f], angle=%.1f, iters=%d, min=%.1f, max=%.1f\n", 
-            c.xc, c.yc, c.dx, c.dy, c.phi * 180/3.1416, c.iters, c.min, c.max);
+        printf("center=[%.0f,%.0f], diam=[%.0f,%.0f], angle=%.1f, iters=%d, min=%.1f, max=%.1f, mean=%.2f, sdev=%.2f\n", 
+            c.xc, c.yc, c.dx, c.dy, c.phi * 180/3.1416, c.iters, c.min, c.max, c.mean, c.sdev);
         printf("Elapsed: %.3fs, FPS: %.1f, %.2fms/frame\n", elapsed, FRAMES/elapsed, elapsed/(double)FRAMES*1000); \
     }
 #endif
