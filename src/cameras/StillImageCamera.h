@@ -1,7 +1,7 @@
 #ifndef STILL_IMAGE_CAMERA_H
 #define STILL_IMAGE_CAMERA_H
 
-#include "cameras/CameraBase.h"
+#include "cameras/Camera.h"
 
 #include <QString>
 

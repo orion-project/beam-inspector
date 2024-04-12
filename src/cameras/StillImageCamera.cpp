@@ -92,8 +92,26 @@ std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, PlotI
     g.mask_diam = settings.maskDiam;
     g.min = 0;
     g.max = 0;
-    g.ax1 = 0, g.ax2 = c.w;
-    g.ay1 = 0, g.ay2 = c.h;
+    if (settings.aperture.isValid(c.w, c.h)) {
+        g.ax1 = settings.aperture.x1;
+        g.ay1 = settings.aperture.y1;
+        g.ax2 = settings.aperture.x2;
+        g.ay2 = settings.aperture.y2;
+        r.x1 = settings.aperture.x1;
+        r.y1 = settings.aperture.y1;
+        r.x2 = settings.aperture.x2;
+        r.y2 = settings.aperture.y2;
+    } else
+    {
+        g.ax1 = 0;
+        g.ay1 = 0;
+        g.ax2 = c.w;
+        g.ay2 = c.h;
+        r.x1 = 0;
+        r.y1 = 0;
+        r.x2 = c.w;
+        r.y2 = c.h;
+    }
     QVector<double> subtracted;
     if (settings.subtractBackground) {
         subtracted = QVector<double>(sz);

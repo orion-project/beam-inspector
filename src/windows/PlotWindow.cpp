@@ -1,7 +1,7 @@
 #include "PlotWindow.h"
 
 #include "app/HelpSystem.h"
-#include "cameras/CameraBase.h"
+#include "cameras/Camera.h"
 #include "cameras/StillImageCamera.h"
 #include "cameras/VirtualDemoCamera.h"
 #include "widgets/Plot.h"
@@ -37,6 +37,8 @@ enum StatusPanels
     STATUS_CAMERA,
     STATUS_SEPARATOR_1,
     STATUS_RESOLUTION,
+    STATUS_APERTURE_ICON,
+    STATUS_APERTURE,
     STATUS_SEPARATOR_2,
     STATUS_FPS,
     STATUS_SEPARATOR_3,
@@ -58,13 +60,13 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     createDockPanel();
     createPlot();
     updateActions(false);
-    updateIsoWarning();
     setCentralWidget(_plot);
 
     connect(qApp->styleHints(), &QStyleHints::colorSchemeChanged, this, &PlotWindow::updateThemeColors);
     setThemeColors();
 
     restoreState();
+    showCameraSettings(false);
     resize(800, 600);
 
     _plot->setFocus();
@@ -125,7 +127,7 @@ void PlotWindow::createMenuBar()
 
     _actionStart = A_(tr("Start Capture"), this, &PlotWindow::startCapture, ":/toolbar/start");
     _actionStop = A_(tr("Stop Capture"), this, &PlotWindow::stopCapture, ":/toolbar/stop");
-    _actionEditAperture = A_(tr("Edit Soft Aperture"), this, [this]{ _plot->startEditAperture(); });
+    _actionEditAperture = A_(tr("Edit Soft Aperture"), this, [this]{ _plot->startEditAperture(); }, ":/toolbar/aperture");
     _actionCamSettings = A_(tr("Settings..."), this, &PlotWindow::editCamSettings, ":/toolbar/settings");
     //auto actnSelectBgColor = A_(tr("Select Background..."), this, [this]{ _plot->selectBackgroundColor(); });
     menuBar()->addMenu(M_(tr("Camera"), {_actionStart, _actionStop, 0,
@@ -239,6 +241,7 @@ void PlotWindow::createPlot()
 {
     _plot = new Plot;
     _plotIntf = _plot->plotIntf();
+    connect(_plot, &Plot::apertureEdited, this, &PlotWindow::apertureEdited);
 }
 
 void PlotWindow::closeEvent(QCloseEvent* ce)
@@ -375,17 +378,33 @@ void PlotWindow::editCamSettings()
     if (!StillImageCamera::editSettings())
         return;
 
-    updateIsoWarning();
+    showCameraSettings(true);
 
     if (!_stillImageFile.isEmpty())
         openImage(_stillImageFile);
 }
 
-void PlotWindow::updateIsoWarning()
+void PlotWindow::showCameraSettings(bool replot)
 {
     auto s = StillImageCamera::loadSettings();
+    if (s.aperture.enabled) {
+        _statusBar->setIcon(STATUS_APERTURE_ICON, ":/toolbar/aperture");
+        _statusBar->setText(STATUS_APERTURE, s.aperture.sizeStr());
+    } else {
+        _statusBar->clear(STATUS_APERTURE_ICON);
+        _statusBar->clear(STATUS_APERTURE);
+    }
+    _plot->setAperture(s.aperture, replot);
     if (!s.subtractBackground) {
         _statusBar->setIcon(STATUS_WARNING, ":/toolbar/exclame");
         _statusBar->setHint(STATUS_WARNING, tr("Background subtraction disabled"));
     } else _statusBar->clear(STATUS_WARNING);
+}
+
+void PlotWindow::apertureEdited()
+{
+    auto s = StillImageCamera::loadSettings();
+    s.aperture = _plot->aperture();
+    s.save();
+    showCameraSettings(true);
 }

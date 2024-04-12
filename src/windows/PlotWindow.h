@@ -62,10 +62,11 @@ private:
     void captureStopped();
     void dataReady();
     void imageReady(const CameraInfo& info);
+    void apertureEdited();
 
     void openImage(const QString& fileName);
     void updateActions(bool started);
-    void updateIsoWarning();
+    void showCameraSettings(bool replot);
     void updateThemeColors();
     void setThemeColors();
     void showFps(int fps);

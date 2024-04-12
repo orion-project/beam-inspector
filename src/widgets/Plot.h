@@ -1,6 +1,8 @@
 #ifndef PLOT_H
 #define PLOT_H
 
+#include "cameras/Camera.h"
+
 #include <QWidget>
 
 class QCustomPlot;
@@ -30,15 +32,21 @@ public:
     void setThemeColors(Theme theme, bool replot);
     void setRainbowEnabled(bool on, bool replot);
     void setBeamInfoVisible(bool on, bool replot);
+    void setAperture(const SoftAperture& a, bool replot);
     void selectBackgroundColor();
     void recalcLimits(bool replot);
     void exportImageDlg();
     void startEditAperture();
     void stopEditAperture(bool apply);
     bool isApertureEditing() const;
+    SoftAperture aperture() const;
+
+signals:
+    void apertureEdited();
 
 protected:
     void resizeEvent(QResizeEvent*) override;
+    void keyPressEvent(QKeyEvent*) override;
 
 private:
     QCustomPlot *_plot;

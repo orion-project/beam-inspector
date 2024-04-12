@@ -1,7 +1,7 @@
 #ifndef VIRTUAL_DEMO_CAMERA_H
 #define VIRTUAL_DEMO_CAMERA_H
 
-#include "cameras/CameraBase.h"
+#include "cameras/Camera.h"
 
 #include <QThread>
 #include <QSharedPointer>
