@@ -7,11 +7,10 @@ class QAction;
 class QTableWidget;
 class QTableWidgetItem;
 
-class CameraInfo;
+class Camera;
 class Plot;
 class PlotIntf;
 class TableIntf;
-class VirtualDemoCamera;
 
 namespace Ori {
 class MruFileList;
@@ -33,17 +32,16 @@ protected:
 
 private:
     Plot *_plot;
-    VirtualDemoCamera *_cameraThread = nullptr;
-    QAction *_actionStart, *_actionStop, *_actionOpen, *_actionCamSettings,
-        *_actionGrayscale, *_actionRainbow, *_actionBeamInfo, *_actionEditAperture;
+    QSharedPointer<Camera> _camera;
+    QAction *_actionStart, *_actionStop, *_actionOpen, *_actionCamConfig,
+        *_actionGrayscale, *_actionRainbow, *_actionBeamInfo,
+        *_actionEditAperture, *_actionUseAperture;
     QTableWidget *_table;
     QTableWidgetItem *_itemRenderTime;
     TableIntf *_tableIntf;
     PlotIntf *_plotIntf;
-    QString imageFile;
     Ori::MruFileList *_mru;
     Ori::Widgets::StatusBar *_statusBar;
-    QString _stillImageFile;
 
     void createMenuBar();
     void createToolBar();
@@ -57,20 +55,21 @@ private:
     void openImageDlg();
     void startCapture();
     void stopCapture();
-    void editCamSettings();
+    void editCamConfig();
 
     void captureStopped();
     void dataReady();
-    void imageReady(const CameraInfo& info);
     void apertureEdited();
+    void configChanged();
 
     void openImage(const QString& fileName);
     void updateActions(bool started);
-    void showCameraSettings(bool replot);
     void updateThemeColors();
     void setThemeColors();
     void showFps(int fps);
-    void showInfo(const CameraInfo& info);
+    void showCamConfig(bool replot);
+    void processImage();
+    void toggleAperture();
 };
 
 #endif // PLOT_WINDOW_H

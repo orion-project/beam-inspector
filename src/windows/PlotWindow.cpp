@@ -1,15 +1,14 @@
 #include "PlotWindow.h"
 
 #include "app/HelpSystem.h"
-#include "cameras/Camera.h"
 #include "cameras/StillImageCamera.h"
 #include "cameras/VirtualDemoCamera.h"
+#include "cameras/WelcomeCamera.h"
 #include "widgets/Plot.h"
 #include "widgets/PlotIntf.h"
 #include "widgets/TableIntf.h"
 
 #include "helpers/OriWidgets.h"
-#include "helpers/OriDialogs.h"
 #include "tools/OriMruList.h"
 #include "tools/OriSettings.h"
 #include "widgets/OriFlatToolBar.h"
@@ -49,8 +48,6 @@ enum StatusPanels
 
 PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
 {
-    setWindowTitle(qApp->applicationName() + " [VirtualDemo]");
-
     _mru = new Ori::MruFileList(this);
     connect(_mru, &Ori::MruFileList::clicked, this, &PlotWindow::openImage);
 
@@ -65,11 +62,20 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     connect(qApp->styleHints(), &QStyleHints::colorSchemeChanged, this, &PlotWindow::updateThemeColors);
     setThemeColors();
 
+    _camera.reset((Camera*)new WelcomeCamera(_plotIntf, _tableIntf));
+    showCamConfig(false);
+    showFps(0);
+
     restoreState();
-    showCameraSettings(false);
     resize(800, 600);
 
     _plot->setFocus();
+
+    QTimer::singleShot(0, this, [this]{
+        _camera->capture();
+        _plot->prepare();
+        dataReady();
+    });
 }
 
 PlotWindow::~PlotWindow()
@@ -128,12 +134,14 @@ void PlotWindow::createMenuBar()
     _actionStart = A_(tr("Start Capture"), this, &PlotWindow::startCapture, ":/toolbar/start");
     _actionStop = A_(tr("Stop Capture"), this, &PlotWindow::stopCapture, ":/toolbar/stop");
     _actionEditAperture = A_(tr("Edit Soft Aperture"), this, [this]{ _plot->startEditAperture(); }, ":/toolbar/aperture");
-    _actionCamSettings = A_(tr("Settings..."), this, &PlotWindow::editCamSettings, ":/toolbar/settings");
+    _actionUseAperture = A_(tr("Use Soft Aperture"), this, &PlotWindow::toggleAperture);
+    _actionUseAperture->setCheckable(true);
+    _actionCamConfig = A_(tr("Settings..."), this, &PlotWindow::editCamConfig, ":/toolbar/settings");
     //auto actnSelectBgColor = A_(tr("Select Background..."), this, [this]{ _plot->selectBackgroundColor(); });
     menuBar()->addMenu(M_(tr("Camera"), {_actionStart, _actionStop, 0,
         //actnSelectBgColor, 0,
-        _actionEditAperture, 0,
-        _actionCamSettings
+        _actionEditAperture, _actionUseAperture, 0,
+        _actionCamConfig
     }));
 
     auto m = menuBar()->addMenu(tr("Help"));
@@ -155,20 +163,24 @@ void PlotWindow::createToolBar()
     tb->addSeparator();
     tb->addAction(_actionOpen);
     tb->addSeparator();
-    tb->addAction(_actionCamSettings);
+    tb->addAction(_actionCamConfig);
 }
 
 void PlotWindow::createStatusBar()
 {
     _statusBar = new Ori::Widgets::StatusBar(STATUS_PANEL_COUNT);
+
     _statusBar->addVersionLabel();
     _statusBar->setText(STATUS_CAMERA, "VirtualDemo");
     _statusBar->setText(STATUS_RESOLUTION, "2592 × 2048 × 8bit");
     _statusBar->setText(STATUS_SEPARATOR_1, "|");
     _statusBar->setText(STATUS_SEPARATOR_2, "|");
     _statusBar->setText(STATUS_SEPARATOR_3, "|");
-    showInfo(VirtualDemoCamera::info());
-    showFps(0);
+    _statusBar->setMargin(STATUS_SEPARATOR_1, 0, 0);
+    _statusBar->setMargin(STATUS_SEPARATOR_2, 0, 0);
+    _statusBar->setMargin(STATUS_SEPARATOR_3, 0, 0);
+    _statusBar->setMargin(STATUS_APERTURE_ICON, 6, 0);
+    _statusBar->setMargin(STATUS_APERTURE, 0, 6);
     setStatusBar(_statusBar);
 }
 
@@ -247,7 +259,8 @@ void PlotWindow::createPlot()
 void PlotWindow::closeEvent(QCloseEvent* ce)
 {
     QMainWindow::closeEvent(ce);
-    if (_cameraThread && _cameraThread->isRunning()) {
+    auto thread = dynamic_cast<QThread*>(_camera.get());
+    if (thread && thread->isRunning()) {
         stopCapture();
     }
 }
@@ -274,10 +287,31 @@ void PlotWindow::showFps(int fps)
     else _statusBar->setText(STATUS_FPS, QStringLiteral("FPS: ") % QString::number(fps));
 }
 
-void PlotWindow::showInfo(const CameraInfo& info)
+void PlotWindow::showCamConfig(bool replot)
 {
-    _statusBar->setText(STATUS_CAMERA, info.name, info.descr);
-    _statusBar->setText(STATUS_RESOLUTION, info.resolutionStr());
+    setWindowTitle(qApp->applicationName() +  " [" + _camera->name() + ']');
+    _statusBar->setText(STATUS_CAMERA, _camera->name(), _camera->descr());
+    _statusBar->setText(STATUS_RESOLUTION, _camera->resolutionStr());
+
+    auto c = _camera->config();
+    _plot->setAperture(c.aperture, replot);
+    _actionUseAperture->setChecked(c.aperture.enabled);
+    _statusBar->setVisible(STATUS_APERTURE_ICON, c.aperture.enabled);
+    _statusBar->setVisible(STATUS_APERTURE, c.aperture.enabled);
+    if (c.aperture.enabled) {
+        bool valid = c.aperture.isValid(_camera->width(), _camera->height());
+        QString hint = valid ? tr("Soft aperture") : tr("Soft aperture is not valid");
+        QString icon = valid ? ":/toolbar/aperture" : ":/toolbar/aperture_warn";
+        _statusBar->setIcon(STATUS_APERTURE_ICON, icon);
+        _statusBar->setHint(STATUS_APERTURE_ICON, hint);
+        _statusBar->setText(STATUS_APERTURE, c.aperture.sizeStr());
+        _statusBar->setHint(STATUS_APERTURE, hint);
+    }
+
+    if (!c.subtractBackground) {
+        _statusBar->setIcon(STATUS_WARNING, ":/toolbar/exclame");
+        _statusBar->setHint(STATUS_WARNING, tr("Background subtraction disabled"));
+    } else _statusBar->clear(STATUS_WARNING);
 }
 
 void PlotWindow::setThemeColors()
@@ -298,8 +332,10 @@ void PlotWindow::updateThemeColors()
 
 void PlotWindow::updateActions(bool started)
 {
-    _actionCamSettings->setDisabled(started);
+    _mru->setDisabled(started);
+    _actionCamConfig->setDisabled(started);
     _actionEditAperture->setDisabled(started);
+    _actionUseAperture->setDisabled(started);
     _actionOpen->setDisabled(started);
     _actionStart->setDisabled(started);
     _actionStart->setVisible(!started);
@@ -309,24 +345,30 @@ void PlotWindow::updateActions(bool started)
 
 void PlotWindow::startCapture()
 {
-    _stillImageFile.clear();
-    showInfo(VirtualDemoCamera::info());
+    _plot->stopEditAperture(false);
     _itemRenderTime->setText(tr(" Render time "));
-    _cameraThread = new VirtualDemoCamera(_plotIntf, _tableIntf, this);
-    connect(_cameraThread, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
-    connect(_cameraThread, &VirtualDemoCamera::stats, this, &PlotWindow::showFps);
-    connect(_cameraThread, &VirtualDemoCamera::started, this, [this]{ _plot->prepare(); });
-    connect(_cameraThread, &VirtualDemoCamera::finished, this, &PlotWindow::captureStopped);
-    _cameraThread->start();
+    auto cam = new VirtualDemoCamera(_plotIntf, _tableIntf, this);
+    connect(cam, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
+    connect(cam, &VirtualDemoCamera::stats, this, &PlotWindow::showFps);
+    connect(cam, &VirtualDemoCamera::started, this, [this]{ _plot->prepare(); });
+    connect(cam, &VirtualDemoCamera::finished, this, &PlotWindow::captureStopped);
+    _camera.reset((Camera*)cam);
+    _camera->capture();
+    showCamConfig(false);
     updateActions(true);
 }
 
 void PlotWindow::stopCapture()
 {
+    auto thread = dynamic_cast<QThread*>(_camera.get());
+    if (!thread) {
+        qWarning() << "Current camera is not thread based";
+        return;
+    }
     qDebug() << "Stopping camera thread...";
     _actionStop->setDisabled(true);
-    _cameraThread->requestInterruption();
-    if (!_cameraThread->wait(5000)) {
+    thread->requestInterruption();
+    if (!thread->wait(5000)) {
         qDebug() << "Can not stop camera thread in timeout";
     }
 }
@@ -335,8 +377,6 @@ void PlotWindow::captureStopped()
 {
     updateActions(false);
     showFps(0);
-    _cameraThread->deleteLater();
-    _cameraThread = nullptr;
 }
 
 void PlotWindow::dataReady()
@@ -348,63 +388,65 @@ void PlotWindow::dataReady()
 
 void PlotWindow::openImageDlg()
 {
-    auto info = StillImageCamera::start(_plotIntf, _tableIntf);
-    if (info) imageReady(*info);
+    auto cam = new StillImageCamera(_plotIntf, _tableIntf);
+    if (cam->fileName().isEmpty()) {
+        delete cam;
+        return;
+    }
+    _camera.reset((Camera*)cam);
+    processImage();
 }
 
 void PlotWindow::openImage(const QString& fileName)
 {
-    if (_cameraThread && _cameraThread->isRunning()) {
-        Ori::Dlg::info(tr("Can not open file while capture is in progress"));
-        return;
-    }
-    auto info = StillImageCamera::start(fileName, _plotIntf, _tableIntf);
-    if (info) imageReady(*info);
+    _camera.reset((Camera*)new StillImageCamera(_plotIntf, _tableIntf, fileName));
+    processImage();
 }
 
-void PlotWindow::imageReady(const CameraInfo& info)
+void PlotWindow::processImage()
 {
-    _stillImageFile = info.descr;
+    auto cam = dynamic_cast<StillImageCamera*>(_camera.get());
+    if (!cam) {
+        qWarning() << "Current camera is not StillImageCamera";
+        return;
+    }
+    _plot->stopEditAperture(false);
+    _plotIntf->cleanResult();
+    _tableIntf->cleanResult();
     _itemRenderTime->setText(tr(" Load time "));
-    _mru->append(info.descr);
+    _mru->append(cam->fileName());
+    _camera->capture();
+    showCamConfig(false); // _after_ run(), when image is already loaded
     _plot->prepare();
     dataReady();
-    showInfo(info);
     showFps(0);
 }
 
-void PlotWindow::editCamSettings()
+void PlotWindow::editCamConfig()
 {
-    if (!StillImageCamera::editSettings())
-        return;
-
-    showCameraSettings(true);
-
-    if (!_stillImageFile.isEmpty())
-        openImage(_stillImageFile);
+    if (_camera->editConfig())
+        configChanged();
 }
 
-void PlotWindow::showCameraSettings(bool replot)
+void PlotWindow::configChanged()
 {
-    auto s = StillImageCamera::loadSettings();
-    if (s.aperture.enabled) {
-        _statusBar->setIcon(STATUS_APERTURE_ICON, ":/toolbar/aperture");
-        _statusBar->setText(STATUS_APERTURE, s.aperture.sizeStr());
-    } else {
-        _statusBar->clear(STATUS_APERTURE_ICON);
-        _statusBar->clear(STATUS_APERTURE);
-    }
-    _plot->setAperture(s.aperture, replot);
-    if (!s.subtractBackground) {
-        _statusBar->setIcon(STATUS_WARNING, ":/toolbar/exclame");
-        _statusBar->setHint(STATUS_WARNING, tr("Background subtraction disabled"));
-    } else _statusBar->clear(STATUS_WARNING);
+    if (dynamic_cast<StillImageCamera*>(_camera.get()))
+        processImage();
+    else
+        showCamConfig(true);
 }
 
 void PlotWindow::apertureEdited()
 {
-    auto s = StillImageCamera::loadSettings();
-    s.aperture = _plot->aperture();
-    s.save();
-    showCameraSettings(true);
+    _camera->setAperture(_plot->aperture());
+    configChanged();
+}
+
+void PlotWindow::toggleAperture()
+{
+    bool on = _actionUseAperture->isChecked();
+    if (_plot->isApertureEditing() && !on)
+        _plot->stopEditAperture(false);
+    _camera->toggleAperture(on);
+    configChanged();
 }

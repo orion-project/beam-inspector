@@ -8,6 +8,7 @@ class QTableWidgetItem;
 class TableIntf
 {
 public:
+    void cleanResult();
     void setResult(const CgnBeamResult& r, double renderTime, double calcTime);
     void showResult();
 

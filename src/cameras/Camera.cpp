@@ -14,102 +14,55 @@
 
 using namespace Ori::Layouts;
 
-#include <QDebug>
-
-//------------------------------------------------------------------------------
-//                                CameraInfo
-//------------------------------------------------------------------------------
-
-QString CameraInfo::resolutionStr() const
+Camera::Camera(PlotIntf *plot, TableIntf *table, const char* configGroup) :
+    _plot(plot), _table(table), _configGroup(configGroup)
 {
-    return QStringLiteral("%1 × %2 × %3bit").arg(width).arg(height).arg(bits);
+    loadConfig();
 }
 
-//------------------------------------------------------------------------------
-//                               SoftAperture
-//------------------------------------------------------------------------------
-
-bool SoftAperture::isValid(int w, int h) const
+QString Camera::resolutionStr() const
 {
-    return x1 >= 0 && x2 > x1 && x2 <= w && y1 >= 0 && y2 > y1 && y2 <= h;
+    return QStringLiteral("%1 × %2 × %3bit").arg(width()).arg(height()).arg(bits());
 }
 
-QString SoftAperture::sizeStr() const
+void Camera::loadConfig()
 {
-    return QStringLiteral("%1 × %2").arg(x2-x1).arg(y2-y1);
-}
-
-//------------------------------------------------------------------------------
-//                                CameraSettings
-//------------------------------------------------------------------------------
-
-void CameraSettings::print()
-{
-    qDebug() << "subtractBackground:" << subtractBackground << "maxIters:" << maxIters
-        << "precision:" << precision << "cornerFraction:" << cornerFraction << "nT:" << nT
-        << "maskDiam:" << maskDiam;
-}
-
-void CameraSettings::load(const QString &group)
-{
-    this->group = group;
-
     Ori::Settings s;
-    s.beginGroup(group);
-
-    normalize = s.value("normalize", true).toBool();
-    subtractBackground = s.value("subtractBackground", true).toBool();
-
-    maxIters = s.value("maxIters", 0).toInt();
-    if (maxIters <= 0) maxIters = 0;
-
-    precision = s.value("precision", 0.05).toDouble();
-    if (precision <= 0) precision = 0.05;
-
-    cornerFraction = s.value("cornerFraction", 0.035).toDouble();
-    if (cornerFraction <= 0) cornerFraction = 0.035;
-
-    nT = s.value("nT", 3).toDouble();
-    if (nT <= 0) nT = 3;
-
-    maskDiam = s.value("maskDiam", 3).toDouble();
-    if (maskDiam <= 0) maskDiam = 3;
-
-    aperture.enabled = s.value("aperture/on", false).toBool();
-    aperture.x1 = s.value("aperture/x1", 0).toInt();
-    aperture.y1 = s.value("aperture/y1", 0).toInt();
-    aperture.x2 = s.value("aperture/x2", 0).toInt();
-    aperture.y2 = s.value("aperture/y2", 0).toInt();
+    s.beginGroup(_configGroup);
+    _config.normalize = s.value("normalize", true).toBool();
+    _config.subtractBackground = s.value("subtractBackground", true).toBool();
+    _config.maxIters = s.value("maxIters", 0).toInt();
+    _config.precision = s.value("precision", 0.05).toDouble();
+    _config.cornerFraction = s.value("cornerFraction", 0.035).toDouble();
+    _config.nT = s.value("nT", 3).toDouble();
+    _config.maskDiam = s.value("maskDiam", 3).toDouble();
+    _config.aperture.enabled = s.value("aperture/on", false).toBool();
+    _config.aperture.x1 = s.value("aperture/x1", 0).toInt();
+    _config.aperture.y1 = s.value("aperture/y1", 0).toInt();
+    _config.aperture.x2 = s.value("aperture/x2", 0).toInt();
+    _config.aperture.y2 = s.value("aperture/y2", 0).toInt();
 }
 
-void CameraSettings::save(const QString &group)
+void Camera::saveConfig()
 {
-    if (group.isEmpty() && this->group.isEmpty()) {
-        qWarning() << "Unable to save camera settings, groups is not set";
-        return;
-    }
-
     Ori::Settings s;
-    s.beginGroup(group.isEmpty() ? this->group : group);
-    s.setValue("normalize", normalize);
-    s.setValue("subtractBackground", subtractBackground);
-    s.setValue("maxIters", maxIters);
-    s.setValue("precision", precision);
-    s.setValue("cornerFraction", cornerFraction);
-    s.setValue("nT", nT);
-    s.setValue("maskDiam", maskDiam);
-    s.setValue("aperture/on", aperture.enabled);
-    s.setValue("aperture/x1", aperture.x1);
-    s.setValue("aperture/y1", aperture.y1);
-    s.setValue("aperture/x2", aperture.x2);
-    s.setValue("aperture/y2", aperture.y2);
+    s.beginGroup(_configGroup);
+    s.setValue("normalize", _config.normalize);
+    s.setValue("subtractBackground", _config.subtractBackground);
+    s.setValue("maxIters", _config.maxIters);
+    s.setValue("precision", _config.precision);
+    s.setValue("cornerFraction", _config.cornerFraction);
+    s.setValue("nT", _config.nT);
+    s.setValue("maskDiam", _config.maskDiam);
+    s.setValue("aperture/on", _config.aperture.enabled);
+    s.setValue("aperture/x1", _config.aperture.x1);
+    s.setValue("aperture/y1", _config.aperture.y1);
+    s.setValue("aperture/x2", _config.aperture.x2);
+    s.setValue("aperture/y2", _config.aperture.y2);
 }
 
-bool CameraSettings::editDlg(const QString &group)
+bool Camera::editConfig()
 {
-    CameraSettings s;
-    s.load(group);
-
     auto normalize = new QCheckBox(qApp->tr("Normalize data"));
     auto subtractBackground = new QCheckBox(qApp->tr("Subtract background"));
     auto maxIters = Ori::Gui::spinBox(0, 50);
@@ -118,13 +71,13 @@ bool CameraSettings::editDlg(const QString &group)
     auto nT = new Ori::Widgets::ValueEdit;
     auto maskDiam = new Ori::Widgets::ValueEdit;
 
-    normalize->setChecked(s.normalize);
-    subtractBackground->setChecked(s.subtractBackground);
-    maxIters->setValue(s.maxIters);
-    precision->setValue(s.precision);
-    cornerFraction->setValue(s.cornerFraction * 100);
-    nT->setValue(s.nT);
-    maskDiam->setValue(s.maskDiam);
+    normalize->setChecked(_config.normalize);
+    subtractBackground->setChecked(_config.subtractBackground);
+    maxIters->setValue(_config.maxIters);
+    precision->setValue(_config.precision);
+    cornerFraction->setValue(_config.cornerFraction * 100);
+    nT->setValue(_config.nT);
+    maskDiam->setValue(_config.maskDiam);
 
     auto hintLabel = [](const QString& text){
         auto label = new QLabel(text);
@@ -156,18 +109,28 @@ bool CameraSettings::editDlg(const QString &group)
 
     }).setSpacing(3).makeWidgetAuto();
 
-    bool ok = Ori::Dlg::Dialog(w).withPersistenceId(group).exec();
-
+    bool ok = Ori::Dlg::Dialog(w).withPersistenceId("cam_config").exec();
     if (ok) {
-        s.normalize = normalize->isChecked();
-        s.subtractBackground = subtractBackground->isChecked();
-        s.maxIters = maxIters->value();
-        s.precision = precision->value();
-        s.cornerFraction = cornerFraction->value() / 100.0;
-        s.nT = nT->value();
-        s.maskDiam = maskDiam->value();
-        s.save();
+        _config.normalize = normalize->isChecked();
+        _config.subtractBackground = subtractBackground->isChecked();
+        _config.maxIters = maxIters->value();
+        _config.precision = precision->value();
+        _config.cornerFraction = cornerFraction->value() / 100.0;
+        _config.nT = nT->value();
+        _config.maskDiam = maskDiam->value();
+        saveConfig();
     }
-
     return ok;
+}
+
+void Camera::setAperture(const SoftAperture &a)
+{
+    _config.aperture = a;
+    saveConfig();
+}
+
+void Camera::toggleAperture(bool on)
+{
+    _config.aperture.enabled = on;
+    saveConfig();
 }

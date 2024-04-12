@@ -14,6 +14,7 @@ history:
   - version: 0.0.3
     date: ?
     changes:
+      - text: Can specify a part of image to process (soft aperture)
+      - text: Calculate ellipticity
       - text: Command for exporting plot image
-      - text: Calc and show ellipticity
-      - text: Warning icon when background not subtracted
+      - text: Warning icon when background subtraction disabled

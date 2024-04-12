@@ -40,8 +40,10 @@ set(PROJECT_SOURCES
     src/main.cpp
     src/app/HelpSystem.cpp
     src/cameras/Camera.cpp
+    src/cameras/CameraTypes.cpp
     src/cameras/StillImageCamera.cpp
     src/cameras/VirtualDemoCamera.cpp
+    src/cameras/WelcomeCamera.cpp
     src/plot/BeamGraph.cpp
     src/plot/PlotExport.cpp
     src/widgets/Plot.cpp

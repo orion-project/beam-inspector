@@ -3,46 +3,43 @@
 
 #include <QString>
 
-struct CameraInfo
+#include "cameras/CameraTypes.h"
+
+class PlotIntf;
+class TableIntf;
+
+class Camera
 {
-    QString name;
-    QString descr;
-    int width;
-    int height;
-    int bits;
+public:
+    virtual ~Camera() {}
+
+    virtual QString name() const = 0;
+    virtual QString descr() const { return {}; }
+    virtual int width() const = 0;
+    virtual int height() const = 0;
+    virtual int bits() const = 0;
+
+    virtual void capture() = 0;
+
+    CameraConfig config() const { return _config; };
+    bool editConfig();
+
+    void setAperture(const SoftAperture&);
+    void toggleAperture(bool on);
 
     QString resolutionStr() const;
-};
 
-struct SoftAperture
-{
-    bool enabled = false;
-    int x1 = 0;
-    int y1 = 0;
-    int x2 = 0;
-    int y2 = 0;
+protected:
+    PlotIntf *_plot;
+    TableIntf *_table;
+    QString _configGroup;
+    CameraConfig _config;
 
-    bool isValid(int w, int h) const;
-    QString sizeStr() const;
-};
+    Camera(PlotIntf *plot, TableIntf *table, const char* configGroup);
 
-struct CameraSettings
-{
-    QString group;
-    bool normalize = true;
-    bool subtractBackground = true;
-    int maxIters = 0;
-    double precision = 0.05;
-    double cornerFraction = 0.035;
-    double nT = 3;
-    double maskDiam = 3;
-    SoftAperture aperture;
-
-    void print();
-    void load(const QString &group);
-    void save(const QString &group = QString());
-
-    static bool editDlg(const QString &group);
+private:
+    void loadConfig();
+    void saveConfig();
 };
 
 #endif // CAMERA_BASE_H

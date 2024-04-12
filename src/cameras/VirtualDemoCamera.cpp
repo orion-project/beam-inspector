@@ -9,6 +9,8 @@
 #include <QDebug>
 #include <QRandomGenerator>
 
+#define CAMERA_WIDTH 2592
+#define CAMERA_HEIGHT 2048
 #define CAMERA_LOOP_TICK_MS 5
 #define CAMERA_FRAME_DELAY_MS 30
 #define PLOT_FRAME_DELAY_MS 200
@@ -59,7 +61,7 @@ public:
     qint64 prevStat = 0;
     PlotIntf *plot;
     TableIntf *table;
-    VirtualDemoCamera *thread;
+    VirtualDemoCamera *cam;
     double avgFrameTime = 0;
     double avgRenderTime = 0;
     double avgCalcTime = 0;
@@ -68,16 +70,12 @@ public:
     bool normalize;
     double *graph;
 
-    BeamRenderer(PlotIntf *plot, TableIntf *table, VirtualDemoCamera *thread) : plot(plot), table(table), thread(thread)
+    BeamRenderer(PlotIntf *plot, TableIntf *table, VirtualDemoCamera *cam) : plot(plot), table(table), cam(cam)
     {
-        auto settings = CameraSettings();
-        settings.load("StillImageCamera");
-        settings.print();
+        auto cfg = cam->config();
 
-        auto info = VirtualDemoCamera::info();
-
-        b.w = info.width;
-        b.h = info.height;
+        b.w = CAMERA_WIDTH;
+        b.h = CAMERA_HEIGHT;
         b.dx = b.w/2;
         b.dy = b.dx*0.75;
         b.xc = b.w/2;
@@ -103,22 +101,22 @@ public:
         phi_offset = RandomOffset(b.phi, b.phi-12, b.phi+12);
 
         g.iters = 0;
-        g.max_iter = settings.maxIters;
-        g.precision = settings.precision;
-        g.corner_fraction = settings.cornerFraction;
-        g.nT = settings.nT;
-        g.mask_diam = settings.maskDiam;
+        g.max_iter = cfg.maxIters;
+        g.precision = cfg.precision;
+        g.corner_fraction = cfg.cornerFraction;
+        g.nT = cfg.nT;
+        g.mask_diam = cfg.maskDiam;
         g.min = 0;
         g.max = 0;
         g.ax1 = 0, g.ax2 = c.w;
         g.ay1 = 0, g.ay2 = c.h;
-        subtract = settings.subtractBackground;
+        subtract = cfg.subtractBackground;
         if (subtract) {
             subtracted = QVector<double>(c.w*c.h);
             g.subtracted = subtracted.data();
         }
 
-        normalize = settings.normalize;
+        normalize = cfg.normalize;
 
         plot->initGraph(b.w, b.h);
         graph = plot->rawGraph();
@@ -134,7 +132,7 @@ public:
                 // When we disable sleep, its possible to get an exact number of FPS,
                 // e.g. 40 FPS when CAMERA_FRAME_DELAY_MS=25, but at cost of increased CPU usage.
                 // Sleep allows to get about 30 FPS, which is enough, and relaxes CPU loading
-                thread->msleep(CAMERA_LOOP_TICK_MS);
+                cam->msleep(CAMERA_LOOP_TICK_MS);
                 continue;
             }
 
@@ -180,13 +178,13 @@ public:
                     plot->setResult(r, 0, 1);
                 else plot->setResult(r, g.min, g.max);
                 table->setResult(r, avgRenderTime, avgCalcTime);
-                emit thread->ready();
+                emit cam->ready();
             }
 
             if (tm - prevStat >= STAT_DELAY_MS) {
                 prevStat = tm;
                 // TODO: average FPS over STAT_DELAY_MS
-                emit thread->stats(qRound(1000.0/avgFrameTime));
+                emit cam->stats(qRound(1000.0/avgFrameTime));
             #ifdef LOG_FRAME_TIME
                 qDebug()
                     << "FPS:" << qRound(1000.0/avgFrameTime)
@@ -194,7 +192,7 @@ public:
                     << "avgRenderTime:" << qRound(avgRenderTime)
                     << "avgCalcTime:" << qRound(avgCalcTime);
             #endif
-                if (thread->isInterruptionRequested()) {
+                if (cam->isInterruptionRequested()) {
                     qDebug() << "VirtualDemoCamera::interrupted";
                     return;
                 }
@@ -203,22 +201,28 @@ public:
     }
 };
 
-VirtualDemoCamera::VirtualDemoCamera(PlotIntf *plot, TableIntf *table, QObject *parent) : QThread{parent}
+VirtualDemoCamera::VirtualDemoCamera(PlotIntf *plot, TableIntf *table, QObject *parent) :
+    Camera(plot, table, "VirtualDemoCamera"), QThread(parent)
 {
     _render.reset(new BeamRenderer(plot, table, this));
+}
+
+int VirtualDemoCamera::width() const
+{
+    return CAMERA_WIDTH;
+}
+
+int VirtualDemoCamera::height() const
+{
+    return CAMERA_HEIGHT;
+}
+
+void VirtualDemoCamera::capture()
+{
+    start();
 }
 
 void VirtualDemoCamera::run()
 {
     _render->run();
-}
-
-CameraInfo VirtualDemoCamera::info()
-{
-    return CameraInfo {
-        .name = "Camera: VirtualDemo",
-        .width = 2592,
-        .height = 2048,
-        .bits = 8,
-    };
 }

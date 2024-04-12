@@ -15,94 +15,106 @@
 #include <QFileDialog>
 #include <QMessageBox>
 
-#define SETTINGS_KEY "StillImageCamera"
-
-bool StillImageCamera::editSettings()
-{
-    return CameraSettings::editDlg(SETTINGS_KEY);
-}
-
-CameraSettings StillImageCamera::loadSettings()
-{
-    auto settings = CameraSettings();
-    settings.load(SETTINGS_KEY);
-    //settings.print();
-    return settings;
-}
-
-std::optional<CameraInfo> StillImageCamera::start(PlotIntf *plot, TableIntf *table)
+StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table) : Camera(plot, table, "StillImageCamera")
 {
     Ori::Settings s;
-    s.beginGroup(SETTINGS_KEY);
+    s.beginGroup(_configGroup);
 
     QString fileName = QFileDialog::getOpenFileName(qApp->activeWindow(),
                                 qApp->tr("Open Beam Image"),
                                 s.strValue("recentDir"),
                                 qApp->tr("Images (*.png *.pgm *.jpg);;All Files (*.*)"));
-    if (fileName.isEmpty())
-        return {};
-
-    s.setValue("recentDir", QFileInfo(fileName).dir().absolutePath());
-
-    return start(fileName, plot, table);
+    if (!fileName.isEmpty()) {
+        _fileName = fileName;
+        s.setValue("recentDir", QFileInfo(fileName).dir().absolutePath());
+    }
 }
 
-std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, PlotIntf *plot, TableIntf *table)
+StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table, const QString& fileName) :
+    Camera(plot, table, "StillImageCamera"), _fileName(fileName)
 {
-    auto settings = loadSettings();
+}
 
+QString StillImageCamera::name() const
+{
+    QFileInfo fi(_fileName);
+    return fi.fileName();
+}
+
+QString StillImageCamera::descr() const
+{
+    QFileInfo fi(_fileName);
+    return fi.absoluteFilePath();
+}
+
+int StillImageCamera::width() const
+{
+    return _image.width();
+}
+
+int StillImageCamera::height() const
+{
+    return _image.height();
+}
+
+int StillImageCamera::bits() const
+{
+    return _image.depth();
+}
+
+void StillImageCamera::capture()
+{
     QElapsedTimer timer;
 
     timer.start();
-    QImage img(fileName);
-    if (img.isNull()) {
+    _image = QImage(_fileName);
+    if (_image.isNull()) {
         Ori::Dlg::error(qApp->tr("Unable to to load image file"));
-        return {};
+        return;
     }
     auto loadTime = timer.elapsed();
 
-    auto fmt = img.format();
+    auto fmt = _image.format();
     if (fmt != QImage::Format_Grayscale8 && fmt != QImage::Format_Grayscale16) {
         Ori::Dlg::error(qApp->tr("Wrong image format, only grayscale images are supported"));
-        return {};
+        return;
     }
 
-    plot->initGraph(img.width(), img.height());
-
     // declare explicitly as const to avoid deep copy
-    const uchar* buf = img.bits();
+    const uchar* buf = _image.bits();
 
     CgnBeamCalc c;
-    c.w = img.width();
-    c.h = img.height();
+    c.w = _image.width();
+    c.h = _image.height();
     c.bits = fmt == QImage::Format_Grayscale8 ? 8 : 16;
     c.buf = (uint8_t*)buf;
 
     int sz = c.w*c.h;
-    double *graph = plot->rawGraph();
+
+    _plot->initGraph(c.w, c.h);
+    double *graph = _plot->rawGraph();
 
     CgnBeamResult r;
 
     CgnBeamBkgnd g;
     g.iters = 0;
-    g.max_iter = settings.maxIters;
-    g.precision = settings.precision;
-    g.corner_fraction = settings.cornerFraction;
-    g.nT = settings.nT;
-    g.mask_diam = settings.maskDiam;
+    g.max_iter = _config.maxIters;
+    g.precision = _config.precision;
+    g.corner_fraction = _config.cornerFraction;
+    g.nT = _config.nT;
+    g.mask_diam = _config.maskDiam;
     g.min = 0;
     g.max = 0;
-    if (settings.aperture.isValid(c.w, c.h)) {
-        g.ax1 = settings.aperture.x1;
-        g.ay1 = settings.aperture.y1;
-        g.ax2 = settings.aperture.x2;
-        g.ay2 = settings.aperture.y2;
-        r.x1 = settings.aperture.x1;
-        r.y1 = settings.aperture.y1;
-        r.x2 = settings.aperture.x2;
-        r.y2 = settings.aperture.y2;
-    } else
-    {
+    if (_config.aperture.enabled && _config.aperture.isValid(c.w, c.h)) {
+        g.ax1 = _config.aperture.x1;
+        g.ay1 = _config.aperture.y1;
+        g.ax2 = _config.aperture.x2;
+        g.ay2 = _config.aperture.y2;
+        r.x1 = _config.aperture.x1;
+        r.y1 = _config.aperture.y1;
+        r.x2 = _config.aperture.x2;
+        r.y2 = _config.aperture.y2;
+    } else {
         g.ax1 = 0;
         g.ay1 = 0;
         g.ax2 = c.w;
@@ -113,13 +125,13 @@ std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, PlotI
         r.y2 = c.h;
     }
     QVector<double> subtracted;
-    if (settings.subtractBackground) {
+    if (_config.subtractBackground) {
         subtracted = QVector<double>(sz);
         g.subtracted = subtracted.data();
     }
 
     timer.restart();
-    if (settings.subtractBackground) {
+    if (_config.subtractBackground) {
         cgn_calc_beam_bkgnd(&c, &g, &r);
     } else {
         cgn_calc_beam_naive(&c, &r);
@@ -127,14 +139,14 @@ std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, PlotI
     auto calcTime = timer.elapsed();
 
     timer.restart();
-    if (settings.subtractBackground) {
-        if (settings.normalize) {
+    if (_config.subtractBackground) {
+        if (_config.normalize) {
             cgn_copy_normalized_f64(g.subtracted, graph, sz, g.min, g.max);
         } else {
-            memcpy(plot, g.subtracted, sizeof(double)*sz);
+            memcpy(graph, g.subtracted, sizeof(double)*sz);
         }
     } else {
-        if (settings.normalize) {
+        if (_config.normalize) {
             if (c.bits > 8) {
                 cgn_render_beam_to_doubles_norm_16((const uint16_t*)c.buf, sz, graph);
             } else {
@@ -148,18 +160,9 @@ std::optional<CameraInfo> StillImageCamera::start(const QString& fileName, PlotI
 
     qDebug() << "loadTime:" << loadTime << "calcTime:" << calcTime << "copyTime:" << copyTime << "iters:" << g.iters;
 
-    plot->invalidateGraph();
-    if (settings.normalize)
-        plot->setResult(r, 0, 1);
-    else plot->setResult(r, g.min, g.max);
-    table->setResult(r, loadTime, calcTime);
-
-    QFileInfo fi(fileName);
-    return CameraInfo {
-        .name = fi.fileName(),
-        .descr = fi.absoluteFilePath(),
-        .width = img.width(),
-        .height = img.height(),
-        .bits = img.depth(),
-    };
+    _plot->invalidateGraph();
+    if (_config.normalize)
+        _plot->setResult(r, 0, 1);
+    else _plot->setResult(r, g.min, g.max);
+    _table->setResult(r, loadTime, calcTime);
 }
