@@ -18,6 +18,8 @@ BeamColorMapData::BeamColorMapData(int w, int h)
 
 BeamColorScale::BeamColorScale(QCustomPlot *parentPlot) : QCPColorScale(parentPlot)
 {
+    setRangeDrag(false);
+    setRangeZoom(false);
 }
 
 void BeamColorScale::setFrameColor(const QColor& c)
@@ -71,6 +73,22 @@ ApertureRect::ApertureRect(QCustomPlot *parentPlot) : QCPAbstractItem(parentPlot
 double ApertureRect::selectTest(const QPointF &pos, bool onlySelectable, QVariant *details) const
 {
     return 0;
+}
+
+SoftAperture ApertureRect::aperture() const
+{
+    if (_editing) {
+        // can be used for auto-zooming in edit mode
+        // should not be applied in another way
+        return {
+            .enabled = true,
+            .x1 = (int)_x1,
+            .y1 = (int)_y1,
+            .x2 = (int)_x2,
+            .y2 = (int)_y2,
+        };
+    }
+    return _aperture;
 }
 
 void ApertureRect::setAperture(const SoftAperture &aperture, bool replot)
@@ -138,13 +156,12 @@ void ApertureRect::draw(QCPPainter *painter)
     const double x2 = parentPlot()->xAxis->coordToPixel(_x2);
     const double y2 = parentPlot()->yAxis->coordToPixel(_y2);
     if (_editing) {
-        const double max_x = parentPlot()->xAxis->coordToPixel(maxX);
-        const double max_y = parentPlot()->yAxis->coordToPixel(maxY);
+        auto r = parentPlot()->axisRect()->rect();
         painter->setPen(_pen);
-        painter->drawLine(QLineF(0, y1, max_x, y1));
-        painter->drawLine(QLineF(0, y2, max_x, y2));
-        painter->drawLine(QLineF(x1, 0, x1, max_y));
-        painter->drawLine(QLineF(x2, 0, x2, max_y));
+        painter->drawLine(QLineF(r.left(), y1, r.right(), y1));
+        painter->drawLine(QLineF(r.left(), y2, r.right(), y2));
+        painter->drawLine(QLineF(x1, r.top(), x1, r.bottom()));
+        painter->drawLine(QLineF(x2, r.top(), x2, r.bottom()));
         painter->setPen(_editPen);
         painter->drawRect(x1, y1, x2-x1, y2-y1);
     } else {
@@ -158,6 +175,12 @@ void ApertureRect::draw(QCPPainter *painter)
 void ApertureRect::mouseMove(QMouseEvent *e)
 {
     if (!visible() || !_editing) return;
+
+    if (!parentPlot()->axisRect()->rect().contains(e->pos())) {
+        resetDragCusrsor();
+        _dragging = false;
+        return;
+    }
 
     const double x = e->pos().x();
     const double y = e->pos().y();
@@ -220,6 +243,7 @@ void ApertureRect::mouseMove(QMouseEvent *e)
 void ApertureRect::mousePress(QMouseEvent *e)
 {
     if (!visible() || !_editing) return;
+    if (e->button() != Qt::LeftButton) return;
     _dragging = true;
     _dragX = e->pos().x();
     _dragY = e->pos().y();

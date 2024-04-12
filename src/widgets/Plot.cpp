@@ -36,6 +36,9 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _plot->axisRect()->setupFullAxesBox(true);
     _plot->xAxis->setTickLabels(false);
     _plot->xAxis2->setTickLabels(true);
+    _plot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
+    //connect(_plot->xAxis, QOverload<const QCPRange&>::of(&QCPAxis::rangeChanged), this, &Plot::axisRangeChanged);
+    //connect(_plot->yAxis, QOverload<const QCPRange&>::of(&QCPAxis::rangeChanged), this, &Plot::axisRangeChanged);
 
     auto gridLayer = _plot->xAxis->grid()->layer();
     _plot->addLayer("beam", gridLayer, QCustomPlot::limBelow);
@@ -94,12 +97,12 @@ void Plot::prepare()
     _imageH = _colorMap->data()->valueRange().upper;
     _aperture->maxX = _imageW;
     _aperture->maxY = _imageH;
-    recalcLimits(false);
+    zoomAuto(false);
 }
 
 void Plot::resizeEvent(QResizeEvent *event)
 {
-    recalcLimits(false);
+    zoomAuto(false);
 }
 
 void Plot::keyPressEvent(QKeyEvent *event)
@@ -112,12 +115,12 @@ void Plot::keyPressEvent(QKeyEvent *event)
         _aperture->stopEdit(true);
 }
 
-void Plot::recalcLimits(bool replot)
+void Plot::zoomToBounds(int x1, int y1, int x2, int y2, bool replot)
 {
     const double plotW = _plot->axisRect()->width();
     const double plotH = _plot->axisRect()->height();
-    const double imgW = _imageW;
-    const double imgH = _imageH;
+    double imgW = x2 - x1;
+    double imgH = y2 - y1;
     double newImgW = imgW;
     double pixelScale = plotW / imgW;
     double newImgH = plotH / pixelScale;
@@ -126,10 +129,46 @@ void Plot::recalcLimits(bool replot)
         pixelScale = plotH / imgH;
         newImgW = plotW / pixelScale;
     }
-    _plot->xAxis->setRange(0, newImgW);
-    _plot->yAxis->setRange(0, newImgH);
+    //qDebug() << "zoom";
+    _autoZooming = true;
+    _plot->xAxis->setRange(x1, x1 + newImgW);
+    _plot->yAxis->setRange(y1, y1 + newImgH);
+    _autoZooming = false;
     if (replot)
         _plot->replot();
+}
+
+void Plot::zoomFull(bool replot)
+{
+    _autoZoom = ZOOM_FULL;
+    zoomToBounds(0, 0, _imageW, _imageH, replot);
+}
+
+void Plot::zoomAperture(bool replot)
+{
+    if (!_aperture->visible()) {
+        zoomFull(replot);
+        return;
+    }
+    _autoZoom = ZOOM_APERTURE;
+    auto a = _aperture->aperture();
+    int dx = a.width() * 0.05;
+    int dy = a.height() * 0.05;
+    zoomToBounds(a.x1-dx, a.y1-dy, a.x2+dx, a.y2+dy, replot);
+}
+
+void Plot::zoomAuto(bool replot)
+{
+    if (_autoZoom == ZOOM_FULL)
+        zoomFull(replot);
+    else if (_autoZoom == ZOOM_APERTURE)
+        zoomAperture(replot);
+}
+
+void Plot::axisRangeChanged()
+{
+    //TODO: Keep user set scale somehow
+    //if (!_autoZooming) _autoZoom = ZOOM_NONE;
 }
 
 void Plot::replot()
@@ -250,6 +289,8 @@ bool Plot::isApertureEditing() const
 
 void Plot::setAperture(const SoftAperture& a, bool replot)
 {
+    if (_autoZoom == ZOOM_APERTURE && !a.enabled)
+        _autoZoom = ZOOM_FULL;
     _aperture->setAperture(a, replot);
 }
 

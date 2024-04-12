@@ -129,7 +129,13 @@ void PlotWindow::createMenuBar()
     _actionRainbow = A_(tr("Rainbow"), colorGroup, [this]{ _plot->setRainbowEnabled(true, true); });
     _actionGrayscale->setCheckable(true);
     _actionRainbow->setCheckable(true);
-    menuBar()->addMenu(M_(tr("View"), {_actionBeamInfo, 0, _actionGrayscale, _actionRainbow}));
+    auto actnZoomFull = A_(tr("Zoom to Sensor"), this, [this]{ _plot->zoomFull(true); });
+    _actionZoomAperture = A_(tr("Zoom to Aperture"), this, [this]{ _plot->zoomAperture(true); });
+    menuBar()->addMenu(M_(tr("View"), {
+        _actionBeamInfo, 0,
+        _actionGrayscale, _actionRainbow, 0,
+        actnZoomFull, _actionZoomAperture,
+    }));
 
     _actionStart = A_(tr("Start Capture"), this, &PlotWindow::startCapture, ":/toolbar/start");
     _actionStop = A_(tr("Stop Capture"), this, &PlotWindow::stopCapture, ":/toolbar/stop");
@@ -270,7 +276,7 @@ void PlotWindow::changeEvent(QEvent* e)
     QMainWindow::changeEvent(e);
     if (e->type() == QEvent::WindowStateChange) {
         // resizeEvent is not called when window gets maximized or restored
-        _plot->recalcLimits(true);
+        _plot->zoomAuto(true);
     }
 }
 
@@ -296,6 +302,7 @@ void PlotWindow::showCamConfig(bool replot)
     auto c = _camera->config();
     _plot->setAperture(c.aperture, replot);
     _actionUseAperture->setChecked(c.aperture.enabled);
+    _actionZoomAperture->setVisible(c.aperture.enabled);
     _statusBar->setVisible(STATUS_APERTURE_ICON, c.aperture.enabled);
     _statusBar->setVisible(STATUS_APERTURE, c.aperture.enabled);
     if (c.aperture.enabled) {

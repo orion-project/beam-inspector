@@ -34,8 +34,10 @@ public:
     void setBeamInfoVisible(bool on, bool replot);
     void setAperture(const SoftAperture& a, bool replot);
     void selectBackgroundColor();
-    void recalcLimits(bool replot);
     void exportImageDlg();
+    void zoomAuto(bool replot);
+    void zoomFull(bool replot);
+    void zoomAperture(bool replot);
     void startEditAperture();
     void stopEditAperture(bool apply);
     bool isApertureEditing() const;
@@ -58,8 +60,13 @@ private:
     BeamEllipse *_beamShape;
     ApertureRect *_aperture;
     int _imageW, _imageH;
+    enum AutoZoomMode { ZOOM_NONE, ZOOM_FULL, ZOOM_APERTURE };
+    AutoZoomMode _autoZoom = ZOOM_FULL;
+    bool _autoZooming = false;
 
     void renderDemoBeam();
+    void zoomToBounds(int x1, int y1, int x2, int y2, bool replot);
+    void axisRangeChanged();
 };
 
 #endif // PLOT_WIDGET_H
