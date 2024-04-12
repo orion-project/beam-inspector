@@ -49,7 +49,7 @@ public:
     void stopEdit(bool apply);
     bool isEditing() const { return _editing; }
 
-    SoftAperture aperture() const { return _aperture; }
+    SoftAperture aperture() const;
     void setAperture(const SoftAperture &aperture, bool replot);
 
     double selectTest(const QPointF &pos, bool onlySelectable, QVariant *details=nullptr) const override;

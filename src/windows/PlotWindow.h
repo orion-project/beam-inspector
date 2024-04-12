@@ -35,7 +35,7 @@ private:
     QSharedPointer<Camera> _camera;
     QAction *_actionStart, *_actionStop, *_actionOpen, *_actionCamConfig,
         *_actionGrayscale, *_actionRainbow, *_actionBeamInfo,
-        *_actionEditAperture, *_actionUseAperture;
+        *_actionEditAperture, *_actionUseAperture, *_actionZoomAperture;
     QTableWidget *_table;
     QTableWidgetItem *_itemRenderTime;
     TableIntf *_tableIntf;
