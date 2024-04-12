@@ -9,6 +9,8 @@
 #include "qcp/src/items/item-straightline.h"
 #include "qcp/src/items/item-text.h"
 
+#define APERTURE_ZOOM_MARGIN 0.01
+
 static QColor themeAxisColor(Plot::Theme theme)
 {
     bool dark = theme == Plot::SYSTEM && qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark;
@@ -152,8 +154,8 @@ void Plot::zoomAperture(bool replot)
     }
     _autoZoom = ZOOM_APERTURE;
     auto a = _aperture->aperture();
-    int dx = a.width() * 0.05;
-    int dy = a.height() * 0.05;
+    int dx = a.width() * APERTURE_ZOOM_MARGIN;
+    int dy = a.height() * APERTURE_ZOOM_MARGIN;
     zoomToBounds(a.x1-dx, a.y1-dy, a.x2+dx, a.y2+dy, replot);
 }
 
