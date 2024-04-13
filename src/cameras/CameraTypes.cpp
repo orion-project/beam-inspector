@@ -1,6 +1,31 @@
 #include "CameraTypes.h"
 
 //------------------------------------------------------------------------------
+//                               PixelScale
+//------------------------------------------------------------------------------
+
+QString PixelScale::format(const double &v) const
+{
+    if (on)
+        return QStringLiteral("%1 %2").arg(v*factor, 0, 'f', 0).arg(unit);
+    return QStringLiteral("%1").arg(v, 0, 'f', 0);
+}
+
+QString PixelScale::formatWithMargins(const double &v) const
+{
+    if (on)
+        return QStringLiteral(" %1 %2 ").arg(v*factor, 0, 'f', 0).arg(unit);
+    return QStringLiteral(" %1 ").arg(v, 0, 'f', 0);
+}
+
+bool PixelScale::operator ==(const PixelScale& s) const {
+    return
+        on == s.on &&
+        int(factor * 1000) == int(s.factor * 1000) &&
+        unit == s.unit;
+}
+
+//------------------------------------------------------------------------------
 //                               SoftAperture
 //------------------------------------------------------------------------------
 

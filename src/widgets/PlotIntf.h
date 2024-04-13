@@ -3,6 +3,8 @@
 
 #include "beam_calc.h"
 
+#include "cameras/CameraTypes.h"
+
 class BeamColorMapData;
 class BeamEllipse;
 class QCPColorMap;
@@ -26,12 +28,14 @@ public:
     void cleanResult();
     void setResult(const CgnBeamResult& r, double min, double max);
     void showResult();
+    void setScale(const PixelScale& scale) { _scale = scale; }
 
     void initGraph(int w, int h);
     double* rawGraph() const;
     void invalidateGraph() const;
 
 private:
+    PixelScale _scale;
     CgnBeamResult _res;
     QCPItemText *_beamInfo;
     QCPColorMap *_colorMap;

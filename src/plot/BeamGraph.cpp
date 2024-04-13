@@ -81,7 +81,7 @@ SoftAperture ApertureRect::aperture() const
         // can be used for auto-zooming in edit mode
         // should not be applied in another way
         return {
-            .enabled = true,
+            .on = true,
             .x1 = (int)_x1,
             .y1 = (int)_y1,
             .x2 = (int)_x2,
@@ -98,7 +98,7 @@ void ApertureRect::setAperture(const SoftAperture &aperture, bool replot)
     _y1 = _aperture.y1;
     _x2 = _aperture.x2;
     _y2 = _aperture.y2;
-    setVisible(_aperture.enabled);
+    setVisible(_aperture.on);
     if (replot)
         parentPlot()->replot();
 }
@@ -132,7 +132,7 @@ void ApertureRect::stopEdit(bool apply)
         _aperture.y1 = _y1;
         _aperture.x2 = _x2;
         _aperture.y2 = _y2;
-        _aperture.enabled = true;
+        _aperture.on = true;
         if (onEdited)
             onEdited();
     } else {
@@ -140,7 +140,7 @@ void ApertureRect::stopEdit(bool apply)
         _y1 = _aperture.y1;
         _x2 = _aperture.x2;
         _y2 = _aperture.y2;
-        setVisible(_aperture.enabled);
+        setVisible(_aperture.on);
     }
     QToolTip::hideText();
     resetDragCusrsor();
