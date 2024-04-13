@@ -131,7 +131,6 @@ void Plot::zoomToBounds(int x1, int y1, int x2, int y2, bool replot)
         pixelScale = plotH / imgH;
         newImgW = plotW / pixelScale;
     }
-    //qDebug() << "zoom";
     _autoZooming = true;
     _plot->xAxis->setRange(x1, x1 + newImgW);
     _plot->yAxis->setRange(y1, y1 + newImgH);

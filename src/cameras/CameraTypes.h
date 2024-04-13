@@ -14,6 +14,7 @@ struct SoftAperture
     int width() const { return x2 - x1; }
     int height() const { return y2 - y1; }
     bool isValid(int w, int h) const;
+    void fix(int w, int h);
     QString sizeStr() const;
 };
 
