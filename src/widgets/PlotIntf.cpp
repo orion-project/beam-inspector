@@ -13,6 +13,8 @@ PlotIntf::PlotIntf(QCPColorMap *colorMap, QCPColorScale *colorScale, BeamEllipse
 
 void PlotIntf::initGraph(int w, int h)
 {
+    _w = w;
+    _h = h;
     auto d = _colorMap->data();
     if (d->keySize() != w or d->valueSize() != h) {
         _beamData = new BeamColorMapData(w, h);
@@ -48,20 +50,24 @@ void PlotIntf::setResult(const CgnBeamResult& r, double min, double max)
 
 void PlotIntf::showResult()
 {
-    auto phi = qDegreesToRadians(_res.phi);
-    auto cos_phi = cos(phi);
-    auto sin_phi = sin(phi);
+    const double phi = qDegreesToRadians(_res.phi);
+    const double cos_phi = cos(phi);
+    const double sin_phi = sin(phi);
+    const double xc = _scale.sensorToUnit(_res.xc);
+    const double yc = _scale.sensorToUnit(_res.yc);
+    const double dx = _scale.sensorToUnit(_res.dx);
+    const double dy = _scale.sensorToUnit(_res.dy);
 
-    _lineX->point1->setCoords(_res.xc, _res.yc);
-    _lineX->point2->setCoords(_res.xc + _res.dx*cos_phi, _res.yc + _res.dx*sin_phi);
+    _lineX->point1->setCoords(xc, yc);
+    _lineX->point2->setCoords(xc + dx*cos_phi, yc + dx*sin_phi);
 
-    _lineY->point1->setCoords(_res.xc, _res.yc);
-    _lineY->point2->setCoords(_res.xc + _res.dy*sin_phi, _res.yc - _res.dy*cos_phi);
+    _lineY->point1->setCoords(xc, yc);
+    _lineY->point2->setCoords(xc + dy*sin_phi, yc - dy*cos_phi);
 
-    _beamShape->xc = _res.xc;
-    _beamShape->yc = _res.yc;
-    _beamShape->dx = _res.dx;
-    _beamShape->dy = _res.dy;
+    _beamShape->xc = xc;
+    _beamShape->yc = yc;
+    _beamShape->dx = dx;
+    _beamShape->dy = dy;
     _beamShape->phi = _res.phi;
 
     if (_beamInfo->visible()) {
@@ -76,4 +82,6 @@ void PlotIntf::showResult()
     }
 
     _colorScale->setDataRange(QCPRange(_min, _max));
+    if (_w > 0) _beamData->setKeyRange(QCPRange(0, _scale.sensorToUnit(_w)));
+    if (_h > 0) _beamData->setValueRange(QCPRange(0, _scale.sensorToUnit(_h)));
 }

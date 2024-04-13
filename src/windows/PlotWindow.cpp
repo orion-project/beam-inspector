@@ -74,7 +74,7 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
 
     QTimer::singleShot(0, this, [this]{
         _camera->capture();
-        _plot->prepare();
+        _plot->zoomAuto(false);
         dataReady();
     });
 }
@@ -308,7 +308,6 @@ void PlotWindow::showCamConfig(bool replot)
     _statusBar->setText(STATUS_RESOLUTION, _camera->resolutionStr());
 
     const auto &c = _camera->config();
-    _plot->setAperture(c.aperture, replot);
     _actionUseAperture->setChecked(c.aperture.on);
     _actionZoomAperture->setVisible(c.aperture.on);
     _statusBar->setVisible(STATUS_APERTURE_ICON, c.aperture.on);
@@ -323,10 +322,13 @@ void PlotWindow::showCamConfig(bool replot)
         _statusBar->setHint(STATUS_APERTURE, hint);
     }
 
-    _statusBar->setVisible(STATUS_BGND, c.bgnd.on);
+    _statusBar->setVisible(STATUS_BGND, !c.bgnd.on);
 
+    _plot->setImageSize(_camera->width(), _camera->height(), c.scale);
+    _plot->setAperture(c.aperture);
     _tableIntf->setScale(c.scale);
     _plotIntf->setScale(c.scale);
+    if (replot) _plot->replot();
 }
 
 void PlotWindow::setThemeColors()
@@ -367,7 +369,7 @@ void PlotWindow::startCapture()
     auto cam = new VirtualDemoCamera(_plotIntf, _tableIntf, this);
     connect(cam, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualDemoCamera::stats, this, &PlotWindow::showFps);
-    connect(cam, &VirtualDemoCamera::started, this, [this]{ _plot->prepare(); });
+    connect(cam, &VirtualDemoCamera::started, this, [this]{ _plot->zoomAuto(false); });
     connect(cam, &VirtualDemoCamera::finished, this, &PlotWindow::captureStopped);
     _camera.reset((Camera*)cam);
     _camera->capture();
@@ -434,7 +436,7 @@ void PlotWindow::processImage()
     _mru->append(cam->fileName());
     _camera->capture();
     showCamConfig(false); // _after_ run(), when image is already loaded
-    _plot->prepare();
+    _plot->zoomAuto(false);
     dataReady();
     showFps(0);
 }
@@ -446,8 +448,12 @@ void PlotWindow::editCamConfig(int pageId)
         return;
     configChanged();
     if (_camera->config().scale != prevScale) {
-        _tableIntf->showResult();
-        _plotIntf->showResult();
+        // Image will be re-processed by StillImageCamera
+        // For other types need to re-show cached results
+        if (!dynamic_cast<StillImageCamera*>(_camera.get())) {
+            _plot->zoomAuto(false);
+            dataReady();
+        }
     }
 }
 
