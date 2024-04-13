@@ -75,32 +75,27 @@ double ApertureRect::selectTest(const QPointF &pos, bool onlySelectable, QVarian
     return 0;
 }
 
-SoftAperture ApertureRect::aperture() const
-{
-    if (_editing) {
-        // can be used for auto-zooming in edit mode
-        // should not be applied in another way
-        return {
-            .on = true,
-            .x1 = (int)_x1,
-            .y1 = (int)_y1,
-            .x2 = (int)_x2,
-            .y2 = (int)_y2,
-        };
-    }
-    return _aperture;
-}
-
-void ApertureRect::setAperture(const SoftAperture &aperture, bool replot)
+void ApertureRect::setAperture(const SoftAperture &aperture)
 {
     _aperture = aperture;
-    _x1 = _aperture.x1;
-    _y1 = _aperture.y1;
-    _x2 = _aperture.x2;
-    _y2 = _aperture.y2;
+    updateCoords();
     setVisible(_aperture.on);
-    if (replot)
-        parentPlot()->replot();
+}
+
+void ApertureRect::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
+{
+    _scale = scale;
+    _maxX = scale.sensorToUnit(sensorW);
+    _maxY = scale.sensorToUnit(sensorH);
+    updateCoords();
+}
+
+void ApertureRect::updateCoords()
+{
+    _x1 = _scale.sensorToUnit(_aperture.x1);
+    _y1 = _scale.sensorToUnit(_aperture.y1);
+    _x2 = _scale.sensorToUnit(_aperture.x2);
+    _y2 = _scale.sensorToUnit(_aperture.y2);
 }
 
 void ApertureRect::startEdit()
@@ -108,15 +103,13 @@ void ApertureRect::startEdit()
     if (_editing)
         return;
     _editing = true;
-    _x1 = _aperture.x1;
-    _y1 = _aperture.y1;
-    _x2 = _aperture.x2;
-    _y2 = _aperture.y2;
-    if (!_aperture.isValid(maxX, maxY)) {
-        _x1 = maxX/4;
-        _x2 = maxX*3/4;
-        _y1 = maxY/4;
-        _y2 = maxY*3/4;
+    const double sensorW = _scale.unitToSensor(_maxX);
+    const double sensorH = _scale.unitToSensor(_maxY);
+    if (!_aperture.isValid(sensorW, sensorH)) {
+        _x1 = _maxX / 4;
+        _x2 = _maxX / 4 * 3;
+        _y1 = _maxY / 4;
+        _y2 = _maxY / 4 * 3;
     }
     setVisible(true);
     parentPlot()->replot();
@@ -128,18 +121,15 @@ void ApertureRect::stopEdit(bool apply)
         return;
     _editing = false;
     if (apply) {
-        _aperture.x1 = _x1;
-        _aperture.y1 = _y1;
-        _aperture.x2 = _x2;
-        _aperture.y2 = _y2;
+        _aperture.x1 = _scale.unitToSensor(_x1);
+        _aperture.y1 = _scale.unitToSensor(_y1);
+        _aperture.x2 = _scale.unitToSensor(_x2);
+        _aperture.y2 = _scale.unitToSensor(_y2);
         _aperture.on = true;
         if (onEdited)
             onEdited();
     } else {
-        _x1 = _aperture.x1;
-        _y1 = _aperture.y1;
-        _x2 = _aperture.x2;
-        _y2 = _aperture.y2;
+        updateCoords();
         setVisible(_aperture.on);
     }
     QToolTip::hideText();
@@ -201,7 +191,7 @@ void ApertureRect::mouseMove(QMouseEvent *e)
         }
         if (_drag0 || _dragX2) {
             _x2 = parentPlot()->xAxis->pixelToCoord(qMax(x2+dx, x1+t));
-            _x2 = qMin(_x2, maxX);
+            _x2 = qMin(_x2, _maxX);
         }
         if (_drag0 || _dragY1) {
             _y1 = parentPlot()->yAxis->pixelToCoord(qMin(y1+dy, y2-t));
@@ -209,7 +199,7 @@ void ApertureRect::mouseMove(QMouseEvent *e)
         }
         if (_drag0 || _dragY2) {
             _y2 = parentPlot()->yAxis->pixelToCoord(qMax(y2+dy, y1+t));
-            _y2 = qMin(_y2, maxY);
+            _y2 = qMin(_y2, _maxY);
         }
         showCoordTooltip(e->globalPosition().toPoint());
         parentPlot()->replot();

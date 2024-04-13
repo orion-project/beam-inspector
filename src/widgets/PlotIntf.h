@@ -25,16 +25,18 @@ public:
         BeamEllipse *beamShape, QCPItemText *beamInfo,
         QCPItemStraightLine *lineX, QCPItemStraightLine *lineY);
 
-    void cleanResult();
+    void setScale(const PixelScale& scale) { _scale = scale; }
     void setResult(const CgnBeamResult& r, double min, double max);
     void showResult();
-    void setScale(const PixelScale& scale) { _scale = scale; }
+    void cleanResult();
 
     void initGraph(int w, int h);
     double* rawGraph() const;
     void invalidateGraph() const;
 
 private:
+    int _w = 0, _h = 0;
+    double _min, _max;
     PixelScale _scale;
     CgnBeamResult _res;
     QCPItemText *_beamInfo;
@@ -43,7 +45,6 @@ private:
     BeamColorMapData *_beamData;
     BeamEllipse *_beamShape;
     QCPItemStraightLine *_lineX, *_lineY;
-    double _min, _max;
 };
 
 #endif // PLOT_INTF_H

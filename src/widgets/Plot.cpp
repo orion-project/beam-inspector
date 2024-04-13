@@ -93,13 +93,11 @@ Plot::~Plot()
     delete _plotIntf;
 }
 
-void Plot::prepare()
+void Plot::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
 {
-    _imageW = _colorMap->data()->keyRange().upper;
-    _imageH = _colorMap->data()->valueRange().upper;
-    _aperture->maxX = _imageW;
-    _aperture->maxY = _imageH;
-    zoomAuto(false);
+    _imageW = scale.sensorToUnit(sensorW);
+    _imageH = scale.sensorToUnit(sensorH);
+    _aperture->setImageSize(sensorW, sensorH, scale);
 }
 
 void Plot::resizeEvent(QResizeEvent *event)
@@ -117,12 +115,16 @@ void Plot::keyPressEvent(QKeyEvent *event)
         _aperture->stopEdit(true);
 }
 
-void Plot::zoomToBounds(int x1, int y1, int x2, int y2, bool replot)
+void Plot::zoomToBounds(double x1, double y1, double x2, double y2, bool replot)
 {
+    const double xx1 = x1;
+    const double xx2 = x2;
+    const double yy1 = y1;
+    const double yy2 = y2;
     const double plotW = _plot->axisRect()->width();
     const double plotH = _plot->axisRect()->height();
-    double imgW = x2 - x1;
-    double imgH = y2 - y1;
+    const double imgW = xx2 - xx1;
+    const double imgH = yy2 - yy1;
     double newImgW = imgW;
     double pixelScale = plotW / imgW;
     double newImgH = plotH / pixelScale;
@@ -132,8 +134,8 @@ void Plot::zoomToBounds(int x1, int y1, int x2, int y2, bool replot)
         newImgW = plotW / pixelScale;
     }
     _autoZooming = true;
-    _plot->xAxis->setRange(x1, x1 + newImgW);
-    _plot->yAxis->setRange(y1, y1 + newImgH);
+    _plot->xAxis->setRange(xx1, xx1 + newImgW);
+    _plot->yAxis->setRange(yy1, yy1 + newImgH);
     _autoZooming = false;
     if (replot)
         _plot->replot();
@@ -152,10 +154,13 @@ void Plot::zoomAperture(bool replot)
         return;
     }
     _autoZoom = ZOOM_APERTURE;
-    auto a = _aperture->aperture();
-    int dx = a.width() * APERTURE_ZOOM_MARGIN;
-    int dy = a.height() * APERTURE_ZOOM_MARGIN;
-    zoomToBounds(a.x1-dx, a.y1-dy, a.x2+dx, a.y2+dy, replot);
+    const double x1 = _aperture->getX1();
+    const double y1 = _aperture->getY1();
+    const double x2 = _aperture->getX2();
+    const double y2 = _aperture->getY2();
+    const double dx = (x2 - x1) * APERTURE_ZOOM_MARGIN;
+    const double dy = (y2 - y1) * APERTURE_ZOOM_MARGIN;
+    zoomToBounds(x1-dx, y1-dy, x2+dx, y2+dy, replot);
 }
 
 void Plot::zoomAuto(bool replot)
@@ -288,11 +293,11 @@ bool Plot::isApertureEditing() const
     return _aperture->isEditing();
 }
 
-void Plot::setAperture(const SoftAperture& a, bool replot)
+void Plot::setAperture(const SoftAperture& a)
 {
     if (_autoZoom == ZOOM_APERTURE && !a.on)
         _autoZoom = ZOOM_FULL;
-    _aperture->setAperture(a, replot);
+    _aperture->setAperture(a);
 }
 
 SoftAperture Plot::aperture() const

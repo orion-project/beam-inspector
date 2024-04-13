@@ -25,14 +25,14 @@ public:
 
     PlotIntf* plotIntf() { return _plotIntf; }
 
-    void prepare();
     void replot();
 
     enum Theme { SYSTEM, LIGHT };
     void setThemeColors(Theme theme, bool replot);
     void setRainbowEnabled(bool on, bool replot);
     void setBeamInfoVisible(bool on, bool replot);
-    void setAperture(const SoftAperture& a, bool replot);
+    void setImageSize(int sensorW, int sensorH, const PixelScale &scale);
+    void setAperture(const SoftAperture &a);
     void selectBackgroundColor();
     void exportImageDlg();
     void zoomAuto(bool replot);
@@ -64,8 +64,7 @@ private:
     AutoZoomMode _autoZoom = ZOOM_FULL;
     bool _autoZooming = false;
 
-    void renderDemoBeam();
-    void zoomToBounds(int x1, int y1, int x2, int y2, bool replot);
+    void zoomToBounds(double x1, double y1, double x2, double y2, bool replot);
     void axisRangeChanged();
 };
 

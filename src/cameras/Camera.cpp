@@ -107,9 +107,9 @@ bool Camera::editConfig(ConfigPages page)
 
         (new ConfigItemBool(cfgAper, qApp->tr("Use soft aperture"), &_config.aperture.on))
             ->withHint(qApp->tr(
-                "<p>● Values are in pixels"
-                "<p>● Use command <b>Camera ► Edit Soft Aperture</b> "
-                "to change the aperture interactively"), true),
+                "These are raw pixels values. "
+                "Use the menu command <b>Camera ► Edit Soft Aperture</b> "
+                "to change aperture interactively in scaled units"), true),
         (new ConfigItemInt(cfgAper, qApp->tr("Left"), &_config.aperture.x1))
             ->withMinMax(0, width()),
         (new ConfigItemInt(cfgAper, qApp->tr("Top"), &_config.aperture.y1))

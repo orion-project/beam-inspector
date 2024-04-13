@@ -10,10 +10,10 @@ class QTableWidgetItem;
 class TableIntf
 {
 public:
-    void cleanResult();
-    void setResult(const CgnBeamResult& r, double renderTime, double calcTime);
-    void showResult();
     void setScale(const PixelScale& scale) { _scale = scale; }
+    void setResult(const CgnBeamResult& r, double renderTime, double calcTime);
+    void cleanResult();
+    void showResult();
 
     QTableWidgetItem *itXc, *itYc, *itDx, *itDy, *itPhi, *itEps;
     QTableWidgetItem *itRenderTime, *itCalcTime;

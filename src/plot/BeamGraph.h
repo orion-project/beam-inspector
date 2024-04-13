@@ -49,14 +49,19 @@ public:
     void stopEdit(bool apply);
     bool isEditing() const { return _editing; }
 
-    SoftAperture aperture() const;
-    void setAperture(const SoftAperture &aperture, bool replot);
+    SoftAperture aperture() const { return _aperture; }
+    void setAperture(const SoftAperture &aperture);
+
+    void setImageSize(int sensorW, int sensorH, const PixelScale &scale);
 
     double selectTest(const QPointF &pos, bool onlySelectable, QVariant *details=nullptr) const override;
 
     std::function<void()> onEdited;
-    double maxX = 0;
-    double maxY = 0;
+
+    double getX1() const { return _x1; }
+    double getX2() const { return _x2; }
+    double getY1() const { return _y1; }
+    double getY2() const { return _y2; }
 
 protected:
     void draw(QCPPainter *painter) override;
@@ -64,12 +69,15 @@ protected:
 private:
     QPen _pen, _editPen;
     SoftAperture _aperture;
+    PixelScale _scale;
     bool _editing = false;
     bool _dragging = false;
+    double _maxX = 0, _maxY = 0;
     double _x1, _y1, _x2, _y2, _dragX, _dragY;
     bool _drag0, _dragX1, _dragX2, _dragY1, _dragY2;
     Qt::CursorShape _dragCursor = Qt::ArrowCursor;
 
+    void updateCoords();
     void mouseMove(QMouseEvent*);
     void mousePress(QMouseEvent*);
     void mouseRelease(QMouseEvent*);
