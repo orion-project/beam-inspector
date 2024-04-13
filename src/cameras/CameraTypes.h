@@ -5,7 +5,7 @@
 
 struct SoftAperture
 {
-    bool enabled = false;
+    bool on = false;
     int x1 = 0;
     int y1 = 0;
     int x2 = 0;
@@ -18,16 +18,35 @@ struct SoftAperture
     QString sizeStr() const;
 };
 
+struct PixelScale
+{
+    bool on = false;
+    double factor = 1;
+    QString unit = "um";
+
+    bool operator ==(const PixelScale& s) const;
+    bool operator !=(const PixelScale& s) const { return !(*this == s); }
+
+    QString format(const double &v) const;
+    QString formatWithMargins(const double &v) const;
+};
+
+struct Background
+{
+    bool on = true;
+    int iters = 0;
+    double precision = 0.05;
+    double corner = 0.035;
+    double noise = 3;
+    double mask = 3;
+};
+
 struct CameraConfig
 {
     bool normalize = true;
-    bool subtractBackground = true;
-    int maxIters = 0;
-    double precision = 0.05;
-    double cornerFraction = 0.035;
-    double nT = 3;
-    double maskDiam = 3;
+    Background bgnd;
     SoftAperture aperture;
+    PixelScale scale;
 };
 
 #endif // CAMERA_TYPES_H

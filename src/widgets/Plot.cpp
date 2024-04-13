@@ -290,7 +290,7 @@ bool Plot::isApertureEditing() const
 
 void Plot::setAperture(const SoftAperture& a, bool replot)
 {
-    if (_autoZoom == ZOOM_APERTURE && !a.enabled)
+    if (_autoZoom == ZOOM_APERTURE && !a.on)
         _autoZoom = ZOOM_FULL;
     _aperture->setAperture(a, replot);
 }

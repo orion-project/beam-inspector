@@ -42,7 +42,7 @@ enum StatusPanels
     STATUS_SEPARATOR_2,
     STATUS_FPS,
     STATUS_SEPARATOR_3,
-    STATUS_WARNING,
+    STATUS_BGND,
 
     STATUS_PANEL_COUNT,
 };
@@ -179,7 +179,6 @@ void PlotWindow::createToolBar()
 void PlotWindow::createStatusBar()
 {
     _statusBar = new Ori::Widgets::StatusBar(STATUS_PANEL_COUNT);
-
     _statusBar->addVersionLabel();
     _statusBar->setText(STATUS_CAMERA, "VirtualDemo");
     _statusBar->setText(STATUS_RESOLUTION, "2592 × 2048 × 8bit");
@@ -191,6 +190,11 @@ void PlotWindow::createStatusBar()
     _statusBar->setMargin(STATUS_SEPARATOR_3, 0, 0);
     _statusBar->setMargin(STATUS_APERTURE_ICON, 6, 0);
     _statusBar->setMargin(STATUS_APERTURE, 0, 6);
+    _statusBar->setDblClick(STATUS_APERTURE, [this]{ editCamConfig(Camera::cfgAper); });
+    _statusBar->setDblClick(STATUS_APERTURE_ICON, [this]{ editCamConfig(Camera::cfgAper); });
+    _statusBar->setIcon(STATUS_BGND, ":/toolbar/exclame");
+    _statusBar->setHint(STATUS_BGND, tr("Background subtraction disabled"));
+    _statusBar->setDblClick(STATUS_BGND, [this]{ editCamConfig(Camera::cfgBgnd); });
     setStatusBar(_statusBar);
 }
 
@@ -303,13 +307,13 @@ void PlotWindow::showCamConfig(bool replot)
     _statusBar->setText(STATUS_CAMERA, _camera->name(), _camera->descr());
     _statusBar->setText(STATUS_RESOLUTION, _camera->resolutionStr());
 
-    auto c = _camera->config();
+    const auto &c = _camera->config();
     _plot->setAperture(c.aperture, replot);
-    _actionUseAperture->setChecked(c.aperture.enabled);
-    _actionZoomAperture->setVisible(c.aperture.enabled);
-    _statusBar->setVisible(STATUS_APERTURE_ICON, c.aperture.enabled);
-    _statusBar->setVisible(STATUS_APERTURE, c.aperture.enabled);
-    if (c.aperture.enabled) {
+    _actionUseAperture->setChecked(c.aperture.on);
+    _actionZoomAperture->setVisible(c.aperture.on);
+    _statusBar->setVisible(STATUS_APERTURE_ICON, c.aperture.on);
+    _statusBar->setVisible(STATUS_APERTURE, c.aperture.on);
+    if (c.aperture.on) {
         bool valid = c.aperture.isValid(_camera->width(), _camera->height());
         QString hint = valid ? tr("Soft aperture") : tr("Soft aperture is not valid");
         QString icon = valid ? ":/toolbar/aperture" : ":/toolbar/aperture_warn";
@@ -319,10 +323,10 @@ void PlotWindow::showCamConfig(bool replot)
         _statusBar->setHint(STATUS_APERTURE, hint);
     }
 
-    if (!c.subtractBackground) {
-        _statusBar->setIcon(STATUS_WARNING, ":/toolbar/exclame");
-        _statusBar->setHint(STATUS_WARNING, tr("Background subtraction disabled"));
-    } else _statusBar->clear(STATUS_WARNING);
+    _statusBar->setVisible(STATUS_BGND, c.bgnd.on);
+
+    _tableIntf->setScale(c.scale);
+    _plotIntf->setScale(c.scale);
 }
 
 void PlotWindow::setThemeColors()
@@ -435,10 +439,16 @@ void PlotWindow::processImage()
     showFps(0);
 }
 
-void PlotWindow::editCamConfig()
+void PlotWindow::editCamConfig(int pageId)
 {
-    if (_camera->editConfig())
-        configChanged();
+    const PixelScale prevScale = _camera->config().scale;
+    if (!_camera->editConfig(Camera::ConfigPages(pageId)))
+        return;
+    configChanged();
+    if (_camera->config().scale != prevScale) {
+        _tableIntf->showResult();
+        _plotIntf->showResult();
+    }
 }
 
 void PlotWindow::configChanged()

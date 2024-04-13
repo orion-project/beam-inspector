@@ -67,8 +67,12 @@ void PlotIntf::showResult()
     if (_beamInfo->visible()) {
         double eps = qMin(_res.dx, _res.dy) / qMax(_res.dx, _res.dy);
         _beamInfo->setText(QStringLiteral("Xc=%1\nYc=%2\nDx=%3\nDy=%4\nφ=%5°\nε=%6")
-            .arg(int(_res.xc)).arg(int(_res.yc)).arg(int(_res.dx)).arg(int(_res.dy))
-            .arg(_res.phi, 0, 'f', 1).arg(eps, 0, 'f', 3));
+            .arg(_scale.format(_res.xc),
+                 _scale.format(_res.yc),
+                 _scale.format(_res.dx),
+                 _scale.format(_res.dy))
+            .arg(_res.phi, 0, 'f', 1)
+            .arg(eps, 0, 'f', 3));
     }
 
     _colorScale->setDataRange(QCPRange(_min, _max));

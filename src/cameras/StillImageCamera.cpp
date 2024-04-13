@@ -98,14 +98,14 @@ void StillImageCamera::capture()
 
     CgnBeamBkgnd g;
     g.iters = 0;
-    g.max_iter = _config.maxIters;
-    g.precision = _config.precision;
-    g.corner_fraction = _config.cornerFraction;
-    g.nT = _config.nT;
-    g.mask_diam = _config.maskDiam;
+    g.max_iter = _config.bgnd.iters;
+    g.precision = _config.bgnd.precision;
+    g.corner_fraction = _config.bgnd.corner;
+    g.nT = _config.bgnd.noise;
+    g.mask_diam = _config.bgnd.mask;
     g.min = 0;
     g.max = 0;
-    if (_config.aperture.enabled && _config.aperture.isValid(c.w, c.h)) {
+    if (_config.aperture.on && _config.aperture.isValid(c.w, c.h)) {
         g.ax1 = _config.aperture.x1;
         g.ay1 = _config.aperture.y1;
         g.ax2 = _config.aperture.x2;
@@ -125,13 +125,13 @@ void StillImageCamera::capture()
         r.y2 = c.h;
     }
     QVector<double> subtracted;
-    if (_config.subtractBackground) {
+    if (_config.bgnd.on) {
         subtracted = QVector<double>(sz);
         g.subtracted = subtracted.data();
     }
 
     timer.restart();
-    if (_config.subtractBackground) {
+    if (_config.bgnd.on) {
         cgn_calc_beam_bkgnd(&c, &g, &r);
     } else {
         cgn_calc_beam_naive(&c, &r);
@@ -139,7 +139,7 @@ void StillImageCamera::capture()
     auto calcTime = timer.elapsed();
 
     timer.restart();
-    if (_config.subtractBackground) {
+    if (_config.bgnd.on) {
         if (_config.normalize) {
             cgn_copy_normalized_f64(g.subtracted, graph, sz, g.min, g.max);
         } else {

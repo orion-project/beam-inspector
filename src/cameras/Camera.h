@@ -21,15 +21,14 @@ public:
 
     virtual void capture() = 0;
 
-    CameraConfig config() const { return _config; };
-    bool editConfig();
+    const CameraConfig& config() const { return _config; };
+    enum ConfigPages { cfgPlot, cfgBgnd, cfgAper };
+    bool editConfig(ConfigPages page = cfgPlot);
 
     void setAperture(const SoftAperture&);
     void toggleAperture(bool on);
 
     QString resolutionStr() const;
-
-    enum ConfigPages { cfgPlot, cfgCalc, cfgAper };
 
 protected:
     PlotIntf *_plot;

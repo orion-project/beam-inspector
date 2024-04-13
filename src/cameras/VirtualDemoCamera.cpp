@@ -101,14 +101,14 @@ public:
         phi_offset = RandomOffset(b.phi, b.phi-12, b.phi+12);
 
         g.iters = 0;
-        g.max_iter = cfg.maxIters;
-        g.precision = cfg.precision;
-        g.corner_fraction = cfg.cornerFraction;
-        g.nT = cfg.nT;
-        g.mask_diam = cfg.maskDiam;
+        g.max_iter = cfg.bgnd.iters;
+        g.precision = cfg.bgnd.precision;
+        g.corner_fraction = cfg.bgnd.corner;
+        g.nT = cfg.bgnd.noise;
+        g.mask_diam = cfg.bgnd.mask;
         g.min = 0;
         g.max = 0;
-        if (cfg.aperture.enabled && cfg.aperture.isValid(c.w, c.h)) {
+        if (cfg.aperture.on && cfg.aperture.isValid(c.w, c.h)) {
             g.ax1 = cfg.aperture.x1;
             g.ay1 = cfg.aperture.y1;
             g.ax2 = cfg.aperture.x2;
@@ -127,7 +127,7 @@ public:
             r.x2 = c.w;
             r.y2 = c.h;
         }
-        subtract = cfg.subtractBackground;
+        subtract = cfg.bgnd.on;
         if (subtract) {
             subtracted = QVector<double>(c.w*c.h);
             g.subtracted = subtracted.data();

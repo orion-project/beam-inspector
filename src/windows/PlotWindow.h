@@ -56,7 +56,7 @@ private:
     void openImageDlg();
     void startCapture();
     void stopCapture();
-    void editCamConfig();
+    void editCamConfig(int pageId = 0);
 
     void captureStopped();
     void dataReady();
