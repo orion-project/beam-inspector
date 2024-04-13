@@ -1,18 +1,12 @@
 #include "Camera.h"
 
-#include "helpers/OriDialogs.h"
-#include "helpers/OriLayouts.h"
-#include "helpers/OriWidgets.h"
+#include "dialogs/OriConfigDlg.h"
 #include "tools/OriSettings.h"
-#include "widgets/OriValueEdit.h"
 
 #include <QApplication>
-#include <QCheckBox>
 #include <QLabel>
-#include <QSpinBox>
-#include <QStyleHints>
 
-using namespace Ori::Layouts;
+using namespace Ori::Dlg;
 
 Camera::Camera(PlotIntf *plot, TableIntf *table, const char* configGroup) :
     _plot(plot), _table(table), _configGroup(configGroup)
@@ -63,64 +57,49 @@ void Camera::saveConfig()
 
 bool Camera::editConfig()
 {
-    auto normalize = new QCheckBox(qApp->tr("Normalize data"));
-    auto subtractBackground = new QCheckBox(qApp->tr("Subtract background"));
-    auto maxIters = Ori::Gui::spinBox(0, 50);
-    auto precision = new Ori::Widgets::ValueEdit;
-    auto cornerFraction = new Ori::Widgets::ValueEdit;
-    auto nT = new Ori::Widgets::ValueEdit;
-    auto maskDiam = new Ori::Widgets::ValueEdit;
-
-    normalize->setChecked(_config.normalize);
-    subtractBackground->setChecked(_config.subtractBackground);
-    maxIters->setValue(_config.maxIters);
-    precision->setValue(_config.precision);
-    cornerFraction->setValue(_config.cornerFraction * 100);
-    nT->setValue(_config.nT);
-    maskDiam->setValue(_config.maskDiam);
-
-    auto hintLabel = [](const QString& text){
-        auto label = new QLabel(text);
-        label->setForegroundRole(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Mid);
-        label->setWordWrap(true);
-        return label;
+    ConfigDlgOpts opts;
+    opts.objectName = "CamConfigDlg";
+    opts.pageIconSize = 32;
+    opts.pages = {
+        ConfigPage(cfgPlot, qApp->tr("Plot"), ":/toolbar/beam"),
+        ConfigPage(cfgCalc, qApp->tr("Processing"), ":/toolbar/settings").withSpacing(12),
+        ConfigPage(cfgAper, qApp->tr("Aperture"), ":/toolbar/aperture").withSpacing(12),
     };
+    opts.items = {
+        new ConfigItemBool(cfgPlot, qApp->tr("Normalize data"), &_config.normalize),
 
-    auto w = LayoutV({
-        normalize,
-        subtractBackground, Space(12),
-        qApp->tr("Max Iterations:"), maxIters, Space(12),
-        qApp->tr("Precision:"), precision, Space(12),
+        new ConfigItemBool(cfgCalc, qApp->tr("Subtract background"), &_config.subtractBackground),
+        (new ConfigItemInt(cfgCalc, qApp->tr("Max iterations"), &_config.maxIters))
+            ->withMinMax(0, 50),
+        new ConfigItemReal(cfgCalc, qApp->tr("Precision"), &_config.precision),
+        (new ConfigItemReal(cfgCalc, qApp->tr("Corner Fraction %"), &_config.cornerFraction))
+            ->withHint(qApp->tr("ISO 11146 recommends 2-5%"), false),
+        (new ConfigItemReal(cfgCalc, qApp->tr("Noise Factor"), &_config.nT))
+            ->withHint(qApp->tr("ISO 11146 recommends 2-4"), false),
+        (new ConfigItemReal(cfgCalc, qApp->tr("Mask Diameter"), &_config.maskDiam))
+            ->withHint(qApp->tr("ISO 11146 recommends 3"), false),
 
-        qApp->tr("Corner Fraction %:"),
-        cornerFraction,
-        hintLabel(qApp->tr("ISO 11146 recommends 2-5%")),
-        Space(12),
-
-        qApp->tr("Noise Factor:"),
-        nT,
-        hintLabel(qApp->tr("ISO 11146 recommends 2-4")),
-        Space(12),
-
-        qApp->tr("Mask Diameter:"),
-        maskDiam,
-        hintLabel(qApp->tr("ISO 11146 recommends 3")),
-        Space(12),
-
-    }).setSpacing(3).makeWidgetAuto();
-
-    bool ok = Ori::Dlg::Dialog(w).withPersistenceId("cam_config").exec();
-    if (ok) {
-        _config.normalize = normalize->isChecked();
-        _config.subtractBackground = subtractBackground->isChecked();
-        _config.maxIters = maxIters->value();
-        _config.precision = precision->value();
-        _config.cornerFraction = cornerFraction->value() / 100.0;
-        _config.nT = nT->value();
-        _config.maskDiam = maskDiam->value();
+        new ConfigItemBool(cfgAper, qApp->tr("Use soft aperture"), &_config.aperture.enabled),
+        (new ConfigItemInt(cfgAper, qApp->tr("Left"), &_config.aperture.x1))
+            ->withMinMax(0, width()),
+        (new ConfigItemInt(cfgAper, qApp->tr("Top"), &_config.aperture.y1))
+            ->withMinMax(0, height()),
+        (new ConfigItemInt(cfgAper, qApp->tr("Right"), &_config.aperture.x2))
+            ->withMinMax(0, width()),
+        (new ConfigItemInt(cfgAper, qApp->tr("Bottom"), &_config.aperture.y2))
+            ->withMinMax(0, height())
+            ->withHint(qApp->tr(
+                "<p>● Values are in pixels"
+                "<p>● Use command <b>Camera ► Edit Soft Aperture</b> "
+                "to change the aperture interactively"), true),
+    };
+    if (ConfigDlg::edit(opts))
+    {
+        _config.aperture.fix(width(), height());
         saveConfig();
+        return true;
     }
-    return ok;
+    return false;
 }
 
 void Camera::setAperture(const SoftAperture &a)

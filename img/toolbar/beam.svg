@@ -1,0 +1,8 @@
+<svg height="24" width="24" xmlns="http://www.w3.org/2000/svg">
+<g fill-rule="evenodd">
+<ellipse cx="6.31" cy="10.61" fill="#f00" rx="3.98" ry="3.93" transform="matrix(.98 -.2 .18 .98 0 0)"/>
+<ellipse cx="1.58" cy="16.96" fill="#b235ff" rx="12.46" ry="9.32" stroke="#fff" stroke-width=".5" transform="matrix(.74 -.67 .64 .77 0 0)"/>
+<ellipse cx="2" cy="16.6" fill="#ffc500" rx="9.03" ry="6.71" transform="matrix(.76 -.65 .66 .75 0 0)"/>
+<ellipse cx="5.76" cy="15.82" fill="#f00" rx="4.69" ry="3.49" transform="matrix(.84 -.55 .51 .86 0 0)"/>
+</g>
+</svg>

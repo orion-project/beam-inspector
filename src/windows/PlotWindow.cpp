@@ -164,14 +164,13 @@ void PlotWindow::createToolBar()
     auto tb = new Ori::Widgets::FlatToolBar;
     addToolBar(tb);
     tb->setMovable(false);
-    //tb->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     _buttonStart = tb->addWidget(Ori::Gui::textToolButton(_actionStart));
     _buttonStop = tb->addWidget(Ori::Gui::textToolButton(_actionStop));
     tb->addSeparator();
     tb->addWidget(Ori::Gui::textToolButton(_actionOpen));
     tb->addSeparator();
-    tb->addAction(_actionCamConfig);
     tb->addAction(_actionEditAperture);
+    tb->addAction(_actionCamConfig);
     tb->addSeparator();
     tb->addAction(_actionZoomFull);
     tb->addAction(_actionZoomAperture);

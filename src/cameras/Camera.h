@@ -29,6 +29,8 @@ public:
 
     QString resolutionStr() const;
 
+    enum ConfigPages { cfgPlot, cfgCalc, cfgAper };
+
 protected:
     PlotIntf *_plot;
     TableIntf *_table;
