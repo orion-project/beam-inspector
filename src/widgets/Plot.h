@@ -8,11 +8,11 @@
 class QCustomPlot;
 class QCPColorMap;
 class QCPItemStraightLine;
-class QCPItemText;
 
 class ApertureRect;
 class BeamColorScale;
 class BeamEllipse;
+class BeamInfoText;
 class PlotIntf;
 
 class Plot : public QWidget
@@ -42,6 +42,7 @@ public:
     void stopEditAperture(bool apply);
     bool isApertureEditing() const;
     SoftAperture aperture() const;
+    void adjustWidgetSize();
 
 signals:
     void apertureEdited();
@@ -56,7 +57,7 @@ private:
     QCPColorMap *_colorMap;
     BeamColorScale *_colorScale;
     QCPItemStraightLine *_lineX, *_lineY;
-    QCPItemText *_beamInfo;
+    BeamInfoText *_beamInfo;
     BeamEllipse *_beamShape;
     ApertureRect *_aperture;
     int _imageW, _imageH;

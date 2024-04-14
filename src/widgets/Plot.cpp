@@ -7,7 +7,6 @@
 #include "qcp/src/core.h"
 #include "qcp/src/layoutelements/layoutelement-axisrect.h"
 #include "qcp/src/items/item-straightline.h"
-#include "qcp/src/items/item-text.h"
 
 #define APERTURE_ZOOM_MARGIN 0.01
 
@@ -68,11 +67,7 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _lineX->setPen(QPen(Qt::yellow));
     _lineY->setPen(QPen(Qt::white));
 
-    _beamInfo = new QCPItemText(_plot);
-    _beamInfo->position->setType(QCPItemPosition::ptAxisRectRatio);
-    _beamInfo->position->setCoords(0.075, 0.11);
-    _beamInfo->setColor(Qt::white);
-    _beamInfo->setTextAlignment(Qt::AlignLeft | Qt::AlignTop);
+    _beamInfo = new BeamInfoText(_plot);
 
     _aperture = new ApertureRect(_plot);
     _aperture->onEdited = [this]{ emit apertureEdited(); };
@@ -100,19 +95,32 @@ void Plot::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
     _aperture->setImageSize(sensorW, sensorH, scale);
 }
 
-void Plot::resizeEvent(QResizeEvent *event)
+void Plot::adjustWidgetSize()
 {
-    zoomAuto(false);
+    zoomAuto(true);
+    _aperture->adjustEditorPosition();
 }
 
-void Plot::keyPressEvent(QKeyEvent *event)
+void Plot::resizeEvent(QResizeEvent*)
+{
+    // resizeEvent is not called when window gets maximized or restored
+    // these cases should be processed separately in the parent window
+    adjustWidgetSize();
+}
+
+void Plot::keyPressEvent(QKeyEvent *e)
 {
     if (!_aperture->isEditing())
         return;
-    if (event->matches(QKeySequence::Cancel))
+    switch (e->key()) {
+    case Qt::Key_Escape:
         _aperture->stopEdit(false);
-    else if (event->key() == Qt::Key_Return)
+        break;
+    case Qt::Key_Return:
+    case Qt::Key_Enter:
         _aperture->stopEdit(true);
+        break;
+    }
 }
 
 void Plot::zoomToBounds(double x1, double y1, double x2, double y2, bool replot)

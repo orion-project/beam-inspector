@@ -3,10 +3,9 @@
 #include "plot/BeamGraph.h"
 
 #include "qcp/src/items/item-straightline.h"
-#include "qcp/src/items/item-text.h"
 
 PlotIntf::PlotIntf(QCPColorMap *colorMap, QCPColorScale *colorScale, BeamEllipse *beamShape,
-    QCPItemText *beamInfo, QCPItemStraightLine *lineX, QCPItemStraightLine *lineY)
+    BeamInfoText *beamInfo, QCPItemStraightLine *lineX, QCPItemStraightLine *lineY)
     : _colorMap(colorMap), _colorScale(colorScale), _beamShape(beamShape), _beamInfo(beamInfo), _lineX(lineX), _lineY(lineY)
 {
 }
@@ -72,7 +71,7 @@ void PlotIntf::showResult()
 
     if (_beamInfo->visible()) {
         double eps = qMin(_res.dx, _res.dy) / qMax(_res.dx, _res.dy);
-        _beamInfo->setText(QStringLiteral("Xc=%1\nYc=%2\nDx=%3\nDy=%4\nφ=%5°\nε=%6")
+        _beamInfo->setText(QStringLiteral("Xc = %1\nYc = %2\nD = %3\nDy = %4\nφ = %5°\nε = %6")
             .arg(_scale.format(_res.xc),
                  _scale.format(_res.yc),
                  _scale.format(_res.dx),

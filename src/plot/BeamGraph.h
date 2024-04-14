@@ -6,6 +6,8 @@
 
 #include "cameras/CameraTypes.h"
 
+class QSpinBox;
+
 /**
  * A thin wrapper around QCPColorMapData providing access to protected fields
  */
@@ -18,6 +20,8 @@ public:
     inline void invalidate() { mDataModified = true; }
 };
 
+//------------------------------------------------------------------------------
+
 class BeamColorScale : public QCPColorScale
 {
 public:
@@ -25,6 +29,8 @@ public:
 
     void setFrameColor(const QColor& c);
 };
+
+//------------------------------------------------------------------------------
 
 class BeamEllipse : public QCPAbstractItem
 {
@@ -34,11 +40,13 @@ public:
     QPen pen;
     double xc, yc, dx, dy, phi;
 
-    double selectTest(const QPointF &pos, bool onlySelectable, QVariant *details=nullptr) const override;
+    double selectTest(const QPointF&, bool, QVariant*) const override { return 0; }
 
 protected:
     void draw(QCPPainter *painter) override;
 };
+
+//------------------------------------------------------------------------------
 
 class ApertureRect : public QCPAbstractItem
 {
@@ -54,7 +62,7 @@ public:
 
     void setImageSize(int sensorW, int sensorH, const PixelScale &scale);
 
-    double selectTest(const QPointF &pos, bool onlySelectable, QVariant *details=nullptr) const override;
+    double selectTest(const QPointF&, bool, QVariant*) const override { return 0; }
 
     std::function<void()> onEdited;
 
@@ -62,6 +70,8 @@ public:
     double getX2() const { return _x2; }
     double getY1() const { return _y1; }
     double getY2() const { return _y2; }
+
+    void adjustEditorPosition();
 
 protected:
     void draw(QCPPainter *painter) override;
@@ -76,6 +86,11 @@ private:
     double _x1, _y1, _x2, _y2, _dragX, _dragY;
     bool _drag0, _dragX1, _dragX2, _dragY1, _dragY2;
     Qt::CursorShape _dragCursor = Qt::ArrowCursor;
+    QSpinBox *_seX1, *_seY1, *_seX2, *_seY2, *_seW, *_seH;
+    QFrame *_editor = nullptr;
+
+    int aperW() const { return qAbs((int)_x1 - (int)_x1); }
+    int aperH() const { return qAbs((int)_y2 - (int)_y1); }
 
     void updateCoords();
     void mouseMove(QMouseEvent*);
@@ -85,6 +100,24 @@ private:
     void showDragCursor(Qt::CursorShape c);
     void resetDragCusrsor() { showDragCursor(Qt::ArrowCursor); }
     void showCoordTooltip(const QPoint &p);
+    void makeEditor();
+};
+
+//------------------------------------------------------------------------------
+
+class BeamInfoText : public QCPAbstractItem
+{
+public:
+    explicit BeamInfoText(QCustomPlot *parentPlot);
+
+    double selectTest(const QPointF&, bool, QVariant*) const override { return 0; }
+
+    void setText(const QString& text) { _text = text; }
+
+protected:
+    void draw(QCPPainter *painter) override;
+
+    QString _text;
 };
 
 #endif // BEAM_GRAPH_H
