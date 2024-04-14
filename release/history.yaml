@@ -15,6 +15,7 @@ history:
     date: ?
     changes:
       - text: Can specify a part of image to process (soft aperture)
+      - text: Can define size of pixel and show plot in custom units
       - text: Calculate ellipticity
       - text: Command for exporting plot image
       - text: Warning icon when background subtraction disabled
