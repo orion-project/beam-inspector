@@ -18,6 +18,8 @@ public:
     inline void invalidate() { mDataModified = true; }
 };
 
+//------------------------------------------------------------------------------
+
 class BeamColorScale : public QCPColorScale
 {
 public:
@@ -25,6 +27,8 @@ public:
 
     void setFrameColor(const QColor& c);
 };
+
+//------------------------------------------------------------------------------
 
 class BeamEllipse : public QCPAbstractItem
 {
@@ -34,11 +38,13 @@ public:
     QPen pen;
     double xc, yc, dx, dy, phi;
 
-    double selectTest(const QPointF &pos, bool onlySelectable, QVariant *details=nullptr) const override;
+    double selectTest(const QPointF&, bool, QVariant*) const override { return 0; }
 
 protected:
     void draw(QCPPainter *painter) override;
 };
+
+//------------------------------------------------------------------------------
 
 class ApertureRect : public QCPAbstractItem
 {
@@ -54,7 +60,7 @@ public:
 
     void setImageSize(int sensorW, int sensorH, const PixelScale &scale);
 
-    double selectTest(const QPointF &pos, bool onlySelectable, QVariant *details=nullptr) const override;
+    double selectTest(const QPointF&, bool, QVariant*) const override { return 0; }
 
     std::function<void()> onEdited;
 
@@ -85,6 +91,23 @@ private:
     void showDragCursor(Qt::CursorShape c);
     void resetDragCusrsor() { showDragCursor(Qt::ArrowCursor); }
     void showCoordTooltip(const QPoint &p);
+};
+
+//------------------------------------------------------------------------------
+
+class BeamInfoText : public QCPAbstractItem
+{
+public:
+    explicit BeamInfoText(QCustomPlot *parentPlot);
+
+    double selectTest(const QPointF&, bool, QVariant*) const override { return 0; }
+
+    void setText(const QString& text) { _text = text; }
+
+protected:
+    void draw(QCPPainter *painter) override;
+
+    QString _text;
 };
 
 #endif // BEAM_GRAPH_H

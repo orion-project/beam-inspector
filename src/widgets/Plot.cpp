@@ -7,7 +7,6 @@
 #include "qcp/src/core.h"
 #include "qcp/src/layoutelements/layoutelement-axisrect.h"
 #include "qcp/src/items/item-straightline.h"
-#include "qcp/src/items/item-text.h"
 
 #define APERTURE_ZOOM_MARGIN 0.01
 
@@ -68,11 +67,7 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _lineX->setPen(QPen(Qt::yellow));
     _lineY->setPen(QPen(Qt::white));
 
-    _beamInfo = new QCPItemText(_plot);
-    _beamInfo->position->setType(QCPItemPosition::ptAxisRectRatio);
-    _beamInfo->position->setCoords(0.075, 0.11);
-    _beamInfo->setColor(Qt::white);
-    _beamInfo->setTextAlignment(Qt::AlignLeft | Qt::AlignTop);
+    _beamInfo = new BeamInfoText(_plot);
 
     _aperture = new ApertureRect(_plot);
     _aperture->onEdited = [this]{ emit apertureEdited(); };

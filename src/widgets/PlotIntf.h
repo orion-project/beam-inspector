@@ -7,10 +7,10 @@
 
 class BeamColorMapData;
 class BeamEllipse;
+class BeamInfoText;
 class QCPColorMap;
 class QCPColorScale;
 class QCPItemStraightLine;
-class QCPItemText;
 
 /**
  * Provides access to graph data for camera threads
@@ -22,7 +22,7 @@ class PlotIntf
 public:
     PlotIntf(
         QCPColorMap *colorMap, QCPColorScale *colorScale,
-        BeamEllipse *beamShape, QCPItemText *beamInfo,
+        BeamEllipse *beamShape, BeamInfoText *beamInfo,
         QCPItemStraightLine *lineX, QCPItemStraightLine *lineY);
 
     void setScale(const PixelScale& scale) { _scale = scale; }
@@ -39,7 +39,7 @@ private:
     double _min, _max;
     PixelScale _scale;
     CgnBeamResult _res;
-    QCPItemText *_beamInfo;
+    BeamInfoText *_beamInfo;
     QCPColorMap *_colorMap;
     QCPColorScale *_colorScale;
     BeamColorMapData *_beamData;

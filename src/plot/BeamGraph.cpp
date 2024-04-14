@@ -50,11 +50,6 @@ void BeamEllipse::draw(QCPPainter *painter)
     painter->setTransform(t);
 }
 
-double BeamEllipse::selectTest(const QPointF &pos, bool onlySelectable, QVariant *details) const
-{
-    return 0;
-}
-
 //------------------------------------------------------------------------------
 //                               ApertureRect
 //------------------------------------------------------------------------------
@@ -68,11 +63,6 @@ ApertureRect::ApertureRect(QCustomPlot *parentPlot) : QCPAbstractItem(parentPlot
     connect(parentPlot, &QCustomPlot::mousePress, this, &ApertureRect::mousePress);
     connect(parentPlot, &QCustomPlot::mouseRelease, this, &ApertureRect::mouseRelease);
     connect(parentPlot, &QCustomPlot::mouseDoubleClick, this, &ApertureRect::mouseDoubleClick);
-}
-
-double ApertureRect::selectTest(const QPointF &pos, bool onlySelectable, QVariant *details) const
-{
-    return 0;
 }
 
 void ApertureRect::setAperture(const SoftAperture &aperture)
@@ -273,4 +263,19 @@ void ApertureRect::showCoordTooltip(const QPoint &p)
     if (_dragX1 || _dragX2) hint << QStringLiteral("W: %1").arg(int(_x2) - int(_x1));
     if (_dragY1 || _dragY2) hint << QStringLiteral("H: %1").arg(int(_y2) - int(_y1));
     if (!hint.isEmpty()) QToolTip::showText(p, hint.join('\n'));
+}
+
+//------------------------------------------------------------------------------
+//                               ApertureRect
+//------------------------------------------------------------------------------
+
+BeamInfoText::BeamInfoText(QCustomPlot *parentPlot) : QCPAbstractItem(parentPlot)
+{
+}
+
+void BeamInfoText::draw(QCPPainter *painter)
+{
+    auto r = parentPlot()->axisRect()->rect();
+    painter->setPen(Qt::white);
+    painter->drawText(QRect(r.left()+15, r.top()+10, 10, 10), Qt::TextDontClip, _text);
 }
