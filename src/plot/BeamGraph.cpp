@@ -3,6 +3,12 @@
 #include "qcp/src/core.h"
 #include "qcp/src/painter.h"
 
+#include <QSpinBox>
+#include <QBoxLayout>
+#include <QFormLayout>
+#include <QGraphicsDropShadowEffect>
+#include <QToolButton>
+
 //------------------------------------------------------------------------------
 //                               BeamColorMapData
 //------------------------------------------------------------------------------
@@ -93,14 +99,7 @@ void ApertureRect::startEdit()
     if (_editing)
         return;
     _editing = true;
-    const double sensorW = _scale.unitToSensor(_maxX);
-    const double sensorH = _scale.unitToSensor(_maxY);
-    if (!_aperture.isValid(sensorW, sensorH)) {
-        _x1 = _maxX / 4;
-        _x2 = _maxX / 4 * 3;
-        _y1 = _maxY / 4;
-        _y2 = _maxY / 4 * 3;
-    }
+    makeEditor();
     setVisible(true);
     parentPlot()->replot();
 }
@@ -122,6 +121,8 @@ void ApertureRect::stopEdit(bool apply)
         updateCoords();
         setVisible(_aperture.on);
     }
+    _editor->deleteLater();
+    _editor = nullptr;
     QToolTip::hideText();
     resetDragCusrsor();
     parentPlot()->replot();
@@ -176,20 +177,28 @@ void ApertureRect::mouseMove(QMouseEvent *e)
         _dragX = x;
         _dragY = y;
         if (_drag0 || _dragX1) {
-            _x1 = parentPlot()->xAxis->pixelToCoord(qMin(x1+dx, x2-t));
+            _x1 = parentPlot()->xAxis->pixelToCoord(x1+dx);
             _x1 = qMax(_x1, 0.0);
+            _seX1->setValue(_x1);
+            _seW->setValue(aperW());
         }
         if (_drag0 || _dragX2) {
-            _x2 = parentPlot()->xAxis->pixelToCoord(qMax(x2+dx, x1+t));
+            _x2 = parentPlot()->xAxis->pixelToCoord(x2+dx);
             _x2 = qMin(_x2, _maxX);
+            _seX2->setValue(_x2);
+            _seW->setValue(aperW());
         }
         if (_drag0 || _dragY1) {
-            _y1 = parentPlot()->yAxis->pixelToCoord(qMin(y1+dy, y2-t));
+            _y1 = parentPlot()->yAxis->pixelToCoord(y1+dy);
             _y1 = qMax(_y1, 0.0);
+            _seY1->setValue(_y1);
+            _seH->setValue(aperH());
         }
         if (_drag0 || _dragY2) {
-            _y2 = parentPlot()->yAxis->pixelToCoord(qMax(y2+dy, y1+t));
+            _y2 = parentPlot()->yAxis->pixelToCoord(y2+dy);
             _y2 = qMin(_y2, _maxY);
+            _seY2->setValue(_y2);
+            _seH->setValue(aperH());
         }
         showCoordTooltip(e->globalPosition().toPoint());
         parentPlot()->replot();
@@ -265,8 +274,121 @@ void ApertureRect::showCoordTooltip(const QPoint &p)
     if (!hint.isEmpty()) QToolTip::showText(p, hint.join('\n'));
 }
 
+class ApertureBoundEditor : public QSpinBox
+{
+public:
+    ApertureBoundEditor(int value, int max, int sign) : QSpinBox(), _sign(sign) {
+        setMinimum(0);
+        setMaximum(max);
+        setValue(value);
+    }
+protected:
+    void keyPressEvent(QKeyEvent *e) override {
+        if (e->modifiers().testFlag(Qt::ShiftModifier)) {
+            QSpinBox::keyPressEvent(e);
+            return;
+        }
+        switch (e->key()) {
+        case Qt::Key_Up:
+        case Qt::Key_Right:
+            stepBy(_sign * (e->modifiers().testFlag(Qt::ControlModifier) ? 100 : 1));
+            break;
+        case Qt::Key_Down:
+        case Qt::Key_Left:
+            stepBy(_sign * (e->modifiers().testFlag(Qt::ControlModifier) ? -100 : -1));
+            break;
+        default:
+            QSpinBox::keyPressEvent(e);
+        }
+    }
+private:
+    int _sign;
+};
+
+void ApertureRect::makeEditor()
+{
+    _seX1 = new ApertureBoundEditor(_x1, _maxX, +1);
+    _seY1 = new ApertureBoundEditor(_y1, _maxY, -1);
+    _seX2 = new ApertureBoundEditor(_x2, _maxX, +1);
+    _seY2 = new ApertureBoundEditor(_y2, _maxY, -1);
+    _seW = new QSpinBox;
+    _seH = new QSpinBox;
+    _seW->setValue(aperW());
+    _seH->setValue(aperH());
+    _seW->setReadOnly(true);
+    _seH->setReadOnly(true);
+
+    connect(_seX1, &QSpinBox::valueChanged, this, [this](int v){
+        if ((int)_x1 == v) return;
+        _x1 = v;
+        _seW->setValue(aperW());
+        parentPlot()->replot();
+    });
+    connect(_seX2, &QSpinBox::valueChanged, this, [this](int v){
+        if ((int)_x2 == v) return;
+        _x2 = v;
+        _seW->setValue(aperW());
+        parentPlot()->replot();
+    });
+    connect(_seY1, &QSpinBox::valueChanged, this, [this](int v){
+        if ((int)_y1 == v) return;
+        _y1 = v;
+        _seH->setValue(aperH());
+        parentPlot()->replot();
+    });
+    connect(_seY2, &QSpinBox::valueChanged, this, [this](int v){
+        if ((int)_y2 == v) return;
+        _y2 = v;
+        _seH->setValue(aperH());
+        parentPlot()->replot();
+    });
+
+    _editor = new QFrame;
+    _editor->setFrameShape(QFrame::NoFrame);
+    _editor->setFrameShadow(QFrame::Plain);
+    auto shadow = new QGraphicsDropShadowEffect;
+    if (qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark)
+        shadow->setColor(QColor(255, 255, 255, 180));
+    else
+        shadow->setColor(QColor(0, 0, 0, 180));
+    shadow->setBlurRadius(20);
+    shadow->setOffset(0);
+    _editor->setGraphicsEffect(shadow);
+
+    auto butApply = new QToolButton;
+    auto butCancel = new QToolButton;
+    butApply->setIcon(QIcon(":/toolbar/check"));
+    butCancel->setIcon(QIcon(":/toolbar/delete"));
+    connect(butApply, &QToolButton::pressed, this, [this]{ stopEdit(true); });
+    connect(butCancel, &QToolButton::pressed, this, [this]{ stopEdit(false); });
+    auto buttons = new QHBoxLayout;
+    buttons->addWidget(butApply);
+    buttons->addWidget(butCancel);
+
+    auto l = new QFormLayout(_editor);
+    l->addRow("X1", _seX1);
+    l->addRow("Y1", _seY1);
+    l->addRow("X2", _seX2);
+    l->addRow("Y2", _seY2);
+    l->addRow("W", _seW);
+    l->addRow("H", _seH);
+    l->addRow("", buttons);
+
+    _editor->setParent(parentPlot());
+    _editor->setAutoFillBackground(true);
+    _editor->show();
+    _editor->adjustSize();
+    adjustEditorPosition();
+}
+
+void ApertureRect::adjustEditorPosition()
+{
+    if (_editor)
+        _editor->move(parentPlot()->width() - _editor->width() - 15, 15);
+}
+
 //------------------------------------------------------------------------------
-//                               ApertureRect
+//                               BeamInfoText
 //------------------------------------------------------------------------------
 
 BeamInfoText::BeamInfoText(QCustomPlot *parentPlot) : QCPAbstractItem(parentPlot)

@@ -37,7 +37,7 @@ enum StatusPanels
     STATUS_CAMERA,
     STATUS_SEPARATOR_1,
     STATUS_RESOLUTION,
-    STATUS_APERTURE_ICON,
+    STATUS_APER_ICON,
     STATUS_APERTURE,
     STATUS_SEPARATOR_2,
     STATUS_FPS,
@@ -131,23 +131,23 @@ void PlotWindow::createMenuBar()
     _actionGrayscale->setCheckable(true);
     _actionRainbow->setCheckable(true);
     _actionZoomFull = A_(tr("Zoom to Sensor"), this, [this]{ _plot->zoomFull(true); }, ":/toolbar/zoom_sensor", QKeySequence("Ctrl+0"));
-    _actionZoomAperture = A_(tr("Zoom to Aperture"), this, [this]{ _plot->zoomAperture(true); }, ":/toolbar/zoom_aperture", QKeySequence("Ctrl+1"));
+    _actionZoomAper = A_(tr("Zoom to Aperture"), this, [this]{ _plot->zoomAperture(true); }, ":/toolbar/zoom_aper", QKeySequence("Ctrl+1"));
     menuBar()->addMenu(M_(tr("View"), {
         _actionBeamInfo, 0,
         _actionGrayscale, _actionRainbow, 0,
-        _actionZoomFull, _actionZoomAperture,
+        _actionZoomFull, _actionZoomAper,
     }));
 
     _actionStart = A_(tr("Start Capture"), this, &PlotWindow::startCapture, ":/toolbar/start", Qt::Key_F9);
     _actionStop = A_(tr("Stop Capture"), this, &PlotWindow::stopCapture, ":/toolbar/stop", Qt::Key_F9);
-    _actionEditAperture = A_(tr("Edit Soft Aperture"), this, [this]{ _plot->startEditAperture(); }, ":/toolbar/aperture");
-    _actionUseAperture = A_(tr("Use Soft Aperture"), this, &PlotWindow::toggleAperture);
-    _actionUseAperture->setCheckable(true);
+    _actionEditAper = A_(tr("Edit Soft Aperture"), this, [this]{ _plot->startEditAperture(); }, ":/toolbar/aper");
+    _actionUseAper = A_(tr("Use Soft Aperture"), this, &PlotWindow::toggleAperture, ":/toolbar/aper_rect");
+    _actionUseAper->setCheckable(true);
     _actionCamConfig = A_(tr("Settings..."), this, &PlotWindow::editCamConfig, ":/toolbar/settings");
     //auto actnSelectBgColor = A_(tr("Select Background..."), this, [this]{ _plot->selectBackgroundColor(); });
     menuBar()->addMenu(M_(tr("Camera"), {_actionStart, _actionStop, 0,
         //actnSelectBgColor, 0,
-        _actionEditAperture, _actionUseAperture, 0,
+        _actionEditAper, _actionUseAper, 0,
         _actionCamConfig
     }));
 
@@ -169,29 +169,28 @@ void PlotWindow::createToolBar()
     tb->addSeparator();
     tb->addWidget(Ori::Gui::textToolButton(_actionOpen));
     tb->addSeparator();
-    tb->addAction(_actionEditAperture);
+    tb->addAction(_actionEditAper);
+    tb->addAction(_actionUseAper);
     tb->addAction(_actionCamConfig);
     tb->addSeparator();
     tb->addAction(_actionZoomFull);
-    tb->addAction(_actionZoomAperture);
+    tb->addAction(_actionZoomAper);
 }
 
 void PlotWindow::createStatusBar()
 {
     _statusBar = new Ori::Widgets::StatusBar(STATUS_PANEL_COUNT);
     _statusBar->addVersionLabel();
-    _statusBar->setText(STATUS_CAMERA, "VirtualDemo");
-    _statusBar->setText(STATUS_RESOLUTION, "2592 × 2048 × 8bit");
     _statusBar->setText(STATUS_SEPARATOR_1, "|");
     _statusBar->setText(STATUS_SEPARATOR_2, "|");
     _statusBar->setText(STATUS_SEPARATOR_3, "|");
     _statusBar->setMargin(STATUS_SEPARATOR_1, 0, 0);
     _statusBar->setMargin(STATUS_SEPARATOR_2, 0, 0);
     _statusBar->setMargin(STATUS_SEPARATOR_3, 0, 0);
-    _statusBar->setMargin(STATUS_APERTURE_ICON, 6, 0);
+    _statusBar->setMargin(STATUS_APER_ICON, 6, 0);
     _statusBar->setMargin(STATUS_APERTURE, 0, 6);
     _statusBar->setDblClick(STATUS_APERTURE, [this]{ editCamConfig(Camera::cfgAper); });
-    _statusBar->setDblClick(STATUS_APERTURE_ICON, [this]{ editCamConfig(Camera::cfgAper); });
+    _statusBar->setDblClick(STATUS_APER_ICON, [this]{ editCamConfig(Camera::cfgAper); });
     _statusBar->setIcon(STATUS_BGND, ":/toolbar/exclame");
     _statusBar->setHint(STATUS_BGND, tr("Background subtraction disabled"));
     _statusBar->setDblClick(STATUS_BGND, [this]{ editCamConfig(Camera::cfgBgnd); });
@@ -282,10 +281,10 @@ void PlotWindow::closeEvent(QCloseEvent* ce)
 void PlotWindow::changeEvent(QEvent* e)
 {
     QMainWindow::changeEvent(e);
-    if (e->type() == QEvent::WindowStateChange) {
-        // resizeEvent is not called when window gets maximized or restored
-        _plot->zoomAuto(true);
-    }
+
+    // resizeEvent is not called when window gets maximized or restored
+    if (e->type() == QEvent::WindowStateChange)
+        _plot->adjustWidgetSize();
 }
 
 void PlotWindow::newWindow()
@@ -308,16 +307,16 @@ void PlotWindow::showCamConfig(bool replot)
     _statusBar->setText(STATUS_RESOLUTION, _camera->resolutionStr());
 
     const auto &c = _camera->config();
-    _actionUseAperture->setChecked(c.aperture.on);
-    _actionZoomAperture->setVisible(c.aperture.on);
-    _statusBar->setVisible(STATUS_APERTURE_ICON, c.aperture.on);
+    _actionUseAper->setChecked(c.aperture.on);
+    _actionZoomAper->setVisible(c.aperture.on);
+    _statusBar->setVisible(STATUS_APER_ICON, c.aperture.on);
     _statusBar->setVisible(STATUS_APERTURE, c.aperture.on);
     if (c.aperture.on) {
-        bool valid = c.aperture.isValid(_camera->width(), _camera->height());
+        bool valid = _camera->isApertureValid();
         QString hint = valid ? tr("Soft aperture") : tr("Soft aperture is not valid");
-        QString icon = valid ? ":/toolbar/aperture" : ":/toolbar/aperture_warn";
-        _statusBar->setIcon(STATUS_APERTURE_ICON, icon);
-        _statusBar->setHint(STATUS_APERTURE_ICON, hint);
+        QString icon = valid ? ":/toolbar/aper" : ":/toolbar/aper_warn";
+        _statusBar->setIcon(STATUS_APER_ICON, icon);
+        _statusBar->setHint(STATUS_APER_ICON, hint);
         _statusBar->setText(STATUS_APERTURE, c.aperture.sizeStr());
         _statusBar->setHint(STATUS_APERTURE, hint);
     }
@@ -351,8 +350,8 @@ void PlotWindow::updateActions(bool started)
 {
     _mru->setDisabled(started);
     _actionCamConfig->setDisabled(started);
-    _actionEditAperture->setDisabled(started);
-    _actionUseAperture->setDisabled(started);
+    _actionEditAper->setDisabled(started);
+    _actionUseAper->setDisabled(started);
     _actionOpen->setDisabled(started);
     _actionStart->setDisabled(started);
     _actionStart->setVisible(!started);
@@ -473,8 +472,8 @@ void PlotWindow::apertureEdited()
 
 void PlotWindow::toggleAperture()
 {
-    bool on = _actionUseAperture->isChecked();
-    if (_plot->isApertureEditing() && !on)
+    bool on = _actionUseAper->isChecked();
+    if (!on && _plot->isApertureEditing())
         _plot->stopEditAperture(false);
     _camera->toggleAperture(on);
     configChanged();

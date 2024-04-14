@@ -27,6 +27,7 @@ public:
 
     void setAperture(const SoftAperture&);
     void toggleAperture(bool on);
+    bool isApertureValid() const;
 
     QString resolutionStr() const;
 

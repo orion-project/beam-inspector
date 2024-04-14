@@ -6,6 +6,8 @@
 
 #include "cameras/CameraTypes.h"
 
+class QSpinBox;
+
 /**
  * A thin wrapper around QCPColorMapData providing access to protected fields
  */
@@ -69,6 +71,8 @@ public:
     double getY1() const { return _y1; }
     double getY2() const { return _y2; }
 
+    void adjustEditorPosition();
+
 protected:
     void draw(QCPPainter *painter) override;
 
@@ -82,6 +86,11 @@ private:
     double _x1, _y1, _x2, _y2, _dragX, _dragY;
     bool _drag0, _dragX1, _dragX2, _dragY1, _dragY2;
     Qt::CursorShape _dragCursor = Qt::ArrowCursor;
+    QSpinBox *_seX1, *_seY1, *_seX2, *_seY2, *_seW, *_seH;
+    QFrame *_editor = nullptr;
+
+    int aperW() const { return qAbs((int)_x1 - (int)_x1); }
+    int aperH() const { return qAbs((int)_y2 - (int)_y1); }
 
     void updateCoords();
     void mouseMove(QMouseEvent*);
@@ -91,6 +100,7 @@ private:
     void showDragCursor(Qt::CursorShape c);
     void resetDragCusrsor() { showDragCursor(Qt::ArrowCursor); }
     void showCoordTooltip(const QPoint &p);
+    void makeEditor();
 };
 
 //------------------------------------------------------------------------------

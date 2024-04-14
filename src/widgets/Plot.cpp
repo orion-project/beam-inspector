@@ -95,19 +95,32 @@ void Plot::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
     _aperture->setImageSize(sensorW, sensorH, scale);
 }
 
-void Plot::resizeEvent(QResizeEvent *event)
+void Plot::adjustWidgetSize()
 {
-    zoomAuto(false);
+    zoomAuto(true);
+    _aperture->adjustEditorPosition();
 }
 
-void Plot::keyPressEvent(QKeyEvent *event)
+void Plot::resizeEvent(QResizeEvent*)
+{
+    // resizeEvent is not called when window gets maximized or restored
+    // these cases should be processed separately in the parent window
+    adjustWidgetSize();
+}
+
+void Plot::keyPressEvent(QKeyEvent *e)
 {
     if (!_aperture->isEditing())
         return;
-    if (event->matches(QKeySequence::Cancel))
+    switch (e->key()) {
+    case Qt::Key_Escape:
         _aperture->stopEdit(false);
-    else if (event->key() == Qt::Key_Return)
+        break;
+    case Qt::Key_Return:
+    case Qt::Key_Enter:
         _aperture->stopEdit(true);
+        break;
+    }
 }
 
 void Plot::zoomToBounds(double x1, double y1, double x2, double y2, bool replot)

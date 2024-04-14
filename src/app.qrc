@@ -1,9 +1,12 @@
 <RCC>
     <qresource prefix="/toolbar">
-        <file alias="aperture">../img/toolbar/aperture.svg</file>
-        <file alias="aperture_warn">../img/toolbar/aperture_warn.svg</file>
+        <file alias="aper">../img/toolbar/aper.svg</file>
+        <file alias="aper_rect">../img/toolbar/aper_rect.svg</file>
+        <file alias="aper_warn">../img/toolbar/aper_warn.svg</file>
         <file alias="beam">../img/toolbar/beam.svg</file>
         <file alias="bug">../img/toolbar/bug.svg</file>
+        <file alias="check">../img/toolbar/check.svg</file>
+        <file alias="delete">../img/toolbar/delete.svg</file>
         <file alias="exclame">../img/toolbar/exclame.svg</file>
         <file alias="export_img">../img/toolbar/save_img.svg</file>
         <file alias="home">../img/toolbar/home.svg</file>
@@ -13,7 +16,7 @@
         <file alias="settings">../img/toolbar/settings.svg</file>
         <file alias="start">../img/toolbar/start.svg</file>
         <file alias="stop">../img/toolbar/pause.svg</file>
-        <file alias="zoom_aperture">../img/toolbar/zoom_aperture.svg</file>
+        <file alias="zoom_aper">../img/toolbar/zoom_aperture.svg</file>
         <file alias="zoom_full">../img/toolbar/zoom_full.svg</file>
         <file alias="zoom_sensor">../img/toolbar/zoom_sensor.svg</file>
     </qresource>

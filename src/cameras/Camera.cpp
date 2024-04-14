@@ -84,7 +84,7 @@ bool Camera::editConfig(ConfigPages page)
     opts.pages = {
         ConfigPage(cfgPlot, qApp->tr("Plot"), ":/toolbar/zoom_sensor"),
         ConfigPage(cfgBgnd, qApp->tr("Background"), ":/toolbar/beam").withSpacing(12),
-        ConfigPage(cfgAper, qApp->tr("Aperture"), ":/toolbar/aperture").withSpacing(12),
+        ConfigPage(cfgAper, qApp->tr("Aperture"), ":/toolbar/aper").withSpacing(12),
     };
     opts.items = {
         new ConfigItemBool(cfgPlot, qApp->tr("Normalize data"), &_config.normalize),
@@ -131,11 +131,24 @@ bool Camera::editConfig(ConfigPages page)
 void Camera::setAperture(const SoftAperture &a)
 {
     _config.aperture = a;
+    if (_config.aperture.on)
+        _config.aperture.fix(width(), height());
     saveConfig();
 }
 
 void Camera::toggleAperture(bool on)
 {
     _config.aperture.on = on;
+    if (on && _config.aperture.isZero()) {
+        _config.aperture.x1 = width() / 4;
+        _config.aperture.y1 = width() / 4;
+        _config.aperture.x2 = width() / 4 * 3;
+        _config.aperture.y2 = width() / 4 * 3;
+    }
     saveConfig();
+}
+
+bool Camera::isApertureValid() const
+{
+    return _config.aperture.isValid(width(), height());
 }

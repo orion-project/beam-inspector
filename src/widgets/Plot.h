@@ -42,6 +42,7 @@ public:
     void stopEditAperture(bool apply);
     bool isApertureEditing() const;
     SoftAperture aperture() const;
+    void adjustWidgetSize();
 
 signals:
     void apertureEdited();
