@@ -86,13 +86,6 @@ void ApertureRect::setImageSize(int sensorW, int sensorH, const PixelScale &scal
     updateCoords();
 }
 
-void ApertureRect::setAperture(const SoftAperture &aperture)
-{
-    _aperture = aperture;
-    updateCoords();
-    setVisible(_aperture.on);
-}
-
 void ApertureRect::updateCoords()
 {
     _x1 = _scale.sensorToUnit(_aperture.x1);

@@ -32,7 +32,7 @@ OutputDir={#BaseDir}\..\install
 OutputBaseFilename="cignus-setup-{#AppVerFull}"
 Compression=lzma
 SolidCompression=yes
-PrivilegesRequired=none
+PrivilegesRequired=lowest
 ChangesAssociations=yes
 VersionInfoVersion={#AppVerFull}.0
 ArchitecturesAllowed=x64
@@ -47,8 +47,6 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: checkedonce
-Name: "desktopicon\common"; Description: "{cm:ForAllUser}"; GroupDescription: "{cm:AdditionalIcons}"
-Name: "desktopicon\user"; Description: "{cm:ForCurrentUser}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
 Source: "{#BaseDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
@@ -57,12 +55,11 @@ Source: "{#BaseDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"
 Name: "{group}\{cm:ProgramOnTheWeb,{#AppName}}"; Filename: "{#AppURL}"
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
-Name: "{commondesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon\common
-Name: "{userdesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon\user
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 
 [UninstallDelete]
-Type: files;          Name: "{userappdata}\{#AppPublisher}\{#AppName}.*"
-Type: dirifempty;     Name: "{userappdata}\{#AppPublisher}"
+Type: files;          Name: "{autoappdata}\{#AppPublisher}\{#AppName}.*"
+Type: dirifempty;     Name: "{autoappdata}\{#AppPublisher}"
 Type: filesandordirs; Name: "{localappdata}\{#AppPublisher}\{#AppName}"
 Type: dirifempty;     Name: "{localappdata}\{#AppPublisher}"
 
