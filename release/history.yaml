@@ -12,7 +12,7 @@ history:
       - text: Grayscale and rainbow plot mode
 
   - version: 0.0.3
-    date: ?
+    date: 2024-04-15
     changes:
       - text: Can specify a part of image to process (soft aperture)
       - text: Can define size of pixel and show plot in custom units
