@@ -29,22 +29,22 @@ bool PixelScale::operator ==(const PixelScale& s) const {
 //                               SoftAperture
 //------------------------------------------------------------------------------
 
-bool SoftAperture::isValid(int w, int h) const
+bool RoiRect::isValid(int w, int h) const
 {
     return x1 >= 0 && x2 > x1 && x2 <= w && y1 >= 0 && y2 > y1 && y2 <= h;
 }
 
-bool SoftAperture::isZero() const
+bool RoiRect::isZero() const
 {
     return x1 == 0 && y1 == 0 && x2 == 0 && y2 == 0;
 }
 
-QString SoftAperture::sizeStr() const
+QString RoiRect::sizeStr() const
 {
     return QStringLiteral("%1 × %2").arg(x2-x1).arg(y2-y1);
 }
 
-void SoftAperture::fix(int w, int h)
+void RoiRect::fix(int w, int h)
 {
     if (x1 > x2) std::swap(x1, x2);
     if (y1 > y2) std::swap(y1, y2);

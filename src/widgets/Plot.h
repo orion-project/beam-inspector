@@ -9,7 +9,7 @@ class QCustomPlot;
 class QCPColorMap;
 class QCPItemStraightLine;
 
-class ApertureRect;
+class RoiRectGraph;
 class BeamColorScale;
 class BeamEllipse;
 class BeamInfoText;
@@ -32,20 +32,20 @@ public:
     void setRainbowEnabled(bool on, bool replot);
     void setBeamInfoVisible(bool on, bool replot);
     void setImageSize(int sensorW, int sensorH, const PixelScale &scale);
-    void setAperture(const SoftAperture &a);
-    void selectBackgroundColor();
+    void setRoi(const RoiRect &a);
+    void selectBackColor();
     void exportImageDlg();
     void zoomAuto(bool replot);
     void zoomFull(bool replot);
-    void zoomAperture(bool replot);
-    void startEditAperture();
-    void stopEditAperture(bool apply);
-    bool isApertureEditing() const;
-    SoftAperture aperture() const;
+    void zoomRoi(bool replot);
+    void startEditRoi();
+    void stopEditRoi(bool apply);
+    bool isRoiEditing() const;
+    RoiRect roi() const;
     void adjustWidgetSize();
 
 signals:
-    void apertureEdited();
+    void roiEdited();
 
 protected:
     void resizeEvent(QResizeEvent*) override;
@@ -59,7 +59,7 @@ private:
     QCPItemStraightLine *_lineX, *_lineY;
     BeamInfoText *_beamInfo;
     BeamEllipse *_beamShape;
-    ApertureRect *_aperture;
+    RoiRectGraph *_roi;
     int _imageW, _imageH;
     enum AutoZoomMode { ZOOM_NONE, ZOOM_FULL, ZOOM_APERTURE };
     AutoZoomMode _autoZoom = ZOOM_FULL;

@@ -14,7 +14,7 @@ history:
   - version: 0.0.3
     date: 2024-04-15
     changes:
-      - text: Can specify a part of image to process (soft aperture)
+      - text: Can specify a part of image to process
       - text: Can define size of pixel and show plot in custom units
       - text: Calculate ellipticity
       - text: Command for exporting plot image

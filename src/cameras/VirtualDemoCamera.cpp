@@ -108,15 +108,15 @@ public:
         g.mask_diam = cfg.bgnd.mask;
         g.min = 0;
         g.max = 0;
-        if (cfg.aperture.on && cfg.aperture.isValid(c.w, c.h)) {
-            g.ax1 = cfg.aperture.x1;
-            g.ay1 = cfg.aperture.y1;
-            g.ax2 = cfg.aperture.x2;
-            g.ay2 = cfg.aperture.y2;
-            r.x1 = cfg.aperture.x1;
-            r.y1 = cfg.aperture.y1;
-            r.x2 = cfg.aperture.x2;
-            r.y2 = cfg.aperture.y2;
+        if (cfg.roi.on && cfg.roi.isValid(c.w, c.h)) {
+            g.ax1 = cfg.roi.x1;
+            g.ay1 = cfg.roi.y1;
+            g.ax2 = cfg.roi.x2;
+            g.ay2 = cfg.roi.y2;
+            r.x1 = cfg.roi.x1;
+            r.y1 = cfg.roi.y1;
+            r.x2 = cfg.roi.x2;
+            r.y2 = cfg.roi.y2;
         } else {
             g.ax1 = 0;
             g.ay1 = 0;

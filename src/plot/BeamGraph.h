@@ -48,17 +48,17 @@ protected:
 
 //------------------------------------------------------------------------------
 
-class ApertureRect : public QCPAbstractItem
+class RoiRectGraph : public QCPAbstractItem
 {
 public:
-    explicit ApertureRect(QCustomPlot *parentPlot);
+    explicit RoiRectGraph(QCustomPlot *parentPlot);
 
     void startEdit();
     void stopEdit(bool apply);
     bool isEditing() const { return _editing; }
 
-    SoftAperture aperture() const { return _aperture; }
-    void setAperture(const SoftAperture &aperture);
+    RoiRect roi() const { return _roi; }
+    void setRoi(const RoiRect &roi);
 
     void setImageSize(int sensorW, int sensorH, const PixelScale &scale);
 
@@ -78,7 +78,7 @@ protected:
 
 private:
     QPen _pen, _editPen;
-    SoftAperture _aperture;
+    RoiRect _roi;
     PixelScale _scale;
     bool _editing = false;
     bool _dragging = false;
@@ -89,8 +89,8 @@ private:
     QSpinBox *_seX1, *_seY1, *_seX2, *_seY2, *_seW, *_seH;
     QFrame *_editor = nullptr;
 
-    int aperW() const { return qAbs((int)_x1 - (int)_x1); }
-    int aperH() const { return qAbs((int)_y2 - (int)_y1); }
+    int roiW() const { return qAbs((int)_x2 - (int)_x1); }
+    int roiH() const { return qAbs((int)_y2 - (int)_y1); }
 
     void updateCoords();
     void mouseMove(QMouseEvent*);

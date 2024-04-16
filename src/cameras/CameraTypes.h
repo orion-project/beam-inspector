@@ -3,7 +3,7 @@
 
 #include <QString>
 
-struct SoftAperture
+struct RoiRect
 {
     bool on = false;
     int x1 = 0;
@@ -49,7 +49,7 @@ struct CameraConfig
 {
     bool normalize = true;
     Background bgnd;
-    SoftAperture aperture;
+    RoiRect roi;
     PixelScale scale;
 };
 

@@ -30,3 +30,8 @@ void TableIntf::showResult()
     itRenderTime->setText(QStringLiteral(" %1 ms ").arg(qRound(_renderTime)));
     itCalcTime->setText(QStringLiteral(" %1 ms ").arg(qRound(_calcTime)));
 }
+
+bool TableIntf::isResultValid() const
+{
+    return !std::isnan(_res.dx);
+}

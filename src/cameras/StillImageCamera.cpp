@@ -105,15 +105,15 @@ void StillImageCamera::capture()
     g.mask_diam = _config.bgnd.mask;
     g.min = 0;
     g.max = 0;
-    if (_config.aperture.on && _config.aperture.isValid(c.w, c.h)) {
-        g.ax1 = _config.aperture.x1;
-        g.ay1 = _config.aperture.y1;
-        g.ax2 = _config.aperture.x2;
-        g.ay2 = _config.aperture.y2;
-        r.x1 = _config.aperture.x1;
-        r.y1 = _config.aperture.y1;
-        r.x2 = _config.aperture.x2;
-        r.y2 = _config.aperture.y2;
+    if (_config.roi.on && _config.roi.isValid(c.w, c.h)) {
+        g.ax1 = _config.roi.x1;
+        g.ay1 = _config.roi.y1;
+        g.ax2 = _config.roi.x2;
+        g.ay2 = _config.roi.y2;
+        r.x1 = _config.roi.x1;
+        r.y1 = _config.roi.y1;
+        r.x2 = _config.roi.x2;
+        r.y2 = _config.roi.y2;
     } else {
         g.ax1 = 0;
         g.ay1 = 0;

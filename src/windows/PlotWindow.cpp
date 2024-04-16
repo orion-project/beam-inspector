@@ -37,8 +37,8 @@ enum StatusPanels
     STATUS_CAMERA,
     STATUS_SEPARATOR_1,
     STATUS_RESOLUTION,
-    STATUS_APER_ICON,
-    STATUS_APERTURE,
+    STATUS_ROI_ICON,
+    STATUS_ROI,
     STATUS_SEPARATOR_2,
     STATUS_FPS,
     STATUS_SEPARATOR_3,
@@ -131,23 +131,23 @@ void PlotWindow::createMenuBar()
     _actionGrayscale->setCheckable(true);
     _actionRainbow->setCheckable(true);
     _actionZoomFull = A_(tr("Zoom to Sensor"), this, [this]{ _plot->zoomFull(true); }, ":/toolbar/zoom_sensor", QKeySequence("Ctrl+0"));
-    _actionZoomAper = A_(tr("Zoom to Aperture"), this, [this]{ _plot->zoomAperture(true); }, ":/toolbar/zoom_aper", QKeySequence("Ctrl+1"));
+    _actionZoomRoi = A_(tr("Zoom to ROI"), this, [this]{ _plot->zoomRoi(true); }, ":/toolbar/zoom_roi", QKeySequence("Ctrl+1"));
     menuBar()->addMenu(M_(tr("View"), {
         _actionBeamInfo, 0,
         _actionGrayscale, _actionRainbow, 0,
-        _actionZoomFull, _actionZoomAper,
+        _actionZoomFull, _actionZoomRoi,
     }));
 
     _actionStart = A_(tr("Start Capture"), this, &PlotWindow::startCapture, ":/toolbar/start", Qt::Key_F9);
     _actionStop = A_(tr("Stop Capture"), this, &PlotWindow::stopCapture, ":/toolbar/stop", Qt::Key_F9);
-    _actionEditAper = A_(tr("Edit Soft Aperture"), this, [this]{ _plot->startEditAperture(); }, ":/toolbar/aper");
-    _actionUseAper = A_(tr("Use Soft Aperture"), this, &PlotWindow::toggleAperture, ":/toolbar/aper_rect");
-    _actionUseAper->setCheckable(true);
+    _actionEditRoi = A_(tr("Edit ROI"), this, [this]{ _plot->startEditRoi(); }, ":/toolbar/roi");
+    _actionUseRoi = A_(tr("Use ROI"), this, &PlotWindow::toggleRoi, ":/toolbar/roi_rect");
+    _actionUseRoi->setCheckable(true);
     _actionCamConfig = A_(tr("Settings..."), this, &PlotWindow::editCamConfig, ":/toolbar/settings");
-    //auto actnSelectBgColor = A_(tr("Select Background..."), this, [this]{ _plot->selectBackgroundColor(); });
+    //auto actnSelectBgColor = A_(tr("Select Background..."), this, [this]{ _plot->selectBackColor(); });
     menuBar()->addMenu(M_(tr("Camera"), {_actionStart, _actionStop, 0,
         //actnSelectBgColor, 0,
-        _actionEditAper, _actionUseAper, 0,
+        _actionEditRoi, _actionUseRoi, 0,
         _actionCamConfig
     }));
 
@@ -169,12 +169,12 @@ void PlotWindow::createToolBar()
     tb->addSeparator();
     tb->addWidget(Ori::Gui::textToolButton(_actionOpen));
     tb->addSeparator();
-    tb->addAction(_actionEditAper);
-    tb->addAction(_actionUseAper);
+    tb->addAction(_actionEditRoi);
+    tb->addAction(_actionUseRoi);
     tb->addAction(_actionCamConfig);
     tb->addSeparator();
     tb->addAction(_actionZoomFull);
-    tb->addAction(_actionZoomAper);
+    tb->addAction(_actionZoomRoi);
 }
 
 void PlotWindow::createStatusBar()
@@ -187,12 +187,13 @@ void PlotWindow::createStatusBar()
     _statusBar->setMargin(STATUS_SEPARATOR_1, 0, 0);
     _statusBar->setMargin(STATUS_SEPARATOR_2, 0, 0);
     _statusBar->setMargin(STATUS_SEPARATOR_3, 0, 0);
-    _statusBar->setMargin(STATUS_APER_ICON, 6, 0);
-    _statusBar->setMargin(STATUS_APERTURE, 0, 6);
-    _statusBar->setDblClick(STATUS_APERTURE, [this]{ editCamConfig(Camera::cfgAper); });
-    _statusBar->setDblClick(STATUS_APER_ICON, [this]{ editCamConfig(Camera::cfgAper); });
+    _statusBar->setMargin(STATUS_ROI_ICON, 6, 0);
+    _statusBar->setMargin(STATUS_ROI, 0, 6);
+    _statusBar->setDblClick(STATUS_ROI, [this]{ editCamConfig(Camera::cfgRoi); });
+    _statusBar->setDblClick(STATUS_ROI_ICON, [this]{ editCamConfig(Camera::cfgRoi); });
     _statusBar->setIcon(STATUS_BGND, ":/toolbar/exclame");
-    _statusBar->setHint(STATUS_BGND, tr("Background subtraction disabled"));
+    _statusBar->setHint(STATUS_BGND, tr("Background subtraction disabled.\n"
+        "The measurement is not compliant with the ISO standard."));
     _statusBar->setDblClick(STATUS_BGND, [this]{ editCamConfig(Camera::cfgBgnd); });
     setStatusBar(_statusBar);
 }
@@ -266,7 +267,7 @@ void PlotWindow::createPlot()
 {
     _plot = new Plot;
     _plotIntf = _plot->plotIntf();
-    connect(_plot, &Plot::apertureEdited, this, &PlotWindow::apertureEdited);
+    connect(_plot, &Plot::roiEdited, this, &PlotWindow::roiEdited);
 }
 
 void PlotWindow::closeEvent(QCloseEvent* ce)
@@ -307,24 +308,28 @@ void PlotWindow::showCamConfig(bool replot)
     _statusBar->setText(STATUS_RESOLUTION, _camera->resolutionStr());
 
     const auto &c = _camera->config();
-    _actionUseAper->setChecked(c.aperture.on);
-    _actionZoomAper->setVisible(c.aperture.on);
-    _statusBar->setVisible(STATUS_APER_ICON, c.aperture.on);
-    _statusBar->setVisible(STATUS_APERTURE, c.aperture.on);
-    if (c.aperture.on) {
-        bool valid = _camera->isApertureValid();
-        QString hint = valid ? tr("Soft aperture") : tr("Soft aperture is not valid");
-        QString icon = valid ? ":/toolbar/aper" : ":/toolbar/aper_warn";
-        _statusBar->setIcon(STATUS_APER_ICON, icon);
-        _statusBar->setHint(STATUS_APER_ICON, hint);
-        _statusBar->setText(STATUS_APERTURE, c.aperture.sizeStr());
-        _statusBar->setHint(STATUS_APERTURE, hint);
+    _actionUseRoi->setChecked(c.roi.on);
+    _actionZoomRoi->setVisible(c.roi.on);
+    _statusBar->setVisible(STATUS_ROI_ICON, c.roi.on);
+    _statusBar->setVisible(STATUS_ROI, c.roi.on);
+    if (c.roi.on) {
+        bool roiValid = _camera->isRoiValid();
+        bool resValid = _tableIntf->isResultValid();
+        QString hint =
+            !roiValid ? tr("Region is not valid") :
+            !resValid ? tr("No valid data inside region") :
+            tr("Region of interest");
+        QString icon = roiValid && resValid ? ":/toolbar/roi" : ":/toolbar/roi_warn";
+        _statusBar->setIcon(STATUS_ROI_ICON, icon);
+        _statusBar->setHint(STATUS_ROI_ICON, hint);
+        _statusBar->setText(STATUS_ROI, c.roi.sizeStr());
+        _statusBar->setHint(STATUS_ROI, hint);
     }
 
     _statusBar->setVisible(STATUS_BGND, !c.bgnd.on);
 
     _plot->setImageSize(_camera->width(), _camera->height(), c.scale);
-    _plot->setAperture(c.aperture);
+    _plot->setRoi(c.roi);
     _tableIntf->setScale(c.scale);
     _plotIntf->setScale(c.scale);
     if (replot) _plot->replot();
@@ -350,8 +355,8 @@ void PlotWindow::updateActions(bool started)
 {
     _mru->setDisabled(started);
     _actionCamConfig->setDisabled(started);
-    _actionEditAper->setDisabled(started);
-    _actionUseAper->setDisabled(started);
+    _actionEditRoi->setDisabled(started);
+    _actionUseRoi->setDisabled(started);
     _actionOpen->setDisabled(started);
     _actionStart->setDisabled(started);
     _actionStart->setVisible(!started);
@@ -363,7 +368,7 @@ void PlotWindow::updateActions(bool started)
 
 void PlotWindow::startCapture()
 {
-    _plot->stopEditAperture(false);
+    _plot->stopEditRoi(false);
     _itemRenderTime->setText(tr(" Render time "));
     auto cam = new VirtualDemoCamera(_plotIntf, _tableIntf, this);
     connect(cam, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
@@ -428,7 +433,7 @@ void PlotWindow::processImage()
         qWarning() << "Current camera is not StillImageCamera";
         return;
     }
-    _plot->stopEditAperture(false);
+    _plot->stopEditRoi(false);
     _plotIntf->cleanResult();
     _tableIntf->cleanResult();
     _itemRenderTime->setText(tr(" Load time "));
@@ -464,17 +469,17 @@ void PlotWindow::configChanged()
         showCamConfig(true);
 }
 
-void PlotWindow::apertureEdited()
+void PlotWindow::roiEdited()
 {
-    _camera->setAperture(_plot->aperture());
+    _camera->setAperture(_plot->roi());
     configChanged();
 }
 
-void PlotWindow::toggleAperture()
+void PlotWindow::toggleRoi()
 {
-    bool on = _actionUseAper->isChecked();
-    if (!on && _plot->isApertureEditing())
-        _plot->stopEditAperture(false);
+    bool on = _actionUseRoi->isChecked();
+    if (!on && _plot->isRoiEditing())
+        _plot->stopEditRoi(false);
     _camera->toggleAperture(on);
     configChanged();
 }

@@ -22,12 +22,12 @@ public:
     virtual void capture() = 0;
 
     const CameraConfig& config() const { return _config; };
-    enum ConfigPages { cfgPlot, cfgBgnd, cfgAper };
+    enum ConfigPages { cfgPlot, cfgBgnd, cfgRoi };
     bool editConfig(ConfigPages page = cfgPlot);
-
-    void setAperture(const SoftAperture&);
+    
+    void setAperture(const RoiRect&);
     void toggleAperture(bool on);
-    bool isApertureValid() const;
+    bool isRoiValid() const;
 
     QString resolutionStr() const;
 

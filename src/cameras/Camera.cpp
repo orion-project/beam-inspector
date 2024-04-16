@@ -39,11 +39,11 @@ void Camera::loadConfig()
     LOAD(bgnd.noise, Double, 3);
     LOAD(bgnd.mask, Double, 3);
 
-    LOAD(aperture.on, Bool, false);
-    LOAD(aperture.x1, Int, 0);
-    LOAD(aperture.y1, Int, 0);
-    LOAD(aperture.x2, Int, 0);
-    LOAD(aperture.y2, Int, 0);
+    LOAD(roi.on, Bool, false);
+    LOAD(roi.x1, Int, 0);
+    LOAD(roi.y1, Int, 0);
+    LOAD(roi.x2, Int, 0);
+    LOAD(roi.y2, Int, 0);
 
     LOAD(scale.on, Bool, false);
     LOAD(scale.factor, Double, 1);
@@ -64,11 +64,11 @@ void Camera::saveConfig()
     SAVE(bgnd.noise);
     SAVE(bgnd.mask);
 
-    SAVE(aperture.on);
-    SAVE(aperture.x1);
-    SAVE(aperture.y1);
-    SAVE(aperture.x2);
-    SAVE(aperture.y2);
+    SAVE(roi.on);
+    SAVE(roi.x1);
+    SAVE(roi.y1);
+    SAVE(roi.x2);
+    SAVE(roi.y2);
 
     SAVE(scale.on);
     SAVE(scale.factor);
@@ -84,7 +84,8 @@ bool Camera::editConfig(ConfigPages page)
     opts.pages = {
         ConfigPage(cfgPlot, qApp->tr("Plot"), ":/toolbar/zoom_sensor"),
         ConfigPage(cfgBgnd, qApp->tr("Background"), ":/toolbar/beam").withSpacing(12),
-        ConfigPage(cfgAper, qApp->tr("Aperture"), ":/toolbar/aper").withSpacing(12),
+        ConfigPage(cfgRoi, qApp->tr("ROI"), ":/toolbar/roi").withSpacing(12)
+            .withLongTitle(qApp->tr("Region of Interest")),
     };
     opts.items = {
         new ConfigItemBool(cfgPlot, qApp->tr("Normalize data"), &_config.normalize),
@@ -105,50 +106,50 @@ bool Camera::editConfig(ConfigPages page)
         (new ConfigItemReal(cfgBgnd, qApp->tr("Mask Diameter"), &_config.bgnd.mask))
             ->withHint(qApp->tr("ISO 11146 recommends 3"), false),
 
-        (new ConfigItemBool(cfgAper, qApp->tr("Use soft aperture"), &_config.aperture.on))
+        (new ConfigItemBool(cfgRoi, qApp->tr("Use region"), &_config.roi.on))
             ->withHint(qApp->tr(
                 "These are raw pixels values. "
-                "Use the menu command <b>Camera ► Edit Soft Aperture</b> "
-                "to change aperture interactively in scaled units"), true),
-        (new ConfigItemInt(cfgAper, qApp->tr("Left"), &_config.aperture.x1))
+                "Use the menu command <b>Camera ► Edit ROI</b> "
+                "to change region interactively in scaled units"), true),
+        (new ConfigItemInt(cfgRoi, qApp->tr("Left"), &_config.roi.x1))
             ->withMinMax(0, width()),
-        (new ConfigItemInt(cfgAper, qApp->tr("Top"), &_config.aperture.y1))
+        (new ConfigItemInt(cfgRoi, qApp->tr("Top"), &_config.roi.y1))
             ->withMinMax(0, height()),
-        (new ConfigItemInt(cfgAper, qApp->tr("Right"), &_config.aperture.x2))
+        (new ConfigItemInt(cfgRoi, qApp->tr("Right"), &_config.roi.x2))
             ->withMinMax(0, width()),
-        (new ConfigItemInt(cfgAper, qApp->tr("Bottom"), &_config.aperture.y2))
+        (new ConfigItemInt(cfgRoi, qApp->tr("Bottom"), &_config.roi.y2))
             ->withMinMax(0, height())
     };
     if (ConfigDlg::edit(opts))
     {
-        _config.aperture.fix(width(), height());
+        _config.roi.fix(width(), height());
         saveConfig();
         return true;
     }
     return false;
 }
 
-void Camera::setAperture(const SoftAperture &a)
+void Camera::setAperture(const RoiRect &a)
 {
-    _config.aperture = a;
-    if (_config.aperture.on)
-        _config.aperture.fix(width(), height());
+    _config.roi = a;
+    if (_config.roi.on)
+        _config.roi.fix(width(), height());
     saveConfig();
 }
 
 void Camera::toggleAperture(bool on)
 {
-    _config.aperture.on = on;
-    if (on && _config.aperture.isZero()) {
-        _config.aperture.x1 = width() / 4;
-        _config.aperture.y1 = width() / 4;
-        _config.aperture.x2 = width() / 4 * 3;
-        _config.aperture.y2 = width() / 4 * 3;
+    _config.roi.on = on;
+    if (on && _config.roi.isZero()) {
+        _config.roi.x1 = width() / 4;
+        _config.roi.y1 = height() / 4;
+        _config.roi.x2 = width() / 4 * 3;
+        _config.roi.y2 = height() / 4 * 3;
     }
     saveConfig();
 }
 
-bool Camera::isApertureValid() const
+bool Camera::isRoiValid() const
 {
-    return _config.aperture.isValid(width(), height());
+    return _config.roi.isValid(width(), height());
 }

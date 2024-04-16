@@ -44,6 +44,7 @@ BeamEllipse::BeamEllipse(QCustomPlot *parentPlot) : QCPAbstractItem(parentPlot)
 
 void BeamEllipse::draw(QCPPainter *painter)
 {
+    if (!qIsFinite(xc) || !qIsFinite(yc) || !qIsFinite(dx) || !qIsFinite(dy)) return;
     const double x = parentPlot()->xAxis->coordToPixel(xc);
     const double y = parentPlot()->yAxis->coordToPixel(yc);
     const double rx = parentPlot()->xAxis->coordToPixel(xc + dx/2.0) - x;
@@ -60,25 +61,25 @@ void BeamEllipse::draw(QCPPainter *painter)
 //                               ApertureRect
 //------------------------------------------------------------------------------
 
-ApertureRect::ApertureRect(QCustomPlot *parentPlot) : QCPAbstractItem(parentPlot)
+RoiRectGraph::RoiRectGraph(QCustomPlot *parentPlot) : QCPAbstractItem(parentPlot)
 {
     _pen = QPen(Qt::yellow, 0, Qt::DashLine);
     _editPen = QPen(Qt::yellow, 3, Qt::SolidLine);
 
-    connect(parentPlot, &QCustomPlot::mouseMove, this, &ApertureRect::mouseMove);
-    connect(parentPlot, &QCustomPlot::mousePress, this, &ApertureRect::mousePress);
-    connect(parentPlot, &QCustomPlot::mouseRelease, this, &ApertureRect::mouseRelease);
-    connect(parentPlot, &QCustomPlot::mouseDoubleClick, this, &ApertureRect::mouseDoubleClick);
+    connect(parentPlot, &QCustomPlot::mouseMove, this, &RoiRectGraph::mouseMove);
+    connect(parentPlot, &QCustomPlot::mousePress, this, &RoiRectGraph::mousePress);
+    connect(parentPlot, &QCustomPlot::mouseRelease, this, &RoiRectGraph::mouseRelease);
+    connect(parentPlot, &QCustomPlot::mouseDoubleClick, this, &RoiRectGraph::mouseDoubleClick);
 }
 
-void ApertureRect::setAperture(const SoftAperture &aperture)
+void RoiRectGraph::setRoi(const RoiRect &roi)
 {
-    _aperture = aperture;
+    _roi = roi;
     updateCoords();
-    setVisible(_aperture.on);
+    setVisible(_roi.on);
 }
 
-void ApertureRect::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
+void RoiRectGraph::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
 {
     _scale = scale;
     _maxX = scale.sensorToUnit(sensorW);
@@ -86,15 +87,15 @@ void ApertureRect::setImageSize(int sensorW, int sensorH, const PixelScale &scal
     updateCoords();
 }
 
-void ApertureRect::updateCoords()
+void RoiRectGraph::updateCoords()
 {
-    _x1 = _scale.sensorToUnit(_aperture.x1);
-    _y1 = _scale.sensorToUnit(_aperture.y1);
-    _x2 = _scale.sensorToUnit(_aperture.x2);
-    _y2 = _scale.sensorToUnit(_aperture.y2);
+    _x1 = _scale.sensorToUnit(_roi.x1);
+    _y1 = _scale.sensorToUnit(_roi.y1);
+    _x2 = _scale.sensorToUnit(_roi.x2);
+    _y2 = _scale.sensorToUnit(_roi.y2);
 }
 
-void ApertureRect::startEdit()
+void RoiRectGraph::startEdit()
 {
     if (_editing)
         return;
@@ -104,22 +105,22 @@ void ApertureRect::startEdit()
     parentPlot()->replot();
 }
 
-void ApertureRect::stopEdit(bool apply)
+void RoiRectGraph::stopEdit(bool apply)
 {
     if (!_editing)
         return;
     _editing = false;
     if (apply) {
-        _aperture.x1 = _scale.unitToSensor(_x1);
-        _aperture.y1 = _scale.unitToSensor(_y1);
-        _aperture.x2 = _scale.unitToSensor(_x2);
-        _aperture.y2 = _scale.unitToSensor(_y2);
-        _aperture.on = true;
+        _roi.x1 = _scale.unitToSensor(_x1);
+        _roi.y1 = _scale.unitToSensor(_y1);
+        _roi.x2 = _scale.unitToSensor(_x2);
+        _roi.y2 = _scale.unitToSensor(_y2);
+        _roi.on = true;
         if (onEdited)
             onEdited();
     } else {
         updateCoords();
-        setVisible(_aperture.on);
+        setVisible(_roi.on);
     }
     _editor->deleteLater();
     _editor = nullptr;
@@ -130,7 +131,7 @@ void ApertureRect::stopEdit(bool apply)
 
 static const int dragThreshold = 10;
 
-void ApertureRect::draw(QCPPainter *painter)
+void RoiRectGraph::draw(QCPPainter *painter)
 {
     const double x1 = parentPlot()->xAxis->coordToPixel(_x1);
     const double y1 = parentPlot()->yAxis->coordToPixel(_y1);
@@ -153,7 +154,7 @@ void ApertureRect::draw(QCPPainter *painter)
 //    painter->drawRect(x1, y1, x2-x1, y2-y1);
 }
 
-void ApertureRect::mouseMove(QMouseEvent *e)
+void RoiRectGraph::mouseMove(QMouseEvent *e)
 {
     if (!visible() || !_editing) return;
 
@@ -180,25 +181,25 @@ void ApertureRect::mouseMove(QMouseEvent *e)
             _x1 = parentPlot()->xAxis->pixelToCoord(x1+dx);
             _x1 = qMax(_x1, 0.0);
             _seX1->setValue(_x1);
-            _seW->setValue(aperW());
+            _seW->setValue(roiW());
         }
         if (_drag0 || _dragX2) {
             _x2 = parentPlot()->xAxis->pixelToCoord(x2+dx);
             _x2 = qMin(_x2, _maxX);
             _seX2->setValue(_x2);
-            _seW->setValue(aperW());
+            _seW->setValue(roiW());
         }
         if (_drag0 || _dragY1) {
             _y1 = parentPlot()->yAxis->pixelToCoord(y1+dy);
             _y1 = qMax(_y1, 0.0);
             _seY1->setValue(_y1);
-            _seH->setValue(aperH());
+            _seH->setValue(roiH());
         }
         if (_drag0 || _dragY2) {
             _y2 = parentPlot()->yAxis->pixelToCoord(y2+dy);
             _y2 = qMin(_y2, _maxY);
             _seY2->setValue(_y2);
-            _seH->setValue(aperH());
+            _seH->setValue(roiH());
         }
         showCoordTooltip(e->globalPosition().toPoint());
         parentPlot()->replot();
@@ -229,7 +230,7 @@ void ApertureRect::mouseMove(QMouseEvent *e)
         resetDragCusrsor();
 }
 
-void ApertureRect::mousePress(QMouseEvent *e)
+void RoiRectGraph::mousePress(QMouseEvent *e)
 {
     if (!visible() || !_editing) return;
     if (e->button() != Qt::LeftButton) return;
@@ -239,20 +240,20 @@ void ApertureRect::mousePress(QMouseEvent *e)
     showCoordTooltip(e->globalPosition().toPoint());
 }
 
-void ApertureRect::mouseRelease(QMouseEvent *e)
+void RoiRectGraph::mouseRelease(QMouseEvent *e)
 {
     if (!visible() || !_editing) return;
     QToolTip::hideText();
     _dragging = false;
 }
 
-void ApertureRect::mouseDoubleClick(QMouseEvent*)
+void RoiRectGraph::mouseDoubleClick(QMouseEvent*)
 {
     if (!visible() || !_editing) return;
     stopEdit(true);
 }
 
-void ApertureRect::showDragCursor(Qt::CursorShape c)
+void RoiRectGraph::showDragCursor(Qt::CursorShape c)
 {
     if (_dragCursor == c)
         return;
@@ -262,7 +263,7 @@ void ApertureRect::showDragCursor(Qt::CursorShape c)
         QApplication::setOverrideCursor(c);
 }
 
-void ApertureRect::showCoordTooltip(const QPoint &p)
+void RoiRectGraph::showCoordTooltip(const QPoint &p)
 {
     QStringList hint;
     if (_drag0 || _dragX1) hint << QStringLiteral("X1: %1").arg(int(_x1));
@@ -274,10 +275,10 @@ void ApertureRect::showCoordTooltip(const QPoint &p)
     if (!hint.isEmpty()) QToolTip::showText(p, hint.join('\n'));
 }
 
-class ApertureBoundEditor : public QSpinBox
+class RoiBoundEdit : public QSpinBox
 {
 public:
-    ApertureBoundEditor(int value, int max, int sign) : QSpinBox(), _sign(sign) {
+    RoiBoundEdit(int value, int max, int sign) : QSpinBox(), _sign(sign) {
         setMinimum(0);
         setMaximum(max);
         setValue(value);
@@ -305,41 +306,39 @@ private:
     int _sign;
 };
 
-void ApertureRect::makeEditor()
+void RoiRectGraph::makeEditor()
 {
-    _seX1 = new ApertureBoundEditor(_x1, _maxX, +1);
-    _seY1 = new ApertureBoundEditor(_y1, _maxY, -1);
-    _seX2 = new ApertureBoundEditor(_x2, _maxX, +1);
-    _seY2 = new ApertureBoundEditor(_y2, _maxY, -1);
-    _seW = new QSpinBox;
-    _seH = new QSpinBox;
-    _seW->setValue(aperW());
-    _seH->setValue(aperH());
+    _seX1 = new RoiBoundEdit(_x1, _maxX, +1);
+    _seY1 = new RoiBoundEdit(_y1, _maxY, -1);
+    _seX2 = new RoiBoundEdit(_x2, _maxX, +1);
+    _seY2 = new RoiBoundEdit(_y2, _maxY, -1);
+    _seW = new RoiBoundEdit(roiW(), _maxX, 1);
+    _seH = new RoiBoundEdit(roiH(), _maxY, 1);
     _seW->setReadOnly(true);
     _seH->setReadOnly(true);
 
     connect(_seX1, &QSpinBox::valueChanged, this, [this](int v){
         if ((int)_x1 == v) return;
         _x1 = v;
-        _seW->setValue(aperW());
+        _seW->setValue(roiW());
         parentPlot()->replot();
     });
     connect(_seX2, &QSpinBox::valueChanged, this, [this](int v){
         if ((int)_x2 == v) return;
         _x2 = v;
-        _seW->setValue(aperW());
+        _seW->setValue(roiW());
         parentPlot()->replot();
     });
     connect(_seY1, &QSpinBox::valueChanged, this, [this](int v){
         if ((int)_y1 == v) return;
         _y1 = v;
-        _seH->setValue(aperH());
+        _seH->setValue(roiH());
         parentPlot()->replot();
     });
     connect(_seY2, &QSpinBox::valueChanged, this, [this](int v){
         if ((int)_y2 == v) return;
         _y2 = v;
-        _seH->setValue(aperH());
+        _seH->setValue(roiH());
         parentPlot()->replot();
     });
 
@@ -381,7 +380,7 @@ void ApertureRect::makeEditor()
     adjustEditorPosition();
 }
 
-void ApertureRect::adjustEditorPosition()
+void RoiRectGraph::adjustEditorPosition()
 {
     if (_editor)
         _editor->move(parentPlot()->width() - _editor->width() - 15, 15);

@@ -35,7 +35,7 @@ private:
     QSharedPointer<Camera> _camera;
     QAction *_actionStart, *_actionStop, *_actionOpen, *_actionCamConfig,
         *_actionGrayscale, *_actionRainbow, *_actionBeamInfo,
-        *_actionEditAper, *_actionUseAper, *_actionZoomFull, *_actionZoomAper;
+        *_actionEditRoi, *_actionUseRoi, *_actionZoomFull, *_actionZoomRoi;
     QAction *_buttonStart, *_buttonStop;
     QTableWidget *_table;
     QTableWidgetItem *_itemRenderTime;
@@ -60,7 +60,7 @@ private:
 
     void captureStopped();
     void dataReady();
-    void apertureEdited();
+    void roiEdited();
     void configChanged();
 
     void openImage(const QString& fileName);
@@ -70,7 +70,7 @@ private:
     void showFps(int fps);
     void showCamConfig(bool replot);
     void processImage();
-    void toggleAperture();
+    void toggleRoi();
 };
 
 #endif // PLOT_WINDOW_H

@@ -69,8 +69,8 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
 
     _beamInfo = new BeamInfoText(_plot);
 
-    _aperture = new ApertureRect(_plot);
-    _aperture->onEdited = [this]{ emit apertureEdited(); };
+    _roi = new RoiRectGraph(_plot);
+    _roi->onEdited = [this]{ emit roiEdited(); };
 
     setThemeColors(SYSTEM, false);
 
@@ -92,13 +92,13 @@ void Plot::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
 {
     _imageW = scale.sensorToUnit(sensorW);
     _imageH = scale.sensorToUnit(sensorH);
-    _aperture->setImageSize(sensorW, sensorH, scale);
+    _roi->setImageSize(sensorW, sensorH, scale);
 }
 
 void Plot::adjustWidgetSize()
 {
     zoomAuto(true);
-    _aperture->adjustEditorPosition();
+    _roi->adjustEditorPosition();
 }
 
 void Plot::resizeEvent(QResizeEvent*)
@@ -110,15 +110,15 @@ void Plot::resizeEvent(QResizeEvent*)
 
 void Plot::keyPressEvent(QKeyEvent *e)
 {
-    if (!_aperture->isEditing())
+    if (!_roi->isEditing())
         return;
     switch (e->key()) {
     case Qt::Key_Escape:
-        _aperture->stopEdit(false);
+        _roi->stopEdit(false);
         break;
     case Qt::Key_Return:
     case Qt::Key_Enter:
-        _aperture->stopEdit(true);
+        _roi->stopEdit(true);
         break;
     }
 }
@@ -155,17 +155,17 @@ void Plot::zoomFull(bool replot)
     zoomToBounds(0, 0, _imageW, _imageH, replot);
 }
 
-void Plot::zoomAperture(bool replot)
+void Plot::zoomRoi(bool replot)
 {
-    if (!_aperture->visible()) {
+    if (!_roi->visible()) {
         zoomFull(replot);
         return;
     }
     _autoZoom = ZOOM_APERTURE;
-    const double x1 = _aperture->getX1();
-    const double y1 = _aperture->getY1();
-    const double x2 = _aperture->getX2();
-    const double y2 = _aperture->getY2();
+    const double x1 = _roi->getX1();
+    const double y1 = _roi->getY1();
+    const double x2 = _roi->getX2();
+    const double y2 = _roi->getY2();
     const double dx = (x2 - x1) * APERTURE_ZOOM_MARGIN;
     const double dy = (y2 - y1) * APERTURE_ZOOM_MARGIN;
     zoomToBounds(x1-dx, y1-dy, x2+dx, y2+dy, replot);
@@ -176,7 +176,7 @@ void Plot::zoomAuto(bool replot)
     if (_autoZoom == ZOOM_FULL)
         zoomFull(replot);
     else if (_autoZoom == ZOOM_APERTURE)
-        zoomAperture(replot);
+        zoomRoi(replot);
 }
 
 void Plot::axisRangeChanged()
@@ -272,7 +272,7 @@ void Plot::setBeamInfoVisible(bool on, bool replot)
     if (replot) _plot->replot();
 }
 
-void Plot::selectBackgroundColor()
+void Plot::selectBackColor()
 {
     auto c = QColorDialog::getColor(_plot->axisRect()->backgroundBrush().color(), this);
     if (c.isValid()) {
@@ -286,29 +286,29 @@ void Plot::exportImageDlg()
     ::exportImageDlg(_plot, [this]{setThemeColors(LIGHT, false);}, [this]{setThemeColors(SYSTEM, false);});
 }
 
-void Plot::startEditAperture()
+void Plot::startEditRoi()
 {
-    _aperture->startEdit();
+    _roi->startEdit();
 }
 
-void Plot::stopEditAperture(bool apply)
+void Plot::stopEditRoi(bool apply)
 {
-    _aperture->stopEdit(apply);
+    _roi->stopEdit(apply);
 }
 
-bool Plot::isApertureEditing() const
+bool Plot::isRoiEditing() const
 {
-    return _aperture->isEditing();
+    return _roi->isEditing();
 }
 
-void Plot::setAperture(const SoftAperture& a)
+void Plot::setRoi(const RoiRect& a)
 {
     if (_autoZoom == ZOOM_APERTURE && !a.on)
         _autoZoom = ZOOM_FULL;
-    _aperture->setAperture(a);
+    _roi->setRoi(a);
 }
 
-SoftAperture Plot::aperture() const
+RoiRect Plot::roi() const
 {
-    return _aperture->aperture();
+    return _roi->roi();
 }
