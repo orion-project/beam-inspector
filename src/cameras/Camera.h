@@ -18,6 +18,7 @@ public:
     virtual int width() const = 0;
     virtual int height() const = 0;
     virtual int bits() const = 0;
+    virtual PixelScale sensorScale() const { return {}; }
 
     virtual void capture() = 0;
 
@@ -28,6 +29,8 @@ public:
     void setAperture(const RoiRect&);
     void toggleAperture(bool on);
     bool isRoiValid() const;
+
+    PixelScale pixelScale() const;
 
     QString resolutionStr() const;
 

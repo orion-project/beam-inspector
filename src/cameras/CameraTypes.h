@@ -45,12 +45,18 @@ struct Background
     double mask = 3;
 };
 
-struct CameraConfig
+struct PlotOptions
 {
     bool normalize = true;
+    bool rescale = false;
+    PixelScale customScale;
+};
+
+struct CameraConfig
+{
+    PlotOptions plot;
     Background bgnd;
     RoiRect roi;
-    PixelScale scale;
 };
 
 #endif // CAMERA_TYPES_H

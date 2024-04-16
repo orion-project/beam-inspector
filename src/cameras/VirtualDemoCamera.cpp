@@ -133,7 +133,7 @@ public:
             g.subtracted = subtracted.data();
         }
 
-        normalize = cfg.normalize;
+        normalize = cfg.plot.normalize;
 
         plot->initGraph(b.w, b.h);
         graph = plot->rawGraph();

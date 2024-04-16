@@ -30,7 +30,11 @@ void Camera::loadConfig()
     Ori::Settings s;
     s.beginGroup(_configGroup);
 
-    LOAD(normalize, Bool, true);
+    LOAD(plot.normalize, Bool, true);
+    LOAD(plot.rescale, Bool, false);
+    LOAD(plot.customScale.on, Bool, true);
+    LOAD(plot.customScale.factor, Double, 5);
+    LOAD(plot.customScale.unit, String, "um");
 
     LOAD(bgnd.on, Bool, true);
     LOAD(bgnd.iters, Int, 0);
@@ -44,10 +48,6 @@ void Camera::loadConfig()
     LOAD(roi.y1, Int, 0);
     LOAD(roi.x2, Int, 0);
     LOAD(roi.y2, Int, 0);
-
-    LOAD(scale.on, Bool, false);
-    LOAD(scale.factor, Double, 1);
-    LOAD(scale.unit, String, "um");
 }
 
 void Camera::saveConfig()
@@ -55,7 +55,11 @@ void Camera::saveConfig()
     Ori::Settings s;
     s.beginGroup(_configGroup);
 
-    SAVE(normalize);
+    SAVE(plot.normalize);
+    SAVE(plot.rescale);
+    SAVE(plot.customScale.on);
+    SAVE(plot.customScale.factor);
+    SAVE(plot.customScale.unit);
 
     SAVE(bgnd.on);
     SAVE(bgnd.iters);
@@ -69,10 +73,6 @@ void Camera::saveConfig()
     SAVE(roi.y1);
     SAVE(roi.x2);
     SAVE(roi.y2);
-
-    SAVE(scale.on);
-    SAVE(scale.factor);
-    SAVE(scale.unit);
 }
 
 bool Camera::editConfig(ConfigPages page)
@@ -87,12 +87,23 @@ bool Camera::editConfig(ConfigPages page)
         ConfigPage(cfgRoi, qApp->tr("ROI"), ":/toolbar/roi").withSpacing(12)
             .withLongTitle(qApp->tr("Region of Interest")),
     };
+    auto hardScale = sensorScale();
+    bool useSensorScale = !_config.plot.customScale.on;
+    bool useCustomScale = _config.plot.customScale.on;
     opts.items = {
-        new ConfigItemBool(cfgPlot, qApp->tr("Normalize data"), &_config.normalize),
+        new ConfigItemBool(cfgPlot, qApp->tr("Normalize data"), &_config.plot.normalize),
         new ConfigItemSpace(cfgPlot, 12),
-        new ConfigItemBool(cfgPlot, qApp->tr("Rescale pixels"), &_config.scale.on),
-        new ConfigItemReal(cfgPlot, qApp->tr("1px equals to"), &_config.scale.factor),
-        (new ConfigItemStr(cfgPlot, qApp->tr("of units"), &_config.scale.unit))
+        new ConfigItemBool(cfgPlot, qApp->tr("Rescale pixels"), &_config.plot.rescale),
+        (new ConfigItemBool(cfgPlot, qApp->tr("Use hardware scale"), &useSensorScale))
+            ->setDisabled(!hardScale.on)
+            ->withRadioGroup(0)
+            ->withHint(hardScale.on
+                ? QString("1px = %1 %2").arg(hardScale.factor).arg(hardScale.unit)
+                : qApp->tr("Camera does not provide meta data")),
+        (new ConfigItemBool(cfgPlot, qApp->tr("Use custom scale"), &useCustomScale))
+            ->withRadioGroup(0),
+        new ConfigItemReal(cfgPlot, qApp->tr("1px equals to"), &_config.plot.customScale.factor),
+        (new ConfigItemStr(cfgPlot, qApp->tr("of units"), &_config.plot.customScale.unit))
             ->withAlignment(Qt::AlignRight),
 
         new ConfigItemBool(cfgBgnd, qApp->tr("Subtract background"), &_config.bgnd.on),
@@ -122,6 +133,7 @@ bool Camera::editConfig(ConfigPages page)
     };
     if (ConfigDlg::edit(opts))
     {
+        _config.plot.customScale.on = useCustomScale;
         _config.roi.fix(width(), height());
         saveConfig();
         return true;
@@ -152,4 +164,13 @@ void Camera::toggleAperture(bool on)
 bool Camera::isRoiValid() const
 {
     return _config.roi.isValid(width(), height());
+}
+
+PixelScale Camera::pixelScale() const
+{
+    if (!_config.plot.rescale)
+        return {};
+    if (_config.plot.customScale.on)
+        return _config.plot.customScale;
+    return sensorScale();
 }

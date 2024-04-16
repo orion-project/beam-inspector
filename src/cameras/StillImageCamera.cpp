@@ -140,13 +140,13 @@ void StillImageCamera::capture()
 
     timer.restart();
     if (_config.bgnd.on) {
-        if (_config.normalize) {
+        if (_config.plot.normalize) {
             cgn_copy_normalized_f64(g.subtracted, graph, sz, g.min, g.max);
         } else {
             memcpy(graph, g.subtracted, sizeof(double)*sz);
         }
     } else {
-        if (_config.normalize) {
+        if (_config.plot.normalize) {
             if (c.bits > 8) {
                 cgn_render_beam_to_doubles_norm_16((const uint16_t*)c.buf, sz, graph);
             } else {
@@ -161,7 +161,7 @@ void StillImageCamera::capture()
     qDebug() << "loadTime:" << loadTime << "calcTime:" << calcTime << "copyTime:" << copyTime << "iters:" << g.iters;
 
     _plot->invalidateGraph();
-    if (_config.normalize)
+    if (_config.plot.normalize)
         _plot->setResult(r, 0, 1);
     else _plot->setResult(r, g.min, g.max);
     _table->setResult(r, loadTime, calcTime);

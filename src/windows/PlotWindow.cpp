@@ -313,13 +313,9 @@ void PlotWindow::showCamConfig(bool replot)
     _statusBar->setVisible(STATUS_ROI_ICON, c.roi.on);
     _statusBar->setVisible(STATUS_ROI, c.roi.on);
     if (c.roi.on) {
-        bool roiValid = _camera->isRoiValid();
-        bool resValid = _tableIntf->isResultValid();
-        QString hint =
-            !roiValid ? tr("Region is not valid") :
-            !resValid ? tr("No valid data inside region") :
-            tr("Region of interest");
-        QString icon = roiValid && resValid ? ":/toolbar/roi" : ":/toolbar/roi_warn";
+        bool valid = _camera->isRoiValid();
+        QString hint = valid ? tr("Region of interest") : tr("Region is not valid");
+        QString icon = valid ? ":/toolbar/roi" : ":/toolbar/roi_warn";
         _statusBar->setIcon(STATUS_ROI_ICON, icon);
         _statusBar->setHint(STATUS_ROI_ICON, hint);
         _statusBar->setText(STATUS_ROI, c.roi.sizeStr());
@@ -328,10 +324,11 @@ void PlotWindow::showCamConfig(bool replot)
 
     _statusBar->setVisible(STATUS_BGND, !c.bgnd.on);
 
-    _plot->setImageSize(_camera->width(), _camera->height(), c.scale);
+    auto s = _camera->pixelScale();
+    _plot->setImageSize(_camera->width(), _camera->height(), s);
     _plot->setRoi(c.roi);
-    _tableIntf->setScale(c.scale);
-    _plotIntf->setScale(c.scale);
+    _tableIntf->setScale(s);
+    _plotIntf->setScale(s);
     if (replot) _plot->replot();
 }
 
@@ -447,11 +444,11 @@ void PlotWindow::processImage()
 
 void PlotWindow::editCamConfig(int pageId)
 {
-    const PixelScale prevScale = _camera->config().scale;
+    const PixelScale prevScale = _camera->pixelScale();
     if (!_camera->editConfig(Camera::ConfigPages(pageId)))
         return;
     configChanged();
-    if (_camera->config().scale != prevScale) {
+    if (_camera->pixelScale() != prevScale) {
         // Image will be re-processed by StillImageCamera
         // For other types need to re-show cached results
         if (!dynamic_cast<StillImageCamera*>(_camera.get())) {
