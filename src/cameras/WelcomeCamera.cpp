@@ -34,6 +34,7 @@ void WelcomeCamera::capture()
     timer.restart();
 
     CgnBeamResult r;
+    memset(&r, 0, sizeof(CgnBeamResult));
     r.xc = b.xc;
     r.yc = b.yc;
     r.dx = b.dx;

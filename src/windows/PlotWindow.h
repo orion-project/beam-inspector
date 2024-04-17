@@ -61,7 +61,7 @@ private:
     void openImageDlg();
     void startCapture();
     void stopCapture();
-    void editCamConfig(int pageId = 0);
+    void editCamConfig(int pageId = -1);
     void activateCamWelcome();
     void activateCamImage();
     void activateCamDemo();

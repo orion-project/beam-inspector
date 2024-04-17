@@ -25,3 +25,4 @@ history:
     changes:
       - text: Option for using hardware pixel scale
       - text: Camera selector button on the toolbar
+      - text: Warning icon when all pixels below threshold

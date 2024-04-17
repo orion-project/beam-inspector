@@ -70,7 +70,8 @@ void PlotIntf::showResult()
     _beamShape->dy = dy;
     _beamShape->phi = _res.phi;
 
-    if (_beamInfo->visible()) {
+    if (_beamInfo->visible() && !_res.nan)
+    {
         double eps = qMin(_res.dx, _res.dy) / qMax(_res.dx, _res.dy);
         _beamInfo->setText(QStringLiteral("Xc = %1\nYc = %2\nD = %3\nDy = %4\nφ = %5°\nε = %6")
             .arg(_scale.format(_res.xc),
@@ -80,6 +81,7 @@ void PlotIntf::showResult()
             .arg(_res.phi, 0, 'f', 1)
             .arg(eps, 0, 'f', 3));
     }
+    else _beamInfo->setText({});
 
     _colorScale->setDataRange(QCPRange(_min, _max));
     if (_w > 0) _beamData->setKeyRange(QCPRange(0, _scale.sensorToUnit(_w)));

@@ -16,22 +16,37 @@ void TableIntf::setResult(const CgnBeamResult& r, double renderTime, double calc
     _calcTime = calcTime;
 }
 
+inline void setTextInvald(QTableWidgetItem *it)
+{
+    it->setText(QStringLiteral(" --- "));
+}
+
 void TableIntf::showResult()
 {
-    double eps = qMin(_res.dx, _res.dy) / qMax(_res.dx, _res.dy);
+    itRenderTime->setText(QStringLiteral(" %1 ms ").arg(qRound(_renderTime)));
+    itCalcTime->setText(QStringLiteral(" %1 ms ").arg(qRound(_calcTime)));
 
+    if (_res.nan)
+    {
+        setTextInvald(itXc);
+        setTextInvald(itYc);
+        setTextInvald(itDx);
+        setTextInvald(itDy);
+        setTextInvald(itPhi);
+        setTextInvald(itEps);
+        return;
+    }
+
+    double eps = qMin(_res.dx, _res.dy) / qMax(_res.dx, _res.dy);
     itXc->setText(_scale.formatWithMargins(_res.xc));
     itYc->setText(_scale.formatWithMargins(_res.yc));
     itDx->setText(_scale.formatWithMargins(_res.dx));
     itDy->setText(_scale.formatWithMargins(_res.dy));
     itPhi->setText(QStringLiteral(" %1° ").arg(_res.phi, 0, 'f', 1));
     itEps->setText(QStringLiteral(" %1 ").arg(eps, 0, 'f', 3));
-
-    itRenderTime->setText(QStringLiteral(" %1 ms ").arg(qRound(_renderTime)));
-    itCalcTime->setText(QStringLiteral(" %1 ms ").arg(qRound(_calcTime)));
 }
 
-bool TableIntf::isResultValid() const
+bool TableIntf::resultInvalid() const
 {
-    return !std::isnan(_res.dx);
+    return _res.nan;
 }

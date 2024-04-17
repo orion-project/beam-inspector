@@ -95,16 +95,15 @@ void StillImageCamera::capture()
     double *graph = _plot->rawGraph();
 
     CgnBeamResult r;
+    memset(&r, 0, sizeof(CgnBeamResult));
 
     CgnBeamBkgnd g;
-    g.iters = 0;
+    memset(&g, 0, sizeof(CgnBeamBkgnd));
     g.max_iter = _config.bgnd.iters;
     g.precision = _config.bgnd.precision;
     g.corner_fraction = _config.bgnd.corner;
     g.nT = _config.bgnd.noise;
     g.mask_diam = _config.bgnd.mask;
-    g.min = 0;
-    g.max = 0;
     if (_config.roi.on && _config.roi.isValid(c.w, c.h)) {
         g.ax1 = _config.roi.x1;
         g.ay1 = _config.roi.y1;
@@ -115,12 +114,8 @@ void StillImageCamera::capture()
         r.x2 = _config.roi.x2;
         r.y2 = _config.roi.y2;
     } else {
-        g.ax1 = 0;
-        g.ay1 = 0;
         g.ax2 = c.w;
         g.ay2 = c.h;
-        r.x1 = 0;
-        r.y1 = 0;
         r.x2 = c.w;
         r.y2 = c.h;
     }
@@ -158,7 +153,11 @@ void StillImageCamera::capture()
     }
     auto copyTime = timer.elapsed();
 
-    qDebug() << "loadTime:" << loadTime << "calcTime:" << calcTime << "copyTime:" << copyTime << "iters:" << g.iters;
+    qDebug() << "loadTime:" << loadTime << "| calcTime" << calcTime << "| copyTime" << copyTime
+        << "| iters" << g.iters << "| min" << g.min << "| max" << g.max
+        << "| mean" << g.mean << "| sdev" << g.sdev << "| count" << g.count
+        << "| ax1" << g.ax1 << "| ay1" << g.ay1 << "| ax2" << g.ax2 << "| ay2" << g.ay2
+        << "| xx" << r.xx << "| yy" << r.yy << "| xy" << r.xy << "| p" << r.p;
 
     _plot->invalidateGraph();
     if (_config.plot.normalize)

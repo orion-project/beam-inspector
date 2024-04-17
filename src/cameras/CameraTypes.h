@@ -59,4 +59,5 @@ struct CameraConfig
     RoiRect roi;
 };
 
+
 #endif // CAMERA_TYPES_H

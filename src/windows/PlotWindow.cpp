@@ -42,6 +42,7 @@ enum StatusPanels
     STATUS_SEPARATOR_2,
     STATUS_FPS,
     STATUS_SEPARATOR_3,
+    STATUS_NO_DATA,
     STATUS_BGND,
 
     STATUS_PANEL_COUNT,
@@ -106,9 +107,9 @@ void PlotWindow::createMenuBar()
 {
 #define A_ Ori::Gui::action
 #define M_ Ori::Gui::menu
-    _actionCamWelcome = A_("Welcome", this, &PlotWindow::activateCamWelcome);
-    _actionCamImage = A_("Image", this, &PlotWindow::activateCamImage);
-    _actionCamDemo = A_("Demo", this, &PlotWindow::activateCamDemo);
+    _actionCamWelcome = A_("Welcome", this, &PlotWindow::activateCamWelcome, ":/toolbar/cam_select");
+    _actionCamImage = A_("Image", this, &PlotWindow::activateCamImage, ":/toolbar/cam_select");
+    _actionCamDemo = A_("Demo", this, &PlotWindow::activateCamDemo, ":/toolbar/cam_select");
     _camSelectMenu = M_(tr("Active Camera"), {_actionCamWelcome, _actionCamImage, _actionCamDemo});
 
     auto actnNew = A_(tr("New Window"), this, &PlotWindow::newWindow, ":/toolbar/new", QKeySequence::New);
@@ -140,7 +141,7 @@ void PlotWindow::createMenuBar()
     _actionEditRoi = A_(tr("Edit ROI"), this, [this]{ _plot->startEditRoi(); }, ":/toolbar/roi");
     _actionUseRoi = A_(tr("Use ROI"), this, &PlotWindow::toggleRoi, ":/toolbar/roi_rect");
     _actionUseRoi->setCheckable(true);
-    _actionCamConfig = A_(tr("Settings..."), this, &PlotWindow::editCamConfig, ":/toolbar/settings");
+    _actionCamConfig = A_(tr("Settings..."), this, [this]{ PlotWindow::editCamConfig(-1); }, ":/toolbar/settings");
     //auto actnSelectBgColor = A_(tr("Select Background..."), this, [this]{ _plot->selectBackColor(); });
     menuBar()->addMenu(M_(tr("Camera"), {_actionStart, _actionStop, 0,
         //actnSelectBgColor, 0,
@@ -197,6 +198,9 @@ void PlotWindow::createStatusBar()
     _statusBar->setMargin(STATUS_ROI, 0, 6);
     _statusBar->setDblClick(STATUS_ROI, [this]{ editCamConfig(Camera::cfgRoi); });
     _statusBar->setDblClick(STATUS_ROI_ICON, [this]{ editCamConfig(Camera::cfgRoi); });
+    _statusBar->setIcon(STATUS_NO_DATA, ":/toolbar/error");
+    _statusBar->setHint(STATUS_NO_DATA, tr("No data to process.\n"
+        "All pixels in the region are below noise threshold"));
     _statusBar->setIcon(STATUS_BGND, ":/toolbar/exclame");
     _statusBar->setHint(STATUS_BGND, tr("Background subtraction disabled.\n"
         "The measurement is not compliant with the ISO standard."));
@@ -408,6 +412,7 @@ void PlotWindow::captureStopped()
 
 void PlotWindow::dataReady()
 {
+    _statusBar->setVisible(STATUS_NO_DATA, _tableIntf->resultInvalid());
     _tableIntf->showResult();
     _plotIntf->showResult();
     _plot->replot();
@@ -452,7 +457,7 @@ void PlotWindow::processImage()
 void PlotWindow::editCamConfig(int pageId)
 {
     const PixelScale prevScale = _camera->pixelScale();
-    if (!_camera->editConfig(Camera::ConfigPages(pageId)))
+    if (!_camera->editConfig(pageId))
         return;
     configChanged();
     if (_camera->pixelScale() != prevScale) {
@@ -521,6 +526,7 @@ void PlotWindow::activateCamDemo()
     _tableIntf->cleanResult();
     _tableIntf->showResult();
     _itemRenderTime->setText(tr(" Render time "));
+    _statusBar->setVisible(STATUS_NO_DATA, false);
     auto cam = new VirtualDemoCamera(_plotIntf, _tableIntf, this);
     connect(cam, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualDemoCamera::stats, this, &PlotWindow::showFps);

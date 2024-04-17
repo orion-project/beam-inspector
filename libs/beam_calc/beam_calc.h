@@ -89,13 +89,21 @@ typedef struct {
 
     // Min and max pixel values after backgdound subtracted.
     double min, max;
+
+    // Number of pixels about the noise threshol/
+    int count;
 } CgnBeamBkgnd;
 
 typedef struct {
     int x1, x2;
     int y1, y2;
+    int nan;
+    double p;
     double xc;
     double yc;
+    double xx;
+    double yy;
+    double xy;
     double dx;
     double dy;
     double phi;

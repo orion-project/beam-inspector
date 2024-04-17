@@ -14,7 +14,7 @@ public:
     void setResult(const CgnBeamResult& r, double renderTime, double calcTime);
     void cleanResult();
     void showResult();
-    bool isResultValid() const;
+    bool resultInvalid() const;
 
     QTableWidgetItem *itXc, *itYc, *itDx, *itDy, *itPhi, *itEps;
     QTableWidgetItem *itRenderTime, *itCalcTime;

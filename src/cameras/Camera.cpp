@@ -75,7 +75,7 @@ void Camera::saveConfig()
     SAVE(roi.y2);
 }
 
-bool Camera::editConfig(ConfigPages page)
+bool Camera::editConfig(int page)
 {
     ConfigDlgOpts opts;
     opts.currentPageId = page;
@@ -90,6 +90,7 @@ bool Camera::editConfig(ConfigPages page)
     auto hardScale = sensorScale();
     bool useSensorScale = !_config.plot.customScale.on;
     bool useCustomScale = _config.plot.customScale.on;
+    double cornerFraction = _config.bgnd.corner * 100;
     opts.items = {
         new ConfigItemBool(cfgPlot, qApp->tr("Normalize data"), &_config.plot.normalize),
         new ConfigItemSpace(cfgPlot, 12),
@@ -110,7 +111,7 @@ bool Camera::editConfig(ConfigPages page)
         (new ConfigItemInt(cfgBgnd, qApp->tr("Max iterations"), &_config.bgnd.iters))
             ->withMinMax(0, 50),
         new ConfigItemReal(cfgBgnd, qApp->tr("Precision"), &_config.bgnd.precision),
-        (new ConfigItemReal(cfgBgnd, qApp->tr("Corner Fraction %"), &_config.bgnd.corner))
+        (new ConfigItemReal(cfgBgnd, qApp->tr("Corner Fraction %"), &cornerFraction))
             ->withHint(qApp->tr("ISO 11146 recommends 2-5%"), false),
         (new ConfigItemReal(cfgBgnd, qApp->tr("Noise Factor"), &_config.bgnd.noise))
             ->withHint(qApp->tr("ISO 11146 recommends 2-4"), false),
@@ -134,6 +135,7 @@ bool Camera::editConfig(ConfigPages page)
     if (ConfigDlg::edit(opts))
     {
         _config.plot.customScale.on = useCustomScale;
+        _config.bgnd.corner = cornerFraction / 100.0;
         _config.roi.fix(width(), height());
         saveConfig();
         return true;

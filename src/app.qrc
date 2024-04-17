@@ -5,6 +5,7 @@
         <file alias="cam_select">../img/toolbar/cam_select.svg</file>
         <file alias="check">../img/toolbar/check.svg</file>
         <file alias="delete">../img/toolbar/delete.svg</file>
+        <file alias="error">../img/toolbar/error.svg</file>
         <file alias="exclame">../img/toolbar/exclame.svg</file>
         <file alias="export_img">../img/toolbar/save_img.svg</file>
         <file alias="home">../img/toolbar/home.svg</file>

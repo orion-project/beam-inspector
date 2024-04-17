@@ -24,7 +24,7 @@ public:
 
     const CameraConfig& config() const { return _config; };
     enum ConfigPages { cfgPlot, cfgBgnd, cfgRoi };
-    bool editConfig(ConfigPages page = cfgPlot);
+    bool editConfig(int page = -1);
     
     void setAperture(const RoiRect&);
     void toggleAperture(bool on);

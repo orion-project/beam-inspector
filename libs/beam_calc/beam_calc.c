@@ -1,11 +1,11 @@
 #include "beam_calc.h"
 
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #ifdef USE_BLAS
 #include "cblas.h"
-
-#include <stdlib.h>
 #endif
 
 #define sign(s) ((s) < 0 ? -1 : ((s) > 0 ? 1 : 0))
@@ -47,6 +47,10 @@
     r->phi = 0.5 * atan(2 * xy / (xx - yy)) * 57.29577951308232;   \
     r->xc = xc;                                                    \
     r->yc = yc;                                                    \
+    r->xx = xx;                                                    \
+    r->yy = yy;                                                    \
+    r->xy = xy;                                                    \
+    r->p = p;
 
 void cgn_calc_beam_u8(const uint8_t *buf, const CgnBeamCalc *c, CgnBeamResult *r) {
     cgn_calc_beam
@@ -97,6 +101,7 @@ void cgn_calc_beam_naive(const CgnBeamCalc *c, CgnBeamResult *r) {
     double s = 0;                                       \
     for (int i = 0; i < k; i++) {                       \
         s += sqr(t[i] - m);                             \
+        t[i] = 0;                                       \
     }                                                   \
     s = sqrt(s / (double)k);                            \
                                                         \
@@ -106,11 +111,15 @@ void cgn_calc_beam_naive(const CgnBeamCalc *c, CgnBeamResult *r) {
     const double th = m + b->nT * s;                    \
     b->min = 1e10;                                      \
     b->max = -1e10;                                     \
+    b->count = 0;                                       \
     for (int i = y1; i < y2; i++) {                     \
         const int offset = i*w;                         \
         for (int j = x1; j < x2; j++) {                 \
             const int k = offset + j;                   \
-            t[k] = (buf[k] > th) ? (buf[k] - m) : 0;    \
+            if (buf[k] > th) {                          \
+                b->count++;                             \
+                t[k] = buf[k] - m;                      \
+            } else t[k] = 0;                            \
             if (t[k] > b->max) b->max = t[k];           \
             else if (t[k] < b->min) b->min = t[k];      \
         }                                               \
@@ -133,6 +142,13 @@ void cgn_calc_beam_bkgnd(const CgnBeamCalc *c, CgnBeamBkgnd *b, CgnBeamResult *r
 
     r->x1 = b->ax1, r->x2 = b->ax2;
     r->y1 = b->ay1, r->y2 = b->ay2;
+    if (b->count < 10) {
+        memset(r, 0, sizeof(CgnBeamResult));
+        r->nan = 1;
+        return;
+    }
+    r->nan = 0;
+
     cgn_calc_beam_f64(b->subtracted, c, r);
 
     for (b->iters = 0; b->iters < b->max_iter; b->iters++) {

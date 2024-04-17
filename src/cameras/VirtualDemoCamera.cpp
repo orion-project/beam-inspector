@@ -100,14 +100,14 @@ public:
         yc_offset = RandomOffset(b.yc, b.yc-20, b.yc+20);
         phi_offset = RandomOffset(b.phi, b.phi-12, b.phi+12);
 
-        g.iters = 0;
+        memset(&r, 0, sizeof(CgnBeamResult));
+        memset(&g, 0, sizeof(CgnBeamBkgnd));
+
         g.max_iter = cfg.bgnd.iters;
         g.precision = cfg.bgnd.precision;
         g.corner_fraction = cfg.bgnd.corner;
         g.nT = cfg.bgnd.noise;
         g.mask_diam = cfg.bgnd.mask;
-        g.min = 0;
-        g.max = 0;
         if (cfg.roi.on && cfg.roi.isValid(c.w, c.h)) {
             g.ax1 = cfg.roi.x1;
             g.ay1 = cfg.roi.y1;
@@ -118,12 +118,8 @@ public:
             r.x2 = cfg.roi.x2;
             r.y2 = cfg.roi.y2;
         } else {
-            g.ax1 = 0;
-            g.ay1 = 0;
             g.ax2 = c.w;
             g.ay2 = c.h;
-            r.x1 = 0;
-            r.y1 = 0;
             r.x2 = c.w;
             r.y2 = c.h;
         }
