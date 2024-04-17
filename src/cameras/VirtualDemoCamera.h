@@ -15,7 +15,7 @@ class VirtualDemoCamera : public QThread, public Camera
 public:
     VirtualDemoCamera(PlotIntf *plot, TableIntf *table, QObject *parent);
 
-    QString name() const override { return "VirtualDemo"; }
+    QString name() const override { return "Demo"; }
     int width() const override;
     int height() const override;
     int bits() const override { return 8; }
