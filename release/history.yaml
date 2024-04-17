@@ -19,3 +19,9 @@ history:
       - text: Calculate ellipticity
       - text: Command for exporting plot image
       - text: Warning icon when background subtraction disabled
+
+  - version: 0.0.4
+    date: ?
+    changes:
+      - text: Option for using hardware pixel scale
+      - text: Camera selector button on the toolbar

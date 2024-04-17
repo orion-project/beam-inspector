@@ -36,6 +36,7 @@ void PlotIntf::invalidateGraph() const
 void PlotIntf::cleanResult()
 {
     memset(&_res, 0, sizeof(CgnBeamResult));
+    memset(_beamData->rawData(), 0, sizeof(double)*_w*_h);
     _min = 0;
     _max = 0;
 }

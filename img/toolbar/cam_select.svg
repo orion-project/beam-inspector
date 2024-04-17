@@ -1,0 +1,14 @@
+<svg height="24" viewBox="0 0 6.35 6.35" width="24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<linearGradient id="a" gradientUnits="userSpaceOnUse" x1="1.3" x2="5.56" y1=".66" y2="5.56">
+<stop offset="0" stop-color="#545454"/>
+<stop offset="1" stop-color="#8e8e8e"/>
+</linearGradient>
+<path d="m.88.66h4.33c.27 0 .48.22.48.48v4.06c0 .27-.22.48-.48.48h-4.33c-.27 0-.48-.22-.48-.48v-4.06c0-.27.22-.48.48-.48z" fill="#d4d4d4" stroke="url(#a)" stroke-linecap="round" stroke-linejoin="round" stroke-width=".26"/>
+<g fill-rule="evenodd">
+<ellipse cx="3.04" cy="3.18" fill="#545454" rx="2.25" ry="2.12"/>
+<ellipse cx="3.23" cy="3.31" fill="#ff2258" rx="1.8" ry="1.72"/>
+<ellipse cx="3.09" cy="3.17" fill="#ff698e" rx="1.67" ry="1.59"/>
+<ellipse cx="2.91" cy="3.1" fill="#ffadc2" rx="1.13" ry=".99"/>
+<ellipse cx="2.58" cy="2.91" fill="#fff" rx=".53" ry=".46"/>
+</g>
+</svg>

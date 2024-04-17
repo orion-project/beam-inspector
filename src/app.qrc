@@ -2,6 +2,7 @@
     <qresource prefix="/toolbar">
         <file alias="beam">../img/toolbar/beam.svg</file>
         <file alias="bug">../img/toolbar/bug.svg</file>
+        <file alias="cam_select">../img/toolbar/cam_select.svg</file>
         <file alias="check">../img/toolbar/check.svg</file>
         <file alias="delete">../img/toolbar/delete.svg</file>
         <file alias="exclame">../img/toolbar/exclame.svg</file>

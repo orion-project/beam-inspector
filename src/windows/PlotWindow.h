@@ -6,6 +6,7 @@
 class QAction;
 class QTableWidget;
 class QTableWidgetItem;
+class QToolButton;
 
 class Camera;
 class Plot;
@@ -35,14 +36,18 @@ private:
     QSharedPointer<Camera> _camera;
     QAction *_actionStart, *_actionStop, *_actionOpen, *_actionCamConfig,
         *_actionGrayscale, *_actionRainbow, *_actionBeamInfo,
-        *_actionEditRoi, *_actionUseRoi, *_actionZoomFull, *_actionZoomRoi;
-    QAction *_buttonStart, *_buttonStop;
+        *_actionEditRoi, *_actionUseRoi, *_actionZoomFull, *_actionZoomRoi,
+        *_actionCamWelcome, *_actionCamImage, *_actionCamDemo;
+    QAction *_buttonStart, *_buttonStop, *_buttonOpen;
     QTableWidget *_table;
     QTableWidgetItem *_itemRenderTime;
     TableIntf *_tableIntf;
     PlotIntf *_plotIntf;
     Ori::MruFileList *_mru;
     Ori::Widgets::StatusBar *_statusBar;
+    QMenu *_camSelectMenu;
+    QToolButton *_buttonSelectCam;
+    QString _prevImage;
 
     void createMenuBar();
     void createToolBar();
@@ -57,6 +62,9 @@ private:
     void startCapture();
     void stopCapture();
     void editCamConfig(int pageId = 0);
+    void activateCamWelcome();
+    void activateCamImage();
+    void activateCamDemo();
 
     void captureStopped();
     void dataReady();
