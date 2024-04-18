@@ -30,6 +30,9 @@ signals:
 protected:
     void run() override;
 
+private slots:
+    void camConfigChanged();
+
 private:
     QSharedPointer<BeamRenderer> _render;
 };

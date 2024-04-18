@@ -69,9 +69,17 @@ public:
     bool subtract;
     bool normalize;
     double *graph;
+    bool reconfig = false;
 
     BeamRenderer(PlotIntf *plot, TableIntf *table, VirtualDemoCamera *cam) : plot(plot), table(table), cam(cam)
     {
+        plot->initGraph(CAMERA_WIDTH, CAMERA_HEIGHT);
+        graph = plot->rawGraph();
+
+        configure();
+    }
+
+    void configure() {
         auto cfg = cam->config();
 
         b.w = CAMERA_WIDTH;
@@ -130,12 +138,10 @@ public:
         }
 
         normalize = cfg.plot.normalize;
-
-        plot->initGraph(b.w, b.h);
-        graph = plot->rawGraph();
     }
 
     void run() {
+        qDebug() << "VirtualDemoCamera: started";
         QElapsedTimer timer;
         timer.start();
         while (true) {
@@ -177,7 +183,7 @@ public:
                     if (normalize) {
                         cgn_copy_normalized_f64(g.subtracted, graph, c.w*c.h, g.min, g.max);
                     } else {
-                        memcpy(plot, g.subtracted, sizeof(double)*c.w*c.h);
+                        memcpy(graph, g.subtracted, sizeof(double)*c.w*c.h);
                     }
                 } else {
                     if (normalize) {
@@ -206,8 +212,13 @@ public:
                     << "avgCalcTime:" << qRound(avgCalcTime);
             #endif
                 if (cam->isInterruptionRequested()) {
-                    qDebug() << "VirtualDemoCamera::interrupted";
+                    qDebug() << "VirtualDemoCamera: interrupted";
                     return;
+                }
+                if (reconfig) {
+                    reconfig = false;
+                    configure();
+                    qDebug() << "VirtualDemoCamera: reconfigured";
                 }
             }
         }
@@ -218,6 +229,8 @@ VirtualDemoCamera::VirtualDemoCamera(PlotIntf *plot, TableIntf *table, QObject *
     Camera(plot, table, "VirtualDemoCamera"), QThread(parent)
 {
     _render.reset(new BeamRenderer(plot, table, this));
+
+    connect(parent, SIGNAL(camConfigChanged()), this, SLOT(camConfigChanged()));
 }
 
 int VirtualDemoCamera::width() const
@@ -238,4 +251,9 @@ void VirtualDemoCamera::capture()
 void VirtualDemoCamera::run()
 {
     _render->run();
+}
+
+void VirtualDemoCamera::camConfigChanged()
+{
+    _render->reconfig = true;
 }

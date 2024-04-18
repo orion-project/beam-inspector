@@ -58,7 +58,6 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     createStatusBar();
     createDockPanel();
     createPlot();
-    updateActions(false);
     setCentralWidget(_plot);
 
     connect(qApp->styleHints(), &QStyleHints::colorSchemeChanged, this, &PlotWindow::updateThemeColors);
@@ -113,10 +112,10 @@ void PlotWindow::createMenuBar()
     _camSelectMenu = M_(tr("Active Camera"), {_actionCamWelcome, _actionCamImage, _actionCamDemo});
 
     auto actnNew = A_(tr("New Window"), this, &PlotWindow::newWindow, ":/toolbar/new", QKeySequence::New);
-    _actionOpen = A_(tr("Open Image..."), this, &PlotWindow::openImageDlg, ":/toolbar/open_img", QKeySequence::Open);
+    _actionOpenImg = A_(tr("Open Image..."), this, &PlotWindow::openImageDlg, ":/toolbar/open_img", QKeySequence::Open);
     auto actnExport = A_(tr("Export Image..."), this, [this]{ _plot->exportImageDlg(); }, ":/toolbar/export_img");
     auto actnClose = A_(tr("Exit"), this, &PlotWindow::close);
-    auto menuFile = M_(tr("File"), {actnNew, 0, actnExport, _actionOpen, actnClose});
+    auto menuFile = M_(tr("File"), {actnNew, 0, actnExport, _actionOpenImg, actnClose});
     new Ori::Widgets::MruMenuPart(_mru, menuFile, actnClose, this);
     menuBar()->addMenu(menuFile);
 
@@ -136,15 +135,13 @@ void PlotWindow::createMenuBar()
         _actionZoomFull, _actionZoomRoi,
     }));
 
-    _actionStart = A_(tr("Start Capture"), this, &PlotWindow::startCapture, ":/toolbar/start", Qt::Key_F9);
-    _actionStop = A_(tr("Stop Capture"), this, &PlotWindow::stopCapture, ":/toolbar/stop", Qt::Key_F9);
+    _actionMeasure = A_(tr("Start Measurements"), this, &PlotWindow::toggleMeasure, ":/toolbar/start", Qt::Key_F9);
     _actionEditRoi = A_(tr("Edit ROI"), this, [this]{ _plot->startEditRoi(); }, ":/toolbar/roi");
     _actionUseRoi = A_(tr("Use ROI"), this, &PlotWindow::toggleRoi, ":/toolbar/roi_rect");
     _actionUseRoi->setCheckable(true);
     _actionCamConfig = A_(tr("Settings..."), this, [this]{ PlotWindow::editCamConfig(-1); }, ":/toolbar/settings");
-    //auto actnSelectBgColor = A_(tr("Select Background..."), this, [this]{ _plot->selectBackColor(); });
-    menuBar()->addMenu(M_(tr("Camera"), {_actionStart, _actionStop, 0,
-        //actnSelectBgColor, 0,
+    menuBar()->addMenu(M_(tr("Camera"), {
+        _actionMeasure, 0,
         _actionEditRoi, _actionUseRoi, 0,
         _actionCamConfig
     }));
@@ -176,9 +173,8 @@ void PlotWindow::createToolBar()
     tb->addAction(_actionEditRoi);
     tb->addAction(_actionUseRoi);
     tb->addSeparator();
-    _buttonStart = tb->addWidget(Ori::Gui::textToolButton(_actionStart));
-    _buttonStop = tb->addWidget(Ori::Gui::textToolButton(_actionStop));
-    _buttonOpen = tb->addWidget(Ori::Gui::textToolButton(_actionOpen));
+    _buttonMeasure = tb->addWidget(Ori::Gui::textToolButton(_actionMeasure));
+    _buttonOpenImg = tb->addWidget(Ori::Gui::textToolButton(_actionOpenImg));
     tb->addSeparator();
     tb->addAction(_actionZoomFull);
     tb->addAction(_actionZoomRoi);
@@ -315,11 +311,9 @@ void PlotWindow::showCamConfig(bool replot)
 {
     bool isImage = dynamic_cast<StillImageCamera*>(_camera.get());
     auto demoCam = dynamic_cast<VirtualDemoCamera*>(_camera.get());
-    _buttonOpen->setVisible(isImage);
-    _actionStart->setVisible(demoCam && !demoCam->isRunning());
-    _actionStop->setVisible(demoCam && demoCam->isRunning());
-    _buttonStart->setVisible(demoCam && !demoCam->isRunning());
-    _buttonStop->setVisible(demoCam && demoCam->isRunning());
+    _buttonOpenImg->setVisible(isImage);
+    _actionMeasure->setVisible(demoCam);
+    _buttonMeasure->setVisible(demoCam);
     _buttonSelectCam->setText("  " + (isImage ? _actionCamImage->text() : _camera->name()));
 
     setWindowTitle(qApp->applicationName() +  " [" + _camera->name() + ']');
@@ -367,37 +361,33 @@ void PlotWindow::updateThemeColors()
     });
 }
 
-void PlotWindow::updateActions(bool started)
+void PlotWindow::updateActions()
 {
-    _mru->setDisabled(started);
-    _actionCamConfig->setDisabled(started);
-    _actionEditRoi->setDisabled(started);
-    _actionUseRoi->setDisabled(started);
-    _actionOpen->setDisabled(started);
-    _actionStart->setDisabled(started);
-    _actionStart->setVisible(!started);
-    _actionStop->setDisabled(!started);
-    _actionStop->setVisible(started);
-    _buttonStart->setVisible(!started);
-    _buttonStop->setVisible(started);
+    _mru->setDisabled(_isMeasuring);
+    _buttonSelectCam->setDisabled(_isMeasuring);
+    _actionCamConfig->setDisabled(_isMeasuring);
+    _actionEditRoi->setDisabled(_isMeasuring);
+    _actionUseRoi->setDisabled(_isMeasuring);
+    _actionOpenImg->setDisabled(_isMeasuring);
+    _actionMeasure->setText(_isMeasuring ? tr("Stop Measurements") : tr("Start Measurements"));
+    _actionMeasure->setIcon(QIcon(_isMeasuring ? ":/toolbar/stop" : ":/toolbar/start"));
 }
 
-void PlotWindow::startCapture()
+void PlotWindow::toggleMeasure()
 {
-    activateCamDemo();
-    _camera->capture();
-    updateActions(true);
+    _isMeasuring = !_isMeasuring;
+    updateActions();
 }
 
 void PlotWindow::stopCapture()
 {
+    if (!_camera) return;
     auto thread = dynamic_cast<QThread*>(_camera.get());
     if (!thread) {
-        qWarning() << "Current camera is not thread based";
+        qWarning() << "Current camera is not thread based, nothing to stop";
         return;
     }
     qDebug() << "Stopping camera thread...";
-    _actionStop->setDisabled(true);
     thread->requestInterruption();
     if (!thread->wait(5000)) {
         qDebug() << "Can not stop camera thread in timeout";
@@ -406,7 +396,6 @@ void PlotWindow::stopCapture()
 
 void PlotWindow::captureStopped()
 {
-    updateActions(false);
     showFps(0);
 }
 
@@ -448,7 +437,8 @@ void PlotWindow::processImage()
     _itemRenderTime->setText(tr(" Load time "));
     _mru->append(cam->fileName());
     _camera->capture();
-    showCamConfig(false); // _after_ run(), when image is already loaded
+    // do showCamConfig() after capture(), when image is already loaded and its size gets known
+    showCamConfig(false);
     _plot->zoomAuto(false);
     dataReady();
     showFps(0);
@@ -461,21 +451,25 @@ void PlotWindow::editCamConfig(int pageId)
         return;
     configChanged();
     if (_camera->pixelScale() != prevScale) {
-        // Image will be re-processed by StillImageCamera
-        // For other types need to re-show cached results
-        if (!dynamic_cast<StillImageCamera*>(_camera.get())) {
+        if (dynamic_cast<VirtualDemoCamera*>(_camera.get())) {
+            _plot->zoomAuto(false);
+        }
+        else if (dynamic_cast<WelcomeCamera*>(_camera.get())) {
             _plot->zoomAuto(false);
             dataReady();
         }
+        // StillImageCamera will reprocess image, nothing to do
     }
 }
 
 void PlotWindow::configChanged()
 {
-    if (dynamic_cast<StillImageCamera*>(_camera.get()))
+    if (dynamic_cast<StillImageCamera*>(_camera.get())) {
         processImage();
-    else
-        showCamConfig(true);
+        return;
+    }
+    emit camConfigChanged();
+    showCamConfig(true);
 }
 
 void PlotWindow::roiEdited()
@@ -495,6 +489,8 @@ void PlotWindow::toggleRoi()
 
 void PlotWindow::activateCamWelcome()
 {
+    stopCapture();
+
     auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get());
     if (imgCam) _prevImage = imgCam->fileName();
 
@@ -509,6 +505,8 @@ void PlotWindow::activateCamWelcome()
 
 void PlotWindow::activateCamImage()
 {
+    stopCapture();
+
     if (_prevImage.isEmpty())
         openImageDlg();
     else openImage(_prevImage);
@@ -516,23 +514,21 @@ void PlotWindow::activateCamImage()
 
 void PlotWindow::activateCamDemo()
 {
+    if (dynamic_cast<VirtualDemoCamera*>(_camera.get())) return;
+
     auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get());
     if (imgCam) _prevImage = imgCam->fileName();
 
     _plot->stopEditRoi(false);
     _plotIntf->cleanResult();
-    _plotIntf->showResult();
-    _plotIntf->invalidateGraph();
     _tableIntf->cleanResult();
-    _tableIntf->showResult();
     _itemRenderTime->setText(tr(" Render time "));
-    _statusBar->setVisible(STATUS_NO_DATA, false);
     auto cam = new VirtualDemoCamera(_plotIntf, _tableIntf, this);
     connect(cam, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualDemoCamera::stats, this, &PlotWindow::showFps);
     connect(cam, &VirtualDemoCamera::finished, this, &PlotWindow::captureStopped);
     _camera.reset((Camera*)cam);
     showCamConfig(false);
-    _plot->zoomAuto(true);
-    showFps(0);
+    _plot->zoomAuto(false);
+    _camera->capture();
 }
