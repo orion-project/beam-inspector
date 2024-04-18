@@ -27,6 +27,9 @@ public:
     PlotWindow(QWidget *parent = nullptr);
     ~PlotWindow();
 
+signals:
+    void camConfigChanged();
+
 protected:
     void closeEvent(class QCloseEvent*) override;
     void changeEvent(QEvent* e) override;
@@ -34,11 +37,11 @@ protected:
 private:
     Plot *_plot;
     QSharedPointer<Camera> _camera;
-    QAction *_actionStart, *_actionStop, *_actionOpen, *_actionCamConfig,
+    QAction *_actionMeasure, *_actionOpenImg, *_actionCamConfig,
         *_actionGrayscale, *_actionRainbow, *_actionBeamInfo,
         *_actionEditRoi, *_actionUseRoi, *_actionZoomFull, *_actionZoomRoi,
         *_actionCamWelcome, *_actionCamImage, *_actionCamDemo;
-    QAction *_buttonStart, *_buttonStop, *_buttonOpen;
+    QAction *_buttonMeasure, *_buttonOpenImg;
     QTableWidget *_table;
     QTableWidgetItem *_itemRenderTime;
     TableIntf *_tableIntf;
@@ -48,6 +51,7 @@ private:
     QMenu *_camSelectMenu;
     QToolButton *_buttonSelectCam;
     QString _prevImage;
+    bool _isMeasuring = false;
 
     void createMenuBar();
     void createToolBar();
@@ -59,7 +63,7 @@ private:
 
     void newWindow();
     void openImageDlg();
-    void startCapture();
+    void toggleMeasure();
     void stopCapture();
     void editCamConfig(int pageId = -1);
     void activateCamWelcome();
@@ -72,7 +76,7 @@ private:
     void configChanged();
 
     void openImage(const QString& fileName);
-    void updateActions(bool started);
+    void updateActions();
     void updateThemeColors();
     void setThemeColors();
     void showFps(int fps);
