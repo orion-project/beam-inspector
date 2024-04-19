@@ -41,6 +41,7 @@ set(PROJECT_SOURCES
     src/app/HelpSystem.cpp
     src/cameras/Camera.cpp
     src/cameras/CameraTypes.cpp
+    src/cameras/MeasureSaver.cpp
     src/cameras/StillImageCamera.cpp
     src/cameras/VirtualDemoCamera.cpp
     src/cameras/WelcomeCamera.cpp

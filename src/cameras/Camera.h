@@ -20,7 +20,7 @@ public:
     virtual int bits() const = 0;
     virtual PixelScale sensorScale() const { return {}; }
 
-    virtual void capture() = 0;
+    virtual void startCapture() = 0;
 
     const CameraConfig& config() const { return _config; };
     enum ConfigPages { cfgPlot, cfgBgnd, cfgRoi };

@@ -19,7 +19,7 @@ public:
 
     QString fileName() const { return _fileName; }
 
-    void capture() override;
+    void startCapture() override;
 
 private:
     QString _fileName;

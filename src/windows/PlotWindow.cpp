@@ -1,6 +1,7 @@
 #include "PlotWindow.h"
 
 #include "app/HelpSystem.h"
+#include "cameras/MeasureSaver.h"
 #include "cameras/StillImageCamera.h"
 #include "cameras/VirtualDemoCamera.h"
 #include "cameras/WelcomeCamera.h"
@@ -8,6 +9,7 @@
 #include "widgets/PlotIntf.h"
 #include "widgets/TableIntf.h"
 
+#include "helpers/OriDialogs.h"
 #include "helpers/OriWidgets.h"
 #include "tools/OriMruList.h"
 #include "tools/OriSettings.h"
@@ -363,19 +365,40 @@ void PlotWindow::updateThemeColors()
 
 void PlotWindow::updateActions()
 {
-    _mru->setDisabled(_isMeasuring);
-    _buttonSelectCam->setDisabled(_isMeasuring);
-    _actionCamConfig->setDisabled(_isMeasuring);
-    _actionEditRoi->setDisabled(_isMeasuring);
-    _actionUseRoi->setDisabled(_isMeasuring);
-    _actionOpenImg->setDisabled(_isMeasuring);
-    _actionMeasure->setText(_isMeasuring ? tr("Stop Measurements") : tr("Start Measurements"));
-    _actionMeasure->setIcon(QIcon(_isMeasuring ? ":/toolbar/stop" : ":/toolbar/start"));
+    bool started = (bool)_saver;
+    _mru->setDisabled(started);
+    _buttonSelectCam->setDisabled(started);
+    _actionCamConfig->setDisabled(started);
+    _actionEditRoi->setDisabled(started);
+    _actionUseRoi->setDisabled(started);
+    _actionOpenImg->setDisabled(started);
+    _actionMeasure->setText(started ? tr("Stop Measurements") : tr("Start Measurements"));
+    _actionMeasure->setIcon(QIcon(started ? ":/toolbar/stop" : ":/toolbar/start"));
 }
 
 void PlotWindow::toggleMeasure()
 {
-    _isMeasuring = !_isMeasuring;
+    auto cam = dynamic_cast<VirtualDemoCamera*>(_camera.get());
+    if (!cam) return;
+
+    if (_saver)
+    {
+        _saver.reset(nullptr);
+        updateActions();
+        return;
+    }
+
+    auto saver = new MeasureSaver;
+    auto res = saver->start();
+    if (!res.isEmpty()) {
+        Ori::Dlg::error(tr("Failed to start measuments:\n%1").arg(res));
+        return;
+    }
+
+    connect(saver, &MeasureSaver::finished, this, &PlotWindow::toggleMeasure);
+
+    _saver.reset(saver);
+    cam->startMeasure(_saver.get());
     updateActions();
 }
 
@@ -387,10 +410,9 @@ void PlotWindow::stopCapture()
         qWarning() << "Current camera is not thread based, nothing to stop";
         return;
     }
-    qDebug() << "Stopping camera thread...";
     thread->requestInterruption();
     if (!thread->wait(5000)) {
-        qDebug() << "Can not stop camera thread in timeout";
+        qCritical() << "Can not stop camera thread in timeout";
     }
 }
 
@@ -436,7 +458,7 @@ void PlotWindow::processImage()
     _tableIntf->cleanResult();
     _itemRenderTime->setText(tr(" Load time "));
     _mru->append(cam->fileName());
-    _camera->capture();
+    _camera->startCapture();
     // do showCamConfig() after capture(), when image is already loaded and its size gets known
     showCamConfig(false);
     _plot->zoomAuto(false);
@@ -498,7 +520,7 @@ void PlotWindow::activateCamWelcome()
     _camera.reset((Camera*)new WelcomeCamera(_plotIntf, _tableIntf));
     showCamConfig(false);
     showFps(0);
-    _camera->capture();
+    _camera->startCapture();
     _plot->zoomAuto(false);
     dataReady();
 }
@@ -530,5 +552,5 @@ void PlotWindow::activateCamDemo()
     _camera.reset((Camera*)cam);
     showCamConfig(false);
     _plot->zoomAuto(false);
-    _camera->capture();
+    _camera->startCapture();
 }

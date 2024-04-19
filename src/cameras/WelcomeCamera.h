@@ -13,7 +13,7 @@ public:
     int height() const override { return 80; }
     int bits() const override { return 8; }
 
-    void capture() override;
+    void startCapture() override;
 };
 
 #endif // WELCOME_CAMERA_H
