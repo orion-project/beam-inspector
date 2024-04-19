@@ -12,7 +12,7 @@ WelcomeCamera::WelcomeCamera(PlotIntf *plot, TableIntf *table) : Camera(plot, ta
 {
 }
 
-void WelcomeCamera::capture()
+void WelcomeCamera::startCapture()
 {
     QElapsedTimer timer;
     timer.start();

@@ -62,7 +62,7 @@ int StillImageCamera::bits() const
     return _image.depth();
 }
 
-void StillImageCamera::capture()
+void StillImageCamera::startCapture()
 {
     QElapsedTimer timer;
 

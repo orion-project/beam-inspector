@@ -9,6 +9,7 @@ class QTableWidgetItem;
 class QToolButton;
 
 class Camera;
+class MeasureSaver;
 class Plot;
 class PlotIntf;
 class TableIntf;
@@ -37,6 +38,7 @@ protected:
 private:
     Plot *_plot;
     QSharedPointer<Camera> _camera;
+    QSharedPointer<MeasureSaver> _saver;
     QAction *_actionMeasure, *_actionOpenImg, *_actionCamConfig,
         *_actionGrayscale, *_actionRainbow, *_actionBeamInfo,
         *_actionEditRoi, *_actionUseRoi, *_actionZoomFull, *_actionZoomRoi,
@@ -51,7 +53,6 @@ private:
     QMenu *_camSelectMenu;
     QToolButton *_buttonSelectCam;
     QString _prevImage;
-    bool _isMeasuring = false;
 
     void createMenuBar();
     void createToolBar();

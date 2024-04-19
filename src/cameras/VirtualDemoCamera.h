@@ -3,8 +3,9 @@
 
 #include "cameras/Camera.h"
 
-#include <QThread>
+#include <QPointer>
 #include <QSharedPointer>
+#include <QThread>
 
 class BeamRenderer;
 
@@ -21,7 +22,8 @@ public:
     int bits() const override { return 8; }
     PixelScale sensorScale() const override { return { .on=true, .factor=2.5, .unit="um" }; }
 
-    void capture() override;
+    void startCapture() override;
+    void startMeasure(QObject *saver);
 
 signals:
     void ready();
