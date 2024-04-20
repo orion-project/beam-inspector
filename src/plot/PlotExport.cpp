@@ -59,7 +59,7 @@ class ExportImageDlg
     Q_DECLARE_TR_FUNCTIONS(ExportImageDlg)
 
 public:
-    ExportImageDlg(QCustomPlot* plot, ExportImageProps& props) : plot(plot) {
+    ExportImageDlg(QCustomPlot* plot, const ExportImageProps& props) : plot(plot) {
         edFile = new QLineEdit;
         edFile->setText(props.fileName);
         edFile->connect(edFile, &QLineEdit::editingFinished, edFile, [this]{ updateFileStatus(); });
@@ -147,7 +147,7 @@ public:
         };
         const QStringList filterExts = { "png", "jpg" };
         Q_ASSERT(filters.size() == filterExts.size());
-        QFileDialog dlg(qApp->activeModalWidget(), tr("Select a file name"), selectedDir);
+        QFileDialog dlg(qApp->activeModalWidget(), tr("Select Target File"), selectedDir);
         dlg.setNameFilters(filters);
         QString selectedFile = edFile->text().trimmed();
         if (!selectedFile.isEmpty()) {

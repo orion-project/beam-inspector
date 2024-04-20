@@ -47,6 +47,7 @@ set(PROJECT_SOURCES
     src/cameras/WelcomeCamera.cpp
     src/plot/BeamGraph.cpp
     src/plot/PlotExport.cpp
+    src/widgets/FileSelector.cpp
     src/widgets/Plot.cpp
     src/widgets/PlotIntf.cpp
     src/widgets/TableIntf.cpp

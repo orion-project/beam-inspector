@@ -5,6 +5,8 @@
 #include <QEvent>
 #include <QString>
 
+class QSettings;
+
 struct RoiRect
 {
     bool on = false;
@@ -59,6 +61,9 @@ struct CameraConfig
     PlotOptions plot;
     Background bgnd;
     RoiRect roi;
+
+    void load(QSettings *s);
+    void save(QSettings *s, bool min=false) const;
 };
 
 struct Measurement
