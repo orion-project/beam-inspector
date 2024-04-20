@@ -19,60 +19,18 @@ QString Camera::resolutionStr() const
     return QStringLiteral("%1 × %2 × %3bit").arg(width()).arg(height()).arg(bits());
 }
 
-#define LOAD(option, type, def)\
-    _config.option = s.settings()->value(QStringLiteral(#option), def).to ## type()
-
-#define SAVE(option)\
-    s.settings()->setValue(QStringLiteral(#option), _config.option)
-
 void Camera::loadConfig()
 {
     Ori::Settings s;
     s.beginGroup(_configGroup);
-
-    LOAD(plot.normalize, Bool, true);
-    LOAD(plot.rescale, Bool, false);
-    LOAD(plot.customScale.on, Bool, true);
-    LOAD(plot.customScale.factor, Double, 5);
-    LOAD(plot.customScale.unit, String, "um");
-
-    LOAD(bgnd.on, Bool, true);
-    LOAD(bgnd.iters, Int, 0);
-    LOAD(bgnd.precision, Double, 0.05);
-    LOAD(bgnd.corner, Double, 0.035);
-    LOAD(bgnd.noise, Double, 3);
-    LOAD(bgnd.mask, Double, 3);
-
-    LOAD(roi.on, Bool, false);
-    LOAD(roi.x1, Int, 0);
-    LOAD(roi.y1, Int, 0);
-    LOAD(roi.x2, Int, 0);
-    LOAD(roi.y2, Int, 0);
+    _config.load(s.settings());
 }
 
 void Camera::saveConfig()
 {
     Ori::Settings s;
     s.beginGroup(_configGroup);
-
-    SAVE(plot.normalize);
-    SAVE(plot.rescale);
-    SAVE(plot.customScale.on);
-    SAVE(plot.customScale.factor);
-    SAVE(plot.customScale.unit);
-
-    SAVE(bgnd.on);
-    SAVE(bgnd.iters);
-    SAVE(bgnd.precision);
-    SAVE(bgnd.corner);
-    SAVE(bgnd.noise);
-    SAVE(bgnd.mask);
-
-    SAVE(roi.on);
-    SAVE(roi.x1);
-    SAVE(roi.y1);
-    SAVE(roi.x2);
-    SAVE(roi.y2);
+    _config.save(s.settings());
 }
 
 bool Camera::editConfig(int page)

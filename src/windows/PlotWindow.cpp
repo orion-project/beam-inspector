@@ -312,10 +312,10 @@ void PlotWindow::showFps(int fps)
 void PlotWindow::showCamConfig(bool replot)
 {
     bool isImage = dynamic_cast<StillImageCamera*>(_camera.get());
-    auto demoCam = dynamic_cast<VirtualDemoCamera*>(_camera.get());
+    bool isDemo = dynamic_cast<VirtualDemoCamera*>(_camera.get());
     _buttonOpenImg->setVisible(isImage);
-    _actionMeasure->setVisible(demoCam);
-    _buttonMeasure->setVisible(demoCam);
+    _actionMeasure->setVisible(isDemo);
+    _buttonMeasure->setVisible(isDemo);
     _buttonSelectCam->setText("  " + (isImage ? _actionCamImage->text() : _camera->name()));
 
     setWindowTitle(qApp->applicationName() +  " [" + _camera->name() + ']');
@@ -388,15 +388,16 @@ void PlotWindow::toggleMeasure()
         return;
     }
 
-    auto saver = new MeasureSaver;
-    auto res = saver->start();
+    auto cfg = MeasureSaver::configure();
+    if (!cfg)
+        return;
+    auto saver = new MeasureSaver();
+    auto res = saver->start(*cfg, cam);
     if (!res.isEmpty()) {
         Ori::Dlg::error(tr("Failed to start measuments:\n%1").arg(res));
         return;
     }
-
     connect(saver, &MeasureSaver::finished, this, &PlotWindow::toggleMeasure);
-
     _saver.reset(saver);
     cam->startMeasure(_saver.get());
     updateActions();

@@ -1,5 +1,64 @@
 #include "CameraTypes.h"
 
+#include <QSettings>
+
+//------------------------------------------------------------------------------
+//                               CameraConfig
+//------------------------------------------------------------------------------
+
+#define LOAD(option, type, def) option = s->value(QStringLiteral(#option), def).to ## type()
+#define SAVE(option) s->setValue(QStringLiteral(#option), option)
+
+void CameraConfig::load(QSettings *s)
+{
+    LOAD(plot.normalize, Bool, true);
+    LOAD(plot.rescale, Bool, false);
+    LOAD(plot.customScale.on, Bool, true);
+    LOAD(plot.customScale.factor, Double, 5);
+    LOAD(plot.customScale.unit, String, "um");
+
+    LOAD(bgnd.on, Bool, true);
+    LOAD(bgnd.iters, Int, 0);
+    LOAD(bgnd.precision, Double, 0.05);
+    LOAD(bgnd.corner, Double, 0.035);
+    LOAD(bgnd.noise, Double, 3);
+    LOAD(bgnd.mask, Double, 3);
+
+    LOAD(roi.on, Bool, false);
+    LOAD(roi.x1, Int, 0);
+    LOAD(roi.y1, Int, 0);
+    LOAD(roi.x2, Int, 0);
+    LOAD(roi.y2, Int, 0);
+}
+
+void CameraConfig::save(QSettings *s, bool min) const
+{
+    SAVE(plot.normalize);
+    SAVE(plot.rescale);
+    SAVE(plot.customScale.on);
+    if (!min or plot.customScale.on) {
+        SAVE(plot.customScale.factor);
+        SAVE(plot.customScale.unit);
+    }
+
+    SAVE(bgnd.on);
+    if (!min or bgnd.on) {
+        SAVE(bgnd.iters);
+        SAVE(bgnd.precision);
+        SAVE(bgnd.corner);
+        SAVE(bgnd.noise);
+        SAVE(bgnd.mask);
+    }
+
+    SAVE(roi.on);
+    if (!min or roi.on) {
+        SAVE(roi.x1);
+        SAVE(roi.y1);
+        SAVE(roi.x2);
+        SAVE(roi.y2);
+    }
+}
+
 //------------------------------------------------------------------------------
 //                               PixelScale
 //------------------------------------------------------------------------------
@@ -26,7 +85,7 @@ bool PixelScale::operator ==(const PixelScale& s) const {
 }
 
 //------------------------------------------------------------------------------
-//                               SoftAperture
+//                               RoiRect
 //------------------------------------------------------------------------------
 
 bool RoiRect::isValid(int w, int h) const
