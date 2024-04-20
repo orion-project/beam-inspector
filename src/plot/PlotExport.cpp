@@ -1,5 +1,7 @@
 #include "PlotExport.h"
 
+#include "widgets/FileSelector.h"
+
 #include "helpers/OriDialogs.h"
 #include "helpers/OriLayouts.h"
 #include "helpers/OriWidgets.h"
@@ -60,14 +62,12 @@ class ExportImageDlg
 
 public:
     ExportImageDlg(QCustomPlot* plot, const ExportImageProps& props) : plot(plot) {
-        edFile = new QLineEdit;
-        edFile->setText(props.fileName);
-        edFile->connect(edFile, &QLineEdit::editingFinished, edFile, [this]{ updateFileStatus(); });
-
-        labFileStatus = new QLabel;
-
-        auto butSelectFile = new QPushButton(tr("Select..."));
-        butSelectFile->connect(butSelectFile, &QPushButton::clicked, butSelectFile, [this]{ selectTargetFile(); });
+        fileSelector = new FileSelector;
+        fileSelector->setFileName(props.fileName);
+        fileSelector->setFilters({
+            { tr("PNG Images (*.png)"), "png" },
+            { tr("JPG Images (*.jpg *.jpeg)"), "jpg" }
+        });
 
         seWidth = Ori::Gui::spinBox(100, 10000, props.width > 0 ? props.width : plot->width());
         seHeight = Ori::Gui::spinBox(100, 10000, props.height > 0 ? props.height : plot->height());
@@ -95,13 +95,8 @@ public:
         auto butResetSize = new QPushButton("  " +  tr("Set size as on screen") + "  ");
         butResetSize->connect(butResetSize, &QPushButton::clicked, butResetSize, [this]{ resetImageSize(); });
 
-        updateFileStatus();
-
         content = content = LayoutV({
-            LayoutV({
-                edFile,
-                LayoutH({labFileStatus, SpaceH(2), Stretch(), butSelectFile}),
-            }).makeGroupBox(tr("Target file")),
+            fileSelector,
             LayoutV({
                 LayoutH({
                     sizeLayout,
@@ -116,64 +111,6 @@ public:
                 })
             }).makeGroupBox(tr("Image size")),
         }).setMargin(0).makeWidgetAuto();
-    }
-
-    void updateFileStatus() {
-        QString fn = edFile->text().trimmed();
-        if (fn.isEmpty()) {
-            labFileStatus->setText(tr("File not selected"));
-            return;
-        }
-        QFileInfo fi(fn);
-        edFile->setText(fi.absoluteFilePath());
-        if (fi.exists()) {
-            labFileStatus->setText("<font color=orange>" + tr("File exists, will be overwritten") + "</font>");
-            selectedDir = fi.dir().absolutePath();
-        } else {
-            auto dir = fi.dir();
-            if (dir.exists()) {
-                selectedDir = dir.absolutePath();
-                labFileStatus->setText("<font color=green>" + tr("File not found, will be created") + "</font>");
-            }
-            else
-                labFileStatus->setText("<font color=red>" + tr("Target directory does not exist") + "</font>");
-        }
-    }
-
-    bool selectTargetFile() {
-        const QStringList filters = {
-            tr("PNG Images (*.png)"),
-            tr("JPG Images (*.jpg *.jpeg)"),
-        };
-        const QStringList filterExts = { "png", "jpg" };
-        Q_ASSERT(filters.size() == filterExts.size());
-        QFileDialog dlg(qApp->activeModalWidget(), tr("Select Target File"), selectedDir);
-        dlg.setNameFilters(filters);
-        QString selectedFile = edFile->text().trimmed();
-        if (!selectedFile.isEmpty()) {
-            dlg.selectFile(selectedFile);
-            QString ext = QFileInfo(selectedFile).suffix().toLower();
-            for (const auto& f : filters) {
-                if (f.contains(ext)) {
-                    dlg.selectNameFilter(f);
-                    break;
-                }
-            }
-        }
-        if (!dlg.exec())
-            return false;
-        selectedFile = dlg.selectedFiles().at(0);
-        if (QFileInfo(selectedFile).suffix().isEmpty()) {
-            QString selectedFilter = dlg.selectedNameFilter();
-            for (int i = 0; i < filters.size(); i++)
-                if (selectedFilter == filters.at(i)) {
-                    selectedFile += "." + filterExts.at(i);
-                    break;
-                }
-        }
-        edFile->setText(selectedFile);
-        updateFileStatus();
-        return true;
     }
 
     void resetImageSize() {
@@ -204,7 +141,10 @@ public:
     bool exec() {
         return Ori::Dlg::Dialog(content)
             .withVerification([this]{
-                if (!QFileInfo(edFile->text()).dir().exists())
+                auto fn = fileSelector->fileName();
+                if (fn.isEmpty())
+                    return tr("Target file not selected");
+                if (!QFileInfo(fn).dir().exists())
                     return tr("Target directory does not exist");
                 return QString();
             })
@@ -215,7 +155,7 @@ public:
     }
 
     void fillProps(ExportImageProps& props) {
-        props.fileName = edFile->text().trimmed();
+        props.fileName = fileSelector->fileName();
         props.width = seWidth->value();
         props.height = seHeight->value();
         props.quality = seQuality->value();
@@ -224,15 +164,13 @@ public:
     }
 
     QCustomPlot *plot;
-    QLineEdit *edFile;
-    QLabel *labFileStatus;
+    FileSelector *fileSelector;
     QSpinBox *seWidth, *seHeight, *seQuality;
     QCheckBox *cbProportional;
     Ori::Widgets::ValueEdit *edScale;
     QSharedPointer<QWidget> content;
     double aspect = 1;
     bool skipSizeChange = false;
-    QString selectedDir;
 };
 
 QString exportImageDlg(QCustomPlot* plot, std::function<void()> prepare, std::function<void()> unprepare)
@@ -242,12 +180,6 @@ QString exportImageDlg(QCustomPlot* plot, std::function<void()> prepare, std::fu
     if (!dlg.exec())
         return {};
     dlg.fillProps(props);
-    if (props.fileName.isEmpty())
-    {
-        if (!dlg.selectTargetFile())
-            return {};
-        dlg.fillProps(props);
-    }
     props.save();
     prepare();
     bool ok = plot->saveRastered(props.fileName, props.width, props.height, props.scale, nullptr, props.quality);
