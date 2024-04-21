@@ -68,7 +68,6 @@ struct CameraConfig
 
 struct Measurement
 {
-    int idx;
     qint64 time;
     bool nan;
     double xc;
@@ -76,6 +75,7 @@ struct Measurement
     double dx;
     double dy;
     double phi;
+    inline double eps() const { return qMin(dx, dy) / qMax(dx, dy); }
 };
 
 class MeasureEvent : public QEvent

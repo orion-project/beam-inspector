@@ -397,7 +397,14 @@ void PlotWindow::toggleMeasure()
         Ori::Dlg::error(tr("Failed to start measuments:\n%1").arg(res));
         return;
     }
-    connect(saver, &MeasureSaver::finished, this, &PlotWindow::toggleMeasure);
+    connect(saver, &MeasureSaver::finished, this, [this]{
+        toggleMeasure();
+        Ori::Dlg::info(tr("<b>Measurements finished</b>"));
+    });
+    connect(saver, &MeasureSaver::interrupted, this, [this](const QString &error){
+        toggleMeasure();
+        Ori::Dlg::error(tr("<b>Measurements interrupted</b><p>") + QString(error).replace("\n", "<br>"));
+    });
     _saver.reset(saver);
     cam->startMeasure(_saver.get());
     updateActions();
