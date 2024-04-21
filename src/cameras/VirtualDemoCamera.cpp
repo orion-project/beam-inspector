@@ -16,7 +16,7 @@
 #define CAMERA_FRAME_DELAY_MS 30
 #define PLOT_FRAME_DELAY_MS 200
 #define STAT_DELAY_MS 1000
-#define MEASURE_BUF_SIZE 10
+#define MEASURE_BUF_SIZE 1000
 #define MEASURE_BUF_COUNT 2
 //#define LOG_FRAME_TIME
 
@@ -80,7 +80,6 @@ public:
     Measurement *results;
     int resultIdx = 0;
     int resultBufIdx = 0;
-    int resultFrameIdx = 0;
     QDateTime start;
 
     BeamRenderer(PlotIntf *plot, TableIntf *table, VirtualDemoCamera *cam) : plot(plot), table(table), cam(cam)
@@ -197,7 +196,6 @@ public:
             avgCalcTime = avgCalcTime*0.9 + (timer.elapsed() - tm)*0.1;
 
             if (saver) {
-                results->idx = ++resultFrameIdx;
                 results->time = timer.elapsed();
                 results->nan = r.nan;
                 results->dx = r.dx;
@@ -294,7 +292,6 @@ void VirtualDemoCamera::startMeasure(QObject *saver)
 {
     _render->resultIdx = 0;
     _render->resultBufIdx = 0;
-    _render->resultFrameIdx = 0;
     _render->results = _render->resultBufs[0];
     _render->saver = saver;
 }

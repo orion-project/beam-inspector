@@ -22,6 +22,10 @@
 #include <QStyleHints>
 #include <QThread>
 
+#define SEP ','
+//#define SEP '\t'
+//#define SAVE_CHECK_FILE
+
 using namespace Ori::Layouts;
 
 static int parseDuration(const QString &str)
@@ -123,7 +127,7 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     _scale = scale.on ? scale.factor : 1;
 
     QString cfgFileName = _config.fileName;
-    cfgFileName.replace(QFileInfo(_config.fileName).suffix(), "cfg");
+    cfgFileName.replace(QFileInfo(_config.fileName).suffix(), "ini");
     QFile cfgFile(cfgFileName);
     if (!cfgFile.open(QIODeviceBase::WriteOnly | QIODeviceBase::Truncate))
         return tr("Failed to create configuration file:\n%1").arg(cfgFile.errorString());
@@ -156,7 +160,22 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     if (!csvFile.open(QIODeviceBase::WriteOnly | QIODeviceBase::Truncate))
         return tr("Failed to create resuls file:\n%1").arg(csvFile.errorString());
     QTextStream out(&csvFile);
-    out << "Index,Timestamp,Center X,Center Y,Width X,Width Y,Azimuth,Ellipticity\n";
+    out << "Index" << SEP
+        << "Timestamp" << SEP
+        << "Center X" << SEP
+        << "Center Y" << SEP
+        << "Width X" << SEP
+        << "Width Y" << SEP
+        << "Azimuth" << SEP
+        << "Ellipticity" << '\n';
+    csvFile.close();
+
+#ifdef SAVE_CHECK_FILE
+    QFile checkFile(_config.fileName + ".check");
+    if (!checkFile.open(QIODeviceBase::WriteOnly | QIODeviceBase::Truncate)) {
+        qCritical() << "Failed to open check file" << checkFile.errorString();
+    }
+#endif
 
     _thread.reset(new QThread);
     moveToThread(_thread.get());
@@ -165,8 +184,30 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
 
     _startTime = QDateTime::currentSecsSinceEpoch();
 
+    _interval_beg = -1;
+    _interval_len = _config.intervalSecs * 1000;
+    _interval_idx = 0;
+    _avg_xc = 0, _avg_yc = 0;
+    _avg_dx = 0, _avg_dy = 0;
+    _avg_phi = 0, _avg_eps = 0;
+    _avg_cnt = 0;
+
     return {};
 }
+
+#define OUT_VALS(xc, yc, dx, dy, phi, eps)          \
+    out << int(xc * _scale) << SEP                  \
+        << int(yc * _scale) << SEP                  \
+        << int(dx * _scale) << SEP                  \
+        << int(dy * _scale) << SEP                  \
+        << QString::number(phi, 'f', 1) << SEP      \
+        << QString::number(eps, 'f', 3) << '\n'
+
+#define OUT_ROW(nan, xc, yc, dx, dy, phi, eps)                            \
+    out << _interval_idx << SEP                                           \
+        << e->start.addMSecs(r->time).toString(Qt::ISODateWithMs) << SEP; \
+    if (nan) OUT_VALS(0, 0, 0, 0, 0, 0);                                  \
+    else OUT_VALS(xc, yc, dx, dy, phi, eps)
 
 bool MeasureSaver::event(QEvent *event)
 {
@@ -175,31 +216,86 @@ bool MeasureSaver::event(QEvent *event)
 
     qDebug() << "MeasureSaver: measurement" << e->num;
 
+#ifdef SAVE_CHECK_FILE
+    // Check file contains all results without splitting to intervals
+    // To check if the splitting and averaging has been done correctly
+    QFile checkFile(_config.fileName + ".check");
+    if (checkFile.open(QIODeviceBase::WriteOnly | QIODeviceBase::Append)) {
+        QTextStream out(&checkFile);
+        int interval_idx = _interval_idx;
+        for (auto r = e->results; r - e->results < e->count; r++) {
+            OUT_ROW(r->nan, r->xc, r->yc, r->dx, r->dy, r->phi, r->eps());
+            _interval_idx++;
+        }
+        _interval_idx = interval_idx;
+    }
+    else qCritical() << "Failed to open check file" << checkFile.errorString();
+#endif
+
     QFile f(_config.fileName);
     if (!f.open(QIODeviceBase::WriteOnly | QIODeviceBase::Append)) {
-        qCritical() << "Failed to open resuls file" << f.errorString();
+        qCritical() << "Failed to open resuls file" << _config.fileName << f.errorString();
+        emit interrupted(tr("Failed to open resuls file") + '\n' + _config.fileName + '\n' + f.errorString());
         return true;
     }
 
     QTextStream out(&f);
     for (auto r = e->results; r - e->results < e->count; r++) {
-        out << r->idx << ','
-            << e->start.addMSecs(r->time).toString(Qt::ISODateWithMs) << ',';
-        if (r->nan)
-            out << 0 << ',' // xc
-                << 0 << ',' // yc
-                << 0 << ',' // dx
-                << 0 << ',' // dy
-                << 0 << ',' // phi
-                << 0;       // eps
-        else
-            out << int(r->xc * _scale) << ','
-                << int(r->yc * _scale) << ','
-                << int(r->dx * _scale) << ','
-                << int(r->dy * _scale) << ','
-                << QString::number(r->phi, 'f', 1) << ','
-                << QString::number(qMin(r->dx, r->dy) / qMax(r->dx, r->dy), 'f', 3);
-        out << '\n';
+        if (_config.allFrames)
+        {
+            OUT_ROW(r->nan, r->xc, r->yc, r->dx, r->dy, r->phi, r->eps());
+            _interval_idx++;
+            continue;
+        }
+
+        if (_config.average and !r->nan) {
+            _avg_xc += r->xc;
+            _avg_yc += r->yc;
+            _avg_dx += r->dx;
+            _avg_dy += r->dy;
+            _avg_phi += r->phi;
+            _avg_eps += r->eps();
+            _avg_cnt++;
+        }
+
+        if (_interval_beg < 0) {
+            _interval_beg = r->time;
+
+            // If we don't average, there is no need to wait
+            // for the whole interval to get the first value
+            if (!_config.average) {
+                OUT_ROW(r->nan, r->xc, r->yc, r->dx, r->dy, r->phi, r->eps());
+                _interval_idx++;
+            }
+            continue;
+        }
+
+        if (r->time - _interval_beg < _interval_len)
+            continue;
+
+        //qDebug() << _interval_idx << r->time << _interval_beg << _interval_len;
+
+        if (!_config.average) {
+            OUT_ROW(r->nan, r->xc, r->yc, r->dx, r->dy, r->phi, r->eps());
+            _interval_idx++;
+            _interval_beg = r->time;
+            continue;
+        }
+
+        OUT_ROW(_avg_cnt == 0,
+                _avg_xc / _avg_cnt,
+                _avg_yc / _avg_cnt,
+                _avg_dx / _avg_cnt,
+                _avg_dy / _avg_cnt,
+                _avg_phi / _avg_cnt,
+                _avg_eps / _avg_cnt);
+
+        _interval_idx++;
+        _interval_beg = r->time;
+        _avg_xc = 0, _avg_yc = 0;
+        _avg_dx = 0, _avg_dy = 0;
+        _avg_phi = 0, _avg_eps = 0;
+        _avg_cnt = 0;
     }
 
     if (_duration > 0)

@@ -37,6 +37,7 @@ public:
 
 signals:
     void finished();
+    void interrupted(const QString &error);
 
 protected:
     bool event(QEvent *event) override;
@@ -47,6 +48,11 @@ private:
     double _scale = 1;
     int _duration = 0;
     qint64 _startTime;
+    qint64 _interval_beg;
+    qint64 _interval_len;
+    int _interval_idx;
+    double _avg_xc, _avg_yc, _avg_dx, _avg_dy, _avg_phi, _avg_eps;
+    double _avg_cnt;
 };
 
 #endif // MEASURE_SAVER_H

@@ -23,6 +23,7 @@ history:
   - version: 0.0.4
     date: ?
     changes:
+      - text: Save measurement results to CSV file
       - text: Option for using hardware pixel scale
       - text: Camera selector button on the toolbar
       - text: Warning icon when all pixels below threshold
