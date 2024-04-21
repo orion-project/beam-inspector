@@ -15,6 +15,7 @@
 #include "tools/OriSettings.h"
 #include "widgets/OriFlatToolBar.h"
 #include "widgets/OriMruMenu.h"
+#include "widgets/OriPopupMessage.h"
 #include "widgets/OriStatusBar.h"
 
 #include <QAction>
@@ -399,13 +400,14 @@ void PlotWindow::toggleMeasure()
     }
     connect(saver, &MeasureSaver::finished, this, [this]{
         toggleMeasure();
-        Ori::Dlg::info(tr("<b>Measurements finished</b>"));
+        Ori::Gui::PopupMessage::affirm(tr("<b>Measurements finished<b>"), 0);
     });
     connect(saver, &MeasureSaver::interrupted, this, [this](const QString &error){
         toggleMeasure();
-        Ori::Dlg::error(tr("<b>Measurements interrupted</b><p>") + QString(error).replace("\n", "<br>"));
+        Ori::Gui::PopupMessage::error(tr("<b>Measurements interrupted</b><p>") + QString(error).replace("\n", "<br>"), 0);
     });
     _saver.reset(saver);
+    Ori::Gui::PopupMessage::cancel();
     cam->startMeasure(_saver.get());
     updateActions();
 }

@@ -1,0 +1,22 @@
+/************************************
+             PopupMessage
+************************************/
+#OriPopupMessage {
+  border-radius: 4px;
+}
+#OriPopupMessage QLabel {
+  font-size: 10pt;
+  margin: 10px;
+}
+#OriPopupMessage[mode=warning] {
+  border: 1px solid #f3af8f;
+  background: #ffdcbc;
+}
+#OriPopupMessage[mode=affirm] {
+  border: 1px solid #7ee87e;
+  background: #b5fbb5;
+}
+#OriPopupMessage[mode=error] {
+  border: 1px solid #e87e7e;
+  background: #ffb5b5;
+}

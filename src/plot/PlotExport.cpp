@@ -6,6 +6,7 @@
 #include "helpers/OriLayouts.h"
 #include "helpers/OriWidgets.h"
 #include "tools/OriSettings.h"
+#include "widgets/OriPopupMessage.h"
 #include "widgets/OriValueEdit.h"
 
 #include "qcp/src/core.h"
@@ -185,8 +186,9 @@ QString exportImageDlg(QCustomPlot* plot, std::function<void()> prepare, std::fu
     bool ok = plot->saveRastered(props.fileName, props.width, props.height, props.scale, nullptr, props.quality);
     unprepare();
     if (!ok) {
-        Ori::Dlg::error(qApp->translate("ExportImageDlg", "Failed to save image"));
+        Ori::Gui::PopupMessage::error(qApp->translate("ExportImageDlg", "Failed to save image"));
         return {};
     }
+    Ori::Gui::PopupMessage::affirm(qApp->translate("ExportImageDlg", "Image saved to ") + props.fileName);
     return props.fileName;
 }

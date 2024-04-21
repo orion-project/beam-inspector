@@ -25,4 +25,7 @@
     <qresource prefix="/window_icons">
         <file alias="main">../img/icons/cignus.svg</file>
     </qresource>
+    <qresource prefix="/style">
+        <file alias="app">app.qss</file>
+    </qresource>
 </RCC>
