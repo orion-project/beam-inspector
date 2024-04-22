@@ -24,6 +24,7 @@ public:
 
     void startCapture() override;
     void startMeasure(QObject *saver);
+    void stopMeasure();
 
 signals:
     void ready();

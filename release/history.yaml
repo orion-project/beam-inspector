@@ -21,7 +21,7 @@ history:
       - text: Warning icon when background subtraction disabled
 
   - version: 0.0.4
-    date: ?
+    date: 2024-04-22
     changes:
       - text: Save measurement results to CSV file
       - text: Option for using hardware pixel scale

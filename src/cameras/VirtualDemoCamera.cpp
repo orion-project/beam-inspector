@@ -8,6 +8,7 @@
 
 #include <QApplication>
 #include <QDebug>
+#include <QMutex>
 #include <QRandomGenerator>
 
 #define CAMERA_WIDTH 2592
@@ -73,7 +74,8 @@ public:
     bool normalize;
     double *graph;
     bool reconfig = false;
-    QPointer<QObject> saver;
+    QObject *saver;
+    QMutex saverMutex;
     QVector<Measurement> resultBuf1;
     QVector<Measurement> resultBuf2;
     Measurement *resultBufs[MEASURE_BUF_COUNT];
@@ -193,8 +195,8 @@ public:
                 cgn_calc_beam_naive(&c, &r);
                 //cgn_calc_beam_blas(&c, &r);
             }
-            avgCalcTime = avgCalcTime*0.9 + (timer.elapsed() - tm)*0.1;
 
+            saverMutex.lock();
             if (saver) {
                 results->time = timer.elapsed();
                 results->nan = r.nan;
@@ -216,6 +218,9 @@ public:
                     results++;
                 }
             }
+            saverMutex.unlock();
+
+            avgCalcTime = avgCalcTime*0.9 + (timer.elapsed() - tm)*0.1;
 
             if (tm - prevReady >= PLOT_FRAME_DELAY_MS) {
                 prevReady = tm;
@@ -290,10 +295,19 @@ void VirtualDemoCamera::startCapture()
 
 void VirtualDemoCamera::startMeasure(QObject *saver)
 {
+    _render->saverMutex.lock();
     _render->resultIdx = 0;
     _render->resultBufIdx = 0;
     _render->results = _render->resultBufs[0];
     _render->saver = saver;
+    _render->saverMutex.unlock();
+}
+
+void VirtualDemoCamera::stopMeasure()
+{
+    _render->saverMutex.lock();
+    _render->saver = nullptr;
+    _render->saverMutex.unlock();
 }
 
 void VirtualDemoCamera::run()
