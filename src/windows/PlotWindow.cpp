@@ -447,12 +447,14 @@ void PlotWindow::openImageDlg()
         delete cam;
         return;
     }
+    stopCapture();
     _camera.reset((Camera*)cam);
     processImage();
 }
 
 void PlotWindow::openImage(const QString& fileName)
 {
+    stopCapture();
     _camera.reset((Camera*)new StillImageCamera(_plotIntf, _tableIntf, fileName));
     processImage();
 }
