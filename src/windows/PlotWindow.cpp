@@ -384,6 +384,7 @@ void PlotWindow::toggleMeasure()
 
     if (_saver)
     {
+        cam->stopMeasure();
         _saver.reset(nullptr);
         updateActions();
         return;
