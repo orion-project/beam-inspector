@@ -27,12 +27,14 @@
 #include <QLabel>
 #include <QMenuBar>
 #include <QProcess>
+#include <QProgressBar>
 #include <QStatusBar>
 #include <QStyleHints>
 #include <QTableWidget>
 #include <QTimer>
 #include <QToolBar>
 #include <QToolButton>
+#include <QToolTip>
 #include <QWindowStateChangeEvent>
 
 enum StatusPanels
@@ -50,6 +52,57 @@ enum StatusPanels
 
     STATUS_PANEL_COUNT,
 };
+
+//------------------------------------------------------------------------------
+//                             MeasureProgressBar
+//------------------------------------------------------------------------------
+
+class MeasureProgressBar : public QProgressBar
+{
+public:
+    void setElapsed(qint64 ms) {
+        _secs = ms / 1000;
+        setValue(_secs);
+    }
+
+protected:
+    bool event(QEvent *e) override {
+        if (e->type() != QEvent::ToolTip)
+            return QProgressBar::event(e);
+        if (auto he = dynamic_cast<QHelpEvent*>(e); he)
+            QToolTip::showText(he->globalPos(), formatTooltip());
+        return true;
+    }
+
+private:
+    int _secs;
+
+    QString formatSecs(int secs) const {
+        int h = secs / 3600;
+        int m = (secs - h * 3600) / 60;
+        int s = secs - h * 3600 - m * 60;
+        QStringList strs;
+        if (h > 0) strs << QStringLiteral("%1 h").arg(h);
+        if (m > 0) strs << QStringLiteral("%1 m").arg(m);
+        if (s > 0) strs << QStringLiteral("%1 s").arg(s);
+        return strs.join(' ');
+    }
+
+    QString formatTooltip() const {
+        int max = maximum();
+        if (max == 0)
+            return tr("Measurements<br>Elapsed: <b>%1</b>").arg(formatSecs(_secs));
+        return tr("Measurements"
+            "<br>Duration: <b>%1</b>"
+            "<br>Elapsed: <b>%2</b>"
+            "<br>Remaining: <b>%3</b>")
+            .arg(formatSecs(max), formatSecs(_secs), formatSecs(max - _secs));
+    }
+};
+
+//------------------------------------------------------------------------------
+//                               PlotWindow
+//------------------------------------------------------------------------------
 
 PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
 {
@@ -204,6 +257,11 @@ void PlotWindow::createStatusBar()
     _statusBar->setHint(STATUS_BGND, tr("Background subtraction disabled.\n"
         "The measurement is not compliant with the ISO standard."));
     _statusBar->setDblClick(STATUS_BGND, [this]{ editCamConfig(Camera::cfgBgnd); });
+
+    _measureProgress = new MeasureProgressBar;
+    _measureProgress->setVisible(false);
+    _statusBar->addWidget(_measureProgress);
+
     setStatusBar(_statusBar);
 }
 
@@ -282,6 +340,16 @@ void PlotWindow::createPlot()
 void PlotWindow::closeEvent(QCloseEvent* ce)
 {
     QMainWindow::closeEvent(ce);
+
+    if (_saver) {
+        if (!Ori::Dlg::yes(tr("Measurements still in progress.\n\nInterrupt?"))) {
+            ce->ignore();
+            return;
+        }
+        // could be finished while dialog opened
+        if (_saver) toggleMeasure(true);
+    }
+
     auto thread = dynamic_cast<QThread*>(_camera.get());
     if (thread && thread->isRunning()) {
         stopCapture();
@@ -377,15 +445,24 @@ void PlotWindow::updateActions()
     _actionMeasure->setIcon(QIcon(started ? ":/toolbar/stop" : ":/toolbar/start"));
 }
 
-void PlotWindow::toggleMeasure()
+void PlotWindow::toggleMeasure(bool force)
 {
     auto cam = dynamic_cast<VirtualDemoCamera*>(_camera.get());
     if (!cam) return;
 
     if (_saver)
     {
+        if (!force) {
+            if (!Ori::Dlg::yes(tr("Interrupt measurements?")))
+                return;
+            // could be finished while dialog opened
+            if (!_saver)
+                return;
+        }
+
         cam->stopMeasure();
         _saver.reset(nullptr);
+        _measureProgress->setVisible(false);
         updateActions();
         return;
     }
@@ -393,6 +470,7 @@ void PlotWindow::toggleMeasure()
     auto cfg = MeasureSaver::configure();
     if (!cfg)
         return;
+
     auto saver = new MeasureSaver();
     auto res = saver->start(*cfg, cam);
     if (!res.isEmpty()) {
@@ -400,16 +478,21 @@ void PlotWindow::toggleMeasure()
         return;
     }
     connect(saver, &MeasureSaver::finished, this, [this]{
-        toggleMeasure();
+        toggleMeasure(true);
         Ori::Gui::PopupMessage::affirm(tr("<b>Measurements finished<b>"), 0);
     });
     connect(saver, &MeasureSaver::interrupted, this, [this](const QString &error){
-        toggleMeasure();
+        toggleMeasure(true);
         Ori::Gui::PopupMessage::error(tr("<b>Measurements interrupted</b><p>") + QString(error).replace("\n", "<br>"), 0);
     });
     _saver.reset(saver);
     Ori::Gui::PopupMessage::cancel();
     cam->startMeasure(_saver.get());
+
+    _measureProgress->setElapsed(0);
+    _measureProgress->setMaximum(cfg->durationInf ? 0 : cfg->durationSecs());
+    _measureProgress->setVisible(true);
+
     updateActions();
 }
 
@@ -430,6 +513,13 @@ void PlotWindow::stopCapture()
 void PlotWindow::captureStopped()
 {
     showFps(0);
+}
+
+void PlotWindow::statsReceived(int fps, qint64 measureTime)
+{
+    showFps(fps);
+    if (measureTime >= 0)
+        _measureProgress->setElapsed(measureTime);
 }
 
 void PlotWindow::dataReady()
@@ -560,7 +650,7 @@ void PlotWindow::activateCamDemo()
     _itemRenderTime->setText(tr(" Render time "));
     auto cam = new VirtualDemoCamera(_plotIntf, _tableIntf, this);
     connect(cam, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
-    connect(cam, &VirtualDemoCamera::stats, this, &PlotWindow::showFps);
+    connect(cam, &VirtualDemoCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &VirtualDemoCamera::finished, this, &PlotWindow::captureStopped);
     _camera.reset((Camera*)cam);
     showCamConfig(false);

@@ -9,6 +9,7 @@ class QTableWidgetItem;
 class QToolButton;
 
 class Camera;
+class MeasureProgressBar;
 class MeasureSaver;
 class Plot;
 class PlotIntf;
@@ -53,6 +54,7 @@ private:
     QMenu *_camSelectMenu;
     QToolButton *_buttonSelectCam;
     QString _prevImage;
+    MeasureProgressBar *_measureProgress;
 
     void createMenuBar();
     void createToolBar();
@@ -64,13 +66,14 @@ private:
 
     void newWindow();
     void openImageDlg();
-    void toggleMeasure();
+    void toggleMeasure(bool force);
     void stopCapture();
     void editCamConfig(int pageId = -1);
     void activateCamWelcome();
     void activateCamImage();
     void activateCamDemo();
 
+    void statsReceived(int fps, qint64 measureTime);
     void captureStopped();
     void dataReady();
     void roiEdited();

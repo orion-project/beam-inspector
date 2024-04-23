@@ -98,6 +98,11 @@ void MeasureConfig::saveRecent() const
     save(s.settings());
 }
 
+int MeasureConfig::durationSecs() const
+{
+    return parseDuration(duration);
+}
+
 //------------------------------------------------------------------------------
 //                               MeasureSaver
 //------------------------------------------------------------------------------
@@ -116,7 +121,7 @@ MeasureSaver::~MeasureSaver()
 QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
 {
     if (!cfg.durationInf) {
-        _duration = parseDuration(cfg.duration);
+        _duration = cfg.durationSecs();
         if (_duration <= 0)
             return tr("Invalid duration string: %1").arg(cfg.duration);
     }

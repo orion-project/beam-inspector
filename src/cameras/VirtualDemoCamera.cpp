@@ -83,6 +83,8 @@ public:
     int resultIdx = 0;
     int resultBufIdx = 0;
     QDateTime start;
+    QElapsedTimer timer;
+    qint64 measureStart = -1;
 
     BeamRenderer(PlotIntf *plot, TableIntf *table, VirtualDemoCamera *cam) : plot(plot), table(table), cam(cam)
     {
@@ -162,7 +164,6 @@ public:
     void run() {
         qDebug() << "VirtualDemoCamera: started" << QThread::currentThreadId();
         start = QDateTime::currentDateTime();
-        QElapsedTimer timer;
         timer.start();
         while (true) {
             qint64 tm = timer.elapsed();
@@ -248,7 +249,7 @@ public:
             if (tm - prevStat >= STAT_DELAY_MS) {
                 prevStat = tm;
                 // TODO: average FPS over STAT_DELAY_MS
-                emit cam->stats(qRound(1000.0/avgFrameTime));
+                emit cam->stats(qRound(1000.0/avgFrameTime), measureStart > 0 ? timer.elapsed() - measureStart : -1);
             #ifdef LOG_FRAME_TIME
                 qDebug()
                     << "FPS:" << qRound(1000.0/avgFrameTime)
@@ -299,6 +300,7 @@ void VirtualDemoCamera::startMeasure(QObject *saver)
     _render->resultIdx = 0;
     _render->resultBufIdx = 0;
     _render->results = _render->resultBufs[0];
+    _render->measureStart = _render->timer.elapsed();
     _render->saver = saver;
     _render->saverMutex.unlock();
 }
@@ -307,6 +309,7 @@ void VirtualDemoCamera::stopMeasure()
 {
     _render->saverMutex.lock();
     _render->saver = nullptr;
+    _render->measureStart = -1;
     _render->saverMutex.unlock();
 }
 

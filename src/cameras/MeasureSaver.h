@@ -21,6 +21,7 @@ struct MeasureConfig
     void save(QSettings *s, bool min=false) const;
     void loadRecent();
     void saveRecent() const;
+    int durationSecs() const;
 };
 
 class MeasureSaver : public QObject

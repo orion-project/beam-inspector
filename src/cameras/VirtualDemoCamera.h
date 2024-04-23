@@ -28,7 +28,7 @@ public:
 
 signals:
     void ready();
-    void stats(int fps);
+    void stats(int fps, qint64 measureTime);
 
 protected:
     void run() override;
