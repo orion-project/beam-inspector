@@ -4,6 +4,7 @@ __pycache__
 libs/openblas*
 tmp
 out
+build
 *.exe
 calc/*.pgm
 CMakeLists.txt.user*
