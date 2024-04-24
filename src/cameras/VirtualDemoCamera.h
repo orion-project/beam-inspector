@@ -22,12 +22,12 @@ public:
     PixelScale sensorScale() const override { return { .on=true, .factor=2.5, .unit="um" }; }
 
     void startCapture() override;
-    void startMeasure(QObject *saver);
-    void stopMeasure();
+    void startMeasure(QObject *saver) override;
+    void stopMeasure() override;
 
 signals:
     void ready();
-    void stats(int fps, qint64 measureTime);
+    void stats(const CameraStats &stats);
 
 protected:
     void run() override;

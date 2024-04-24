@@ -89,4 +89,11 @@ public:
     QDateTime start;
 };
 
+struct CameraStats
+{
+    int fps;
+    qint64 measureTime;
+    int errorFrames;
+};
+
 #endif // CAMERA_TYPES_H

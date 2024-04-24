@@ -249,10 +249,14 @@ public:
             if (tm - prevStat >= STAT_DELAY_MS) {
                 prevStat = tm;
                 // TODO: average FPS over STAT_DELAY_MS
-                emit cam->stats(qRound(1000.0/avgFrameTime), measureStart > 0 ? timer.elapsed() - measureStart : -1);
+                CameraStats st {
+                    .fps = qRound(1000.0/avgFrameTime),
+                    .measureTime = measureStart > 0 ? timer.elapsed() - measureStart : -1,
+                };
+                emit cam->stats(st);
             #ifdef LOG_FRAME_TIME
                 qDebug()
-                    << "FPS:" << qRound(1000.0/avgFrameTime)
+                    << "FPS:" << st.fps
                     << "avgFrameTime:" << qRound(avgFrameTime)
                     << "avgRenderTime:" << qRound(avgRenderTime)
                     << "avgCalcTime:" << qRound(avgCalcTime);

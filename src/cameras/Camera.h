@@ -19,10 +19,12 @@ public:
     virtual int height() const = 0;
     virtual int bits() const = 0;
     virtual PixelScale sensorScale() const { return {}; }
-
     virtual void startCapture() = 0;
+    virtual void stopCapture() {}
+    virtual void startMeasure(QObject *saver) {}
+    virtual void stopMeasure() {}
 
-    const CameraConfig& config() const { return _config; };
+    const CameraConfig& config() const { return _config; }
     enum ConfigPages { cfgPlot, cfgBgnd, cfgRoi };
     bool editConfig(int page = -1);
     

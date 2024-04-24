@@ -324,6 +324,7 @@ void PlotWindow::createDockPanel()
     makeHeader(tr(" Debug "));
     _tableIntf->itRenderTime = makeItem(tr("Render time"), &_itemRenderTime);
     _tableIntf->itCalcTime = makeItem(tr("Calc time"));
+    _itemErrCount = makeItem(tr("Error frames"));
 
     auto dock = new QDockWidget(tr("Results"));
     dock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
@@ -384,9 +385,10 @@ void PlotWindow::showCamConfig(bool replot)
 {
     bool isImage = dynamic_cast<StillImageCamera*>(_camera.get());
     bool isDemo = dynamic_cast<VirtualDemoCamera*>(_camera.get());
+    bool isIds = dynamic_cast<IdsComfortCamera*>(_camera.get());
     _buttonOpenImg->setVisible(isImage);
-    _actionMeasure->setVisible(isDemo);
-    _buttonMeasure->setVisible(isDemo);
+    _actionMeasure->setVisible(isDemo || isIds);
+    _buttonMeasure->setVisible(isDemo || isIds);
     _buttonSelectCam->setText("  " + (isImage ? _actionCamImage->text() : _camera->name()));
 
     setWindowTitle(qApp->applicationName() +  " [" + _camera->name() + ']');
@@ -412,7 +414,9 @@ void PlotWindow::showCamConfig(bool replot)
 
     auto s = _camera->pixelScale();
     _plot->setImageSize(_camera->width(), _camera->height(), s);
-    _plot->setRoi(c.roi);
+    if (c.roi.isZero())
+        _plot->setRoi({false, 0, 0, _camera->width(), _camera->height()});
+    else _plot->setRoi(c.roi);
     _tableIntf->setScale(s);
     _plotIntf->setScale(s);
     if (replot) _plot->replot();
@@ -449,7 +453,7 @@ void PlotWindow::updateActions()
 
 void PlotWindow::toggleMeasure(bool force)
 {
-    auto cam = dynamic_cast<VirtualDemoCamera*>(_camera.get());
+    auto cam = _camera.get();
     if (!cam) return;
 
     if (_saver)
@@ -517,11 +521,12 @@ void PlotWindow::captureStopped()
     showFps(0);
 }
 
-void PlotWindow::statsReceived(int fps, qint64 measureTime)
+void PlotWindow::statsReceived(const CameraStats &stats)
 {
-    showFps(fps);
-    if (measureTime >= 0)
-        _measureProgress->setElapsed(measureTime);
+    showFps(stats.fps);
+    if (stats.measureTime >= 0)
+        _measureProgress->setElapsed(stats.measureTime);
+    _itemErrCount->setText(QStringLiteral(" %1 ").arg(stats.errorFrames));
 }
 
 void PlotWindow::dataReady()
@@ -675,6 +680,11 @@ void PlotWindow::activateCamIds()
     connect(cam, &IdsComfortCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &IdsComfortCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &IdsComfortCamera::finished, this, &PlotWindow::captureStopped);
+    connect(cam, &IdsComfortCamera::error, this, [this, cam](const QString& err){
+        Ori::Dlg::error(err);
+        toggleMeasure(true);
+        cam->stopCapture();
+    });
     _camera.reset((Camera*)cam);
     showCamConfig(false);
     _plot->zoomAuto(false);
