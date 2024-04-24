@@ -43,7 +43,7 @@ private:
     QAction *_actionMeasure, *_actionOpenImg, *_actionCamConfig,
         *_actionGrayscale, *_actionRainbow, *_actionBeamInfo,
         *_actionEditRoi, *_actionUseRoi, *_actionZoomFull, *_actionZoomRoi,
-        *_actionCamWelcome, *_actionCamImage, *_actionCamDemo;
+        *_actionCamWelcome, *_actionCamImage, *_actionCamDemo, *_actionCamIds;
     QAction *_buttonMeasure, *_buttonOpenImg;
     QTableWidget *_table;
     QTableWidgetItem *_itemRenderTime;
@@ -72,6 +72,7 @@ private:
     void activateCamWelcome();
     void activateCamImage();
     void activateCamDemo();
+    void activateCamIds();
 
     void statsReceived(int fps, qint64 measureTime);
     void captureStopped();
