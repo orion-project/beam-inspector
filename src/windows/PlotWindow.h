@@ -9,6 +9,7 @@ class QTableWidgetItem;
 class QToolButton;
 
 class Camera;
+struct CameraStats;
 class MeasureProgressBar;
 class MeasureSaver;
 class Plot;
@@ -46,7 +47,7 @@ private:
         *_actionCamWelcome, *_actionCamImage, *_actionCamDemo, *_actionCamIds;
     QAction *_buttonMeasure, *_buttonOpenImg;
     QTableWidget *_table;
-    QTableWidgetItem *_itemRenderTime;
+    QTableWidgetItem *_itemRenderTime, *_itemErrCount;
     TableIntf *_tableIntf;
     PlotIntf *_plotIntf;
     Ori::MruFileList *_mru;
@@ -74,7 +75,7 @@ private:
     void activateCamDemo();
     void activateCamIds();
 
-    void statsReceived(int fps, qint64 measureTime);
+    void statsReceived(const CameraStats &stats);
     void captureStopped();
     void dataReady();
     void roiEdited();

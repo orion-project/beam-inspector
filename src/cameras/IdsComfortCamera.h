@@ -17,18 +17,19 @@ public:
     ~IdsComfortCamera();
 
     QString name() const override;
-    int width() const override;
-    int height() const override;
-    int bits() const override;
+    int width() const override { return _width; }
+    int height() const override { return _height; }
+    int bits() const override { return _bits; }
     PixelScale sensorScale() const override;
 
     void startCapture() override;
-    void startMeasure(QObject *saver);
-    void stopMeasure();
+    void stopCapture() override;
+    void startMeasure(QObject *saver) override;
+    void stopMeasure() override;
 
 signals:
     void ready();
-    void stats(int fps, qint64 measureTime);
+    void stats(const CameraStats& stats);
     void error(const QString& err);
 
 protected:
@@ -38,7 +39,9 @@ private slots:
     void camConfigChanged();
 
 private:
+    int _width, _height, _bits;
     QSharedPointer<PeakIntf> _peak;
+    friend class PeakIntf;
 };
 
 #endif // IDS_COMFORT_CAMERA_H
