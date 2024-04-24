@@ -41,6 +41,7 @@ set(PROJECT_SOURCES
     src/app/HelpSystem.cpp
     src/cameras/Camera.cpp
     src/cameras/CameraTypes.cpp
+    src/cameras/IdsComfortCamera.cpp
     src/cameras/MeasureSaver.cpp
     src/cameras/StillImageCamera.cpp
     src/cameras/VirtualDemoCamera.cpp
@@ -76,7 +77,12 @@ else()
     )
 endif()
 
+if (NOT TARGET ids_peak_comfort_c)
+    find_package(ids_peak_comfort_c REQUIRED)
+endif()
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
+    ids_peak_comfort_c::ids_peak_comfort_c
     qcustomplot
     cgn_beam_render
     cgn_beam_calc

@@ -1,6 +1,7 @@
 #include "PlotWindow.h"
 
 #include "app/HelpSystem.h"
+#include "cameras/IdsComfortCamera.h"
 #include "cameras/MeasureSaver.h"
 #include "cameras/StillImageCamera.h"
 #include "cameras/VirtualDemoCamera.h"
@@ -165,7 +166,8 @@ void PlotWindow::createMenuBar()
     _actionCamWelcome = A_("Welcome", this, &PlotWindow::activateCamWelcome, ":/toolbar/cam_select");
     _actionCamImage = A_("Image", this, &PlotWindow::activateCamImage, ":/toolbar/cam_select");
     _actionCamDemo = A_("Demo", this, &PlotWindow::activateCamDemo, ":/toolbar/cam_select");
-    _camSelectMenu = M_(tr("Active Camera"), {_actionCamWelcome, _actionCamImage, _actionCamDemo});
+    _actionCamIds = A_("IDS", this, &PlotWindow::activateCamIds, ":/toolbar/cam_select");
+    _camSelectMenu = M_(tr("Active Camera"), {_actionCamWelcome, _actionCamImage, _actionCamDemo, _actionCamIds});
 
     auto actnNew = A_(tr("New Window"), this, &PlotWindow::newWindow, ":/toolbar/new", QKeySequence::New);
     _actionOpenImg = A_(tr("Open Image..."), this, &PlotWindow::openImageDlg, ":/toolbar/open_img", QKeySequence::Open);
@@ -652,6 +654,27 @@ void PlotWindow::activateCamDemo()
     connect(cam, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualDemoCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &VirtualDemoCamera::finished, this, &PlotWindow::captureStopped);
+    _camera.reset((Camera*)cam);
+    showCamConfig(false);
+    _plot->zoomAuto(false);
+    _camera->startCapture();
+}
+
+void PlotWindow::activateCamIds()
+{
+    if (dynamic_cast<IdsComfortCamera*>(_camera.get())) return;
+
+    auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get());
+    if (imgCam) _prevImage = imgCam->fileName();
+
+    _plot->stopEditRoi(false);
+    _plotIntf->cleanResult();
+    _tableIntf->cleanResult();
+    _itemRenderTime->setText(tr(" Acquire time "));
+    auto cam = new IdsComfortCamera(_plotIntf, _tableIntf, this);
+    connect(cam, &IdsComfortCamera::ready, this, &PlotWindow::dataReady);
+    connect(cam, &IdsComfortCamera::stats, this, &PlotWindow::statsReceived);
+    connect(cam, &IdsComfortCamera::finished, this, &PlotWindow::captureStopped);
     _camera.reset((Camera*)cam);
     showCamConfig(false);
     _plot->zoomAuto(false);
