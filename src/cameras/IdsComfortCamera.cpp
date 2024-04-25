@@ -58,29 +58,32 @@ public:
         CHECK_ERR("Unable to open camera");
         qDebug() << LOG_ID << "Camera opened" << id;
 
+        // TODO: support more depths
         peak_pixel_format targetFormat = PEAK_PIXEL_FORMAT_MONO8;
+        //peak_pixel_format targetFormat = PEAK_PIXEL_FORMAT_MONO10G40_IDS;
+        //peak_pixel_format targetFormat = PEAK_PIXEL_FORMAT_MONO12G24_IDS;
         peak_pixel_format pixelFormat = PEAK_PIXEL_FORMAT_INVALID;
         res = peak_PixelFormat_Get(hCam, &pixelFormat);
         CHECK_ERR("Unable to get pixel format");
         qDebug() << LOG_ID << "Pixel format" << QString::number(pixelFormat, 16);
 
-        // TODO: support more depths
+        size_t formatCount = 0;
+        res = peak_PixelFormat_GetList(hCam, nullptr, &formatCount);
+        CHECK_ERR("Unable to get pixel format count");
+        QVector<peak_pixel_format> pixelFormats(formatCount);
+        res = peak_PixelFormat_GetList(hCam, pixelFormats.data(), &formatCount);
+        CHECK_ERR("Unable to get pixel formats");
+        bool supports = false;
+        for (int i = 0; i < formatCount; i++) {
+            qDebug() << LOG_ID << "Supported pixel format" << QString::number(pixelFormats[i], 16);
+            if (pixelFormats[i] == targetFormat) {
+                supports = true;
+            }
+        }
+        if (!supports)
+            // Use one of color formats and convert manually?
+            return "Camera doesn't support gray scale format";
         if (pixelFormat != targetFormat) {
-            size_t formatCount = 0;
-            res = peak_PixelFormat_GetList(hCam, nullptr, &formatCount);
-            CHECK_ERR("Unable to get pixel format count");
-            QVector<peak_pixel_format> pixelFormats(formatCount);
-            res = peak_PixelFormat_GetList(hCam, pixelFormats.data(), &formatCount);
-            CHECK_ERR("Unable to get pixel formats");
-            bool supports = false;
-            for (int i = 0; i < formatCount; i++)
-                if (pixelFormats[i] == targetFormat) {
-                    supports = true;
-                    break;
-                }
-            if (!supports)
-                // Use one of color formats and convert manually?
-                return "Camera doesn't support gray scale format";
             res = peak_PixelFormat_Set(hCam, targetFormat);
             CHECK_ERR("Unable to set pixel format");
             qDebug() << LOG_ID << "pixel format set";
@@ -185,10 +188,18 @@ public:
             if (tm - prevStat >= STAT_DELAY_MS) {
                 prevStat = tm;
 
-                // TODO: show additional stats
-                //peak_acquisition_info info;
-                //memset(&info, 0, sizeof(info));
-                //peak_Acquisition_GetInfo(hCam, &info);
+                QStringList errors;
+                errors << QString::number(errCount);
+
+                // TODO: suggest a way for sending arbitrary stats and showing it in the table
+                peak_acquisition_info info;
+                memset(&info, 0, sizeof(info));
+                res = peak_Acquisition_GetInfo(hCam, &info);
+                if (PEAK_SUCCESS(res)) {
+                    errors << QString::number(info.numUnderrun)
+                            << QString::number(info.numDropped)
+                            << QString::number(info.numIncomplete);
+                }
 
                 double ft = avgFrameTime / avgFrameCount;
                 avgFrameTime = 0;
@@ -196,7 +207,7 @@ public:
                 CameraStats st {
                     .fps = qRound(1000.0/ft),
                     .measureTime = measureStart > 0 ? timer.elapsed() - measureStart : -1,
-                    .errorFrames = errCount,
+                    .errorFrames = errors.join(','),
                 };
                 emit cam->stats(st);
 #ifdef LOG_FRAME_TIME

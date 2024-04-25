@@ -724,7 +724,8 @@ void PlotWindow::activateCamIds()
     connect(cam, &IdsComfortCamera::finished, this, &PlotWindow::captureStopped);
     connect(cam, &IdsComfortCamera::error, this, [this, cam](const QString& err){
         Ori::Dlg::error(err);
-        toggleMeasure(true);
+        if (_saver)
+            toggleMeasure(true);
         cam->stopCapture();
     });
     _camera.reset((Camera*)cam);
