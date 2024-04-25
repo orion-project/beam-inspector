@@ -53,7 +53,7 @@ QVector<CameraItem> IdsComfort::getCameras()
         qWarning() << LOG_ID << "Unable to update camera list" << getPeakError(res);
         return {};
     }
-    else qDebug() << LOG_ID << "Camera list updated";
+    else qDebug() << LOG_ID << "Camera list updated. Cameras found:" << camCount;
 
     QVector<peak_camera_descriptor> cams(camCount);
     res = peak_CameraList_Get(cams.data(), &camCount);

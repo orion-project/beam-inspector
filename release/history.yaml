@@ -32,4 +32,4 @@ history:
     date: ?
     changes:
       - text: Show measurements progress
-    
+      - text: Support for cameras from IDS
