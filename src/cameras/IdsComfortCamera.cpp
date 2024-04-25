@@ -1,6 +1,7 @@
 #include "IdsComfortCamera.h"
 
-#include "cameras/IdsComfort.h"
+#define LOG_ID "IdsComfortCamera:"
+
 #include "cameras/CameraWorker.h"
 
 #include "helpers/OriDialogs.h"
@@ -9,7 +10,7 @@
 
 #include <QDebug>
 
-#define LOG_ID "IdsComfortCamera:"
+
 #define FRAME_TIMEOUT 5000
 //#define LOG_FRAME_TIME
 
@@ -223,13 +224,7 @@ public:
                     qDebug() << LOG_ID << "Interrupted by user";
                     return;
                 }
-                cfgMutex.lock();
-                if (reconfig) {
-                    reconfig = false;
-                    configure();
-                    qDebug() << LOG_ID << "Reconfigured";
-                }
-                cfgMutex.unlock();
+                checkReconfig();
             }
         }
     }

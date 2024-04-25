@@ -113,6 +113,16 @@ public:
         cfgMutex.unlock();
     }
 
+    void checkReconfig()
+    {
+        cfgMutex.lock();
+        if (reconfig) {
+            configure();
+            qDebug() << LOG_ID << "Reconfigured";
+        }
+        cfgMutex.unlock();
+    }
+
     inline bool waitFrame()
     {
         tm = timer.elapsed();

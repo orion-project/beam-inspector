@@ -482,7 +482,7 @@ void PlotWindow::toggleMeasure(bool force)
     if (!cam) return;
 
     if (!cam->isCapturing()) {
-        Ori::Gui::PopupMessage::warning(tr("Camera os not opened"));
+        Ori::Gui::PopupMessage::warning(tr("Camera is not opened"));
         return;
     }
 
