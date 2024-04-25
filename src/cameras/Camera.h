@@ -19,6 +19,7 @@ public:
     virtual int height() const = 0;
     virtual int bits() const = 0;
     virtual PixelScale sensorScale() const { return {}; }
+    virtual bool isCapturing() const { return false; }
     virtual void startCapture() = 0;
     virtual void stopCapture() {}
     virtual void startMeasure(QObject *saver) {}
@@ -33,7 +34,6 @@ public:
     bool isRoiValid() const;
 
     PixelScale pixelScale() const;
-
     QString resolutionStr() const;
 
 protected:

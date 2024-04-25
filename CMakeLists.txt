@@ -41,6 +41,7 @@ set(PROJECT_SOURCES
     src/app/HelpSystem.cpp
     src/cameras/Camera.cpp
     src/cameras/CameraTypes.cpp
+    src/cameras/IdsComfort.cpp
     src/cameras/IdsComfortCamera.cpp
     src/cameras/MeasureSaver.cpp
     src/cameras/StillImageCamera.cpp

@@ -1,34 +1,20 @@
 #include "IdsComfortCamera.h"
 
+#include "cameras/IdsComfort.h"
 #include "cameras/CameraWorker.h"
 
 #include "helpers/OriDialogs.h"
-
-#include "beam_render.h"
 
 #include <ids_peak_comfort_c/ids_peak_comfort_c.h>
 
 #include <QDebug>
 
+#define LOG_ID "IdsComfortCamera:"
 #define FRAME_TIMEOUT 5000
 //#define LOG_FRAME_TIME
-#define LOG_ID "IdsComfortCamera:"
 
-static peak_camera_handle hCam = PEAK_INVALID_HANDLE;
-
-static QString getPeakError(peak_status status)
-{
-    size_t bufSize = 0;
-    auto res = peak_Library_GetLastError(&status, nullptr, &bufSize);
-    if (PEAK_SUCCESS(res)) {
-        QByteArray buf(bufSize, 0);
-        res = peak_Library_GetLastError(&status, buf.data(), &bufSize);
-        if (PEAK_SUCCESS(res))
-            return QString::fromLatin1(buf.data());
-    }
-    qWarning() << LOG_ID << "Unable to get text for error" << status << "because of error" << res;
-    return QString("errcode=%1").arg(status);
-}
+// Implemented in IdsComfort.cpp
+QString getPeakError(peak_status status);
 
 #define CHECK_ERR(msg) \
     if (PEAK_ERROR(res)) { \
@@ -37,35 +23,40 @@ static QString getPeakError(peak_status status)
         return QString(msg ": ") + err; \
     }
 
+#define SHOW_CAM_PROP(prop, func, typ) {\
+    typ val; \
+    auto res = func(hCam, &val); \
+    if (PEAK_ERROR(res)) \
+        qDebug() << LOG_ID << "Unable to get" << prop << getPeakError(res); \
+    else qDebug() << LOG_ID << prop << val; \
+}
+
 class PeakIntf : public CameraWorker
 {
 public:
+    peak_camera_id id;
     IdsComfortCamera *cam;
+    peak_camera_handle hCam = PEAK_INVALID_HANDLE;
     peak_status res;
     peak_buffer buf;
     peak_frame_handle frame;
     int errCount = 0;
 
-    PeakIntf(PlotIntf *plot, TableIntf *table, IdsComfortCamera *cam)
-        : CameraWorker(plot, table, cam, cam), cam(cam)
+    PeakIntf(peak_camera_id id, PlotIntf *plot, TableIntf *table, IdsComfortCamera *cam)
+        : CameraWorker(plot, table, cam, cam), id(id), cam(cam)
     {}
 
     QString init()
     {
-        if (hCam != PEAK_INVALID_HANDLE)
-            return "Already initialized";
+        peak_camera_descriptor descr;
+        res = peak_Camera_GetDescriptor(id, &descr);
+        CHECK_ERR("Unable to get camera descriptor");
+        cam->_name = QString::fromLatin1(descr.modelName);
+        cam->_descr = cam->_name + ' ' + QString::fromLatin1(descr.serialNumber);
 
-        res = peak_Library_Init();
-        CHECK_ERR("Unable to init library");
-        qDebug() << LOG_ID << "Library inited";
-
-        res = peak_CameraList_Update(nullptr);
-        CHECK_ERR("Unable to update camera list");
-        qDebug() << LOG_ID << "Camera list updated";
-
-        res = peak_Camera_OpenFirstAvailable(&hCam);
-        CHECK_ERR("Unable to open first camera");
-        qDebug() << LOG_ID << "Camera opened";
+        res = peak_Camera_Open(id, &hCam);
+        CHECK_ERR("Unable to open camera");
+        qDebug() << LOG_ID << "Camera opened" << id;
 
         peak_pixel_format targetFormat = PEAK_PIXEL_FORMAT_MONO8;
         peak_pixel_format pixelFormat = PEAK_PIXEL_FORMAT_INVALID;
@@ -108,6 +99,10 @@ public:
         cam->_width = c.w;
         cam->_height = c.h;
 
+        SHOW_CAM_PROP("FPS", peak_FrameRate_Get, double);
+        SHOW_CAM_PROP("Exposure", peak_ExposureTime_Get, double);
+        SHOW_CAM_PROP("PixelClock", peak_PixelClock_Get, double);
+
         res = peak_Acquisition_Start(hCam, PEAK_INFINITE);
         CHECK_ERR("Unable to start acquisition");
         qDebug() << LOG_ID << "Acquisition started";
@@ -136,13 +131,8 @@ public:
         auto res = peak_Camera_Close(hCam);
         if (PEAK_ERROR(res))
             qWarning() << LOG_ID << "Unable to close camera" << getPeakError(res);
-        else qDebug() << LOG_ID << "Camera closed";
+        else qDebug() << LOG_ID << "Camera closed" << id;
         hCam = PEAK_INVALID_HANDLE;
-
-        res = peak_Library_Exit();
-        if (PEAK_ERROR(res))
-            qWarning() << LOG_ID << "Unable to deinit library" << getPeakError(res);
-        else qDebug() << LOG_ID << "Library deinited";
     }
 
     void run()
@@ -194,6 +184,12 @@ public:
 
             if (tm - prevStat >= STAT_DELAY_MS) {
                 prevStat = tm;
+
+                // TODO: show additional stats
+                //peak_acquisition_info info;
+                //memset(&info, 0, sizeof(info));
+                //peak_Acquisition_GetInfo(hCam, &info);
+
                 double ft = avgFrameTime / avgFrameCount;
                 avgFrameTime = 0;
                 avgFrameCount = 0;
@@ -228,10 +224,10 @@ public:
     }
 };
 
-IdsComfortCamera::IdsComfortCamera(PlotIntf *plot, TableIntf *table, QObject *parent) :
-    Camera(plot, table, "IdsComfortCamera"), QThread(parent)
+IdsComfortCamera::IdsComfortCamera(QVariant id, PlotIntf *plot, TableIntf *table, QObject *parent) :
+    Camera(plot, table, "IdsComfortCamera"), QThread(parent), _id(id)
 {
-    auto peak = new PeakIntf(plot, table, this);
+    auto peak = new PeakIntf(id.value<peak_camera_id>(), plot, table, this);
     auto res = peak->init();
     if (!res.isEmpty())
     {
@@ -247,11 +243,6 @@ IdsComfortCamera::IdsComfortCamera(PlotIntf *plot, TableIntf *table, QObject *pa
 IdsComfortCamera::~IdsComfortCamera()
 {
     qDebug() << LOG_ID << "Deleted";
-}
-
-QString IdsComfortCamera::name() const
-{
-    return "IDS"; // TODO: take from camera
 }
 
 PixelScale IdsComfortCamera::sensorScale() const
