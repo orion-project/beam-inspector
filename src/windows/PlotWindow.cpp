@@ -1,6 +1,7 @@
 #include "PlotWindow.h"
 
 #include "app/HelpSystem.h"
+#include "cameras/IdsComfort.h"
 #include "cameras/IdsComfortCamera.h"
 #include "cameras/MeasureSaver.h"
 #include "cameras/StillImageCamera.h"
@@ -37,6 +38,8 @@
 #include <QToolButton>
 #include <QToolTip>
 #include <QWindowStateChangeEvent>
+
+#define LOG_ID "PlotWindow:"
 
 enum StatusPanels
 {
@@ -110,12 +113,15 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     _mru = new Ori::MruFileList(this);
     connect(_mru, &Ori::MruFileList::clicked, this, &PlotWindow::openImage);
 
+    if (auto ids = IdsComfort::init(); ids) _ids.reset(ids);
+
     createMenuBar();
     createToolBar();
     createStatusBar();
     createDockPanel();
     createPlot();
     setCentralWidget(_plot);
+    fillCamSelector();
 
     connect(qApp->styleHints(), &QStyleHints::colorSchemeChanged, this, &PlotWindow::updateThemeColors);
     setThemeColors();
@@ -166,8 +172,8 @@ void PlotWindow::createMenuBar()
     _actionCamWelcome = A_("Welcome", this, &PlotWindow::activateCamWelcome, ":/toolbar/cam_select");
     _actionCamImage = A_("Image", this, &PlotWindow::activateCamImage, ":/toolbar/cam_select");
     _actionCamDemo = A_("Demo", this, &PlotWindow::activateCamDemo, ":/toolbar/cam_select");
-    _actionCamIds = A_("IDS", this, &PlotWindow::activateCamIds, ":/toolbar/cam_select");
-    _camSelectMenu = M_(tr("Active Camera"), {_actionCamWelcome, _actionCamImage, _actionCamDemo, _actionCamIds});
+    _actionRefreshCams = A_("Refresh", this, &PlotWindow::fillCamSelector);
+    _camSelectMenu = new QMenu(tr("Active Camera"), this);
 
     auto actnNew = A_(tr("New Window"), this, &PlotWindow::newWindow, ":/toolbar/new", QKeySequence::New);
     _actionOpenImg = A_(tr("Open Image..."), this, &PlotWindow::openImageDlg, ":/toolbar/open_img", QKeySequence::Open);
@@ -210,6 +216,25 @@ void PlotWindow::createMenuBar()
     m->addAction(QIcon(":/toolbar/bug"), tr("Send Bug Report"), help, &HelpSystem::sendBugReport);
 #undef M_
 #undef A_
+}
+
+void PlotWindow::fillCamSelector()
+{
+    _camSelectMenu->clear();
+    _camSelectMenu->addAction(_actionCamWelcome);
+    _camSelectMenu->addAction(_actionCamImage);
+    _camSelectMenu->addAction(_actionCamDemo);
+
+    if (_ids)
+        for (const auto& cam : _ids->getCameras()) {
+            auto a = _camSelectMenu->addAction(QIcon(":/toolbar/cam_select"), cam.name, this, &PlotWindow::activateCamIds);
+            a->setData(cam.id);
+        }
+
+    // TODO: do something if active camera disappeared
+
+    _camSelectMenu->addSeparator();
+    _camSelectMenu->addAction(_actionRefreshCams);
 }
 
 void PlotWindow::createToolBar()
@@ -456,6 +481,12 @@ void PlotWindow::toggleMeasure(bool force)
     auto cam = _camera.get();
     if (!cam) return;
 
+    if (!cam->isCapturing()) {
+        Ori::Gui::PopupMessage::warning(tr("Camera os not opened"));
+        return;
+    }
+
+
     if (_saver)
     {
         if (!force) {
@@ -507,13 +538,13 @@ void PlotWindow::stopCapture()
     if (!_camera) return;
     auto thread = dynamic_cast<QThread*>(_camera.get());
     if (!thread) {
-        qWarning() << "Current camera is not thread based, nothing to stop";
+        qWarning() << LOG_ID << "Current camera is not thread based, nothing to stop";
         return;
     }
     thread->requestInterruption();
-    if (!thread->wait(5000)) {
-        qCritical() << "Can not stop camera thread in timeout";
-    }
+    if (!thread->wait(5000))
+        qCritical() << LOG_ID << "Can not stop camera thread in timeout";
+    else qDebug() << LOG_ID << "Camera thread stopped";
 }
 
 void PlotWindow::captureStopped()
@@ -560,7 +591,7 @@ void PlotWindow::processImage()
 {
     auto cam = dynamic_cast<StillImageCamera*>(_camera.get());
     if (!cam) {
-        qWarning() << "Current camera is not StillImageCamera";
+        qWarning() << LOG_ID << "Current camera is not StillImageCamera";
         return;
     }
     _plot->stopEditRoi(false);
@@ -651,6 +682,8 @@ void PlotWindow::activateCamDemo()
     auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get());
     if (imgCam) _prevImage = imgCam->fileName();
 
+    stopCapture();
+
     _plot->stopEditRoi(false);
     _plotIntf->cleanResult();
     _tableIntf->cleanResult();
@@ -667,16 +700,25 @@ void PlotWindow::activateCamDemo()
 
 void PlotWindow::activateCamIds()
 {
-    if (dynamic_cast<IdsComfortCamera*>(_camera.get())) return;
+    auto action = qobject_cast<QAction*>(sender());
+    if (!action) return;
+
+    auto camId = action->data();
+    qDebug() << LOG_ID << "Open camera with id" << camId;
+
+    auto idsCam = dynamic_cast<IdsComfortCamera*>(_camera.get());
+    if (idsCam and idsCam->id() == camId) return;
 
     auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get());
     if (imgCam) _prevImage = imgCam->fileName();
 
+    stopCapture();
+
     _plot->stopEditRoi(false);
     _plotIntf->cleanResult();
     _tableIntf->cleanResult();
-    _itemRenderTime->setText(tr(" Acquire time "));
-    auto cam = new IdsComfortCamera(_plotIntf, _tableIntf, this);
+    _itemRenderTime->setText(tr(" Acq. time "));
+    auto cam = new IdsComfortCamera(camId, _plotIntf, _tableIntf, this);
     connect(cam, &IdsComfortCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &IdsComfortCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &IdsComfortCamera::finished, this, &PlotWindow::captureStopped);

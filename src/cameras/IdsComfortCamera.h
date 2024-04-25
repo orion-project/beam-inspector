@@ -13,19 +13,22 @@ class IdsComfortCamera : public QThread, public Camera
     Q_OBJECT
 
 public:
-    IdsComfortCamera(PlotIntf *plot, TableIntf *table, QObject *parent);
+    IdsComfortCamera(QVariant id, PlotIntf *plot, TableIntf *table, QObject *parent);
     ~IdsComfortCamera();
 
-    QString name() const override;
+    QString name() const override { return _name; }
+    QString descr() const override { return _descr; }
     int width() const override { return _width; }
     int height() const override { return _height; }
     int bits() const override { return _bits; }
     PixelScale sensorScale() const override;
-
+    bool isCapturing() const override { return (bool)_peak; }
     void startCapture() override;
     void stopCapture() override;
     void startMeasure(QObject *saver) override;
     void stopMeasure() override;
+
+    QVariant id() const { return _id; }
 
 signals:
     void ready();
@@ -39,7 +42,11 @@ private slots:
     void camConfigChanged();
 
 private:
-    int _width, _height, _bits;
+    QVariant _id;
+    QString _name, _descr;
+    int _width = 0;
+    int _height = 0;
+    int _bits = 0;
     QSharedPointer<PeakIntf> _peak;
     friend class PeakIntf;
 };

@@ -50,7 +50,7 @@ public:
     double *graph;
     QVector<double> subtracted;
 
-    QObject *saver;
+    QObject *saver = nullptr;
     QMutex saverMutex;
     QVector<Measurement> resultBuf1;
     QVector<Measurement> resultBuf2;

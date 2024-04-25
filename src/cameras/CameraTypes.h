@@ -7,6 +7,12 @@
 
 class QSettings;
 
+struct CameraItem
+{
+    QVariant id;
+    QString name;
+};
+
 struct RoiRect
 {
     bool on = false;

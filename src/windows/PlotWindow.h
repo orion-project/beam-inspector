@@ -10,6 +10,7 @@ class QToolButton;
 
 class Camera;
 struct CameraStats;
+class IdsComfort;
 class MeasureProgressBar;
 class MeasureSaver;
 class Plot;
@@ -39,12 +40,13 @@ protected:
 
 private:
     Plot *_plot;
+    QSharedPointer<IdsComfort> _ids;
     QSharedPointer<Camera> _camera;
     QSharedPointer<MeasureSaver> _saver;
     QAction *_actionMeasure, *_actionOpenImg, *_actionCamConfig,
         *_actionGrayscale, *_actionRainbow, *_actionBeamInfo,
         *_actionEditRoi, *_actionUseRoi, *_actionZoomFull, *_actionZoomRoi,
-        *_actionCamWelcome, *_actionCamImage, *_actionCamDemo, *_actionCamIds;
+        *_actionCamWelcome, *_actionCamImage, *_actionCamDemo, *_actionRefreshCams;
     QAction *_buttonMeasure, *_buttonOpenImg;
     QTableWidget *_table;
     QTableWidgetItem *_itemRenderTime, *_itemErrCount;
@@ -64,6 +66,7 @@ private:
     void createPlot();
     void restoreState();
     void storeState();
+    void fillCamSelector();
 
     void newWindow();
     void openImageDlg();
