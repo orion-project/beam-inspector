@@ -3,6 +3,7 @@
 
 #include "cameras/Camera.h"
 
+#include <QPointer>
 #include <QSharedPointer>
 #include <QThread>
 
@@ -30,6 +31,8 @@ public:
 
     QVariant id() const { return _id; }
 
+    QPointer<QWidget> showHardConfgWindow();
+
 signals:
     void ready();
     void stats(const CameraStats& stats);
@@ -48,6 +51,7 @@ private:
     int _height = 0;
     int _bits = 0;
     QSharedPointer<PeakIntf> _peak;
+    QPointer<QWidget> _cfgWnd;
     friend class PeakIntf;
 };
 

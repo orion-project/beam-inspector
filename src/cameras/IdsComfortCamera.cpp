@@ -8,7 +8,6 @@
 
 #include <ids_peak_comfort_c/ids_peak_comfort_c.h>
 
-
 #define FRAME_TIMEOUT 5000
 //#define LOG_FRAME_TIME
 
@@ -246,6 +245,9 @@ IdsComfortCamera::IdsComfortCamera(QVariant id, PlotIntf *plot, TableIntf *table
 
 IdsComfortCamera::~IdsComfortCamera()
 {
+    if (_cfgWnd)
+        _cfgWnd->deleteLater();
+
     qDebug() << LOG_ID << "Deleted";
 }
 
@@ -263,6 +265,8 @@ void IdsComfortCamera::stopCapture()
 {
     if (_peak)
         _peak.reset(nullptr);
+    if (_cfgWnd)
+        _cfgWnd->deleteLater();
 }
 
 void IdsComfortCamera::startMeasure(MeasureSaver *saver)
@@ -287,4 +291,135 @@ void IdsComfortCamera::camConfigChanged()
 {
     if (_peak)
         _peak->reconfigure();
+}
+
+//------------------------------------------------------------------------------
+//                             IdsHardConfigWindow
+//------------------------------------------------------------------------------
+
+#include <QApplication>
+#include <QBoxLayout>
+#include <QGroupBox>
+#include <QLabel>
+#include <QPushButton>
+#include <QStyleHints>
+
+#include "helpers/OriLayouts.h"
+#include "widgets/OriValueEdit.h"
+
+using namespace Ori::Layouts;
+using namespace Ori::Widgets;
+
+class IdsHardConfigWindow : public QWidget
+{
+    Q_DECLARE_TR_FUNCTIONS(IdsHardConfigWindow)
+
+public:
+    IdsHardConfigWindow(peak_camera_handle hCam) : QWidget(qApp->activeWindow()), hCam(hCam)
+    {
+        setWindowFlag(Qt::Tool, true);
+        setWindowFlag(Qt::WindowStaysOnTopHint, true);
+        setAttribute(Qt::WA_DeleteOnClose, true);
+        setWindowTitle(tr("Device Control"));
+
+        auto layout = new QVBoxLayout(this);
+        peak_status res;
+
+        if (peak_ExposureTime_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE)
+            qWarning() << LOG_ID << "Exposure is not configurable";
+        else {
+            double min, max, step;
+            res = peak_ExposureTime_GetRange(hCam, &min, &max, &step);
+            if (PEAK_ERROR(res))
+                qWarning() << LOG_ID << "Unable to get exposure range" << getPeakError(res);
+            else {
+                qDebug() << LOG_ID << "Exposure range:" << min << max << step;
+                auto label = new QLabel(QString("<b>Min = %1, Max = %2</b>").arg(min, 0, 'f', 2).arg(max, 0, 'f', 2));
+                label->setForegroundRole(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Mid);
+                exposure = new ValueEdit;
+                exposure->connect(exposure, &ValueEdit::keyPressed, [this](int key){
+                    if (key == Qt::Key_Return || key == Qt::Key_Enter) setExposure();
+                });
+                auto b = new QPushButton(tr("Set"));
+                b->setFixedWidth(50);
+                b->connect(b, &QPushButton::pressed, [this]{ setExposure(); });
+                layout->addWidget(LayoutV({label, LayoutH({exposure, b})}).makeGroupBox(tr("Exposure (us)")));
+            }
+        }
+        if (peak_FrameRate_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE)
+            qWarning() << LOG_ID << "FPS is not configurable";
+        else {
+            double min, max, step;
+            res = peak_FrameRate_GetRange(hCam, &min, &max, &step);
+            if (PEAK_ERROR(res))
+                qWarning() << LOG_ID << "Unable to get FPS range" << getPeakError(res);
+            else {
+                qDebug() << LOG_ID << "FPS range:" << min << max << step;
+                auto label = new QLabel(QString("<b>Min = %1, Max = %2</b>").arg(min, 0, 'f', 2).arg(max, 0, 'f', 2));
+                label->setForegroundRole(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Mid);
+                fps = new ValueEdit;
+                fps->connect(fps, &ValueEdit::keyPressed, [this](int key){
+                    if (key == Qt::Key_Return || key == Qt::Key_Enter) setFps(); });
+                auto b = new QPushButton(tr("Set"));
+                b->setFixedWidth(50);
+                b->connect(b, &QPushButton::pressed, [this]{ setFps(); });
+                layout->addWidget(LayoutV({label, LayoutH({fps, b})}).makeGroupBox(tr("Frame rate")));
+            }
+        }
+        showExposure();
+        showFps();
+    }
+
+    void showExposure()
+    {
+        double v;
+        auto res = peak_ExposureTime_Get(hCam, &v);
+        if (PEAK_ERROR(res))
+            qWarning() << LOG_ID << "Unable to get exposure" << getPeakError(res);
+        else
+            exposure->setValue(v);
+    }
+
+    void setExposure()
+    {
+        double v = exposure->value();
+        auto res = peak_ExposureTime_Set(hCam, v);
+        if (PEAK_ERROR(res))
+            Ori::Dlg::error(getPeakError(res));
+        showExposure();
+        showFps();
+    }
+
+    void showFps()
+    {
+        double v;
+        auto res = peak_FrameRate_Get(hCam, &v);
+        if (PEAK_ERROR(res))
+            qWarning() << LOG_ID << "Unable to get FPS" << getPeakError(res);
+        else
+            fps->setValue(v);
+    }
+
+    void setFps()
+    {
+        double v = fps->value();
+        qDebug() << LOG_ID << "Set FPS" << v;
+        auto res = peak_FrameRate_Set(hCam, v);
+        if (PEAK_ERROR(res))
+            Ori::Dlg::error(getPeakError(res));
+        showExposure();
+        showFps();
+    }
+
+    peak_camera_handle hCam;
+    ValueEdit *exposure, *fps;
+};
+
+QPointer<QWidget> IdsComfortCamera::showHardConfgWindow()
+{
+    if (!_cfgWnd)
+        _cfgWnd = new IdsHardConfigWindow(_peak->hCam);
+    _cfgWnd->show();
+    _cfgWnd->activateWindow();
+    return _cfgWnd;
 }

@@ -2,6 +2,7 @@
 #define PLOT_WINDOW_H
 
 #include <QMainWindow>
+#include <QPointer>
 
 class QAction;
 class QTableWidget;
@@ -46,7 +47,8 @@ private:
     QAction *_actionMeasure, *_actionOpenImg, *_actionCamConfig,
         *_actionGrayscale, *_actionRainbow, *_actionBeamInfo,
         *_actionEditRoi, *_actionUseRoi, *_actionZoomFull, *_actionZoomRoi,
-        *_actionCamWelcome, *_actionCamImage, *_actionCamDemo, *_actionRefreshCams;
+        *_actionCamWelcome, *_actionCamImage, *_actionCamDemo, *_actionRefreshCams,
+        *_actionHardConfig;
     QAction *_buttonMeasure, *_buttonOpenImg;
     QTableWidget *_table;
     QTableWidgetItem *_itemRenderTime, *_itemErrCount;
@@ -58,6 +60,7 @@ private:
     QToolButton *_buttonSelectCam;
     QString _prevImage;
     MeasureProgressBar *_measureProgress;
+    QPointer<QWidget> _hardConfigWnd;
 
     void createMenuBar();
     void createToolBar();
@@ -77,6 +80,7 @@ private:
     void activateCamImage();
     void activateCamDemo();
     void activateCamIds();
+    void editHardConfig();
 
     void statsReceived(const CameraStats &stats);
     void captureStopped();

@@ -8,6 +8,7 @@
         <file alias="error">../img/toolbar/error.svg</file>
         <file alias="exclame">../img/toolbar/exclame.svg</file>
         <file alias="export_img">../img/toolbar/save_img.svg</file>
+        <file alias="hardware">../img/toolbar/hardware.svg</file>
         <file alias="home">../img/toolbar/home.svg</file>
         <file alias="info">../img/toolbar/info.svg</file>
         <file alias="new">../img/toolbar/new.svg</file>

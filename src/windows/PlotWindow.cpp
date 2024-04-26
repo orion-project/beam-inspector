@@ -204,10 +204,12 @@ void PlotWindow::createMenuBar()
     _actionUseRoi = A_(tr("Use ROI"), this, &PlotWindow::toggleRoi, ":/toolbar/roi_rect");
     _actionUseRoi->setCheckable(true);
     _actionCamConfig = A_(tr("Settings..."), this, [this]{ PlotWindow::editCamConfig(-1); }, ":/toolbar/settings");
+    _actionHardConfig = A_(tr("Device Control"), this, &PlotWindow::editHardConfig, ":/toolbar/hardware");
     menuBar()->addMenu(M_(tr("Camera"), {
         _actionMeasure, 0,
         _actionEditRoi, _actionUseRoi, 0,
-        _actionCamConfig
+        _actionCamConfig,
+        _actionHardConfig,
     }));
 
     auto m = menuBar()->addMenu(tr("Help"));
@@ -252,6 +254,7 @@ void PlotWindow::createToolBar()
     tb->setMovable(false);
     tb->addWidget(_buttonSelectCam);
     tb->addAction(_actionCamConfig);
+    tb->addAction(_actionHardConfig);
     tb->addSeparator();
     tb->addAction(_actionEditRoi);
     tb->addAction(_actionUseRoi);
@@ -414,6 +417,7 @@ void PlotWindow::showCamConfig(bool replot)
     _buttonOpenImg->setVisible(isImage);
     _actionMeasure->setVisible(isDemo || isIds);
     _buttonMeasure->setVisible(isDemo || isIds);
+    _actionHardConfig->setVisible(isIds);
     _buttonSelectCam->setText("  " + (isImage ? _actionCamImage->text() : _camera->name()));
 
     setWindowTitle(qApp->applicationName() +  " [" + _camera->name() + ']');
@@ -469,6 +473,7 @@ void PlotWindow::updateActions()
     _mru->setDisabled(started);
     _buttonSelectCam->setDisabled(started);
     _actionCamConfig->setDisabled(started);
+    _actionHardConfig->setDisabled(started);
     _actionEditRoi->setDisabled(started);
     _actionUseRoi->setDisabled(started);
     _actionOpenImg->setDisabled(started);
@@ -524,6 +529,9 @@ void PlotWindow::toggleMeasure(bool force)
     _saver.reset(saver);
     Ori::Gui::PopupMessage::cancel();
     cam->startMeasure(_saver.get());
+
+    if (_hardConfigWnd)
+        _hardConfigWnd->deleteLater();
 
     _measureProgress->setElapsed(0);
     _measureProgress->setMaximum(cfg->durationInf ? 0 : cfg->durationSecs());
@@ -731,4 +739,11 @@ void PlotWindow::activateCamIds()
     showCamConfig(false);
     _plot->zoomAuto(false);
     _camera->startCapture();
+}
+
+void PlotWindow::editHardConfig()
+{
+    auto cam = dynamic_cast<IdsComfortCamera*>(_camera.get());
+    if (cam and cam->isCapturing())
+        _hardConfigWnd = cam->showHardConfgWindow();
 }
