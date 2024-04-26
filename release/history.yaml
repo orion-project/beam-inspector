@@ -34,3 +34,4 @@ history:
       - text: Show measurements progress
       - text: Support for cameras from IDS
       - text: Save raw beam images during measurements
+      - text: Measurements configuration presets

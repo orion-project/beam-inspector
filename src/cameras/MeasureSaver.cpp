@@ -7,8 +7,12 @@
 #include "tools/OriSettings.h"
 #include "widgets/FileSelector.h"
 
+#include "helpers/OriDialogs.h"
+#include "widgets/OriPopupMessage.h"
+
 #include <QApplication>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDebug>
 #include <QDir>
 #include <QFile>
@@ -21,8 +25,12 @@
 #include <QSpinBox>
 #include <QStyleHints>
 #include <QThread>
+#include <QToolBar>
+#include <QUuid>
 
 #define LOG_ID "MeasureSaver:"
+#define INI_GROUP_MEASURE "Measurement"
+#define INI_GROUP_PRESETS "MeasurePreset"
 #define SEP ','
 //#define SEP '\t'
 //#define SAVE_CHECK_FILE
@@ -96,14 +104,14 @@ void MeasureConfig::save(QSettings *s, bool min) const
 void MeasureConfig::loadRecent()
 {
     Ori::Settings s;
-    s.beginGroup("Measure");
+    s.beginGroup(INI_GROUP_MEASURE);
     load(s.settings());
 }
 
 void MeasureConfig::saveRecent() const
 {
     Ori::Settings s;
-    s.beginGroup("Measure");
+    s.beginGroup(INI_GROUP_MEASURE);
     save(s.settings());
 }
 
@@ -181,7 +189,7 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     // Save measurement config
     qDebug() << LOG_ID << "Write settings" << _cfgFile;
     QSettings s(_cfgFile, QSettings::IniFormat);
-    s.beginGroup("Measurement");
+    s.beginGroup(INI_GROUP_MEASURE);
     s.setValue("timestamp", QDateTime::currentDateTime().toString(Qt::ISODate));
     if (cfg.saveImg)
         s.setValue("imageDir", _imgDir);
@@ -406,84 +414,109 @@ class MesureSaverDlg
 public:
     MesureSaverDlg(const MeasureConfig &cfg) {
         fileSelector = new FileSelector;
-        fileSelector->setFileName(cfg.fileName);
         fileSelector->setFilters({{tr("CSV Files (*.csv)"), "csv"}});
 
         rbFramesAll = new QRadioButton(tr("Every frame"));
-        rbFramesAll->setChecked(cfg.allFrames);
-
         rbFramesSec = new QRadioButton(tr("Given interval"));
-        rbFramesSec->setChecked(!cfg.allFrames);
 
         seFrameInterval = new QSpinBox;
         seFrameInterval->setMinimum(1);
         seFrameInterval->setMaximum(3600);
-        seFrameInterval->setValue(cfg.intervalSecs);
         seFrameInterval->setSuffix("s");
 
         cbAverageFrames = new QCheckBox(tr("With averaging"));
-        cbAverageFrames->setChecked(cfg.average);
 
         rbDurationInf = new QRadioButton(tr("Until stop"));
-        rbDurationInf->setChecked(cfg.durationInf);
-
         rbDurationSecs = new QRadioButton(tr("Given time"));
-        rbDurationSecs->setChecked(!cfg.durationInf);
 
         edDuration = new ShortLineEdit;
-        edDuration->setText(cfg.duration);
         edDuration->setSizePolicy(QSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred));
         edDuration->connect(edDuration, &QLineEdit::textChanged, edDuration, [this]{ updateDurationSecs(); });
 
         labDuration = new QLabel;
         labDuration->setForegroundRole(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Mid);
-        updateDurationSecs();
 
-        cbSaveImg = new QCheckBox(tr("Save every"));
-        cbSaveImg->setChecked(cfg.saveImg);
+        rbSkipImg = new QRadioButton(tr("Don't save"));
+        rbSaveImg = new QRadioButton(tr("Save every"));
 
         edImgInterval = new ShortLineEdit;
-        edImgInterval->setText(cfg.imgInterval);
         edImgInterval->setSizePolicy(QSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred));
         edImgInterval->connect(edImgInterval, &QLineEdit::textChanged, edImgInterval, [this]{ updateImgIntervalSecs(); });
 
         labImgInterval = new QLabel;
         labImgInterval->setForegroundRole(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Mid);
-        updateImgIntervalSecs();
 
-        content = content = LayoutV({
-            fileSelector,
-            LayoutH({
-                LayoutV({
-                    rbFramesAll,
-                    rbFramesSec,
-                    seFrameInterval,
-                    cbAverageFrames,
-                }).makeGroupBox(tr("Interval")),
-                LayoutV({
-                    rbDurationInf,
-                    rbDurationSecs,
-                    edDuration,
-                    labDuration,
-                }).makeGroupBox(tr("Duration")),
-                LayoutV({
-                    Stretch(),
-                    cbSaveImg,
-                    edImgInterval,
-                    labImgInterval,
-                }).makeGroupBox(tr("Raw images"))
-            }),
-        }).setMargin(0).makeWidgetAuto();
+        cbPresets = new QComboBox;
+        cbPresets->setPlaceholderText(tr("Select a preset"));
+        cbPresets->setToolTip(tr("Measurements preset"));
+        cbPresets->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred));
+        cbPresets->connect(cbPresets, &QComboBox::currentTextChanged, [this](const QString &t){ selectedPresetChnaged(t); });
+
+        auto toolbar = new QToolBar;
+        auto color = toolbar->palette().brush(QPalette::Base).color();
+        toolbar->setStyleSheet(QString("QToolBar{background:%1}").arg(color.name()));
+        toolbar->addAction(QIcon(":/toolbar/open"), tr("Import config..."), [this]{ importConfig(); });
+        toolbar->addAction(QIcon(":/toolbar/save"), tr("Export config..."), [this]{ exportConfig(); });
+        toolbar->addSeparator();
+        toolbar->addAction(QIcon(":/toolbar/star"), tr("Save preset..."), [this]{ saveConfigPreset(); });
+        toolbar->addWidget(cbPresets);
+        toolbar->addAction(QIcon(":/toolbar/trash"), tr("Delete preset"), [this]{ deleteConfigPreset(); });
+
+        content = LayoutV({
+            toolbar,
+            LayoutV({
+                fileSelector,
+                LayoutH({
+                    LayoutV({
+                        rbFramesAll,
+                        rbFramesSec,
+                        seFrameInterval,
+                        cbAverageFrames,
+                    }).makeGroupBox(tr("Interval")),
+                    LayoutV({
+                        rbDurationInf,
+                        rbDurationSecs,
+                        edDuration,
+                        labDuration,
+                    }).makeGroupBox(tr("Duration")),
+                    LayoutV({
+                        rbSkipImg,
+                        rbSaveImg,
+                        edImgInterval,
+                        labImgInterval,
+                    }).makeGroupBox(tr("Raw images"))
+                }),
+            }).setDefSpacing(2).setDefMargins(),
+        }).setSpacing(0).setMargin(0).makeWidgetAuto();
+
+        fillPresetsList();
     }
 
-    void fillProps(MeasureConfig &cfg) {
+    void populate(MeasureConfig &cfg)
+    {
+        fileSelector->setFileName(cfg.fileName);
+        rbFramesAll->setChecked(cfg.allFrames);
+        rbFramesSec->setChecked(!cfg.allFrames);
+        seFrameInterval->setValue(cfg.intervalSecs);
+        cbAverageFrames->setChecked(cfg.average);
+        rbDurationInf->setChecked(cfg.durationInf);
+        rbDurationSecs->setChecked(!cfg.durationInf);
+        edDuration->setText(cfg.duration);
+        rbSaveImg->setChecked(cfg.saveImg);
+        rbSkipImg->setChecked(!cfg.saveImg);
+        edImgInterval->setText(cfg.imgInterval);
+        updateDurationSecs();
+        updateImgIntervalSecs();
+    }
+
+    void collect(MeasureConfig &cfg) {
         cfg.fileName = fileSelector->fileName();
         cfg.allFrames = rbFramesAll->isChecked();
         cfg.intervalSecs = seFrameInterval->value();
         cfg.average = cbAverageFrames->isChecked();
         cfg.durationInf = rbDurationInf->isChecked();
         cfg.duration = edDuration->text().trimmed();
-        cfg.saveImg = cbSaveImg->isChecked();
+        cfg.saveImg = rbSaveImg->isChecked();
         cfg.imgInterval = edImgInterval->text().trimmed();
     }
 
@@ -495,14 +528,139 @@ public:
         else label->setText(QStringLiteral("<b>%1s<b>").arg(secs));
     }
 
-    void updateDurationSecs()
+    void updateDurationSecs() { updateDurationLabel(labDuration, edDuration); }
+    void updateImgIntervalSecs() { updateDurationLabel(labImgInterval, edImgInterval); }
+
+    void exportConfig()
     {
-        updateDurationLabel(labDuration, edDuration);
+        Ori::Settings s;
+        QString recentPath = s.value("recentMeasureCfgDir").toString();
+
+        auto fileName = QFileDialog::getSaveFileName(
+                                        qApp->activeModalWidget(),
+                                        tr("Export Configuration"),
+                                        recentPath,
+                                        tr("INI Files (*.ini)"));
+        if (fileName.isEmpty()) return;
+
+        QFileInfo fi(fileName);
+        if (fi.suffix().isEmpty())
+            fileName += ".ini";
+
+        s.setValue("recentMeasureCfgDir", fileName);
+
+        // Need to manualy clear file content, because QSettings loads it
+        QFile f(fileName);
+        if (!f.open(QIODeviceBase::WriteOnly | QIODeviceBase::Truncate)) {
+            qCritical() << LOG_ID << "Failed to create configuration file" << fileName << f.errorString();
+            Ori::Dlg::error(tr("Failed to create configuration file:\n%1").arg(f.errorString()));
+            return;
+        }
+        f.close();
+
+        MeasureConfig cfg;
+        collect(cfg);
+        QSettings s1(fileName, QSettings::IniFormat);
+        s1.beginGroup(INI_GROUP_MEASURE);
+        cfg.save(&s1);
+
+        Ori::Gui::PopupMessage::affirm(tr("Configuration exported"));
     }
 
-    void updateImgIntervalSecs()
+    void importConfig()
     {
-        updateDurationLabel(labImgInterval, edImgInterval);
+        Ori::Settings s;
+        QString recentPath = s.value("recentMeasureCfgDir").toString();
+
+        auto fileName = QFileDialog::getOpenFileName(
+                                        qApp->activeModalWidget(),
+                                        tr("Import Configuration"),
+                                        recentPath,
+                                        tr("INI Files (*.ini)"));
+        if (fileName.isEmpty()) return;
+
+        s.setValue("recentMeasureCfgDir", fileName);
+
+        MeasureConfig cfg;
+        QSettings s1(fileName, QSettings::IniFormat);
+        s1.beginGroup(INI_GROUP_MEASURE);
+        cfg.load(&s1);
+        populate(cfg);
+    }
+
+    void saveConfigPreset()
+    {
+        QString name = Ori::Dlg::inputText(tr("Preset name:"), cbPresets->currentText());
+        name = name.trimmed();
+        if (name.isEmpty())
+            return;
+        Ori::Settings s;
+        s.beginGroup(INI_GROUP_PRESETS);
+        if (s.settings()->contains(name)) {
+            if (!Ori::Dlg::yes(tr("Preset with this name already exists, overwrite?")))
+                return;
+        }
+        QString group = s.value(name).toString();
+        if (group.isEmpty()) {
+            group = QUuid::createUuid().toString(QUuid::Id128);
+            s.setValue(name, group);
+        }
+        s.beginGroup(group);
+        MeasureConfig cfg;
+        collect(cfg);
+        cfg.save(s.settings());
+
+        fillPresetsList(name);
+        Ori::Gui::PopupMessage::affirm(tr("Preset saved"));
+    }
+
+    void deleteConfigPreset()
+    {
+        QString name = cbPresets->currentText();
+        if (name.isEmpty()) {
+            Ori::Gui::PopupMessage::warning(tr("Please select a preset in the drop-down"));
+            return;
+        }
+        if (!Ori::Dlg::yes(tr("Preset will be deleted:<p><b>%1</b><p>Confirm?").arg(name)))
+            return;
+
+        Ori::Settings s;
+        s.beginGroup(INI_GROUP_PRESETS);
+        QString group = s.value(name).toString();
+        s.settings()->remove(name);
+        s.beginGroup(group);
+        s.settings()->remove("");
+
+        fillPresetsList();
+        Ori::Gui::PopupMessage::affirm(tr("Preset deleted"));
+    }
+
+    void fillPresetsList(const QString &selected = {})
+    {
+        presetListUpdating = true;
+        cbPresets->clear();
+        Ori::Settings s;
+        s.beginGroup(INI_GROUP_PRESETS);
+        auto names = s.settings()->childKeys();
+        names.sort();
+        for (const auto &name : names)
+            cbPresets->addItem(name, s.value(name));
+        if (!selected.isEmpty())
+            cbPresets->setCurrentText(selected);
+        presetListUpdating = false;
+    }
+
+    void selectedPresetChnaged(const QString& name)
+    {
+        if (presetListUpdating) return;
+        Ori::Settings s;
+        s.beginGroup(INI_GROUP_PRESETS);
+        QString group = s.value(name).toString();
+        if (group.isEmpty()) return;
+        MeasureConfig cfg;
+        s.beginGroup(group);
+        cfg.load(s.settings());
+        populate(cfg);
     }
 
     bool exec() {
@@ -516,11 +674,12 @@ public:
                 if (rbDurationSecs->isChecked())
                     if (parseDuration(edDuration->text()) <= 0)
                         return tr("Invalid measurement duration");
-                if (cbSaveImg->isChecked())
+                if (rbSaveImg->isChecked())
                     if (parseDuration(edImgInterval->text()) <= 0)
                         return tr("Invalid image saving interval");
                 return QString();
             })
+            .withSkipContentMargins()
             .withContentToButtonsSpacingFactor(2)
             .withPersistenceId("measureCfgDlg")
             .withTitle(tr("Measurement Configuration"))
@@ -536,9 +695,11 @@ public:
     QRadioButton *rbDurationInf, *rbDurationSecs;
     QLineEdit *edDuration;
     QLabel *labDuration;
-    QCheckBox *cbSaveImg;
+    QRadioButton *rbSkipImg, *rbSaveImg;
     QLineEdit *edImgInterval;
     QLabel *labImgInterval;
+    QComboBox *cbPresets;
+    bool presetListUpdating = false;
 };
 
 std::optional<MeasureConfig> MeasureSaver::configure()
@@ -546,9 +707,10 @@ std::optional<MeasureConfig> MeasureSaver::configure()
     MeasureConfig cfg;
     cfg.loadRecent();
     MesureSaverDlg dlg(cfg);
+    dlg.populate(cfg);
     if (!dlg.exec())
         return {};
-    dlg.fillProps(cfg);
+    dlg.collect(cfg);
     cfg.saveRecent();
     return cfg;
 }

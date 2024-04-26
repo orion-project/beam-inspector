@@ -64,8 +64,8 @@ void FileSelector::updateStatus()
 {
     QString fn = fileName();
     if (fn.isEmpty()) {
-        _statusLabel->setText("<font weight=bold>" + tr("File not selected") + "</font>");
-        _statusIcon->clear();
+        _statusLabel->setText("<font color=red><b>" + tr("File not selected") + "</b></font>");
+        _statusIcon->setPixmap(QIcon(":/toolbar/error").pixmap(16));
         return;
     }
     QFileInfo fi(fn);

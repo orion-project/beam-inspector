@@ -244,7 +244,7 @@ void PlotWindow::createToolBar()
     _buttonSelectCam->setPopupMode(QToolButton::InstantPopup);
     _buttonSelectCam->setIcon(QIcon(":/toolbar/cam_select"));
     _buttonSelectCam->setMenu(_camSelectMenu);
-    _buttonSelectCam->setStyleSheet("font-weight: bold");
+    _buttonSelectCam->setStyleSheet("QToolButton{font-weight: bold}");
     _buttonSelectCam->setToolTip(tr("Active camera"));
 
     auto tb = new Ori::Widgets::FlatToolBar;
@@ -485,7 +485,6 @@ void PlotWindow::toggleMeasure(bool force)
         Ori::Gui::PopupMessage::warning(tr("Camera is not opened"));
         return;
     }
-
 
     if (_saver)
     {

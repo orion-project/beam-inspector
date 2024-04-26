@@ -12,13 +12,17 @@
         <file alias="info">../img/toolbar/info.svg</file>
         <file alias="new">../img/toolbar/new.svg</file>
         <file alias="ok">../img/toolbar/ok.svg</file>
+        <file alias="open">../img/toolbar/open.svg</file>
         <file alias="open_img">../img/toolbar/open_img.svg</file>
         <file alias="roi">../img/toolbar/aper.svg</file>
         <file alias="roi_rect">../img/toolbar/aper_rect.svg</file>
         <file alias="roi_warn">../img/toolbar/aper_warn.svg</file>
+        <file alias="save">../img/toolbar/save.svg</file>
         <file alias="settings">../img/toolbar/settings.svg</file>
+        <file alias="star">../img/toolbar/star.svg</file>
         <file alias="start">../img/toolbar/start.svg</file>
         <file alias="stop">../img/toolbar/pause.svg</file>
+        <file alias="trash">../img/toolbar/trash.svg</file>
         <file alias="zoom_roi">../img/toolbar/zoom_aper.svg</file>
         <file alias="zoom_sensor">../img/toolbar/zoom_sensor.svg</file>
     </qresource>
