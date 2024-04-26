@@ -22,7 +22,7 @@ public:
     PixelScale sensorScale() const override { return { .on=true, .factor=2.5, .unit="um" }; }
     bool isCapturing() const override { return true; }
     void startCapture() override;
-    void startMeasure(QObject *saver) override;
+    void startMeasure(MeasureSaver *saver) override;
     void stopMeasure() override;
 
 signals:

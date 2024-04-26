@@ -8,8 +8,6 @@
 
 #include <ids_peak_comfort_c/ids_peak_comfort_c.h>
 
-#include <QDebug>
-
 
 #define FRAME_TIMEOUT 5000
 //#define LOG_FRAME_TIME
@@ -267,7 +265,7 @@ void IdsComfortCamera::stopCapture()
         _peak.reset(nullptr);
 }
 
-void IdsComfortCamera::startMeasure(QObject *saver)
+void IdsComfortCamera::startMeasure(MeasureSaver *saver)
 {
     if (_peak)
         _peak->startMeasure(saver);

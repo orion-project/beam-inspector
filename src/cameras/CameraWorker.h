@@ -3,6 +3,7 @@
 
 #include "cameras/Camera.h"
 #include "cameras/CameraTypes.h"
+#include "cameras/MeasureSaver.h"
 #include "widgets/PlotIntf.h"
 #include "widgets/TableIntf.h"
 
@@ -10,6 +11,7 @@
 #include "beam_render.h"
 
 #include <QApplication>
+#include <QDebug>
 #include <QMutex>
 
 #define CAMERA_LOOP_TICK_MS 5
@@ -37,6 +39,7 @@ public:
     qint64 prevFrame = 0;
     qint64 prevReady = 0;
     qint64 prevStat = 0;
+    qint64 prevSaveImg = 0;
     double avgFrameCount = 0;
     double avgFrameTime = 0;
     double avgRenderTime = 0;
@@ -50,7 +53,7 @@ public:
     double *graph;
     QVector<double> subtracted;
 
-    QObject *saver = nullptr;
+    MeasureSaver *saver = nullptr;
     QMutex saverMutex;
     QVector<Measurement> resultBuf1;
     QVector<Measurement> resultBuf2;
@@ -59,6 +62,7 @@ public:
     int resultIdx = 0;
     int resultBufIdx = 0;
     qint64 measureStart = -1;
+    qint64 saveImgInterval = 0;
 
     CameraWorker(PlotIntf *plot, TableIntf *table, Camera *cam, QThread *thread)
         : plot(plot), table(table), camera(cam), thread(thread)
@@ -160,7 +164,15 @@ public:
 
         saverMutex.lock();
         if (saver) {
-            results->time = timer.elapsed();
+            qint64 time = timer.elapsed();
+            if (saveImgInterval > 0 and (prevSaveImg == 0 or time - prevSaveImg >= saveImgInterval)) {
+                prevSaveImg = time;
+                auto e = new ImageEvent;
+                e->time = time;
+                e->buf = QByteArray((const char*)c.buf, c.w*c.h*(c.bits>>3));
+                QCoreApplication::postEvent(saver, e);
+            }
+            results->time = time;
             results->nan = r.nan;
             results->dx = r.dx;
             results->dy = r.dy;
@@ -172,7 +184,6 @@ public:
                 e->num = resultBufIdx;
                 e->count = MEASURE_BUF_SIZE;
                 e->results = resultBufs[resultBufIdx % MEASURE_BUF_COUNT];
-                e->start = start;
                 QCoreApplication::postEvent(saver, e);
                 results = resultBufs[++resultBufIdx % MEASURE_BUF_COUNT];
                 resultIdx = 0;
@@ -210,14 +221,16 @@ public:
         return true;
     }
 
-    void startMeasure(QObject *s)
+    void startMeasure(MeasureSaver *s)
     {
         saverMutex.lock();
         resultIdx = 0;
         resultBufIdx = 0;
         results = resultBufs[0];
         measureStart = timer.elapsed();
+        saveImgInterval = s->config().saveImg ? s->config().imgIntervalSecs() * 1000 : 0;
         saver = s;
+        saver->setCaptureStart(start);
         saverMutex.unlock();
     }
 

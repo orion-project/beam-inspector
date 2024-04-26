@@ -22,6 +22,7 @@
 #include <QStyleHints>
 #include <QThread>
 
+#define LOG_ID "MeasureSaver:"
 #define SEP ','
 //#define SEP '\t'
 //#define SAVE_CHECK_FILE
@@ -30,7 +31,7 @@ using namespace Ori::Layouts;
 
 static int parseDuration(const QString &str)
 {
-    static QRegularExpression re("^((?<hour>\\d+)\\s*[hH])?(\\s*(?<min>\\d+)\\s*[mM])?(\\s*(?<sec>\\d+)\\s*[sS])?$");
+    static QRegularExpression re("^\\s*((?<hour>\\d+)\\s*[hH])?(\\s*(?<min>\\d+)\\s*[mM])?(\\s*(?<sec>\\d+)\\s*[sS])?\\s*$");
     auto match = re.match(str);
     if (!match.hasMatch())
         return -1;
@@ -54,7 +55,9 @@ void MeasureConfig::load(QSettings *s)
     LOAD(intervalSecs, Int, 5);
     LOAD(average, Bool, true);
     LOAD(durationInf, Bool, false);
-    LOAD(duration, String, "5 m");
+    LOAD(duration, String, "5m");
+    LOAD(saveImg, Bool, true);
+    LOAD(imgInterval, String, "1m");
 }
 
 void MeasureConfig::save(QSettings *s, bool min) const
@@ -75,12 +78,18 @@ void MeasureConfig::save(QSettings *s, bool min) const
             SAVE(durationInf);
         else
             SAVE(duration);
+        if (saveImg)
+            SAVE(imgInterval);
+        else
+            SAVE(saveImg);
     } else {
         SAVE(allFrames);
         SAVE(intervalSecs);
         SAVE(average);
         SAVE(durationInf);
         SAVE(duration);
+        SAVE(saveImg);
+        SAVE(imgInterval);
     }
 }
 
@@ -103,6 +112,11 @@ int MeasureConfig::durationSecs() const
     return parseDuration(duration);
 }
 
+int MeasureConfig::imgIntervalSecs() const
+{
+    return saveImg ? parseDuration(imgInterval) : 0;
+}
+
 //------------------------------------------------------------------------------
 //                               MeasureSaver
 //------------------------------------------------------------------------------
@@ -115,7 +129,7 @@ MeasureSaver::~MeasureSaver()
 {
     _thread->quit();
     _thread->wait();
-    qDebug() << "MeasureSaver: stopped";
+    qDebug() << LOG_ID << "Stopped";
 }
 
 QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
@@ -123,25 +137,54 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     if (!cfg.durationInf) {
         _duration = cfg.durationSecs();
         if (_duration <= 0)
-            return tr("Invalid duration string: %1").arg(cfg.duration);
+            return tr("Invalid measurements duration: %1").arg(cfg.duration);
+    }
+
+    if (cfg.saveImg && parseDuration(cfg.imgInterval) <= 0) {
+        return tr("Invalid image save interval: %1").arg(cfg.imgInterval);
     }
 
     _config = cfg;
+    _width = cam->width();
+    _height = cam->height();
+    _bits = cam->bits();
 
     auto scale = cam->pixelScale();
     _scale = scale.on ? scale.factor : 1;
 
-    QString cfgFileName = _config.fileName;
-    cfgFileName.replace(QFileInfo(_config.fileName).suffix(), "ini");
-    QFile cfgFile(cfgFileName);
-    if (!cfgFile.open(QIODeviceBase::WriteOnly | QIODeviceBase::Truncate))
+    // Prepare images dir
+    if (_config.saveImg) {
+        QFileInfo fi(_config.fileName);
+        QDir dir = fi.dir();
+        QString subdir = fi.baseName() + ".images";
+        _imgDir = dir.path() + '/' + subdir;
+        if (dir.exists(subdir))
+            qDebug() << LOG_ID << "Img dir exists" << _imgDir;
+        else if (dir.mkdir(subdir))
+            qDebug() << LOG_ID << "Img dir created" << _imgDir;
+        else {
+            qCritical() << LOG_ID << "Failed to create img dir" << _imgDir;
+            return tr("Failed to create subdirectory for beam images");
+        }
+    }
+
+    // Prepare config file
+    _cfgFile = _config.fileName;
+    _cfgFile.replace(QFileInfo(_config.fileName).suffix(), "ini");
+    QFile cfgFile(_cfgFile);
+    if (!cfgFile.open(QIODeviceBase::WriteOnly | QIODeviceBase::Truncate)) {
+        qCritical() << LOG_ID << "Failed to create configuration file" << _cfgFile << cfgFile.errorString();
         return tr("Failed to create configuration file:\n%1").arg(cfgFile.errorString());
+    }
     cfgFile.close();
 
-    qDebug() << "MeasureSaver: write settings" << cfgFileName;
-    QSettings s(cfgFileName, QSettings::IniFormat);
+    // Save measurement config
+    qDebug() << LOG_ID << "Write settings" << _cfgFile;
+    QSettings s(_cfgFile, QSettings::IniFormat);
     s.beginGroup("Measurement");
     s.setValue("timestamp", QDateTime::currentDateTime().toString(Qt::ISODate));
+    if (cfg.saveImg)
+        s.setValue("imageDir", _imgDir);
     _config.save(&s, true);
     s.endGroup();
 
@@ -160,10 +203,13 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     cam->config().save(&s, true);
     s.endGroup();
 
-    qDebug() << "MeasureSaver: recreate target" << _config.fileName;
+    // Prepare results file
+    qDebug() << LOG_ID << "Recreate target" << _config.fileName;
     QFile csvFile(_config.fileName);
-    if (!csvFile.open(QIODeviceBase::WriteOnly | QIODeviceBase::Truncate))
+    if (!csvFile.open(QIODeviceBase::WriteOnly | QIODeviceBase::Truncate)) {
+        qCritical() << LOG_ID << "Failed to create resuls file" << _config.fileName << csvFile.errorString();
         return tr("Failed to create resuls file:\n%1").arg(csvFile.errorString());
+    }
     QTextStream out(&csvFile);
     out << "Index" << SEP
         << "Timestamp" << SEP
@@ -178,16 +224,16 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
 #ifdef SAVE_CHECK_FILE
     QFile checkFile(_config.fileName + ".check");
     if (!checkFile.open(QIODeviceBase::WriteOnly | QIODeviceBase::Truncate)) {
-        qCritical() << "Failed to open check file" << checkFile.errorString();
+        qCritical() << LOG_ID << "Failed to open check file" << checkFile.errorString();
     }
 #endif
 
     _thread.reset(new QThread);
     moveToThread(_thread.get());
     _thread->start();
-    qDebug() << "MeasureSaver: started" << QThread::currentThreadId();
+    qDebug() << LOG_ID << "Started" << QThread::currentThreadId();
 
-    _startTime = QDateTime::currentSecsSinceEpoch();
+    _measureStart = QDateTime::currentSecsSinceEpoch();
 
     _interval_beg = -1;
     _interval_len = _config.intervalSecs * 1000;
@@ -208,18 +254,28 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
         << QString::number(phi, 'f', 1) << SEP      \
         << QString::number(eps, 'f', 3) << '\n'
 
-#define OUT_ROW(nan, xc, yc, dx, dy, phi, eps)                            \
-    out << _interval_idx << SEP                                           \
-        << e->start.addMSecs(r->time).toString(Qt::ISODateWithMs) << SEP; \
-    if (nan) OUT_VALS(0, 0, 0, 0, 0, 0);                                  \
+#define OUT_ROW(nan, xc, yc, dx, dy, phi, eps)                                 \
+    out << _interval_idx << SEP                                                \
+        << _captureStart.addMSecs(r->time).toString(Qt::ISODateWithMs) << SEP; \
+    if (nan) OUT_VALS(0, 0, 0, 0, 0, 0);                                       \
     else OUT_VALS(xc, yc, dx, dy, phi, eps)
 
 bool MeasureSaver::event(QEvent *event)
 {
-    auto e = dynamic_cast<MeasureEvent*>(event);
-    if (!e) return QObject::event(event);
+    if (auto e = dynamic_cast<MeasureEvent*>(event); e) {
+        processMeasure(e);
+        return true;
+    }
+    if (auto e = dynamic_cast<ImageEvent*>(event); e) {
+        saveImage(e);
+        return true;
+    }
+    return QObject::event(event);
+}
 
-    qDebug() << "MeasureSaver: measurement" << e->num;
+void MeasureSaver::processMeasure(MeasureEvent *e)
+{
+    qDebug() << LOG_ID << "Measurement" << e->num;
 
 #ifdef SAVE_CHECK_FILE
     // Check file contains all results without splitting to intervals
@@ -239,9 +295,9 @@ bool MeasureSaver::event(QEvent *event)
 
     QFile f(_config.fileName);
     if (!f.open(QIODeviceBase::WriteOnly | QIODeviceBase::Append)) {
-        qCritical() << "Failed to open resuls file" << _config.fileName << f.errorString();
+        qCritical() << LOG_ID << "Failed to open resuls file" << _config.fileName << f.errorString();
         emit interrupted(tr("Failed to open resuls file") + '\n' + _config.fileName + '\n' + f.errorString());
-        return true;
+        return;
     }
 
     QTextStream out(&f);
@@ -303,11 +359,35 @@ bool MeasureSaver::event(QEvent *event)
         _avg_cnt = 0;
     }
 
-    if (_duration > 0)
-        if (QDateTime::currentSecsSinceEpoch() - _startTime >= _duration)
-            emit finished();
+    if (not _errors.isEmpty()) {
+        QSettings s(_cfgFile, QSettings::IniFormat);
+        s.beginGroup("Errors");
+        for (auto it = _errors.constBegin(); it != _errors.constEnd(); it++) {
+            QString key = _captureStart.addMSecs(it.key()).toString(Qt::ISODateWithMs);
+            s.setValue(key, it.value());
+        }
+        _errors.clear();
+    }
 
-    return true;
+    if (_duration > 0)
+        if (QDateTime::currentSecsSinceEpoch() - _measureStart >= _duration)
+            emit finished();
+}
+
+void MeasureSaver::saveImage(ImageEvent *e)
+{
+    QString time = formatTime(e->time, QStringLiteral("yyyy-MM-ddThh-mm-ss-zzz"));
+    QString path = _imgDir + '/' + time + ".pgm";
+    QFile f(path);
+    if (!f.open(QIODevice::WriteOnly)) {
+        qWarning() << LOG_ID << "Failed to save image" << path << f.errorString();
+        _errors.insert(e->time, "Failed to save image " + path + ": " + f.errorString());
+    }
+    {
+        QTextStream header(&f);
+        header << "P5\n" << _width << ' ' << _height << '\n' << (1<<_bits)-1 << '\n';
+    }
+    f.write(e->buf);
 }
 
 //------------------------------------------------------------------------------
@@ -339,7 +419,7 @@ public:
         seFrameInterval->setMinimum(1);
         seFrameInterval->setMaximum(3600);
         seFrameInterval->setValue(cfg.intervalSecs);
-        seFrameInterval->setSuffix(" s");
+        seFrameInterval->setSuffix("s");
 
         cbAverageFrames = new QCheckBox(tr("With averaging"));
         cbAverageFrames->setChecked(cfg.average);
@@ -359,6 +439,18 @@ public:
         labDuration->setForegroundRole(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Mid);
         updateDurationSecs();
 
+        cbSaveImg = new QCheckBox(tr("Save every"));
+        cbSaveImg->setChecked(cfg.saveImg);
+
+        edImgInterval = new ShortLineEdit;
+        edImgInterval->setText(cfg.imgInterval);
+        edImgInterval->setSizePolicy(QSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred));
+        edImgInterval->connect(edImgInterval, &QLineEdit::textChanged, edImgInterval, [this]{ updateImgIntervalSecs(); });
+
+        labImgInterval = new QLabel;
+        labImgInterval->setForegroundRole(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Mid);
+        updateImgIntervalSecs();
+
         content = content = LayoutV({
             fileSelector,
             LayoutH({
@@ -374,6 +466,12 @@ public:
                     edDuration,
                     labDuration,
                 }).makeGroupBox(tr("Duration")),
+                LayoutV({
+                    Stretch(),
+                    cbSaveImg,
+                    edImgInterval,
+                    labImgInterval,
+                }).makeGroupBox(tr("Raw images"))
             }),
         }).setMargin(0).makeWidgetAuto();
     }
@@ -385,16 +483,27 @@ public:
         cfg.average = cbAverageFrames->isChecked();
         cfg.durationInf = rbDurationInf->isChecked();
         cfg.duration = edDuration->text().trimmed();
+        cfg.saveImg = cbSaveImg->isChecked();
+        cfg.imgInterval = edImgInterval->text().trimmed();
+    }
+
+    void updateDurationLabel(QLabel *label, QLineEdit *editor)
+    {
+        int secs = parseDuration(editor->text());
+        if (secs <= 0)
+            label->setText(QStringLiteral("<font color=red><b>%1</b></font>").arg(tr("Invalid time string")));
+        else label->setText(QStringLiteral("<b>%1s<b>").arg(secs));
     }
 
     void updateDurationSecs()
     {
-        int secs = parseDuration(edDuration->text().trimmed());
-        if (secs <= 0)
-            labDuration->setText(QStringLiteral("<font color=red><b>%1</b></font>").arg(tr("Invalid time string")));
-        else labDuration->setText(QStringLiteral("<b>%1 s<b>").arg(secs));
+        updateDurationLabel(labDuration, edDuration);
     }
 
+    void updateImgIntervalSecs()
+    {
+        updateDurationLabel(labImgInterval, edImgInterval);
+    }
 
     bool exec() {
         return Ori::Dlg::Dialog(content)
@@ -404,6 +513,12 @@ public:
                     return tr("Target file not selected");
                 if (!QFileInfo(fn).dir().exists())
                     return tr("Target directory does not exist");
+                if (rbDurationSecs->isChecked())
+                    if (parseDuration(edDuration->text()) <= 0)
+                        return tr("Invalid measurement duration");
+                if (cbSaveImg->isChecked())
+                    if (parseDuration(edImgInterval->text()) <= 0)
+                        return tr("Invalid image saving interval");
                 return QString();
             })
             .withContentToButtonsSpacingFactor(2)
@@ -421,6 +536,9 @@ public:
     QRadioButton *rbDurationInf, *rbDurationSecs;
     QLineEdit *edDuration;
     QLabel *labDuration;
+    QCheckBox *cbSaveImg;
+    QLineEdit *edImgInterval;
+    QLabel *labImgInterval;
 };
 
 std::optional<MeasureConfig> MeasureSaver::configure()

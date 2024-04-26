@@ -5,6 +5,7 @@
 
 #include "cameras/CameraTypes.h"
 
+class MeasureSaver;
 class PlotIntf;
 class TableIntf;
 
@@ -22,7 +23,7 @@ public:
     virtual bool isCapturing() const { return false; }
     virtual void startCapture() = 0;
     virtual void stopCapture() {}
-    virtual void startMeasure(QObject *saver) {}
+    virtual void startMeasure(MeasureSaver *saver) {}
     virtual void stopMeasure() {}
 
     const CameraConfig& config() const { return _config; }

@@ -1,9 +1,8 @@
 #ifndef CAMERA_TYPES_H
 #define CAMERA_TYPES_H
 
-#include <QDateTime>
-#include <QEvent>
 #include <QString>
+#include <QVariant>
 
 class QSettings;
 
@@ -70,29 +69,6 @@ struct CameraConfig
 
     void load(QSettings *s);
     void save(QSettings *s, bool min=false) const;
-};
-
-struct Measurement
-{
-    qint64 time;
-    bool nan;
-    double xc;
-    double yc;
-    double dx;
-    double dy;
-    double phi;
-    inline double eps() const { return qMin(dx, dy) / qMax(dx, dy); }
-};
-
-class MeasureEvent : public QEvent
-{
-public:
-    MeasureEvent() : QEvent(QEvent::User) {}
-
-    int num;
-    int count;
-    Measurement *results;
-    QDateTime start;
 };
 
 struct CameraStats

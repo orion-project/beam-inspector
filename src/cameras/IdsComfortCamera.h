@@ -25,7 +25,7 @@ public:
     bool isCapturing() const override { return (bool)_peak; }
     void startCapture() override;
     void stopCapture() override;
-    void startMeasure(QObject *saver) override;
+    void startMeasure(MeasureSaver *saver) override;
     void stopMeasure() override;
 
     QVariant id() const { return _id; }

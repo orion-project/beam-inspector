@@ -4,7 +4,6 @@
 
 #include "cameras/CameraWorker.h"
 
-#include <QDebug>
 #include <QRandomGenerator>
 
 #define CAMERA_WIDTH 2592
@@ -155,7 +154,7 @@ void VirtualDemoCamera::startCapture()
     start();
 }
 
-void VirtualDemoCamera::startMeasure(QObject *saver)
+void VirtualDemoCamera::startMeasure(MeasureSaver *saver)
 {
     _render->startMeasure(saver);
 }
