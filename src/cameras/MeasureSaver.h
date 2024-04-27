@@ -50,6 +50,7 @@ public:
     int num;
     int count;
     Measurement *results;
+    QMap<QString, QVariant> stats;
 };
 
 class ImageEvent : public QEvent
@@ -99,6 +100,7 @@ private:
     int _interval_idx;
     double _avg_xc, _avg_yc, _avg_dx, _avg_dy, _avg_phi, _avg_eps;
     double _avg_cnt;
+    int _savedImgCount = 0;
 
     void processMeasure(MeasureEvent *e);
     void saveImage(ImageEvent *e);

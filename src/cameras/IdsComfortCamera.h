@@ -28,6 +28,7 @@ public:
     void stopCapture() override;
     void startMeasure(MeasureSaver *saver) override;
     void stopMeasure() override;
+    void saveHardConfig(QSettings *s) override;
 
     QVariant id() const { return _id; }
 

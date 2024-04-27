@@ -64,6 +64,8 @@ public:
     qint64 measureStart = -1;
     qint64 saveImgInterval = 0;
 
+    QMap<QString, QVariant> stats;
+
     CameraWorker(PlotIntf *plot, TableIntf *table, Camera *cam, QThread *thread)
         : plot(plot), table(table), camera(cam), thread(thread)
     {
@@ -184,6 +186,7 @@ public:
                 e->num = resultBufIdx;
                 e->count = MEASURE_BUF_SIZE;
                 e->results = resultBufs[resultBufIdx % MEASURE_BUF_COUNT];
+                e->stats = stats;
                 QCoreApplication::postEvent(saver, e);
                 results = resultBufs[++resultBufIdx % MEASURE_BUF_COUNT];
                 resultIdx = 0;

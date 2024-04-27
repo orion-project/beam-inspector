@@ -2,6 +2,17 @@
 
 #include <QSettings>
 
+QString formatSecs(int secs) {
+    int h = secs / 3600;
+    int m = (secs - h * 3600) / 60;
+    int s = secs - h * 3600 - m * 60;
+    QStringList strs;
+    if (h > 0) strs << QStringLiteral("%1h").arg(h);
+    if (m > 0) strs << QStringLiteral("%1m").arg(m);
+    if (s > 0) strs << QStringLiteral("%1s").arg(s);
+    return strs.join(' ');
+}
+
 //------------------------------------------------------------------------------
 //                               CameraConfig
 //------------------------------------------------------------------------------

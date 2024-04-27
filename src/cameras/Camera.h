@@ -23,8 +23,9 @@ public:
     virtual bool isCapturing() const { return false; }
     virtual void startCapture() = 0;
     virtual void stopCapture() {}
-    virtual void startMeasure(MeasureSaver *saver) {}
+    virtual void startMeasure(MeasureSaver*) {}
     virtual void stopMeasure() {}
+    virtual void saveHardConfig(QSettings*) {}
 
     const CameraConfig& config() const { return _config; }
     enum ConfigPages { cfgPlot, cfgBgnd, cfgRoi };

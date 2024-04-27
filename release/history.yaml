@@ -29,9 +29,10 @@ history:
       - text: Warning icon when all pixels below threshold
 
   - version: 0.0.5
-    date: ?
+    date: 2024-04-27
     changes:
       - text: Show measurements progress
       - text: Support for cameras from IDS
       - text: Save raw beam images during measurements
       - text: Measurements configuration presets
+      - text: Control hardware exposure and FPS

@@ -205,6 +205,7 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
         s.setValue("sensorScale.factor", sensorScale.factor);
         s.setValue("sensorScale.unit", sensorScale.unit);
     }
+    cam->saveHardConfig(&s);
     s.endGroup();
 
     s.beginGroup("CameraSettings");
@@ -367,19 +368,29 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
         _avg_cnt = 0;
     }
 
-    if (not _errors.isEmpty()) {
-        QSettings s(_cfgFile, QSettings::IniFormat);
+    auto elapsed = QDateTime::currentSecsSinceEpoch() - _measureStart;
+
+    QSettings s(_cfgFile, QSettings::IniFormat);
+    s.beginGroup("Stats");
+    s.setValue("elapsedTime", formatSecs(elapsed));
+    s.setValue("resultsSaved", _interval_idx);
+    s.setValue("imagesSaved", _savedImgCount);
+    for (auto it = e->stats.constBegin(); it != e->stats.constEnd(); it++)
+        s.setValue(it.key(), it.value());
+    s.endGroup();
+
+    if (!_errors.isEmpty()) {
         s.beginGroup("Errors");
         for (auto it = _errors.constBegin(); it != _errors.constEnd(); it++) {
             QString key = _captureStart.addMSecs(it.key()).toString(Qt::ISODateWithMs);
             s.setValue(key, it.value());
         }
         _errors.clear();
+        s.endGroup();
     }
 
-    if (_duration > 0)
-        if (QDateTime::currentSecsSinceEpoch() - _measureStart >= _duration)
-            emit finished();
+    if (_duration > 0 and elapsed >= _duration)
+        emit finished();
 }
 
 void MeasureSaver::saveImage(ImageEvent *e)
@@ -390,12 +401,14 @@ void MeasureSaver::saveImage(ImageEvent *e)
     if (!f.open(QIODevice::WriteOnly)) {
         qWarning() << LOG_ID << "Failed to save image" << path << f.errorString();
         _errors.insert(e->time, "Failed to save image " + path + ": " + f.errorString());
+        return;
     }
     {
         QTextStream header(&f);
         header << "P5\n" << _width << ' ' << _height << '\n' << (1<<_bits)-1 << '\n';
     }
     f.write(e->buf);
+    _savedImgCount++;
 }
 
 //------------------------------------------------------------------------------

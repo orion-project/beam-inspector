@@ -64,9 +64,20 @@ enum StatusPanels
 class MeasureProgressBar : public QProgressBar
 {
 public:
+    void reset(int duration)
+    {
+        setElapsed(0);
+        setMaximum(duration);
+        setVisible(true);
+        setFormat("%p%");
+    }
+
     void setElapsed(qint64 ms) {
         _secs = ms / 1000;
         setValue(_secs);
+        if (value() >= maximum()) {
+            setFormat(tr("Finishing..."));
+        }
     }
 
 protected:
@@ -80,17 +91,6 @@ protected:
 
 private:
     int _secs;
-
-    QString formatSecs(int secs) const {
-        int h = secs / 3600;
-        int m = (secs - h * 3600) / 60;
-        int s = secs - h * 3600 - m * 60;
-        QStringList strs;
-        if (h > 0) strs << QStringLiteral("%1 h").arg(h);
-        if (m > 0) strs << QStringLiteral("%1 m").arg(m);
-        if (s > 0) strs << QStringLiteral("%1 s").arg(s);
-        return strs.join(' ');
-    }
 
     QString formatTooltip() const {
         int max = maximum();
@@ -533,9 +533,7 @@ void PlotWindow::toggleMeasure(bool force)
     if (_hardConfigWnd)
         _hardConfigWnd->deleteLater();
 
-    _measureProgress->setElapsed(0);
-    _measureProgress->setMaximum(cfg->durationInf ? 0 : cfg->durationSecs());
-    _measureProgress->setVisible(true);
+    _measureProgress->reset(cfg->durationInf ? 0 : cfg->durationSecs());
 
     updateActions();
 }

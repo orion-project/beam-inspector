@@ -6,6 +6,8 @@
 
 class QSettings;
 
+QString formatSecs(int secs);
+
 struct CameraItem
 {
     QVariant id;
