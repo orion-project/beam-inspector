@@ -19,7 +19,7 @@
 using namespace Ori::Layouts;
 
 //------------------------------------------------------------------------------
-//                              exportImageDlg
+//                              ExportImageDlg
 //------------------------------------------------------------------------------
 
 struct ExportImageProps
@@ -96,7 +96,7 @@ public:
         auto butResetSize = new QPushButton("  " +  tr("Set size as on screen") + "  ");
         butResetSize->connect(butResetSize, &QPushButton::clicked, butResetSize, [this]{ resetImageSize(); });
 
-        content = content = LayoutV({
+        content = LayoutV({
             fileSelector,
             LayoutV({
                 LayoutH({
@@ -141,17 +141,11 @@ public:
 
     bool exec() {
         return Ori::Dlg::Dialog(content)
-            .withVerification([this]{
-                auto fn = fileSelector->fileName();
-                if (fn.isEmpty())
-                    return tr("Target file not selected");
-                if (!QFileInfo(fn).dir().exists())
-                    return tr("Target directory does not exist");
-                return QString();
-            })
+            .withVerification([this]{ return fileSelector->verify(); })
             .withContentToButtonsSpacingFactor(2)
             .withPersistenceId("exportImageDlg")
             .withTitle(tr("Export Image"))
+            .withAcceptTitle(tr("Save"))
             .exec();
     }
 
@@ -174,12 +168,12 @@ public:
     bool skipSizeChange = false;
 };
 
-QString exportImageDlg(QCustomPlot* plot, std::function<void()> prepare, std::function<void()> unprepare)
+void exportImageDlg(QCustomPlot* plot, std::function<void()> prepare, std::function<void()> unprepare)
 {
     ExportImageProps props;
     ExportImageDlg dlg(plot, props);
     if (!dlg.exec())
-        return {};
+        return;
     dlg.fillProps(props);
     props.save();
     prepare();
@@ -187,8 +181,96 @@ QString exportImageDlg(QCustomPlot* plot, std::function<void()> prepare, std::fu
     unprepare();
     if (!ok) {
         Ori::Gui::PopupMessage::error(qApp->translate("ExportImageDlg", "Failed to save image"));
-        return {};
+        return;
     }
     Ori::Gui::PopupMessage::affirm(qApp->translate("ExportImageDlg", "Image saved to ") + props.fileName);
-    return props.fileName;
+}
+
+//------------------------------------------------------------------------------
+//                              ExportRawImageDlg
+//------------------------------------------------------------------------------
+
+struct ExportRawImageProps
+{
+    QString fileName;
+
+    ExportRawImageProps()
+    {
+        Ori::Settings s;
+        s.beginGroup("ExportRawImage");
+        fileName = s.value("fileName").toString();
+    }
+
+    void save()
+    {
+        Ori::Settings s;
+        s.beginGroup("ExportRawImage");
+        s.setValue("fileName", fileName);
+    }
+};
+
+#define RAW_PREVIEW_W 600
+
+class ExportRawImageDlg
+{
+    Q_DECLARE_TR_FUNCTIONS(ExportRawImageDlg)
+
+public:
+    ExportRawImageDlg(const QImage& img, const ExportRawImageProps& props) {
+        fileSelector = new FileSelector;
+        fileSelector->setFileName(props.fileName);
+        fileSelector->setFilters({
+            { tr("PNG Images (*.png)"), "png" },
+            { tr("PGM Images (*.pgm)"), "pgm" },
+            { tr("JPG Images (*.jpg *.jpeg)"), "jpg" }
+        });
+
+        double aspect = img.width() / (double)img.height();
+        QPixmap pixmap(RAW_PREVIEW_W, RAW_PREVIEW_W/aspect);
+        QPainter painter(&pixmap);
+        painter.drawImage(pixmap.rect(), img, img.rect());
+        auto preview = new QLabel;
+        preview->setPixmap(pixmap);
+
+        content = LayoutV({
+            fileSelector,
+            LayoutV({
+                preview
+            }).makeGroupBox(tr("Preview")),
+        }).setMargin(0).makeWidgetAuto();
+    }
+
+    bool exec() {
+        return Ori::Dlg::Dialog(content)
+            .withVerification([this]{ return fileSelector->verify(); })
+            .withContentToButtonsSpacingFactor(2)
+            .withPersistenceId("exportRawImageDlg")
+            .withTitle(tr("Export Raw Image"))
+            .withAcceptTitle(tr("Save"))
+            .exec();
+    }
+
+    void fillProps(ExportRawImageProps& props) {
+        props.fileName = fileSelector->fileName();
+    }
+
+    FileSelector *fileSelector;
+    QSharedPointer<QWidget> content;
+};
+
+void exportImageDlg(QByteArray data, int w, int h, int bits)
+{
+    QImage img((const uchar*)data.data(), w, h, bits == 8 ? QImage::Format_Grayscale8 : QImage::Format_Grayscale16);
+    ExportRawImageProps props;
+    ExportRawImageDlg dlg(img, props);
+    if (!dlg.exec())
+        return;
+    dlg.fillProps(props);
+    props.save();
+    bool ok = img.save(props.fileName);
+    if (!ok) {
+        Ori::Gui::PopupMessage::error(qApp->translate("ExportImageDlg", "Failed to save image"));
+        return;
+    }
+    Ori::Gui::PopupMessage::affirm(qApp->translate("ExportImageDlg", "Image saved to ") + props.fileName);
 }

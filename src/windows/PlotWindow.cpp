@@ -7,6 +7,7 @@
 #include "cameras/StillImageCamera.h"
 #include "cameras/VirtualDemoCamera.h"
 #include "cameras/WelcomeCamera.h"
+#include "plot/PlotExport.h"
 #include "widgets/Plot.h"
 #include "widgets/PlotIntf.h"
 #include "widgets/TableIntf.h"
@@ -177,9 +178,10 @@ void PlotWindow::createMenuBar()
 
     auto actnNew = A_(tr("New Window"), this, &PlotWindow::newWindow, ":/toolbar/new", QKeySequence::New);
     _actionOpenImg = A_(tr("Open Image..."), this, &PlotWindow::openImageDlg, ":/toolbar/open_img", QKeySequence::Open);
-    auto actnExport = A_(tr("Export Image..."), this, [this]{ _plot->exportImageDlg(); }, ":/toolbar/export_img");
+    _actionSaveRaw = A_(tr("Export Raw Image..."), this, [this]{ _camera->requestRawImg(this); }, ":/toolbar/save_raw", QKeySequence("F6"));
+    auto actnSaveImg = A_(tr("Export Plot Image..."), this, [this]{ _plot->exportImageDlg(); }, ":/toolbar/save_img", QKeySequence("F7"));
     auto actnClose = A_(tr("Exit"), this, &PlotWindow::close);
-    auto menuFile = M_(tr("File"), {actnNew, 0, actnExport, _actionOpenImg, actnClose});
+    auto menuFile = M_(tr("File"), {actnNew, 0, _actionSaveRaw, actnSaveImg, _actionOpenImg, actnClose});
     new Ori::Widgets::MruMenuPart(_mru, menuFile, actnClose, this);
     menuBar()->addMenu(menuFile);
 
@@ -396,6 +398,15 @@ void PlotWindow::changeEvent(QEvent* e)
         _plot->adjustWidgetSize();
 }
 
+bool PlotWindow::event(QEvent *event)
+{
+    if (auto e = dynamic_cast<ImageEvent*>(event); e) {
+        exportImageDlg(e->buf, _camera->width(), _camera->height(), _camera->bits());
+        return true;
+    }
+    return QMainWindow::event(event);
+}
+
 void PlotWindow::newWindow()
 {
     if (!QProcess::startDetached(qApp->applicationFilePath(), {}))
@@ -419,6 +430,7 @@ void PlotWindow::showCamConfig(bool replot)
     _buttonMeasure->setVisible(isDemo || isIds);
     _actionHardConfig->setVisible(isIds);
     _buttonSelectCam->setText("  " + (isImage ? _actionCamImage->text() : _camera->name()));
+    _actionSaveRaw->setEnabled(_camera->isCapturing());
 
     setWindowTitle(qApp->applicationName() +  " [" + _camera->name() + ']');
     _statusBar->setText(STATUS_CAMERA, _camera->name(), _camera->descr());

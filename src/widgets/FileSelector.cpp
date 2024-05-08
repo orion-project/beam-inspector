@@ -118,3 +118,13 @@ bool FileSelector::selectFile()
     updateStatus();
     return true;
 }
+
+QString FileSelector::verify()
+{
+    auto fn = fileName();
+    if (fn.isEmpty())
+        return tr("Target file not selected");
+    if (!QFileInfo(fn).dir().exists())
+        return tr("Target directory does not exist");
+    return QString();
+}

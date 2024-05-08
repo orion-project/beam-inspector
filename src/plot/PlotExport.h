@@ -3,8 +3,9 @@
 
 class QCustomPlot;
 
-#include <QString>
+#include <QByteArray>
 
-QString exportImageDlg(QCustomPlot* plot, std::function<void()> prepare, std::function<void()> unprepare);
+void exportImageDlg(QCustomPlot* plot, std::function<void()> prepare, std::function<void()> unprepare);
+void exportImageDlg(QByteArray data, int w, int h, int bits);
 
 #endif // PLOT_EXPORT_H

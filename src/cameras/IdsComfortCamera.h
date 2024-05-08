@@ -29,6 +29,7 @@ public:
     void startMeasure(MeasureSaver *saver) override;
     void stopMeasure() override;
     void saveHardConfig(QSettings *s) override;
+    void requestRawImg(QObject *sender) override;
 
     QVariant id() const { return _id; }
 

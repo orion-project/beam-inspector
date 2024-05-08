@@ -7,7 +7,6 @@
         <file alias="delete">../img/toolbar/delete.svg</file>
         <file alias="error">../img/toolbar/error.svg</file>
         <file alias="exclame">../img/toolbar/exclame.svg</file>
-        <file alias="export_img">../img/toolbar/save_img.svg</file>
         <file alias="hardware">../img/toolbar/hardware.svg</file>
         <file alias="home">../img/toolbar/home.svg</file>
         <file alias="info">../img/toolbar/info.svg</file>
@@ -19,6 +18,8 @@
         <file alias="roi_rect">../img/toolbar/aper_rect.svg</file>
         <file alias="roi_warn">../img/toolbar/aper_warn.svg</file>
         <file alias="save">../img/toolbar/save.svg</file>
+        <file alias="save_img">../img/toolbar/save_img.svg</file>
+        <file alias="save_raw">../img/toolbar/save_raw.svg</file>
         <file alias="settings">../img/toolbar/settings.svg</file>
         <file alias="star">../img/toolbar/star.svg</file>
         <file alias="start">../img/toolbar/start.svg</file>

@@ -24,6 +24,7 @@ public:
     void startCapture() override;
     void startMeasure(MeasureSaver *saver) override;
     void stopMeasure() override;
+    void requestRawImg(QObject *sender) override;
 
 signals:
     void ready();
