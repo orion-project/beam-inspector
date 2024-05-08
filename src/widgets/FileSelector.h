@@ -23,6 +23,8 @@ public:
 
     bool selectFile();
 
+    QString verify();
+
 private:
     QLabel *_statusLabel;
     QLabel *_statusIcon;

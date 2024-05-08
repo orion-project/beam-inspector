@@ -26,6 +26,7 @@ public:
     virtual void startMeasure(MeasureSaver*) {}
     virtual void stopMeasure() {}
     virtual void saveHardConfig(QSettings*) {}
+    virtual void requestRawImg(QObject *sender) {}
 
     const CameraConfig& config() const { return _config; }
     enum ConfigPages { cfgPlot, cfgBgnd, cfgRoi };

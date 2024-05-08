@@ -318,6 +318,12 @@ void IdsComfortCamera::saveHardConfig(QSettings *s)
     else s->setValue("frameRate", v);
 }
 
+void IdsComfortCamera::requestRawImg(QObject *sender)
+{
+    if (_peak)
+        _peak->requestRawImg(sender);
+}
+
 //------------------------------------------------------------------------------
 //                             IdsHardConfigWindow
 //------------------------------------------------------------------------------

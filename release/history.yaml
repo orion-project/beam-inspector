@@ -17,7 +17,7 @@ history:
       - text: Can specify a part of image to process
       - text: Can define size of pixel and show plot in custom units
       - text: Calculate ellipticity
-      - text: Command for exporting plot image
+      - text: Export plot image
       - text: Warning icon when background subtraction disabled
 
   - version: 0.0.4
@@ -36,3 +36,8 @@ history:
       - text: Save raw beam images during measurements
       - text: Measurements configuration presets
       - text: Control hardware exposure and FPS
+
+  - version: 0.0.6
+    date: ?
+    changes:
+      - text: Export unprocessed image

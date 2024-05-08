@@ -90,6 +90,7 @@ public:
             cgn_render_beam_tilted(&b);
             markRenderTime();
 
+
             b.dx = dx_offset.next();
             b.dy = dy_offset.next();
             b.xc = xc_offset.next();
@@ -172,4 +173,9 @@ void VirtualDemoCamera::run()
 void VirtualDemoCamera::camConfigChanged()
 {
     _render->reconfigure();
+}
+
+void VirtualDemoCamera::requestRawImg(QObject *sender)
+{
+    _render->requestRawImg(sender);
 }

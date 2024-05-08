@@ -63,6 +63,7 @@ public:
     int resultBufIdx = 0;
     qint64 measureStart = -1;
     qint64 saveImgInterval = 0;
+    QObject *rawImgRequest = nullptr;
 
     QMap<QString, QVariant> stats;
 
@@ -165,6 +166,13 @@ public:
         }
 
         saverMutex.lock();
+        if (rawImgRequest) {
+            auto e = new ImageEvent;
+            e->time = 0;
+            e->buf = QByteArray((const char*)c.buf, c.w*c.h*(c.bits>>3));
+            QCoreApplication::postEvent(rawImgRequest, e);
+            rawImgRequest = nullptr;
+        }
         if (saver) {
             qint64 time = timer.elapsed();
             if (saveImgInterval > 0 and (prevSaveImg == 0 or time - prevSaveImg >= saveImgInterval)) {
@@ -242,6 +250,13 @@ public:
         saverMutex.lock();
         saver = nullptr;
         measureStart = -1;
+        saverMutex.unlock();
+    }
+
+    void requestRawImg(QObject *sender)
+    {
+        saverMutex.lock();
+        rawImgRequest = sender;
         saverMutex.unlock();
     }
 };

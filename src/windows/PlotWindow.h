@@ -38,6 +38,7 @@ signals:
 protected:
     void closeEvent(class QCloseEvent*) override;
     void changeEvent(QEvent* e) override;
+    bool event(QEvent *event) override;
 
 private:
     Plot *_plot;
@@ -48,7 +49,7 @@ private:
         *_actionGrayscale, *_actionRainbow, *_actionBeamInfo,
         *_actionEditRoi, *_actionUseRoi, *_actionZoomFull, *_actionZoomRoi,
         *_actionCamWelcome, *_actionCamImage, *_actionCamDemo, *_actionRefreshCams,
-        *_actionHardConfig;
+        *_actionHardConfig, *_actionSaveRaw;
     QAction *_buttonMeasure, *_buttonOpenImg;
     QTableWidget *_table;
     QTableWidgetItem *_itemRenderTime, *_itemErrCount;
