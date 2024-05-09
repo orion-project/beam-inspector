@@ -77,14 +77,14 @@ void CameraConfig::save(QSettings *s, bool min) const
 QString PixelScale::format(const double &v) const
 {
     if (on)
-        return QStringLiteral("%1 %2").arg(v*factor, 0, 'f', 0).arg(unit);
+        return QStringLiteral("%1 %2").arg(v*factor, 0, 'f', 1).arg(unit);
     return QStringLiteral("%1").arg(v, 0, 'f', 0);
 }
 
 QString PixelScale::formatWithMargins(const double &v) const
 {
     if (on)
-        return QStringLiteral(" %1 %2 ").arg(v*factor, 0, 'f', 0).arg(unit);
+        return QStringLiteral(" %1 %2 ").arg(v*factor, 0, 'f', 1).arg(unit);
     return QStringLiteral(" %1 ").arg(v, 0, 'f', 0);
 }
 

@@ -255,12 +255,12 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     return {};
 }
 
-#define OUT_VALS(xc, yc, dx, dy, phi, eps)          \
-    out << int(xc * _scale) << SEP                  \
-        << int(yc * _scale) << SEP                  \
-        << int(dx * _scale) << SEP                  \
-        << int(dy * _scale) << SEP                  \
-        << QString::number(phi, 'f', 1) << SEP      \
+#define OUT_VALS(xc, yc, dx, dy, phi, eps)              \
+    out << QString::number(xc * _scale, 'f', 1) << SEP  \
+        << QString::number(yc * _scale, 'f', 1) << SEP  \
+        << QString::number(dx * _scale, 'f', 1) << SEP  \
+        << QString::number(dy * _scale, 'f', 1) << SEP  \
+        << QString::number(phi, 'f', 1) << SEP          \
         << QString::number(eps, 'f', 3) << '\n'
 
 #define OUT_ROW(nan, xc, yc, dx, dy, phi, eps)                                 \
