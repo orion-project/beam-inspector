@@ -53,6 +53,8 @@ public:
         CHECK_ERR("Unable to get camera descriptor");
         cam->_name = QString::fromLatin1(descr.modelName);
         cam->_descr = cam->_name + ' ' + QString::fromLatin1(descr.serialNumber);
+        cam->_configGroup = cam->_name;
+        cam->loadConfig();
 
         res = peak_Camera_Open(id, &hCam);
         CHECK_ERR("Unable to open camera");
@@ -248,8 +250,6 @@ IdsComfortCamera::IdsComfortCamera(QVariant id, PlotIntf *plot, TableIntf *table
     }
     _peak.reset(peak);
 
-    _configGroup = _name;
-
     connect(parent, SIGNAL(camConfigChanged()), this, SLOT(camConfigChanged()));
 }
 
@@ -341,7 +341,7 @@ void IdsComfortCamera::requestRawImg(QObject *sender)
 using namespace Ori::Layouts;
 using namespace Ori::Widgets;
 
-#define PROP_CONTROL(title, edit, label, setter) { \
+#define PROP_CONTROL(title, group, edit, label, setter) { \
     label = new QLabel; \
     label->setWordWrap(true); \
     label->setForegroundRole(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Mid); \
@@ -351,10 +351,11 @@ using namespace Ori::Widgets;
     auto btn = new QPushButton(tr("Set")); \
     btn->setFixedWidth(50); \
     btn->connect(btn, &QPushButton::pressed, [this]{ setter(); }); \
-    layout->addWidget(LayoutV({label, LayoutH({edit, btn})}).makeGroupBox(title)); \
+    group = LayoutV({label, LayoutH({edit, btn})}).makeGroupBox(title); \
+    layout->addWidget(group); \
 }
 
-#define PROP_SHOW(method, edit, label, getValue, getRange) \
+#define PROP_SHOW(method, edit, label, getValue, getRange, showAux) \
     void method() { \
         double value, min, max, step; \
         auto res = getValue(hCam, &value); \
@@ -371,6 +372,7 @@ using namespace Ori::Widgets;
             label->setText(getPeakError(res)); \
         else \
             label->setText(QString("<b>Min = %1, Max = %2</b>").arg(min, 0, 'f', 2).arg(max, 0, 'f', 2)); \
+        showAux(value); \
     }
 
 #define PROP_SET(method, edit, setValue) \
@@ -397,8 +399,11 @@ public:
 
         auto layout = new QVBoxLayout(this);
 
-        PROP_CONTROL(tr("Exposure (us)"), edExp, labExp, setExp)
-        PROP_CONTROL(tr("Frame rate"), edFps, labFps, setFps);
+        PROP_CONTROL(tr("Exposure (us)"), groupExp, edExp, labExp, setExp)
+        PROP_CONTROL(tr("Frame rate"), groupFps, edFps, labFps, setFps);
+
+        labExpFreq = new QLabel;
+        groupExp->layout()->addWidget(labExpFreq);
 
         if (peak_ExposureTime_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE)
             labExp->setText(tr("Exposure is not configurable"));
@@ -412,12 +417,26 @@ public:
     PROP_SET(setExp, edExp, peak_ExposureTime_Set)
     PROP_SET(setFps, edFps, peak_FrameRate_Set)
 
-    PROP_SHOW(showExp, edExp, labExp, peak_ExposureTime_Get, peak_ExposureTime_GetRange)
-    PROP_SHOW(showFps, edFps, labFps, peak_FrameRate_Get, peak_FrameRate_GetRange)
+    PROP_SHOW(showExp, edExp, labExp, peak_ExposureTime_Get, peak_ExposureTime_GetRange, showExpFreq)
+    PROP_SHOW(showFps, edFps, labFps, peak_FrameRate_Get, peak_FrameRate_GetRange, showAux)
+
+    void showAux(double v) {}
+
+    void showExpFreq(double exp)
+    {
+        double freq = 1e6 / exp;
+        QString s;
+        if (freq < 1000)
+            s = QStringLiteral("Corresponds to <b>%1 Hz</b>").arg(freq, 0, 'f', 1);
+        else
+            s = QStringLiteral("Corresponds to <b>%1 kHz</b>").arg(freq/1000.0, 0, 'f', 2);
+        labExpFreq->setText(s);
+    }
 
     peak_camera_handle hCam;
     ValueEdit *edExp, *edFps;
-    QLabel *labExp, *labFps;
+    QGroupBox *groupExp, *groupFps;
+    QLabel *labExp, *labFps, *labExpFreq;
 };
 
 QPointer<QWidget> IdsComfortCamera::showHardConfgWindow()

@@ -47,7 +47,6 @@ protected:
 
     Camera(PlotIntf *plot, TableIntf *table, const char* configGroup);
 
-private:
     void loadConfig();
     void saveConfig();
 };
