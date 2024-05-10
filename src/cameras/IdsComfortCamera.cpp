@@ -334,6 +334,7 @@ void IdsComfortCamera::requestRawImg(QObject *sender)
 #include <QLabel>
 #include <QPushButton>
 #include <QStyleHints>
+#include <QWheelEvent>
 
 #include "helpers/OriLayouts.h"
 #include "widgets/OriValueEdit.h"
@@ -345,7 +346,8 @@ using namespace Ori::Widgets;
     label = new QLabel; \
     label->setWordWrap(true); \
     label->setForegroundRole(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Mid); \
-    edit = new ValueEdit; \
+    edit = new CamPropEdit; \
+    edit->scrolled = [this](bool inc, bool big){ setter ## Fast(inc, big); }; \
     edit->connect(edit, &ValueEdit::keyPressed, [this](int key){ \
         if (key == Qt::Key_Return || key == Qt::Key_Enter) setter(); }); \
     auto btn = new QPushButton(tr("Set")); \
@@ -355,7 +357,7 @@ using namespace Ori::Widgets;
     layout->addWidget(group); \
 }
 
-#define PROP_SHOW(method, edit, label, getValue, getRange, showAux) \
+#define PROP_SHOW(method, id, edit, label, getValue, getRange, showAux) \
     void method() { \
         double value, min, max, step; \
         auto res = getValue(hCam, &value); \
@@ -367,15 +369,19 @@ using namespace Ori::Widgets;
         } \
         edit->setValue(value); \
         edit->setDisabled(false); \
+        props[id] = value; \
         res = getRange(hCam, &min, &max, &step); \
         if (PEAK_ERROR(res)) \
             label->setText(getPeakError(res)); \
-        else \
+        else { \
             label->setText(QString("<b>Min = %1, Max = %2</b>").arg(min, 0, 'f', 2).arg(max, 0, 'f', 2)); \
+            props[id "_min"] = min; \
+            props[id "_max"] = max; \
+        }\
         showAux(value); \
     }
 
-#define PROP_SET(method, edit, setValue) \
+#define PROP_SET(method, id, edit, setValue) \
     void method() { \
         double v = edit->value(); \
         auto res = setValue(hCam, v); \
@@ -383,7 +389,47 @@ using namespace Ori::Widgets;
             Ori::Dlg::error(getPeakError(res)); \
         showExp(); \
         showFps(); \
+    } \
+    void method ## Fast(bool inc, bool big) { \
+        double val = props[id]; \
+        double newVal; \
+        if (inc) { \
+            double max = props[id "_max"]; \
+            if (val >= max) return; \
+            newVal = qMin(max, val * (big ? propChangeBig : propChangeSm)); \
+        } else { \
+            double min = props[id "_min"]; \
+            if (val <= min) return; \
+            newVal = qMax(min, val / (big ? propChangeBig : propChangeSm)); \
+        } \
+        auto res = setValue(hCam, newVal); \
+        if (PEAK_ERROR(res)) \
+            Ori::Dlg::error(getPeakError(res)); \
+        showExp(); \
+        showFps(); \
     }
+
+class CamPropEdit : public ValueEdit
+{
+public:
+    std::function<void(bool, bool)> scrolled;
+protected:
+    void keyPressEvent(QKeyEvent *e) override {
+        if (e->key() == Qt::Key_Up) {
+            scrolled(true, e->modifiers().testFlag(Qt::ControlModifier));
+            e->accept();
+        } else if (e->key() == Qt::Key_Down) {
+            scrolled(false, e->modifiers().testFlag(Qt::ControlModifier));
+            e->accept();
+        } else {
+            ValueEdit::keyPressEvent(e);
+        }
+    }
+    void wheelEvent(QWheelEvent *e) override {
+        scrolled(e->angleDelta().y() > 0, e->modifiers().testFlag(Qt::ControlModifier));
+        e->accept();
+    }
+};
 
 class IdsHardConfigWindow : public QWidget
 {
@@ -405,20 +451,22 @@ public:
         labExpFreq = new QLabel;
         groupExp->layout()->addWidget(labExpFreq);
 
-        if (peak_ExposureTime_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE)
+        if (peak_ExposureTime_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE) {
             labExp->setText(tr("Exposure is not configurable"));
-        else showExp();
+            edExp->setDisabled(true);
+        } else showExp();
 
-        if (peak_FrameRate_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE)
+        if (peak_FrameRate_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE) {
             labFps->setText(tr("FPS is not configurable"));
-        else showFps();
+            edFps->setDisabled(true);
+        } else showFps();
     }
 
-    PROP_SET(setExp, edExp, peak_ExposureTime_Set)
-    PROP_SET(setFps, edFps, peak_FrameRate_Set)
+    PROP_SET(setExp, "exp", edExp, peak_ExposureTime_Set)
+    PROP_SET(setFps, "fps", edFps, peak_FrameRate_Set)
 
-    PROP_SHOW(showExp, edExp, labExp, peak_ExposureTime_Get, peak_ExposureTime_GetRange, showExpFreq)
-    PROP_SHOW(showFps, edFps, labFps, peak_FrameRate_Get, peak_FrameRate_GetRange, showAux)
+    PROP_SHOW(showExp, "exp", edExp, labExp, peak_ExposureTime_Get, peak_ExposureTime_GetRange, showExpFreq)
+    PROP_SHOW(showFps, "fps", edFps, labFps, peak_FrameRate_Get, peak_FrameRate_GetRange, showAux)
 
     void showAux(double v) {}
 
@@ -434,9 +482,12 @@ public:
     }
 
     peak_camera_handle hCam;
-    ValueEdit *edExp, *edFps;
+    CamPropEdit *edExp, *edFps;
     QGroupBox *groupExp, *groupFps;
     QLabel *labExp, *labFps, *labExpFreq;
+    QMap<const char*, double> props;
+    const double propChangeSm = 1.2;
+    const double propChangeBig = 2;
 };
 
 QPointer<QWidget> IdsComfortCamera::showHardConfgWindow()
