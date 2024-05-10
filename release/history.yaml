@@ -41,3 +41,6 @@ history:
     date: ?
     changes:
       - text: Export unprocessed image
+      - text: Quick modify camera hard props with wheel and arrows
+      - text: Application preferences dialog
+      - text: Fix setting loading for IDS cameras

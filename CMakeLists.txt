@@ -38,6 +38,7 @@ set(PROJECT_SOURCES
     src/app.rc
     src/app.qrc
     src/main.cpp
+    src/app/AppSettings.cpp
     src/app/HelpSystem.cpp
     src/cameras/Camera.cpp
     src/cameras/CameraTypes.cpp

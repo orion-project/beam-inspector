@@ -2,6 +2,7 @@
 
 #define LOG_ID "IdsComfortCamera:"
 
+#include "app/AppSettings.h"
 #include "cameras/CameraWorker.h"
 
 #include "helpers/OriDialogs.h"
@@ -347,7 +348,7 @@ using namespace Ori::Widgets;
     label->setWordWrap(true); \
     label->setForegroundRole(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Mid); \
     edit = new CamPropEdit; \
-    edit->scrolled = [this](bool inc, bool big){ setter ## Fast(inc, big); }; \
+    edit->scrolled = [this](bool wheel, bool inc, bool big){ setter ## Fast(wheel, inc, big); }; \
     edit->connect(edit, &ValueEdit::keyPressed, [this](int key){ \
         if (key == Qt::Key_Return || key == Qt::Key_Enter) setter(); }); \
     auto btn = new QPushButton(tr("Set")); \
@@ -377,6 +378,7 @@ using namespace Ori::Widgets;
             label->setText(QString("<b>Min = %1, Max = %2</b>").arg(min, 0, 'f', 2).arg(max, 0, 'f', 2)); \
             props[id "_min"] = min; \
             props[id "_max"] = max; \
+            props[id "_step"] = step; \
         }\
         showAux(value); \
     }
@@ -390,18 +392,26 @@ using namespace Ori::Widgets;
         showExp(); \
         showFps(); \
     } \
-    void method ## Fast(bool inc, bool big) { \
+    void method ## Fast(bool wheel, bool inc, bool big) { \
+        double change = wheel \
+            ? (big ? propChangeWheelBig : propChangeWheelSm) \
+            : (big ? propChangeArrowBig : propChangeArrowSm); \
         double val = props[id]; \
         double newVal; \
         if (inc) { \
             double max = props[id "_max"]; \
             if (val >= max) return; \
-            newVal = qMin(max, val * (big ? propChangeBig : propChangeSm)); \
+            newVal = val * change; \
+            newVal = qMin(max, val * change); \
         } else { \
             double min = props[id "_min"]; \
             if (val <= min) return; \
-            newVal = qMax(min, val / (big ? propChangeBig : propChangeSm)); \
+            newVal = val / change; \
+            newVal = qMax(min, val / change); \
         } \
+        double step = props[id "_step"]; \
+        if (qAbs(val - newVal) < step) \
+            newVal = val + (inc ? step : -step); \
         auto res = setValue(hCam, newVal); \
         if (PEAK_ERROR(res)) \
             Ori::Dlg::error(getPeakError(res)); \
@@ -412,26 +422,26 @@ using namespace Ori::Widgets;
 class CamPropEdit : public ValueEdit
 {
 public:
-    std::function<void(bool, bool)> scrolled;
+    std::function<void(bool, bool, bool)> scrolled;
 protected:
     void keyPressEvent(QKeyEvent *e) override {
         if (e->key() == Qt::Key_Up) {
-            scrolled(true, e->modifiers().testFlag(Qt::ControlModifier));
+            scrolled(false, true, e->modifiers().testFlag(Qt::ControlModifier));
             e->accept();
         } else if (e->key() == Qt::Key_Down) {
-            scrolled(false, e->modifiers().testFlag(Qt::ControlModifier));
+            scrolled(false, false, e->modifiers().testFlag(Qt::ControlModifier));
             e->accept();
         } else {
             ValueEdit::keyPressEvent(e);
         }
     }
     void wheelEvent(QWheelEvent *e) override {
-        scrolled(e->angleDelta().y() > 0, e->modifiers().testFlag(Qt::ControlModifier));
+        scrolled(true, e->angleDelta().y() > 0, e->modifiers().testFlag(Qt::ControlModifier));
         e->accept();
     }
 };
 
-class IdsHardConfigWindow : public QWidget
+class IdsHardConfigWindow : public QWidget, public IAppSettingsListener
 {
     Q_DECLARE_TR_FUNCTIONS(IdsHardConfigWindow)
 
@@ -442,6 +452,8 @@ public:
         setWindowFlag(Qt::WindowStaysOnTopHint, true);
         setAttribute(Qt::WA_DeleteOnClose, true);
         setWindowTitle(tr("Device Control"));
+
+        applySettings();
 
         auto layout = new QVBoxLayout(this);
 
@@ -481,13 +493,27 @@ public:
         labExpFreq->setText(s);
     }
 
+    void applySettings()
+    {
+        auto &s = AppSettings::instance();
+        propChangeWheelSm = 1 + double(s.propChangeWheelSm) / 100.0;
+        propChangeWheelBig = 1 + double(s.propChangeWheelBig) / 100.0;
+        propChangeArrowSm = 1 + double(s.propChangeArrowSm) / 100.0;
+        propChangeArrowBig = 1 + double(s.propChangeArrowBig) / 100.0;
+    }
+
+    void settingsChanged() override
+    {
+        applySettings();
+    }
+
     peak_camera_handle hCam;
     CamPropEdit *edExp, *edFps;
     QGroupBox *groupExp, *groupFps;
     QLabel *labExp, *labFps, *labExpFreq;
     QMap<const char*, double> props;
-    const double propChangeSm = 1.2;
-    const double propChangeBig = 2;
+    double propChangeWheelSm, propChangeWheelBig;
+    double propChangeArrowSm, propChangeArrowBig;
 };
 
 QPointer<QWidget> IdsComfortCamera::showHardConfgWindow()
