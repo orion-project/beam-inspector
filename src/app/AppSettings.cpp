@@ -45,7 +45,7 @@ void AppSettings::load()
 {
     Ori::Settings s;
 
-    s.beginGroup("Common");
+    s.beginGroup("DeviceControl");
     LOAD(propChangeWheelSm, Int, 20);
     LOAD(propChangeWheelBig, Int, 100);
     LOAD(propChangeArrowSm, Int, 20);
@@ -56,7 +56,7 @@ void AppSettings::save()
 {
     Ori::Settings s;
 
-    s.beginGroup("Common");
+    s.beginGroup("DeviceControl");
     SAVE(propChangeWheelSm);
     SAVE(propChangeWheelBig);
     SAVE(propChangeArrowSm);

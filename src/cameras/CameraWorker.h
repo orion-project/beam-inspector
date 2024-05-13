@@ -64,6 +64,7 @@ public:
     qint64 measureStart = -1;
     qint64 saveImgInterval = 0;
     QObject *rawImgRequest = nullptr;
+    QObject *brightRequest = nullptr;
 
     QMap<QString, QVariant> stats;
 
@@ -173,6 +174,12 @@ public:
             QCoreApplication::postEvent(rawImgRequest, e);
             rawImgRequest = nullptr;
         }
+        if (brightRequest) {
+            auto e = new BrightEvent;
+            e->level = cgn_calc_brightness(&c);
+            QCoreApplication::postEvent(brightRequest, e);
+            brightRequest = nullptr;
+        }
         if (saver) {
             qint64 time = timer.elapsed();
             if (saveImgInterval > 0 and (prevSaveImg == 0 or time - prevSaveImg >= saveImgInterval)) {
@@ -228,6 +235,7 @@ public:
         if (normalize)
             plot->setResult(r, 0, 1);
         else plot->setResult(r, g.min, g.max);
+        //else plot->setResult(r, 0, (1 << c.bits)-1);
         table->setResult(r, avgRenderTime, avgCalcTime);
         return true;
     }
@@ -257,6 +265,13 @@ public:
     {
         saverMutex.lock();
         rawImgRequest = sender;
+        saverMutex.unlock();
+    }
+
+    void requestBrightness(QObject *sender)
+    {
+        saverMutex.lock();
+        brightRequest = sender;
         saverMutex.unlock();
     }
 };

@@ -204,6 +204,39 @@ void cgn_copy_normalized_f64(double *src, double *tgt, int sz, double min, doubl
     }
 }
 
+#define _cgn_calc_brightness               \
+    double b_img = 0;                       \
+    for (int i = 0; i < h; i++) {           \
+        double b_row = 0;                   \
+        const int offset = i*w;             \
+        for (int j = 0; j < w; j += 8) {    \
+            double b0 = 0;                  \
+            for (int k = 0; k < 8; k++)     \
+                b0 += buf[offset + j + k];  \
+            b0 /= 8.0;                      \
+            if (b0 > b_row) b_row = b0;     \
+        }                                   \
+        if (b_row > b_img) b_img = b_row;   \
+    }
+
+double cgn_calc_brightness_u8(const uint8_t *buf, int w, int h) {
+    _cgn_calc_brightness
+    return b_img / 255.0;
+}
+
+double cgn_calc_brightness_u16(const uint16_t *buf, int w, int h) {
+    _cgn_calc_brightness
+    return b_img / 65535.0;
+}
+
+double cgn_calc_brightness(const CgnBeamCalc *c) {
+    if (c->bits > 8) {
+        return cgn_calc_brightness_u16((const uint16_t*)(c->buf), c->w, c->h);
+    } else {
+        return cgn_calc_brightness_u8((const uint8_t*)(c->buf), c->w, c->h);
+    }
+}
+
 #ifdef USE_BLAS
 
 #define ALLOC(var, size) \
