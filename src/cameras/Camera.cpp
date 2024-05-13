@@ -48,9 +48,16 @@ bool Camera::editConfig(int page)
     auto hardScale = sensorScale();
     bool useSensorScale = !_config.plot.customScale.on;
     bool useCustomScale = _config.plot.customScale.on;
+    bool scaleFullRange = _config.plot.fullRange;
+    bool scaleDataRange = !_config.plot.fullRange;
     double cornerFraction = _config.bgnd.corner * 100;
     opts.items = {
         new ConfigItemBool(cfgPlot, qApp->tr("Normalize data"), &_config.plot.normalize),
+        new ConfigItemSpace(cfgPlot, 12),
+        (new ConfigItemBool(cfgPlot, qApp->tr("Colorize over full range"), &scaleFullRange))
+            ->withRadioGroup(1),
+        (new ConfigItemBool(cfgPlot, qApp->tr("Colorize over data range"), &scaleDataRange))
+            ->withRadioGroup(1),
         new ConfigItemSpace(cfgPlot, 12),
         new ConfigItemBool(cfgPlot, qApp->tr("Rescale pixels"), &_config.plot.rescale),
         (new ConfigItemBool(cfgPlot, qApp->tr("Use hardware scale"), &useSensorScale))
@@ -92,6 +99,7 @@ bool Camera::editConfig(int page)
     };
     if (ConfigDlg::edit(opts))
     {
+        _config.plot.fullRange = scaleFullRange;
         _config.plot.customScale.on = useCustomScale;
         _config.bgnd.corner = cornerFraction / 100.0;
         _config.roi.fix(width(), height());

@@ -471,10 +471,10 @@ public:
             edAutoExp = new CamPropEdit;
             edAutoExp->connect(edAutoExp, &ValueEdit::keyPressed, [this](int key){
                 if (key == Qt::Key_Return || key == Qt::Key_Enter) autoExposure(); });
-            auto btn = new QPushButton(tr("Find"));
-            btn->setFixedWidth(50);
-            btn->connect(btn, &QPushButton::pressed, [this]{ autoExposure(); });
-            layout->addWidget(LayoutV({label, LayoutH({edAutoExp, btn})}).makeGroupBox(tr("Autoexposure")));
+            butAutoExp = new QPushButton(tr("Find"));
+            butAutoExp->setFixedWidth(50);
+            butAutoExp->connect(butAutoExp, &QPushButton::pressed, [this]{ autoExposure(); });
+            layout->addWidget(LayoutV({label, LayoutH({edAutoExp, butAutoExp})}).makeGroupBox(tr("Autoexposure")));
         }
 
         PROP_CONTROL(tr("Frame rate"), groupFps, edFps, labFps, setFps);
@@ -518,6 +518,9 @@ public:
     {
         if (props["exp"] == 0) return;
 
+        butAutoExp->setDisabled(true);
+        edAutoExp->setDisabled(true);
+
         auto level = edAutoExp->value();
         if (level <= 0) level = 1;
         else if (level > 100) level = 100;
@@ -543,46 +546,50 @@ public:
 
         if (qAbs(level - autoExpLevel) < 0.01) {
             qDebug() << LOG_ID << "Autoexposure: stop(0)" << props["exp"];
-            return;
+            goto stop;
         }
 
         if (level < autoExpLevel) {
             if (autoExp2 == 0) {
                 if (!setExpRaw(qMin(autoExp1*2, props["exp_max"])))
-                    return;
+                    goto stop;
                 autoExp1 = props["exp"];
             } else {
                 autoExp1 = props["exp"];
                 if (!setExpRaw((autoExp1+autoExp2)/2))
-                    return;
+                    goto stop;
                 if (qAbs(autoExp1 - props["exp"]) <= props["exp_step"]) {
                     qDebug() << LOG_ID << "Autoexposure: stop(1)" << props["exp"];
-                    return;
+                    goto stop;
                 }
             }
         } else {
             if (autoExp2 == 0) {
                 if (props["exp"] == props["exp_min"]) {
                     qDebug() << LOG_ID << "Autoexposure: Overexposed";
-                    Ori::Dlg::warning(tr("Overexposed"));
-                    return;
+                    goto stop;
                 }
                 autoExp2 = autoExp1;
                 autoExp1 = autoExp2/2;
                 if (!setExpRaw((autoExp1+autoExp2)/2))
-                    return;
+                    goto stop;
             } else {
                 autoExp2 = props["exp"];
                 if (!setExpRaw((autoExp1+autoExp2)/2))
-                    return;
+                    goto stop;
                 if (qAbs(autoExp2 - props["exp"]) <= props["exp_step"]) {
                     qDebug() << LOG_ID << "Autoexposure: stop(2)" << props["exp"];
-                    return;
+                    goto stop;
                 }
             }
         }
         autoExpStep++;
         peak->requestBrightness(this);
+        return;
+
+    stop:
+        butAutoExp->setDisabled(false);
+        edAutoExp->setDisabled(false);
     }
 
     void applySettings()
@@ -608,6 +615,7 @@ public:
     CamPropEdit *edExp, *edFps, *edAutoExp;
     QGroupBox *groupExp, *groupFps;
     QLabel *labExp, *labFps, *labExpFreq;
+    QPushButton *butAutoExp;
     QMap<const char*, double> props;
     double propChangeWheelSm, propChangeWheelBig;
     double propChangeArrowSm, propChangeArrowBig;

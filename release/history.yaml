@@ -38,10 +38,11 @@ history:
       - text: Control hardware exposure and FPS
 
   - version: 0.0.6
-    date: ?
+    date: 2024-05-13
     changes:
       - text: Export unprocessed image
       - text: Quick modify camera hard props with wheel and arrows
       - text: Application preferences dialog
       - text: Autoexposure command
+      - text: Colorize over full dynamic range (optionally)
       - text: Fix setting loading for IDS cameras

@@ -54,24 +54,28 @@ void cgn_render_beam_to_doubles(CgnBeamRender *b, double *d) {
     }
 }
 
-void cgn_render_beam_to_doubles_norm_8(const uint8_t *b, int sz, double *d) {
+double cgn_find_max_8(const uint8_t *b, int sz) {
     double max = 0;
+    for (int i = 0; i < sz; i++)
+        if (b[i] > max) max = b[i];
+    return max;
+}
+
+double cgn_find_max_16(const uint16_t *b, int sz) {
+    double max = 0;
+    for (int i = 0; i < sz; i++)
+        if (b[i] > max) max = b[i];
+    return max;
+}
+
+void cgn_render_beam_to_doubles_norm_8(const uint8_t *b, int sz, double *d, double max) {
     for (int i = 0; i < sz; i++) {
-        d[i] = (double)b[i];
-        if (d[i] > max) max = d[i];
-    }
-    for (int i = 0; i < sz; i++) {
-        d[i] /= max;
+        d[i] = b[i] / max;
     }
 }
 
-void cgn_render_beam_to_doubles_norm_16(const uint16_t *b, int sz, double *d) {
-    double max = 0;
+void cgn_render_beam_to_doubles_norm_16(const uint16_t *b, int sz, double *d, double max) {
     for (int i = 0; i < sz; i++) {
-        d[i] = (double)b[i];
-        if (d[i] > max) max = d[i];
-    }
-    for (int i = 0; i < sz; i++) {
-        d[i] /= max;
+        d[i] = b[i] / max;
     }
 }

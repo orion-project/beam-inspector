@@ -24,6 +24,7 @@ void CameraConfig::load(QSettings *s)
 {
     LOAD(plot.normalize, Bool, true);
     LOAD(plot.rescale, Bool, false);
+    LOAD(plot.fullRange, Bool, true);
     LOAD(plot.customScale.on, Bool, true);
     LOAD(plot.customScale.factor, Double, 5);
     LOAD(plot.customScale.unit, String, "um");
@@ -46,6 +47,7 @@ void CameraConfig::save(QSettings *s, bool min) const
 {
     SAVE(plot.normalize);
     SAVE(plot.rescale);
+    SAVE(plot.fullRange);
     SAVE(plot.customScale.on);
     if (!min or plot.customScale.on) {
         SAVE(plot.customScale.factor);

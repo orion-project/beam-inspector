@@ -48,6 +48,7 @@ public:
     QMutex cfgMutex;
     bool subtract;
     bool normalize;
+    bool fullRange;
     bool reconfig = false;
 
     double *graph;
@@ -112,6 +113,7 @@ public:
             g.subtracted = subtracted.data();
         }
         normalize = cfg.plot.normalize;
+        fullRange = cfg.plot.fullRange;
     }
 
     void reconfigure()
@@ -217,25 +219,37 @@ public:
         if (tm - prevReady < PLOT_FRAME_DELAY_MS)
             return false;
         prevReady = tm;
+        const double rangeTop = (1 << c.bits) - 1;
         if (subtract)
         {
-            if (normalize)
-                cgn_copy_normalized_f64(g.subtracted, graph, c.w*c.h, g.min, g.max);
-            else
+            if (normalize) {
+                cgn_copy_normalized_f64(g.subtracted, graph, c.w*c.h, g.min,
+                    fullRange ? rangeTop-g.min : g.max);
+            } else
                 memcpy(graph, g.subtracted, sizeof(double)*c.w*c.h);
         }
         else
         {
-            if (normalize)
-                cgn_render_beam_to_doubles_norm_8(c.buf, c.w*c.h, graph);
-            else
+            if (normalize) {
+                if (c.bits == 8)
+                    cgn_render_beam_to_doubles_norm_8(c.buf, c.w*c.h, graph,
+                        fullRange ? rangeTop : cgn_find_max_8(c.buf, c.w*c.h));
+                else {
+                    auto buf = (const uint16_t*)c.buf;
+                    cgn_render_beam_to_doubles_norm_16(buf, c.w*c.h, graph,
+                        fullRange ? rangeTop : cgn_find_max_16(buf, c.w*c.h));
+                }
+            } else
                 cgn_copy_to_f64(&c, graph, &g.max);
         }
         plot->invalidateGraph();
         if (normalize)
             plot->setResult(r, 0, 1);
-        else plot->setResult(r, g.min, g.max);
-        //else plot->setResult(r, 0, (1 << c.bits)-1);
+        else {
+            if (fullRange)
+                plot->setResult(r, 0, rangeTop);
+            else plot->setResult(r, g.min, g.max);
+        }
         table->setResult(r, avgRenderTime, avgCalcTime);
         return true;
     }

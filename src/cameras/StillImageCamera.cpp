@@ -134,18 +134,23 @@ void StillImageCamera::startCapture()
     auto calcTime = timer.elapsed();
 
     timer.restart();
+    const double rangeTop = (1 << c.bits) - 1;
     if (_config.bgnd.on) {
         if (_config.plot.normalize) {
-            cgn_copy_normalized_f64(g.subtracted, graph, sz, g.min, g.max);
+            cgn_copy_normalized_f64(g.subtracted, graph, sz, g.min,
+                _config.plot.fullRange ? rangeTop-g.min : g.max);
         } else {
             memcpy(graph, g.subtracted, sizeof(double)*sz);
         }
     } else {
         if (_config.plot.normalize) {
             if (c.bits > 8) {
-                cgn_render_beam_to_doubles_norm_16((const uint16_t*)c.buf, sz, graph);
+                auto buf = (const uint16_t*)c.buf;
+                cgn_render_beam_to_doubles_norm_16(buf, sz, graph,
+                    _config.plot.fullRange ? rangeTop : cgn_find_max_16(buf, c.w*c.h));
             } else {
-                cgn_render_beam_to_doubles_norm_8((const uint8_t*)c.buf, sz, graph);
+                cgn_render_beam_to_doubles_norm_8(c.buf, sz, graph,
+                    _config.plot.fullRange ? rangeTop : cgn_find_max_8(c.buf, c.w*c.h));
             }
         } else {
             cgn_copy_to_f64(&c, graph, &g.max);
@@ -162,6 +167,11 @@ void StillImageCamera::startCapture()
     _plot->invalidateGraph();
     if (_config.plot.normalize)
         _plot->setResult(r, 0, 1);
-    else _plot->setResult(r, g.min, g.max);
+    else {
+        if (_config.plot.fullRange)
+            _plot->setResult(r, 0, rangeTop);
+        else
+            _plot->setResult(r, g.min, g.max);
+    }
     _table->setResult(r, loadTime, calcTime);
 }

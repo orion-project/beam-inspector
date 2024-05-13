@@ -60,6 +60,7 @@ struct PlotOptions
 {
     bool normalize = true;
     bool rescale = false;
+    bool fullRange = true;
     PixelScale customScale;
 };
 
