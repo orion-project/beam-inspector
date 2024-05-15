@@ -9,6 +9,18 @@
 
 class PeakIntf;
 
+class IdsComfort
+{
+public:
+    static IdsComfort* init();
+    ~IdsComfort();
+
+    QVector<CameraItem> getCameras();
+
+private:
+    IdsComfort();
+};
+
 class IdsComfortCamera : public QThread, public Camera
 {
     Q_OBJECT

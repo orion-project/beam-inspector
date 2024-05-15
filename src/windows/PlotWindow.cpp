@@ -2,7 +2,6 @@
 
 #include "app/AppSettings.h"
 #include "app/HelpSystem.h"
-#include "cameras/IdsComfort.h"
 #include "cameras/IdsComfortCamera.h"
 #include "cameras/MeasureSaver.h"
 #include "cameras/StillImageCamera.h"

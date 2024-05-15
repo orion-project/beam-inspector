@@ -42,7 +42,6 @@ set(PROJECT_SOURCES
     src/app/HelpSystem.cpp
     src/cameras/Camera.cpp
     src/cameras/CameraTypes.cpp
-    src/cameras/IdsComfort.cpp
     src/cameras/IdsComfortCamera.cpp
     src/cameras/MeasureSaver.cpp
     src/cameras/StillImageCamera.cpp
@@ -84,7 +83,6 @@ if (NOT TARGET ids_peak_comfort_c)
 endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    ids_peak_comfort_c::ids_peak_comfort_c
     qcustomplot
     cgn_beam_render
     cgn_beam_calc
@@ -100,7 +98,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
 
+get_target_property(IDS_PEAK_INCLUDE_DIR ids_peak_comfort_c::ids_peak_comfort_c INTERFACE_INCLUDE_DIRECTORIES)
+
 target_include_directories(${PROJECT_NAME} PRIVATE
+    ${IDS_PEAK_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
