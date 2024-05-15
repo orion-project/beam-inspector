@@ -20,10 +20,14 @@ public:
     int height() const override;
     int bits() const override { return 8; }
     PixelScale sensorScale() const override { return { .on=true, .factor=2.5, .unit="um" }; }
+
     bool isCapturing() const override { return true; }
     void startCapture() override;
+
+    bool canMeasure() const override { return true; }
     void startMeasure(MeasureSaver *saver) override;
     void stopMeasure() override;
+
     void requestRawImg(QObject *sender) override;
 
 signals:
