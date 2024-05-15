@@ -11,7 +11,6 @@ class QToolButton;
 
 class Camera;
 struct CameraStats;
-class IdsComfort;
 class MeasureProgressBar;
 class MeasureSaver;
 class Plot;
@@ -42,7 +41,9 @@ protected:
 
 private:
     Plot *_plot;
-    QSharedPointer<IdsComfort> _ids;
+#ifdef WITH_IDS
+    QSharedPointer<class IdsComfort> _ids;
+#endif
     QSharedPointer<Camera> _camera;
     QSharedPointer<MeasureSaver> _saver;
     QAction *_actionMeasure, *_actionOpenImg, *_actionCamConfig,
@@ -80,7 +81,9 @@ private:
     void activateCamWelcome();
     void activateCamImage();
     void activateCamDemo();
+#ifdef WITH_IDS
     void activateCamIds();
+#endif
     void editHardConfig();
 
     void statsReceived(const CameraStats &stats);

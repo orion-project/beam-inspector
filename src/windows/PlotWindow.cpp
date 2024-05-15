@@ -2,7 +2,9 @@
 
 #include "app/AppSettings.h"
 #include "app/HelpSystem.h"
-#include "cameras/IdsComfortCamera.h"
+#ifdef WITH_IDS
+    #include "cameras/IdsComfortCamera.h"
+#endif
 #include "cameras/MeasureSaver.h"
 #include "cameras/StillImageCamera.h"
 #include "cameras/VirtualDemoCamera.h"
@@ -114,7 +116,9 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     _mru = new Ori::MruFileList(this);
     connect(_mru, &Ori::MruFileList::clicked, this, &PlotWindow::openImage);
 
+#ifdef WITH_IDS
     if (auto ids = IdsComfort::init(); ids) _ids.reset(ids);
+#endif
 
     createMenuBar();
     createToolBar();
@@ -234,11 +238,13 @@ void PlotWindow::fillCamSelector()
     _camSelectMenu->addAction(_actionCamImage);
     _camSelectMenu->addAction(_actionCamDemo);
 
+#ifdef WITH_IDS
     if (_ids)
         for (const auto& cam : _ids->getCameras()) {
             auto a = _camSelectMenu->addAction(QIcon(":/toolbar/cam_select"), cam.name, this, &PlotWindow::activateCamIds);
             a->setData(cam.id);
         }
+#endif
 
     // TODO: do something if active camera disappeared
 
@@ -428,12 +434,10 @@ void PlotWindow::showFps(int fps)
 void PlotWindow::showCamConfig(bool replot)
 {
     bool isImage = dynamic_cast<StillImageCamera*>(_camera.get());
-    bool isDemo = dynamic_cast<VirtualDemoCamera*>(_camera.get());
-    bool isIds = dynamic_cast<IdsComfortCamera*>(_camera.get());
     _buttonOpenImg->setVisible(isImage);
-    _actionMeasure->setVisible(isDemo || isIds);
-    _buttonMeasure->setVisible(isDemo || isIds);
-    _actionHardConfig->setVisible(isIds);
+    _actionMeasure->setVisible(_camera->canMeasure());
+    _buttonMeasure->setVisible(_camera->canMeasure());
+    _actionHardConfig->setVisible(_camera->canHardConfig());
     _buttonSelectCam->setText("  " + (isImage ? _actionCamImage->text() : _camera->name()));
     _actionSaveRaw->setEnabled(_camera->isCapturing());
 
@@ -720,6 +724,7 @@ void PlotWindow::activateCamDemo()
     _camera->startCapture();
 }
 
+#ifdef WITH_IDS
 void PlotWindow::activateCamIds()
 {
     auto action = qobject_cast<QAction*>(sender());
@@ -755,10 +760,10 @@ void PlotWindow::activateCamIds()
     _plot->zoomAuto(false);
     _camera->startCapture();
 }
+#endif
 
 void PlotWindow::editHardConfig()
 {
-    auto cam = dynamic_cast<IdsComfortCamera*>(_camera.get());
-    if (cam and cam->isCapturing())
-        _hardConfigWnd = cam->showHardConfgWindow();
+    if (_camera->canHardConfig() and _camera->isCapturing())
+        _hardConfigWnd = _camera->showHardConfgWindow();
 }

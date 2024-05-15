@@ -1,6 +1,8 @@
 #ifndef IDS_COMFORT_CAMERA_H
 #define IDS_COMFORT_CAMERA_H
 
+#ifdef WITH_IDS
+
 #include "cameras/Camera.h"
 
 #include <QPointer>
@@ -35,17 +37,22 @@ public:
     int height() const override { return _height; }
     int bits() const override { return _bits; }
     PixelScale sensorScale() const override;
+
     bool isCapturing() const override { return (bool)_peak; }
     void startCapture() override;
     void stopCapture() override;
+
+    bool canMeasure() const override { return true; }
     void startMeasure(MeasureSaver *saver) override;
     void stopMeasure() override;
+
     void saveHardConfig(QSettings *s) override;
+    bool canHardConfig() const override { return true; }
+    QPointer<QWidget> showHardConfgWindow() override;
+
     void requestRawImg(QObject *sender) override;
 
     QVariant id() const { return _id; }
-
-    QPointer<QWidget> showHardConfgWindow();
 
 signals:
     void ready();
@@ -69,4 +76,5 @@ private:
     friend class PeakIntf;
 };
 
+#endif // WITH_IDS
 #endif // IDS_COMFORT_CAMERA_H

@@ -1,5 +1,7 @@
 #include "IdsComfortCamera.h"
 
+#ifdef WITH_IDS
+
 #define LOG_ID "IdsComfortCamera:"
 
 #include "app/AppSettings.h"
@@ -828,3 +830,5 @@ QPointer<QWidget> IdsComfortCamera::showHardConfgWindow()
     _cfgWnd->activateWindow();
     return _cfgWnd;
 }
+
+#endif // WITH_IDS

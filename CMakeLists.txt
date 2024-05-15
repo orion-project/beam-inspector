@@ -23,6 +23,9 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+option(WITH_IDS "Add support for cameras from IDS (SDK must be installed)" ON)
+set(WITH_IDS ON)
+
 #add_compile_options(
 #    -O3
 #    -ffast-math
@@ -78,9 +81,6 @@ else()
     )
 endif()
 
-if (NOT TARGET ids_peak_comfort_c)
-    find_package(ids_peak_comfort_c REQUIRED)
-endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     qcustomplot
@@ -98,10 +98,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
 
-get_target_property(IDS_PEAK_INCLUDE_DIR ids_peak_comfort_c::ids_peak_comfort_c INTERFACE_INCLUDE_DIRECTORIES)
-
 target_include_directories(${PROJECT_NAME} PRIVATE
-    ${IDS_PEAK_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
@@ -113,6 +110,23 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     APP_VER_YEAR=${APP_VER_YEAR}
     QT_USE_QSTRINGBUILDER
 )
+
+if(WITH_IDS)
+    if (NOT TARGET ids_peak_comfort_c)
+        find_package(ids_peak_comfort_c REQUIRED)
+    endif()
+
+    add_definitions(-DWITH_IDS)
+
+    get_target_property(IDS_PEAK_INCLUDE_DIR
+        ids_peak_comfort_c::ids_peak_comfort_c
+        INTERFACE_INCLUDE_DIRECTORIES
+    )
+    target_include_directories(${PROJECT_NAME} PRIVATE
+        ${IDS_PEAK_INCLUDE_DIR}
+    )
+endif()
+
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(${PROJECT_NAME})
