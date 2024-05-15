@@ -44,6 +44,7 @@ AppSettings::AppSettings() : QObject()
 void AppSettings::load()
 {
     Ori::Settings s;
+    LOAD(idsInstallDir, String, "C:/Program Files/IDS/ids_peak");
 
     s.beginGroup("DeviceControl");
     LOAD(propChangeWheelSm, Int, 20);

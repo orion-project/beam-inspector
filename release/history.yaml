@@ -46,3 +46,8 @@ history:
       - text: Autoexposure command
       - text: Colorize over full dynamic range (optionally)
       - text: Fix setting loading for IDS cameras
+
+  - version: 0.0.7
+    date: ?
+    changes:
+      - text: Run-time linking against IDS libs

@@ -9,10 +9,194 @@
 
 #include <ids_peak_comfort_c/ids_peak_comfort_c.h>
 
+#include <windows.h>
+
 #include <QSettings>
+#include <QFile>
 
 #define FRAME_TIMEOUT 5000
 //#define LOG_FRAME_TIME
+
+//------------------------------------------------------------------------------
+//                              IdsComfort
+//------------------------------------------------------------------------------
+
+QString getSysError(DWORD err)
+{
+    const int bufSize = 1024;
+    wchar_t buf[bufSize];
+    auto size = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM, 0, err, 0, buf, bufSize, 0);
+    if (size == 0)
+        return QStringLiteral("code: 0x").arg(err, 0, 16);
+    return QString::fromWCharArray(buf, size).trimmed();
+}
+
+namespace IdsLib
+{
+    HMODULE hLib = 0;
+
+    #define IDS_PROC(name) peak_status (__cdecl *name)
+    IDS_PROC(peak_Library_Init)();
+    IDS_PROC(peak_Library_Exit)();
+    IDS_PROC(peak_CameraList_Update)(size_t*);
+    IDS_PROC(peak_CameraList_Get)(peak_camera_descriptor*, size_t*);
+    IDS_PROC(peak_Library_GetLastError)(peak_status*, char*, size_t*);
+    peak_access_status (__cdecl *peak_ExposureTime_GetAccessStatus)(peak_camera_handle);
+    IDS_PROC(peak_ExposureTime_GetRange)(peak_camera_handle, double*, double*, double*);
+    IDS_PROC(peak_ExposureTime_Set)(peak_camera_handle, double);
+    IDS_PROC(peak_ExposureTime_Get)(peak_camera_handle, double*);
+    peak_access_status (__cdecl *peak_FrameRate_GetAccessStatus)(peak_camera_handle);
+    IDS_PROC(peak_FrameRate_GetRange)(peak_camera_handle, double*, double*, double*);
+    IDS_PROC(peak_FrameRate_Set)(peak_camera_handle, double);
+    IDS_PROC(peak_FrameRate_Get)(peak_camera_handle, double*);
+    peak_bool (__cdecl *peak_Acquisition_IsStarted)(peak_camera_handle);
+    IDS_PROC(peak_Acquisition_Start)(peak_camera_handle, uint32_t);
+    IDS_PROC(peak_Acquisition_Stop)(peak_camera_handle);
+    IDS_PROC(peak_Acquisition_WaitForFrame)(peak_camera_handle, uint32_t, peak_frame_handle*);
+    IDS_PROC(peak_Acquisition_GetInfo)(peak_camera_handle, peak_acquisition_info*);
+    IDS_PROC(peak_Camera_GetDescriptor)(peak_camera_id, peak_camera_descriptor*);
+    IDS_PROC(peak_Camera_Open)(peak_camera_id, peak_camera_handle*);
+    IDS_PROC(peak_Camera_Close)(peak_camera_handle);
+    IDS_PROC(peak_PixelFormat_GetList)(peak_camera_handle, peak_pixel_format*, size_t*);
+    IDS_PROC(peak_PixelFormat_Get)(peak_camera_handle, peak_pixel_format*);
+    IDS_PROC(peak_PixelFormat_Set)(peak_camera_handle, peak_pixel_format);
+    IDS_PROC(peak_ROI_Get)(peak_camera_handle, peak_roi*);
+    IDS_PROC(peak_Frame_Buffer_Get)(peak_frame_handle, peak_buffer*);
+    IDS_PROC(peak_Frame_Release)(peak_camera_handle, peak_frame_handle);
+
+    template <typename T> bool getProc(const char *name, T *proc) {
+        *proc = (T)GetProcAddress(hLib, name);
+        if (*proc == NULL) {
+            auto err = GetLastError();
+            qWarning() << LOG_ID << "Failed to get proc" << name << getSysError(err);
+            return false;
+        }
+        return true;
+    }
+}
+
+QString getPeakError(peak_status status)
+{
+    size_t bufSize = 0;
+    auto res = IdsLib::peak_Library_GetLastError(&status, nullptr, &bufSize);
+    if (PEAK_SUCCESS(res)) {
+        QByteArray buf(bufSize, 0);
+        res = IdsLib::peak_Library_GetLastError(&status, buf.data(), &bufSize);
+        if (PEAK_SUCCESS(res))
+            return QString::fromLatin1(buf.data());
+    }
+    qWarning() << LOG_ID << "Unable to get text for error" << status << "because of error" << res;
+    return QString("errcode=%1").arg(status);
+}
+
+IdsComfort* IdsComfort::init()
+{
+    QStringList libs = {
+        "GCBase_MD_VC140_v3_2_IDS.dll",
+        "Log_MD_VC140_v3_2_IDS.dll",
+        "MathParser_MD_VC140_v3_2_IDS.dll",
+        "NodeMapData_MD_VC140_v3_2_IDS.dll",
+        "XmlParser_MD_VC140_v3_2_IDS.dll",
+        "GenApi_MD_VC140_v3_2_IDS.dll",
+        "FirmwareUpdate_MD_VC140_v3_2_IDS.dll",
+        "ids_peak_comfort_c.dll",
+    };
+    QString sdkPath = AppSettings::instance().idsInstallDir + "/comfort_sdk/api/lib/x86_64/";
+    for (const auto& lib : libs) {
+        QString libPath = sdkPath + lib;
+        if (!QFile::exists(libPath)) {
+            qWarning() << LOG_ID << "Library not found" << libPath;
+            return nullptr;
+        }
+        IdsLib::hLib = LoadLibraryW(libPath.toStdWString().c_str());
+        if (IdsLib::hLib == NULL) {
+            auto err = GetLastError();
+            qWarning() << LOG_ID << "Failed to load" << libPath << getSysError(err);
+            return nullptr;
+        }
+    }
+
+    #define GET_PROC(name) if (!IdsLib::getProc(#name, &IdsLib::name)) return nullptr
+    GET_PROC(peak_Library_Init);
+    GET_PROC(peak_Library_Exit);
+    GET_PROC(peak_CameraList_Update);
+    GET_PROC(peak_CameraList_Get);
+    GET_PROC(peak_Library_GetLastError);
+    GET_PROC(peak_ExposureTime_GetAccessStatus);
+    GET_PROC(peak_ExposureTime_GetRange);
+    GET_PROC(peak_ExposureTime_Set);
+    GET_PROC(peak_ExposureTime_Get);
+    GET_PROC(peak_FrameRate_GetAccessStatus);
+    GET_PROC(peak_FrameRate_GetRange);
+    GET_PROC(peak_FrameRate_Set);
+    GET_PROC(peak_FrameRate_Get);
+    GET_PROC(peak_Acquisition_IsStarted);
+    GET_PROC(peak_Acquisition_Start);
+    GET_PROC(peak_Acquisition_Stop);
+    GET_PROC(peak_Acquisition_WaitForFrame);
+    GET_PROC(peak_Acquisition_GetInfo);
+    GET_PROC(peak_Camera_GetDescriptor);
+    GET_PROC(peak_Camera_Open);
+    GET_PROC(peak_Camera_Close);
+    GET_PROC(peak_PixelFormat_GetList);
+    GET_PROC(peak_PixelFormat_Get);
+    GET_PROC(peak_PixelFormat_Set);
+    GET_PROC(peak_ROI_Get);
+    GET_PROC(peak_Frame_Buffer_Get);
+    GET_PROC(peak_Frame_Release);
+
+    auto res = IdsLib::peak_Library_Init();
+    if (PEAK_ERROR(res)) {
+        qCritical() << LOG_ID << "Unable to init library" << getPeakError(res);
+        return nullptr;
+    }
+    qDebug() << LOG_ID << "Library inited";
+    return new IdsComfort();
+}
+
+IdsComfort::IdsComfort()
+{
+}
+
+IdsComfort::~IdsComfort()
+{
+    auto res = IdsLib::peak_Library_Exit();
+    if (PEAK_ERROR(res))
+        qWarning() << LOG_ID << "Unable to deinit library" << getPeakError(res);
+    else qDebug() << LOG_ID << "Library deinited";
+}
+
+QVector<CameraItem> IdsComfort::getCameras()
+{
+    size_t camCount;
+    auto res = IdsLib::peak_CameraList_Update(&camCount);
+    if (PEAK_ERROR(res)) {
+        qWarning() << LOG_ID << "Unable to update camera list" << getPeakError(res);
+        return {};
+    }
+    else qDebug() << LOG_ID << "Camera list updated. Cameras found:" << camCount;
+
+    QVector<peak_camera_descriptor> cams(camCount);
+    res = IdsLib::peak_CameraList_Get(cams.data(), &camCount);
+    if (PEAK_ERROR(res)) {
+        qWarning() << LOG_ID << "Unable to get camera list" << getPeakError(res);
+        return {};
+    }
+
+    QVector<CameraItem> result;
+    for (const auto &cam : cams) {
+        qDebug() << LOG_ID << cam.cameraID << cam.cameraType << cam.modelName << cam.serialNumber;
+        result << CameraItem {
+            .id = cam.cameraID,
+            .name = QString::fromLatin1(cam.modelName)
+        };
+    }
+    return result;
+}
+
+//------------------------------------------------------------------------------
+//                              PeakIntf
+//------------------------------------------------------------------------------
 
 // Implemented in IdsComfort.cpp
 QString getPeakError(peak_status status);
@@ -50,14 +234,14 @@ public:
     QString init()
     {
         peak_camera_descriptor descr;
-        res = peak_Camera_GetDescriptor(id, &descr);
+        res = IdsLib::peak_Camera_GetDescriptor(id, &descr);
         CHECK_ERR("Unable to get camera descriptor");
         cam->_name = QString::fromLatin1(descr.modelName);
         cam->_descr = cam->_name + ' ' + QString::fromLatin1(descr.serialNumber);
         cam->_configGroup = cam->_name;
         cam->loadConfig();
 
-        res = peak_Camera_Open(id, &hCam);
+        res = IdsLib::peak_Camera_Open(id, &hCam);
         CHECK_ERR("Unable to open camera");
         qDebug() << LOG_ID << "Camera opened" << id;
 
@@ -66,15 +250,15 @@ public:
         //peak_pixel_format targetFormat = PEAK_PIXEL_FORMAT_MONO10G40_IDS;
         //peak_pixel_format targetFormat = PEAK_PIXEL_FORMAT_MONO12G24_IDS;
         peak_pixel_format pixelFormat = PEAK_PIXEL_FORMAT_INVALID;
-        res = peak_PixelFormat_Get(hCam, &pixelFormat);
+        res = IdsLib::peak_PixelFormat_Get(hCam, &pixelFormat);
         CHECK_ERR("Unable to get pixel format");
         qDebug() << LOG_ID << "Pixel format" << QString::number(pixelFormat, 16);
 
         size_t formatCount = 0;
-        res = peak_PixelFormat_GetList(hCam, nullptr, &formatCount);
+        res = IdsLib::peak_PixelFormat_GetList(hCam, nullptr, &formatCount);
         CHECK_ERR("Unable to get pixel format count");
         QVector<peak_pixel_format> pixelFormats(formatCount);
-        res = peak_PixelFormat_GetList(hCam, pixelFormats.data(), &formatCount);
+        res = IdsLib::peak_PixelFormat_GetList(hCam, pixelFormats.data(), &formatCount);
         CHECK_ERR("Unable to get pixel formats");
         bool supports = false;
         for (int i = 0; i < formatCount; i++) {
@@ -87,7 +271,7 @@ public:
             // Use one of color formats and convert manually?
             return "Camera doesn't support gray scale format";
         if (pixelFormat != targetFormat) {
-            res = peak_PixelFormat_Set(hCam, targetFormat);
+            res = IdsLib::peak_PixelFormat_Set(hCam, targetFormat);
             CHECK_ERR("Unable to set pixel format");
             qDebug() << LOG_ID << "pixel format set";
         }
@@ -95,7 +279,7 @@ public:
         cam->_bits = c.bits;
 
         peak_roi roi = {0, 0, 0, 0};
-        res = peak_ROI_Get(hCam, &roi);
+        res = IdsLib::peak_ROI_Get(hCam, &roi);
         CHECK_ERR("Unable to get ROI");
         qDebug() << LOG_ID << QString("ROI size=%1x%2, offset=%3x%4")
             .arg(roi.size.width).arg(roi.size.height)
@@ -105,11 +289,10 @@ public:
         cam->_width = c.w;
         cam->_height = c.h;
 
-        SHOW_CAM_PROP("FPS", peak_FrameRate_Get, double);
-        SHOW_CAM_PROP("Exposure", peak_ExposureTime_Get, double);
-        SHOW_CAM_PROP("PixelClock", peak_PixelClock_Get, double);
+        SHOW_CAM_PROP("FPS", IdsLib::peak_FrameRate_Get, double);
+        SHOW_CAM_PROP("Exposure", IdsLib::peak_ExposureTime_Get, double);
 
-        res = peak_Acquisition_Start(hCam, PEAK_INFINITE);
+        res = IdsLib::peak_Acquisition_Start(hCam, PEAK_INFINITE);
         CHECK_ERR("Unable to start acquisition");
         qDebug() << LOG_ID << "Acquisition started";
 
@@ -126,15 +309,15 @@ public:
         if (hCam == PEAK_INVALID_HANDLE)
             return;
 
-        if (peak_Acquisition_IsStarted(hCam))
+        if (IdsLib::peak_Acquisition_IsStarted(hCam))
         {
-            auto res = peak_Acquisition_Stop(hCam);
+            auto res = IdsLib::peak_Acquisition_Stop(hCam);
             if (PEAK_ERROR(res))
                 qWarning() << LOG_ID << "Unable to stop acquisition";
             else qDebug() << LOG_ID << "Acquisition stopped";
         }
 
-        auto res = peak_Camera_Close(hCam);
+        auto res = IdsLib::peak_Camera_Close(hCam);
         if (PEAK_ERROR(res))
             qWarning() << LOG_ID << "Unable to close camera" << getPeakError(res);
         else qDebug() << LOG_ID << "Camera closed" << id;
@@ -150,9 +333,9 @@ public:
             if (waitFrame()) continue;
 
             tm = timer.elapsed();
-            res = peak_Acquisition_WaitForFrame(hCam, FRAME_TIMEOUT, &frame);
+            res = IdsLib::peak_Acquisition_WaitForFrame(hCam, FRAME_TIMEOUT, &frame);
             if (PEAK_SUCCESS(res))
-                res = peak_Frame_Buffer_Get(frame, &buf);
+                res = IdsLib::peak_Frame_Buffer_Get(frame, &buf);
             if (res == PEAK_STATUS_ABORTED) {
                 auto err = getPeakError(res);
                 qCritical() << LOG_ID << "Interrupted" << err;
@@ -176,7 +359,7 @@ public:
                 if (showResults())
                     emit cam->ready();
 
-                res = peak_Frame_Release(hCam, frame);
+                res = IdsLib::peak_Frame_Release(hCam, frame);
                 if (PEAK_ERROR(res)) {
                     auto err = getPeakError(res);
                     qCritical() << LOG_ID << "Unable to release frame" << err;
@@ -199,7 +382,7 @@ public:
                 // TODO: suggest a way for sending arbitrary stats and showing it in the table
                 peak_acquisition_info info;
                 memset(&info, 0, sizeof(info));
-                res = peak_Acquisition_GetInfo(hCam, &info);
+                res = IdsLib::peak_Acquisition_GetInfo(hCam, &info);
                 if (PEAK_SUCCESS(res)) {
                     errors << QString::number(info.numUnderrun)
                             << QString::number(info.numDropped)
@@ -237,6 +420,10 @@ public:
         }
     }
 };
+
+//------------------------------------------------------------------------------
+//                              IdsComfortCamera
+//------------------------------------------------------------------------------
 
 IdsComfortCamera::IdsComfortCamera(QVariant id, PlotIntf *plot, TableIntf *table, QObject *parent) :
     Camera(plot, table, "IdsComfortCamera"), QThread(parent), _id(id)
@@ -309,11 +496,11 @@ void IdsComfortCamera::saveHardConfig(QSettings *s)
     if (!_peak)
         return;
     double v;
-    auto res = peak_ExposureTime_Get(_peak->hCam, &v);
+    auto res = IdsLib::peak_ExposureTime_Get(_peak->hCam, &v);
     if (PEAK_ERROR(res))
         s->setValue("exposure", getPeakError(res));
     else s->setValue("exposure", v);
-    res = peak_FrameRate_Get(_peak->hCam, &v);
+    res = IdsLib::peak_FrameRate_Get(_peak->hCam, &v);
     if (PEAK_ERROR(res))
         s->setValue("frameRate", getPeakError(res));
     else s->setValue("frameRate", v);
@@ -362,7 +549,7 @@ using namespace Ori::Widgets;
 #define PROP_SHOW(method, id, edit, label, getValue, getRange, showAux) \
     void method() { \
         double value, min, max, step; \
-        auto res = getValue(hCam, &value); \
+        auto res = IdsLib::getValue(hCam, &value); \
         if (PEAK_ERROR(res)) { \
             label->setText(getPeakError(res)); \
             edit->setValue(0); \
@@ -373,7 +560,7 @@ using namespace Ori::Widgets;
         edit->setValue(value); \
         edit->setDisabled(false); \
         props[id] = value; \
-        res = getRange(hCam, &min, &max, &step); \
+        res = IdsLib::getRange(hCam, &min, &max, &step); \
         if (PEAK_ERROR(res)) \
             label->setText(getPeakError(res)); \
         else { \
@@ -390,7 +577,7 @@ using namespace Ori::Widgets;
         method ## Raw(edit->value()); \
     } \
     bool method ## Raw(double v) { \
-        auto res = setValue(hCam, v); \
+        auto res = IdsLib::setValue(hCam, v); \
         if (PEAK_ERROR(res)) { \
             Ori::Dlg::error(getPeakError(res)); \
             return false; \
@@ -419,7 +606,7 @@ using namespace Ori::Widgets;
         double step = props[id "_step"]; \
         if (qAbs(val - newVal) < step) \
             newVal = val + (inc ? step : -step); \
-        auto res = setValue(hCam, newVal); \
+        auto res = IdsLib::setValue(hCam, newVal); \
         if (PEAK_ERROR(res)) \
             Ori::Dlg::error(getPeakError(res)); \
         showExp(); \
@@ -482,12 +669,12 @@ public:
         labExpFreq = new QLabel;
         groupExp->layout()->addWidget(labExpFreq);
 
-        if (peak_ExposureTime_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE) {
+        if (IdsLib::peak_ExposureTime_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE) {
             labExp->setText(tr("Exposure is not configurable"));
             edExp->setDisabled(true);
         } else showExp();
 
-        if (peak_FrameRate_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE) {
+        if (IdsLib::peak_FrameRate_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE) {
             labFps->setText(tr("FPS is not configurable"));
             edFps->setDisabled(true);
         } else showFps();

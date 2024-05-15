@@ -25,6 +25,7 @@ public:
     int propChangeWheelBig = 100;
     int propChangeArrowSm = 20;
     int propChangeArrowBig = 100;
+    QString idsInstallDir;
 
     bool isDevMode = false;
 
