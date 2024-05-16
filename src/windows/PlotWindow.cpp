@@ -174,9 +174,9 @@ void PlotWindow::createMenuBar()
 {
 #define A_ Ori::Gui::action
 #define M_ Ori::Gui::menu
-    _actionCamWelcome = A_("Welcome", this, &PlotWindow::activateCamWelcome, ":/toolbar/cam_select");
-    _actionCamImage = A_("Image", this, &PlotWindow::activateCamImage, ":/toolbar/cam_select");
-    _actionCamDemo = A_("Demo", this, &PlotWindow::activateCamDemo, ":/toolbar/cam_select");
+    _actionCamWelcome = A_("Welcome", this, &PlotWindow::activateCamWelcome, ":/toolbar/camera");
+    _actionCamImage = A_("Image", this, &PlotWindow::activateCamImage, ":/toolbar/camera");
+    _actionCamDemo = A_("Demo", this, &PlotWindow::activateCamDemo, ":/toolbar/camera");
     _actionRefreshCams = A_("Refresh", this, &PlotWindow::fillCamSelector);
     _camSelectMenu = new QMenu(tr("Active Camera"), this);
 
@@ -241,7 +241,7 @@ void PlotWindow::fillCamSelector()
 #ifdef WITH_IDS
     if (_ids)
         for (const auto& cam : _ids->getCameras()) {
-            auto a = _camSelectMenu->addAction(QIcon(":/toolbar/cam_select"), cam.name, this, &PlotWindow::activateCamIds);
+            auto a = _camSelectMenu->addAction(QIcon(":/toolbar/camera"), cam.name, this, &PlotWindow::activateCamIds);
             a->setData(cam.id);
         }
 #endif
@@ -257,7 +257,7 @@ void PlotWindow::createToolBar()
     _buttonSelectCam = new QToolButton;
     _buttonSelectCam->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     _buttonSelectCam->setPopupMode(QToolButton::InstantPopup);
-    _buttonSelectCam->setIcon(QIcon(":/toolbar/cam_select"));
+    _buttonSelectCam->setIcon(QIcon(":/toolbar/camera"));
     _buttonSelectCam->setMenu(_camSelectMenu);
     _buttonSelectCam->setStyleSheet("QToolButton{font-weight: bold}");
     _buttonSelectCam->setToolTip(tr("Active camera"));

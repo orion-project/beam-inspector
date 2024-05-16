@@ -25,9 +25,19 @@ public:
     int propChangeWheelBig = 100;
     int propChangeArrowSm = 20;
     int propChangeArrowBig = 100;
-    QString idsInstallDir;
+#ifdef WITH_IDS
+    bool idsEnabled;
+    QString idsSdkDir;
+#endif
 
     bool isDevMode = false;
+
+    enum ConfigPages {
+        cfgDev,
+    #ifdef WITH_IDS
+        cfgIds,
+    #endif
+    };
 
     void load();
     void save();

@@ -93,6 +93,9 @@ QString getPeakError(peak_status status)
 
 IdsComfort* IdsComfort::init()
 {
+    if (!AppSettings::instance().idsEnabled)
+        return nullptr;
+
     QStringList libs = {
         "GCBase_MD_VC140_v3_2_IDS.dll",
         "Log_MD_VC140_v3_2_IDS.dll",
@@ -103,9 +106,9 @@ IdsComfort* IdsComfort::init()
         "FirmwareUpdate_MD_VC140_v3_2_IDS.dll",
         "ids_peak_comfort_c.dll",
     };
-    QString sdkPath = AppSettings::instance().idsInstallDir + "/comfort_sdk/api/lib/x86_64/";
+    QString sdkPath = AppSettings::instance().idsSdkDir;
     for (const auto& lib : libs) {
-        QString libPath = sdkPath + lib;
+        QString libPath = sdkPath + '/' + lib;
         if (!QFile::exists(libPath)) {
             qWarning() << LOG_ID << "Library not found" << libPath;
             return nullptr;
