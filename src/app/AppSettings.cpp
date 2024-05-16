@@ -44,7 +44,10 @@ AppSettings::AppSettings() : QObject()
 void AppSettings::load()
 {
     Ori::Settings s;
-    LOAD(idsInstallDir, String, "C:/Program Files/IDS/ids_peak");
+#ifdef WITH_IDS
+    LOAD(idsEnabled, Bool, true);
+    LOAD(idsSdkDir, String, "C:/Program Files/IDS/ids_peak/comfort_sdk/api/lib/x86_64/");
+#endif
 
     s.beginGroup("DeviceControl");
     LOAD(propChangeWheelSm, Int, 20);
@@ -56,6 +59,10 @@ void AppSettings::load()
 void AppSettings::save()
 {
     Ori::Settings s;
+#ifdef WITH_IDS
+    SAVE(idsEnabled);
+    SAVE(idsSdkDir);
+#endif
 
     s.beginGroup("DeviceControl");
     SAVE(propChangeWheelSm);
@@ -70,19 +77,26 @@ bool AppSettings::edit()
     opts.objectName = "AppSettingsDlg";
     opts.pageIconSize = 32;
     opts.pages = {
-        ConfigPage(0, tr("Device Control"), ":/toolbar/hardware"),
+        ConfigPage(cfgDev, tr("Device Control"), ":/toolbar/hardware"),
+    #ifdef WITH_IDS
+        ConfigPage(cfgIds, tr("IDS Camera"), ":/toolbar/camera"),
+    #endif
     };
     opts.items = {
-        (new ConfigItemInt(0, tr("Small change by mouse wheel, %"), &propChangeWheelSm))
+        (new ConfigItemInt(cfgDev, tr("Small change by mouse wheel, %"), &propChangeWheelSm))
             ->withMinMax(1, 1000),
-        (new ConfigItemInt(0, tr("Big change by mouse wheel, %"), &propChangeWheelBig))
+        (new ConfigItemInt(cfgDev, tr("Big change by mouse wheel, %"), &propChangeWheelBig))
             ->withMinMax(1, 1000)
             ->withHint(tr("Hold Control key for big change")),
-        (new ConfigItemInt(0, tr("Small change by arrow keys, %"), &propChangeArrowSm))
+        (new ConfigItemInt(cfgDev, tr("Small change by arrow keys, %"), &propChangeArrowSm))
             ->withMinMax(1, 1000),
-        (new ConfigItemInt(0, tr("Big change by arrow keys, %"), &propChangeArrowBig))
+        (new ConfigItemInt(cfgDev, tr("Big change by arrow keys, %"), &propChangeArrowBig))
             ->withMinMax(1, 1000)
             ->withHint(tr("Hold Control key for big change")),
+    #ifdef WITH_IDS
+        new ConfigItemBool(cfgIds, tr("Enable"), &idsEnabled),
+        new ConfigItemDir(cfgIds, tr("Peak comfortC directory (x64)"), &idsSdkDir),
+    #endif
     };
     if (ConfigDlg::edit(opts))
     {
