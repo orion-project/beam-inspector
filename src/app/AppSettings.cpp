@@ -44,7 +44,10 @@ AppSettings::AppSettings() : QObject()
 void AppSettings::load()
 {
     Ori::Settings s;
+    LOAD(useConsole, Bool, false);
+
 #ifdef WITH_IDS
+    s.beginGroup("IdsCamera");
     LOAD(idsEnabled, Bool, true);
     LOAD(idsSdkDir, String, "C:/Program Files/IDS/ids_peak/comfort_sdk/api/lib/x86_64/");
 #endif
@@ -59,7 +62,10 @@ void AppSettings::load()
 void AppSettings::save()
 {
     Ori::Settings s;
+    SAVE(useConsole);
+
 #ifdef WITH_IDS
+    s.beginGroup("IdsCamera");
     SAVE(idsEnabled);
     SAVE(idsSdkDir);
 #endif
@@ -81,6 +87,7 @@ bool AppSettings::edit()
     #ifdef WITH_IDS
         ConfigPage(cfgIds, tr("IDS Camera"), ":/toolbar/camera"),
     #endif
+        ConfigPage(cfgDbg, tr("Debug"), ":/toolbar/bug"),
     };
     opts.items = {
         (new ConfigItemInt(cfgDev, tr("Small change by mouse wheel, %"), &propChangeWheelSm))
@@ -97,6 +104,7 @@ bool AppSettings::edit()
         new ConfigItemBool(cfgIds, tr("Enable"), &idsEnabled),
         new ConfigItemDir(cfgIds, tr("Peak comfortC directory (x64)"), &idsSdkDir),
     #endif
+        new ConfigItemBool(cfgDbg, tr("Show log window (restart required)"), &useConsole),
     };
     if (ConfigDlg::edit(opts))
     {
