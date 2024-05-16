@@ -542,11 +542,11 @@ using namespace Ori::Widgets;
     label->setForegroundRole(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Mid); \
     edit = new CamPropEdit; \
     edit->scrolled = [this](bool wheel, bool inc, bool big){ setter ## Fast(wheel, inc, big); }; \
-    edit->connect(edit, &ValueEdit::keyPressed, [this](int key){ \
+    edit->connect(edit, &ValueEdit::keyPressed, edit, [this](int key){ \
         if (key == Qt::Key_Return || key == Qt::Key_Enter) setter(); }); \
     auto btn = new QPushButton(tr("Set")); \
     btn->setFixedWidth(50); \
-    btn->connect(btn, &QPushButton::pressed, [this]{ setter(); }); \
+    btn->connect(btn, &QPushButton::pressed, btn, [this]{ setter(); }); \
     group = LayoutV({label, LayoutH({edit, btn})}).makeGroupBox(title); \
     layout->addWidget(group); \
 }
@@ -661,11 +661,11 @@ public:
         {
             auto label = new QLabel(tr("Percent of dynamic range:"));
             edAutoExp = new CamPropEdit;
-            edAutoExp->connect(edAutoExp, &ValueEdit::keyPressed, [this](int key){
+            edAutoExp->connect(edAutoExp, &ValueEdit::keyPressed, edAutoExp, [this](int key){
                 if (key == Qt::Key_Return || key == Qt::Key_Enter) autoExposure(); });
             butAutoExp = new QPushButton(tr("Find"));
             butAutoExp->setFixedWidth(50);
-            butAutoExp->connect(butAutoExp, &QPushButton::pressed, [this]{ autoExposure(); });
+            butAutoExp->connect(butAutoExp, &QPushButton::pressed, butAutoExp, [this]{ autoExposure(); });
             layout->addWidget(LayoutV({label, LayoutH({edAutoExp, butAutoExp})}).makeGroupBox(tr("Autoexposure")));
         }
 

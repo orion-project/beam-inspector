@@ -30,10 +30,12 @@ public:
     QString idsSdkDir;
 #endif
 
+    bool useConsole = false;
     bool isDevMode = false;
 
     enum ConfigPages {
         cfgDev,
+        cfgDbg,
     #ifdef WITH_IDS
         cfgIds,
     #endif
