@@ -68,6 +68,8 @@ namespace IdsLib
     IDS_PROC(peak_ROI_Size_GetRange)(peak_camera_handle, peak_size*, peak_size*, peak_size*);
     IDS_PROC(peak_Frame_Buffer_Get)(peak_frame_handle, peak_buffer*);
     IDS_PROC(peak_Frame_Release)(peak_camera_handle, peak_frame_handle);
+    IDS_PROC(peak_GFA_Float_Get)(peak_camera_handle, peak_gfa_module, const char*, double*);
+    peak_access_status (__cdecl *peak_GFA_Feature_GetAccessStatus)(peak_camera_handle, peak_gfa_module, const char*);
 
     template <typename T> bool getProc(const char *name, T *proc) {
         *proc = (T)GetProcAddress(hLib, name);
@@ -155,6 +157,8 @@ IdsComfort* IdsComfort::init()
     GET_PROC(peak_ROI_Size_GetRange);
     GET_PROC(peak_Frame_Buffer_Get);
     GET_PROC(peak_Frame_Release);
+    GET_PROC(peak_GFA_Float_Get);
+    GET_PROC(peak_GFA_Feature_GetAccessStatus);
 
     auto res = IdsLib::peak_Library_Init();
     if (PEAK_ERROR(res)) {
@@ -217,6 +221,19 @@ QString getPeakError(peak_status status);
         auto err = getPeakError(res); \
         qCritical() << LOG_ID << msg << err; \
         return QString(msg ": ") + err; \
+    }
+
+#define GFA_GET(prop, value) \
+    if (PEAK_IS_READABLE(IdsLib::peak_GFA_Feature_GetAccessStatus(hCam, PEAK_GFA_MODULE_REMOTE_DEVICE, prop))) { \
+        res = IdsLib::peak_GFA_Float_Get(hCam, PEAK_GFA_MODULE_REMOTE_DEVICE, prop, &value); \
+        if (PEAK_ERROR(res)) { \
+            qWarning() << LOG_ID << "Failed to read" << prop << getPeakError(res); \
+            break; \
+        } \
+        qDebug() << LOG_ID << prop << value; \
+    } else { \
+        qDebug() << LOG_ID << prop << "is not readable"; \
+        break; \
     }
 
 #define SHOW_CAM_PROP(prop, func, typ) {\
@@ -317,6 +334,19 @@ public:
         c.h = roi.size.height;
         cam->_width = c.w;
         cam->_height = c.h;
+
+        while (true) {
+            double pixelW, pixelH;
+            GFA_GET("SensorPixelWidth", pixelW);
+            GFA_GET("SensorPixelHeight", pixelH);
+            if (pixelW != pixelH) {
+                qWarning() << LOG_ID << "Non-square pixels are not supported";
+                break;
+            }
+            cam->_pixelScale.on = true;
+            cam->_pixelScale.factor = pixelW;
+            break;
+        }
 
         SHOW_CAM_PROP("FPS", IdsLib::peak_FrameRate_Get, double);
         SHOW_CAM_PROP("Exposure", IdsLib::peak_ExposureTime_Get, double);
@@ -480,7 +510,7 @@ IdsComfortCamera::~IdsComfortCamera()
 
 PixelScale IdsComfortCamera::sensorScale() const
 {
-    return { .on=false }; // TODO: take from camera
+    return _pixelScale;
 }
 
 void IdsComfortCamera::startCapture()

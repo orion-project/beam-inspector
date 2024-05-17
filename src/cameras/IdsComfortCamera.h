@@ -71,6 +71,7 @@ private:
     int _width = 0;
     int _height = 0;
     int _bits = 0;
+    PixelScale _pixelScale;
     QSharedPointer<PeakIntf> _peak;
     QPointer<QWidget> _cfgWnd;
     friend class PeakIntf;
