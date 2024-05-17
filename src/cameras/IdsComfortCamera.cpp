@@ -40,9 +40,9 @@ namespace IdsLib
     #define IDS_PROC(name) peak_status (__cdecl *name)
     IDS_PROC(peak_Library_Init)();
     IDS_PROC(peak_Library_Exit)();
+    IDS_PROC(peak_Library_GetLastError)(peak_status*, char*, size_t*);
     IDS_PROC(peak_CameraList_Update)(size_t*);
     IDS_PROC(peak_CameraList_Get)(peak_camera_descriptor*, size_t*);
-    IDS_PROC(peak_Library_GetLastError)(peak_status*, char*, size_t*);
     peak_access_status (__cdecl *peak_ExposureTime_GetAccessStatus)(peak_camera_handle);
     IDS_PROC(peak_ExposureTime_GetRange)(peak_camera_handle, double*, double*, double*);
     IDS_PROC(peak_ExposureTime_Set)(peak_camera_handle, double);
@@ -60,9 +60,12 @@ namespace IdsLib
     IDS_PROC(peak_Camera_Open)(peak_camera_id, peak_camera_handle*);
     IDS_PROC(peak_Camera_Close)(peak_camera_handle);
     IDS_PROC(peak_PixelFormat_GetList)(peak_camera_handle, peak_pixel_format*, size_t*);
+    IDS_PROC(peak_PixelFormat_GetInfo)(peak_pixel_format, peak_pixel_format_info*);
     IDS_PROC(peak_PixelFormat_Get)(peak_camera_handle, peak_pixel_format*);
     IDS_PROC(peak_PixelFormat_Set)(peak_camera_handle, peak_pixel_format);
     IDS_PROC(peak_ROI_Get)(peak_camera_handle, peak_roi*);
+    IDS_PROC(peak_ROI_Set)(peak_camera_handle, peak_roi);
+    IDS_PROC(peak_ROI_Size_GetRange)(peak_camera_handle, peak_size*, peak_size*, peak_size*);
     IDS_PROC(peak_Frame_Buffer_Get)(peak_frame_handle, peak_buffer*);
     IDS_PROC(peak_Frame_Release)(peak_camera_handle, peak_frame_handle);
 
@@ -124,9 +127,9 @@ IdsComfort* IdsComfort::init()
     #define GET_PROC(name) if (!IdsLib::getProc(#name, &IdsLib::name)) return nullptr
     GET_PROC(peak_Library_Init);
     GET_PROC(peak_Library_Exit);
+    GET_PROC(peak_Library_GetLastError);
     GET_PROC(peak_CameraList_Update);
     GET_PROC(peak_CameraList_Get);
-    GET_PROC(peak_Library_GetLastError);
     GET_PROC(peak_ExposureTime_GetAccessStatus);
     GET_PROC(peak_ExposureTime_GetRange);
     GET_PROC(peak_ExposureTime_Set);
@@ -144,9 +147,12 @@ IdsComfort* IdsComfort::init()
     GET_PROC(peak_Camera_Open);
     GET_PROC(peak_Camera_Close);
     GET_PROC(peak_PixelFormat_GetList);
+    GET_PROC(peak_PixelFormat_GetInfo);
     GET_PROC(peak_PixelFormat_Get);
     GET_PROC(peak_PixelFormat_Set);
     GET_PROC(peak_ROI_Get);
+    GET_PROC(peak_ROI_Set);
+    GET_PROC(peak_ROI_Size_GetRange);
     GET_PROC(peak_Frame_Buffer_Get);
     GET_PROC(peak_Frame_Release);
 
@@ -283,12 +289,30 @@ public:
         c.bits = 8;
         cam->_bits = c.bits;
 
+        peak_size roiMin, roiMax, roiInc;
+        res = IdsLib::peak_ROI_Size_GetRange(hCam, &roiMin, &roiMax, &roiInc);
+        CHECK_ERR("Unable to get ROI range");
+        qDebug() << LOG_ID << "ROI"
+            << QString("min=%1x%24").arg(roiMin.width).arg(roiMin.height)
+            << QString("max=%1x%24").arg(roiMax.width).arg(roiMax.height)
+            << QString("inc=%1x%24").arg(roiInc.width).arg(roiInc.height);
+
         peak_roi roi = {0, 0, 0, 0};
         res = IdsLib::peak_ROI_Get(hCam, &roi);
         CHECK_ERR("Unable to get ROI");
-        qDebug() << LOG_ID << QString("ROI size=%1x%2, offset=%3x%4")
-            .arg(roi.size.width).arg(roi.size.height)
-            .arg(roi.offset.x).arg(roi.offset.y);
+        qDebug() << LOG_ID << "ROI"
+            << QString("size=%1x%2").arg(roi.size.width).arg(roi.size.height)
+            << QString("offset=%1x%2").arg(roi.offset.x).arg(roi.offset.y);
+        if (roi.size.width != roiMax.width || roi.size.height != roiMax.height) {
+            roi.offset.x = 0;
+            roi.offset.y = 0;
+            roi.size.width = roiMax.width;
+            roi.size.height = roiMax.height;
+            qDebug() << LOG_ID << "Set ROI"
+                << QString("size=%1x%2").arg(roiMax.width).arg(roiMax.height);
+            res = IdsLib::peak_ROI_Set(hCam, roi);
+            CHECK_ERR("Unable to set ROI");
+        }
         c.w = roi.size.width;
         c.h = roi.size.height;
         cam->_width = c.w;
