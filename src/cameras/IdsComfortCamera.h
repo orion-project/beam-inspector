@@ -35,7 +35,7 @@ public:
     QString descr() const override { return _descr; }
     int width() const override { return _width; }
     int height() const override { return _height; }
-    int bits() const override { return _bits; }
+    int bpp() const override { return _bpp; }
     PixelScale sensorScale() const override;
 
     bool isCapturing() const override { return (bool)_peak; }
@@ -70,7 +70,7 @@ private:
     QString _name, _descr;
     int _width = 0;
     int _height = 0;
-    int _bits = 0;
+    int _bpp = 0;
     PixelScale _pixelScale;
     QSharedPointer<PeakIntf> _peak;
     QPointer<QWidget> _cfgWnd;

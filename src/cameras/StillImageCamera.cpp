@@ -57,7 +57,7 @@ int StillImageCamera::height() const
     return _image.height();
 }
 
-int StillImageCamera::bits() const
+int StillImageCamera::bpp() const
 {
     return _image.depth();
 }
@@ -86,7 +86,7 @@ void StillImageCamera::startCapture()
     CgnBeamCalc c;
     c.w = _image.width();
     c.h = _image.height();
-    c.bits = fmt == QImage::Format_Grayscale8 ? 8 : 16;
+    c.hdr = fmt == QImage::Format_Grayscale16;
     c.buf = (uint8_t*)buf;
 
     int sz = c.w*c.h;
@@ -134,7 +134,7 @@ void StillImageCamera::startCapture()
     auto calcTime = timer.elapsed();
 
     timer.restart();
-    const double rangeTop = (1 << c.bits) - 1;
+    const double rangeTop = (1 << _image.depth()) - 1;
     if (_config.bgnd.on) {
         if (_config.plot.normalize) {
             cgn_copy_normalized_f64(g.subtracted, graph, sz, g.min,
@@ -144,7 +144,7 @@ void StillImageCamera::startCapture()
         }
     } else {
         if (_config.plot.normalize) {
-            if (c.bits > 8) {
+            if (c.hdr) {
                 auto buf = (const uint16_t*)c.buf;
                 cgn_render_beam_to_doubles_norm_16(buf, sz, graph,
                     _config.plot.fullRange ? rangeTop : cgn_find_max_16(buf, c.w*c.h));

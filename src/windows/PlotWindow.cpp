@@ -412,7 +412,7 @@ void PlotWindow::changeEvent(QEvent* e)
 bool PlotWindow::event(QEvent *event)
 {
     if (auto e = dynamic_cast<ImageEvent*>(event); e) {
-        exportImageDlg(e->buf, _camera->width(), _camera->height(), _camera->bits());
+        exportImageDlg(e->buf, _camera->width(), _camera->height(), _camera->bpp() > 8);
         return true;
     }
     return QMainWindow::event(event);
@@ -567,10 +567,13 @@ void PlotWindow::stopCapture()
         qWarning() << LOG_ID << "Current camera is not thread based, nothing to stop";
         return;
     }
+    Ori::Gui::PopupMessage::affirm(tr("Stopping..."), 0);
+    QApplication::processEvents();
     thread->requestInterruption();
     if (!thread->wait(5000))
         qCritical() << LOG_ID << "Can not stop camera thread in timeout";
     else qDebug() << LOG_ID << "Camera thread stopped";
+    Ori::Gui::PopupMessage::cancel();
 }
 
 void PlotWindow::captureStopped()
@@ -733,13 +736,15 @@ void PlotWindow::activateCamIds()
     auto camId = action->data();
     qDebug() << LOG_ID << "Open camera with id" << camId;
 
-    auto idsCam = dynamic_cast<IdsComfortCamera*>(_camera.get());
-    if (idsCam and idsCam->id() == camId) return;
-
     auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get());
     if (imgCam) _prevImage = imgCam->fileName();
 
     stopCapture();
+
+    // Selection camera with the same id is for reconnection after settings changed (e.g. pixel format)
+    auto idsCam = dynamic_cast<IdsComfortCamera*>(_camera.get());
+    if (idsCam and idsCam->id() == camId)
+        _camera.reset(nullptr);
 
     _plot->stopEditRoi(false);
     _plotIntf->cleanResult();

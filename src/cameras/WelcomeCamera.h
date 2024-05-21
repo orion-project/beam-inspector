@@ -11,7 +11,7 @@ public:
     QString name() const override { return "Welcome"; }
     int width() const override { return 80; }
     int height() const override { return 80; }
-    int bits() const override { return 8; }
+    int bpp() const override { return 8; }
 
     void startCapture() override;
 };

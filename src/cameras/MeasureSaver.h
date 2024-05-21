@@ -99,7 +99,7 @@ private:
     MeasureConfig _config;
     QString _cfgFile, _imgDir;
     QMap<qint64, QString> _errors;
-    int _width, _height, _bits;
+    int _width, _height, _bpp;
     double _scale = 1;
     int _duration = 0;
     qint64 _measureStart;

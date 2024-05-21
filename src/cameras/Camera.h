@@ -21,7 +21,7 @@ public:
     virtual QString descr() const { return {}; }
     virtual int width() const = 0;
     virtual int height() const = 0;
-    virtual int bits() const = 0;
+    virtual int bpp() const = 0;
     virtual PixelScale sensorScale() const { return {}; }
 
     virtual bool isCapturing() const { return false; }

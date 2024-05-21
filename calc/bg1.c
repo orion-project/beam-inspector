@@ -1,3 +1,21 @@
+/*
+
+Reference implementation the Approximation method for baseline offset correction (ISO 11146-3 [3.4.3])
+
+--------------------------------------
+GCC 11.2x64 Intel i7-2600 CPU 3.40GHz
+
+Image: ../beams/beam_8b_ast.pgm
+Image size: 2592x2048
+Max gray: 255
+Frames: 30
+
+cgn_calc_beam
+center=[1567,965], diam=[979,673], angle=-11.6, iters=1, min=0.0, max=208.4, mean=3.61, sdev=1.26
+Elapsed: 0.943s, FPS: 31.8, 31.43ms/frame
+
+*/
+
 #include <math.h>
 #include <time.h>
 #include "pgm.h"

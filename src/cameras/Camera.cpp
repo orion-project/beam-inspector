@@ -16,7 +16,7 @@ Camera::Camera(PlotIntf *plot, TableIntf *table, const char* configGroup) :
 
 QString Camera::resolutionStr() const
 {
-    return QStringLiteral("%1 × %2 × %3bit").arg(width()).arg(height()).arg(bits());
+    return QStringLiteral("%1 × %2 × %3bit").arg(width()).arg(height()).arg(bpp());
 }
 
 void Camera::loadConfig()

@@ -65,7 +65,8 @@ public:
         c.w = b.w;
         c.h = b.h;
         c.buf = b.buf;
-        c.bits = 8;
+        c.hdr = 0;
+        bpp = 8;
 
         dx_offset = RandomOffset(b.dx, b.dx-20, b.dx+20);
         dy_offset = RandomOffset(b.dy, b.dy-20, b.dy+20);
@@ -89,7 +90,6 @@ public:
             tm = timer.elapsed();
             cgn_render_beam_tilted(&b);
             markRenderTime();
-
 
             b.dx = dx_offset.next();
             b.dy = dy_offset.next();
