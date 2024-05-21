@@ -53,3 +53,4 @@ history:
       - text: Run-time linking against IDS libs
       - text: Set max ROI when connect to IDS camera
       - text: Extract physical pixel size from IDS camera
+      - text: Support 10 and 12 bit images from IDS camera

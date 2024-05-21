@@ -255,6 +255,8 @@ public:
     peak_frame_handle frame;
     int errCount = 0;
 
+    QByteArray hdrBuf;
+
     PeakIntf(peak_camera_id id, PlotIntf *plot, TableIntf *table, IdsComfortCamera *cam)
         : CameraWorker(plot, table, cam, cam), id(id), cam(cam)
     {}
@@ -272,39 +274,6 @@ public:
         res = IdsLib::peak_Camera_Open(id, &hCam);
         CHECK_ERR("Unable to open camera");
         qDebug() << LOG_ID << "Camera opened" << id;
-
-        // TODO: support more depths
-        peak_pixel_format targetFormat = PEAK_PIXEL_FORMAT_MONO8;
-        //peak_pixel_format targetFormat = PEAK_PIXEL_FORMAT_MONO10G40_IDS;
-        //peak_pixel_format targetFormat = PEAK_PIXEL_FORMAT_MONO12G24_IDS;
-        peak_pixel_format pixelFormat = PEAK_PIXEL_FORMAT_INVALID;
-        res = IdsLib::peak_PixelFormat_Get(hCam, &pixelFormat);
-        CHECK_ERR("Unable to get pixel format");
-        qDebug() << LOG_ID << "Pixel format" << QString::number(pixelFormat, 16);
-
-        size_t formatCount = 0;
-        res = IdsLib::peak_PixelFormat_GetList(hCam, nullptr, &formatCount);
-        CHECK_ERR("Unable to get pixel format count");
-        QVector<peak_pixel_format> pixelFormats(formatCount);
-        res = IdsLib::peak_PixelFormat_GetList(hCam, pixelFormats.data(), &formatCount);
-        CHECK_ERR("Unable to get pixel formats");
-        bool supports = false;
-        for (int i = 0; i < formatCount; i++) {
-            qDebug() << LOG_ID << "Supported pixel format" << QString::number(pixelFormats[i], 16);
-            if (pixelFormats[i] == targetFormat) {
-                supports = true;
-            }
-        }
-        if (!supports)
-            // Use one of color formats and convert manually?
-            return "Camera doesn't support gray scale format";
-        if (pixelFormat != targetFormat) {
-            res = IdsLib::peak_PixelFormat_Set(hCam, targetFormat);
-            CHECK_ERR("Unable to set pixel format");
-            qDebug() << LOG_ID << "pixel format set";
-        }
-        c.bits = 8;
-        cam->_bits = c.bits;
 
         peak_size roiMin, roiMax, roiInc;
         res = IdsLib::peak_ROI_Size_GetRange(hCam, &roiMin, &roiMax, &roiInc);
@@ -346,6 +315,61 @@ public:
             cam->_pixelScale.on = true;
             cam->_pixelScale.factor = pixelW;
             break;
+        }
+
+        bpp = AppSettings::instance().idsBitsPerPixel;
+        peak_pixel_format targetFormat = PEAK_PIXEL_FORMAT_MONO8;
+        if (bpp == 12) targetFormat = PEAK_PIXEL_FORMAT_MONO12G24_IDS;
+        else if (bpp == 10) targetFormat = PEAK_PIXEL_FORMAT_MONO10G40_IDS;
+
+        peak_pixel_format pixelFormat = PEAK_PIXEL_FORMAT_INVALID;
+        res = IdsLib::peak_PixelFormat_Get(hCam, &pixelFormat);
+        CHECK_ERR("Unable to get pixel format");
+        qDebug() << LOG_ID << "Pixel format" << QString::number(pixelFormat, 16);
+
+        if (targetFormat != pixelFormat) {
+            size_t formatCount = 0;
+            res = IdsLib::peak_PixelFormat_GetList(hCam, nullptr, &formatCount);
+            CHECK_ERR("Unable to get pixel format count");
+            QVector<peak_pixel_format> pixelFormats(formatCount);
+            res = IdsLib::peak_PixelFormat_GetList(hCam, pixelFormats.data(), &formatCount);
+            CHECK_ERR("Unable to get pixel formats");
+            bool supports8 = false;
+            bool supports10 = false;
+            bool supports12 = false;
+            for (int i = 0; i < formatCount; i++) {
+                qDebug() << LOG_ID << "Supported pixel format" << QString::number(pixelFormats[i], 16);
+                peak_pixel_format_info info;
+                if (pixelFormats[i] == PEAK_PIXEL_FORMAT_MONO8)
+                    supports8 = true;
+                else if (pixelFormats[i] == PEAK_PIXEL_FORMAT_MONO10G40_IDS)
+                    supports10 = true;
+                else if (pixelFormats[i] == PEAK_PIXEL_FORMAT_MONO12G24_IDS)
+                    supports12 = true;
+            }
+            if (bpp == 12 && !supports12) {
+                qWarning() << LOG_ID << "Camera does not support 12bpp, use 8bpp";
+                targetFormat = PEAK_PIXEL_FORMAT_MONO8;
+                bpp = 8;
+            }
+            if (bpp == 10 && !supports10) {
+                qWarning() << LOG_ID << "Camera does not support 10bpp, use 8bpp";
+                targetFormat = PEAK_PIXEL_FORMAT_MONO8;
+                bpp = 8;
+            }
+            if (bpp == 8 && !supports8) {
+                return "Camera doesn't support gray scale format";
+            }
+            res = IdsLib::peak_PixelFormat_Set(hCam, targetFormat);
+            CHECK_ERR("Unable to set pixel format");
+            qDebug() << LOG_ID << "Pixel format set";
+        }
+        cam->_bpp = bpp;
+        c.hdr = bpp > 8;
+        if (c.hdr) {
+            hdrBuf = QByteArray(c.w*c.h*2, 0);
+            c.buf = (uint8_t*)hdrBuf.data();
+            qDebug() << "Allocated" << hdrBuf.size();
         }
 
         SHOW_CAM_PROP("FPS", IdsLib::peak_FrameRate_Get, double);
@@ -404,14 +428,19 @@ public:
             markRenderTime();
 
             if (res == PEAK_STATUS_SUCCESS) {
-                if (buf.memorySize != c.w*c.h) {
-                    qCritical() << LOG_ID << "Unexpected buffer size" << buf.memorySize;
-                    emit cam->error("Invalid buffer size");
-                    return;
-                }
+                // if (buf.memorySize != c.w*c.h) {
+                //     qCritical() << LOG_ID << "Unexpected buffer size" << buf.memorySize;
+                //     emit cam->error("Invalid buffer size");
+                //     return;
+                // }
 
                 tm = timer.elapsed();
-                c.buf = buf.memoryAddress;
+                if (bpp == 12)
+                    cgn_convert_12g24_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
+                else if (bpp == 10)
+                    cgn_convert_10g40_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
+                else
+                    c.buf = buf.memoryAddress;
                 calcResult();
                 markCalcTime();
 

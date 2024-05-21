@@ -111,4 +111,24 @@ uint8_t* read_pgm(const char* filename, int *w, int *h, int *offset) {
     return (uint8_t*)buf;
 }
 
+int write_pgm(const char* filename, uint8_t *buf, int w, int h, int bits) {
+    FILE *f = fopen(filename, "wb");
+    if (!f) return 0;
+    fprintf(f, "P5\n%d %d\n%d\n", w, h, (1<<bits)-1);
+    if (bits > 8) {
+        // The most significant byte is first in PGM file
+        // while the memory has the opposite layout
+        // so we need to swap bytes before writing 16-bit images
+        uint16_t *b = (uint16_t*)buf;
+        for (int i = 0; i < w*h; i++) {
+            uint16_t v = (b[i] >> 8) | (b[i] << 8);
+            fwrite(&v, 2, 1, f);
+        }
+    } else {
+        fwrite(buf, 1, w*h, f);
+    }
+    fclose(f);
+    return 1;
+}
+
 #endif

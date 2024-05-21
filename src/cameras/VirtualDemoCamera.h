@@ -18,7 +18,7 @@ public:
     QString name() const override { return "Demo"; }
     int width() const override;
     int height() const override;
-    int bits() const override { return 8; }
+    int bpp() const override { return 8; }
     PixelScale sensorScale() const override { return { .on=true, .factor=2.5, .unit="um" }; }
 
     bool isCapturing() const override { return true; }

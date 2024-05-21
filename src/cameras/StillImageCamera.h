@@ -15,7 +15,7 @@ public:
     QString descr() const override;
     int width() const override;
     int height() const override;
-    int bits() const override;
+    int bpp() const override;
 
     QString fileName() const { return _fileName; }
 

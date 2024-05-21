@@ -155,7 +155,7 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     _config = cfg;
     _width = cam->width();
     _height = cam->height();
-    _bits = cam->bits();
+    _bpp = cam->bpp();
 
     auto scale = cam->pixelScale();
     _scale = scale.on ? scale.factor : 1;
@@ -405,7 +405,7 @@ void MeasureSaver::saveImage(ImageEvent *e)
     }
     {
         QTextStream header(&f);
-        header << "P5\n" << _width << ' ' << _height << '\n' << (1<<_bits)-1 << '\n';
+        header << "P5\n" << _width << ' ' << _height << '\n' << (1<<_bpp)-1 << '\n';
     }
     f.write(e->buf);
     _savedImgCount++;

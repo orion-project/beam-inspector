@@ -258,9 +258,9 @@ public:
     QSharedPointer<QWidget> content;
 };
 
-void exportImageDlg(QByteArray data, int w, int h, int bits)
+void exportImageDlg(QByteArray data, int w, int h, bool hdr)
 {
-    QImage img((const uchar*)data.data(), w, h, bits == 8 ? QImage::Format_Grayscale8 : QImage::Format_Grayscale16);
+    QImage img((const uchar*)data.data(), w, h, hdr ? QImage::Format_Grayscale16 : QImage::Format_Grayscale8);
     ExportRawImageProps props;
     ExportRawImageDlg dlg(img, props);
     if (!dlg.exec())
