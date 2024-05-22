@@ -64,7 +64,7 @@ void cgn_calc_beam_f64(const double *buf, const CgnBeamCalc *c, CgnBeamResult *r
 }
 
 void cgn_calc_beam_naive(const CgnBeamCalc *c, CgnBeamResult *r) {
-    if (c->hdr) {
+    if (c->bpp > 8) {
         cgn_calc_beam_u16((const uint16_t*)(c->buf), c, r);
     } else {
         cgn_calc_beam_u8((const uint8_t*)(c->buf), c, r);
@@ -133,7 +133,7 @@ void cgn_subtract_bkgnd_u16(const uint16_t *buf, const CgnBeamCalc *c, CgnBeamBk
 }
 
 void cgn_calc_beam_bkgnd(const CgnBeamCalc *c, CgnBeamBkgnd *b, CgnBeamResult *r) {
-    if (c->hdr) {
+    if (c->bpp > 8) {
         cgn_subtract_bkgnd_u16((const uint16_t*)(c->buf), c, b);
     } else {
         cgn_subtract_bkgnd_u8((const uint8_t*)(c->buf), c, b);
@@ -185,7 +185,7 @@ void cgn_copy_u16_to_f64(const uint16_t *buf, int sz, double *tgt, double *max) 
 }
 
 void cgn_copy_to_f64(const CgnBeamCalc *c, double *tgt, double *max) {
-    if (c->hdr) {
+    if (c->bpp > 8) {
         cgn_copy_u16_to_f64((const uint16_t*)(c->buf), c->w*c->h, tgt, max);
     } else {
         cgn_copy_u8_to_f64((const uint8_t*)(c->buf), c->w*c->h, tgt, max);
@@ -224,14 +224,14 @@ double cgn_calc_brightness_u8(const uint8_t *buf, int w, int h) {
     return b_img / 255.0;
 }
 
-double cgn_calc_brightness_u16(const uint16_t *buf, int w, int h) {
+double cgn_calc_brightness_u16(const uint16_t *buf, int w, int h, int bpp) {
     _cgn_calc_brightness
-    return b_img / 65535.0;
+    return b_img / ((1 << bpp) - 1);
 }
 
 double cgn_calc_brightness(const CgnBeamCalc *c) {
-    if (c->hdr) {
-        return cgn_calc_brightness_u16((const uint16_t*)(c->buf), c->w, c->h);
+    if (c->bpp > 8) {
+        return cgn_calc_brightness_u16((const uint16_t*)(c->buf), c->w, c->h, c->bpp);
     } else {
         return cgn_calc_brightness_u8((const uint8_t*)(c->buf), c->w, c->h);
     }

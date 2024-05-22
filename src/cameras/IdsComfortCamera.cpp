@@ -319,10 +319,10 @@ public:
             break;
         }
 
-        bpp = cam->_bpp;
+        c.bpp = cam->_bpp;
         peak_pixel_format targetFormat = PEAK_PIXEL_FORMAT_MONO8;
-        if (bpp == 12) targetFormat = PEAK_PIXEL_FORMAT_MONO12G24_IDS;
-        else if (bpp == 10) targetFormat = PEAK_PIXEL_FORMAT_MONO10G40_IDS;
+        if (c.bpp == 12) targetFormat = PEAK_PIXEL_FORMAT_MONO12G24_IDS;
+        else if (c.bpp == 10) targetFormat = PEAK_PIXEL_FORMAT_MONO10G40_IDS;
 
         peak_pixel_format pixelFormat = PEAK_PIXEL_FORMAT_INVALID;
         res = IdsLib::peak_PixelFormat_Get(hCam, &pixelFormat);
@@ -349,26 +349,25 @@ public:
                 else if (pixelFormats[i] == PEAK_PIXEL_FORMAT_MONO12G24_IDS)
                     supports12 = true;
             }
-            if (bpp == 12 && !supports12) {
+            if (c.bpp == 12 && !supports12) {
                 qWarning() << LOG_ID << "Camera does not support 12bpp, use 8bpp";
                 targetFormat = PEAK_PIXEL_FORMAT_MONO8;
-                bpp = 8;
+                c.bpp = 8;
             }
-            if (bpp == 10 && !supports10) {
+            if (c.bpp == 10 && !supports10) {
                 qWarning() << LOG_ID << "Camera does not support 10bpp, use 8bpp";
                 targetFormat = PEAK_PIXEL_FORMAT_MONO8;
-                bpp = 8;
+                c.bpp = 8;
             }
-            if (bpp == 8 && !supports8) {
+            if (c.bpp == 8 && !supports8) {
                 return "Camera doesn't support gray scale format";
             }
             res = IdsLib::peak_PixelFormat_Set(hCam, targetFormat);
             CHECK_ERR("Unable to set pixel format");
             qDebug() << LOG_ID << "Pixel format set";
         }
-        cam->_bpp = bpp;
-        c.hdr = bpp > 8;
-        if (c.hdr) {
+        cam->_bpp = c.bpp;
+        if (c.bpp > 8) {
             hdrBuf = QByteArray(c.w*c.h*2, 0);
             c.buf = (uint8_t*)hdrBuf.data();
         }
@@ -430,9 +429,9 @@ public:
 
             if (res == PEAK_STATUS_SUCCESS) {
                 tm = timer.elapsed();
-                if (bpp == 12)
+                if (c.bpp == 12)
                     cgn_convert_12g24_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
-                else if (bpp == 10)
+                else if (c.bpp == 10)
                     cgn_convert_10g40_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
                 else
                     c.buf = buf.memoryAddress;
@@ -837,6 +836,7 @@ public:
         autoExp1 = props["exp"];
         autoExp2 = 0;
         autoExpStep = 0;
+        watingBrightness = true;
         peak->requestBrightness(this);
     }
 
@@ -853,6 +853,14 @@ public:
             if (autoExp2 == 0) {
                 if (!setExpRaw(qMin(autoExp1*2, props["exp_max"])))
                     goto stop;
+                // The above does not fail when setting higher-thah-max exposure
+                // It just clamps it to max and the loop never ends.
+                // So need an explicit check:
+                if (props["exp"] >= props["exp_max"]) {
+                    qDebug() << LOG_ID << "Autoexposure: underexposed" << props["exp"];
+                    Ori::Dlg::warning(tr("Underexposed"));
+                    goto stop;
+                }
                 autoExp1 = props["exp"];
             } else {
                 autoExp1 = props["exp"];
@@ -867,6 +875,7 @@ public:
             if (autoExp2 == 0) {
                 if (props["exp"] == props["exp_min"]) {
                     qDebug() << LOG_ID << "Autoexposure: Overexposed";
+                    Ori::Dlg::warning(tr("Overexposed"));
                     goto stop;
                 }
                 autoExp2 = autoExp1;
@@ -884,6 +893,7 @@ public:
             }
         }
         autoExpStep++;
+        watingBrightness = true;
         peak->requestBrightness(this);
         return;
 
@@ -920,13 +930,30 @@ public:
     double propChangeWheelSm, propChangeWheelBig;
     double propChangeArrowSm, propChangeArrowBig;
     double autoExpLevel, autoExp1, autoExp2;
+    bool watingBrightness = false;
+    bool closeRequested = false;
     int autoExpStep;
 
 protected:
+    void closeEvent(QCloseEvent *e) override
+    {
+        QWidget::closeEvent(e);
+        // Event loop will crash if there is no event receiver anymore
+        // Wait for the next brightness event and close after that
+        if (watingBrightness) {
+            closeRequested = true;
+            e->ignore();
+        }
+    }
+
     bool event(QEvent *event) override
     {
         if (auto e = dynamic_cast<BrightEvent*>(event); e) {
-            autoExposureStep(e->level);
+            watingBrightness = false;
+            if (closeRequested)
+                close();
+            else
+                autoExposureStep(e->level);
             return true;
         }
         return QWidget::event(event);
