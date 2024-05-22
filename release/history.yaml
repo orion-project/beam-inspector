@@ -54,3 +54,5 @@ history:
       - text: Set max ROI when connect to IDS camera
       - text: Extract physical pixel size from IDS camera
       - text: Support 10 and 12 bit images from IDS camera
+      - text: Fix autoexposure crash after closing settings window
+      - text: Fix autoexposure endless loop when underexposed

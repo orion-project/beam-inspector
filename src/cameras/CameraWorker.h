@@ -27,7 +27,6 @@ public:
     CgnBeamCalc c;
     CgnBeamResult r;
     CgnBeamBkgnd g;
-    int bpp;
 
     PlotIntf *plot;
     TableIntf *table;
@@ -173,7 +172,7 @@ public:
         if (rawImgRequest) {
             auto e = new ImageEvent;
             e->time = 0;
-            e->buf = QByteArray((const char*)c.buf, c.w*c.h*(c.hdr?2:1));
+            e->buf = QByteArray((const char*)c.buf, c.w*c.h*(c.bpp > 8 ? 2 : 1));
             QCoreApplication::postEvent(rawImgRequest, e);
             rawImgRequest = nullptr;
         }
@@ -189,7 +188,7 @@ public:
                 prevSaveImg = time;
                 auto e = new ImageEvent;
                 e->time = time;
-                e->buf = QByteArray((const char*)c.buf, c.w*c.h*(c.hdr?2:1));
+                e->buf = QByteArray((const char*)c.buf, c.w*c.h*(c.bpp > 8 ? 2 : 1));
                 QCoreApplication::postEvent(saver, e);
             }
             results->time = time;
@@ -220,7 +219,7 @@ public:
         if (tm - prevReady < PLOT_FRAME_DELAY_MS)
             return false;
         prevReady = tm;
-        const double rangeTop = (1 << bpp) - 1;
+        const double rangeTop = (1 << c.bpp) - 1;
         if (subtract)
         {
             if (normalize) {
@@ -232,13 +231,13 @@ public:
         else
         {
             if (normalize) {
-                if (!c.hdr)
-                    cgn_render_beam_to_doubles_norm_8(c.buf, c.w*c.h, graph,
-                        fullRange ? rangeTop : cgn_find_max_8(c.buf, c.w*c.h));
-                else {
+                if (c.bpp > 8) {
                     auto buf = (const uint16_t*)c.buf;
                     cgn_render_beam_to_doubles_norm_16(buf, c.w*c.h, graph,
                         fullRange ? rangeTop : cgn_find_max_16(buf, c.w*c.h));
+                } else {
+                    cgn_render_beam_to_doubles_norm_8(c.buf, c.w*c.h, graph,
+                        fullRange ? rangeTop : cgn_find_max_8(c.buf, c.w*c.h));
                 }
             } else
                 cgn_copy_to_f64(&c, graph, &g.max);

@@ -65,8 +65,7 @@ public:
         c.w = b.w;
         c.h = b.h;
         c.buf = b.buf;
-        c.hdr = 0;
-        bpp = 8;
+        c.bpp = 8;
 
         dx_offset = RandomOffset(b.dx, b.dx-20, b.dx+20);
         dy_offset = RandomOffset(b.dy, b.dy-20, b.dy+20);

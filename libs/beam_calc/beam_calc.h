@@ -45,7 +45,7 @@ void cgn_calc_beam_blas_u16(const uint16_t *b, CgnBeamCalcBlas *c, CgnBeamResult
 typedef struct {
     int w;
     int h;
-    int hdr;
+    int bpp;
     uint8_t *buf;
 } CgnBeamCalc;
 
