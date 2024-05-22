@@ -185,13 +185,13 @@ void PlotWindow::createMenuBar()
     _actionSaveRaw = A_(tr("Export Raw Image..."), this, [this]{ _camera->requestRawImg(this); }, ":/toolbar/save_raw", QKeySequence("F6"));
     auto actnSaveImg = A_(tr("Export Plot Image..."), this, [this]{ _plot->exportImageDlg(); }, ":/toolbar/save_img", QKeySequence("F7"));
     auto actnClose = A_(tr("Exit"), this, &PlotWindow::close);
-    auto actnPrefs = A_(tr("Preferences..."), this, [this]{ AppSettings::instance().edit(); });
+    auto actnPrefs = A_(tr("Preferences..."), this, [this]{ AppSettings::instance().edit(); }, ":/toolbar/options");
     auto menuFile = M_(tr("File"), {
-        actnNew, 0, _actionSaveRaw, actnSaveImg,
-        0, _actionOpenImg,
-        // mru menu here + separator
-        actnPrefs, 0, actnClose});
-    new Ori::Widgets::MruMenuPart(_mru, menuFile, actnPrefs, this);
+        actnNew,
+        0, _actionSaveRaw, actnSaveImg,
+        0, _actionOpenImg, new Ori::Widgets::MruMenu(_mru),
+        0, actnPrefs,
+        0, actnClose});
     menuBar()->addMenu(menuFile);
 
     _actionBeamInfo = A_(tr("Plot Beam Info"), this, [this]{ _plot->setBeamInfoVisible(_actionBeamInfo->isChecked(), true); });

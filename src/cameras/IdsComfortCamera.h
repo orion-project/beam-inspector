@@ -62,6 +62,10 @@ signals:
 protected:
     void run() override;
 
+    void initConfigMore(Ori::Dlg::ConfigDlgOpts &opts) override;
+    void saveConfigMore() override;
+    void loadConfigMore();
+
 private slots:
     void camConfigChanged();
 
@@ -71,6 +75,7 @@ private:
     int _width = 0;
     int _height = 0;
     int _bpp = 0;
+    bool _bpp8, _bpp10, _bpp12; // for config editing
     PixelScale _pixelScale;
     QSharedPointer<PeakIntf> _peak;
     QPointer<QWidget> _cfgWnd;
