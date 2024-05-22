@@ -55,19 +55,19 @@ bool Camera::editConfig(int page)
         new ConfigItemBool(cfgPlot, qApp->tr("Normalize data"), &_config.plot.normalize),
         new ConfigItemSpace(cfgPlot, 12),
         (new ConfigItemBool(cfgPlot, qApp->tr("Colorize over full range"), &scaleFullRange))
-            ->withRadioGroup(1),
+            ->withRadioGroup("colorize"),
         (new ConfigItemBool(cfgPlot, qApp->tr("Colorize over data range"), &scaleDataRange))
-            ->withRadioGroup(1),
+            ->withRadioGroup("colorize"),
         new ConfigItemSpace(cfgPlot, 12),
         new ConfigItemBool(cfgPlot, qApp->tr("Rescale pixels"), &_config.plot.rescale),
         (new ConfigItemBool(cfgPlot, qApp->tr("Use hardware scale"), &useSensorScale))
             ->setDisabled(!hardScale.on)
-            ->withRadioGroup(0)
+            ->withRadioGroup("pixel_scale")
             ->withHint(hardScale.on
                 ? QString("1px = %1 %2").arg(hardScale.factor).arg(hardScale.unit)
                 : qApp->tr("Camera does not provide meta data")),
         (new ConfigItemBool(cfgPlot, qApp->tr("Use custom scale"), &useCustomScale))
-            ->withRadioGroup(0),
+            ->withRadioGroup("pixel_scale"),
         new ConfigItemReal(cfgPlot, qApp->tr("1px equals to"), &_config.plot.customScale.factor),
         (new ConfigItemStr(cfgPlot, qApp->tr("of units"), &_config.plot.customScale.unit))
             ->withAlignment(Qt::AlignRight),
@@ -97,6 +97,7 @@ bool Camera::editConfig(int page)
         (new ConfigItemInt(cfgRoi, qApp->tr("Bottom"), &_config.roi.y2))
             ->withMinMax(0, height())
     };
+    initConfigMore(opts);
     if (ConfigDlg::edit(opts))
     {
         _config.plot.fullRange = scaleFullRange;
@@ -104,6 +105,7 @@ bool Camera::editConfig(int page)
         _config.bgnd.corner = cornerFraction / 100.0;
         _config.roi.fix(width(), height());
         saveConfig();
+        saveConfigMore();
         return true;
     }
     return false;

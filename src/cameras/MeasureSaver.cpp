@@ -407,6 +407,12 @@ void MeasureSaver::saveImage(ImageEvent *e)
         QTextStream header(&f);
         header << "P5\n" << _width << ' ' << _height << '\n' << (1<<_bpp)-1 << '\n';
     }
+    if (_bpp > 8) {
+        auto buf = (uint16_t*)e->buf.data();
+        for (int i = 0; i < _width*_height; i++) {
+            buf[i] = (buf[i] >> 8) | (buf[i] << 8);
+        }
+    }
     f.write(e->buf);
     _savedImgCount++;
 }

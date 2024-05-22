@@ -7,13 +7,14 @@
 #include "app/AppSettings.h"
 #include "cameras/CameraWorker.h"
 
+#include "dialogs/OriConfigDlg.h"
 #include "helpers/OriDialogs.h"
+#include "tools/OriSettings.h"
 
 #include <ids_peak_comfort_c/ids_peak_comfort_c.h>
 
 #include <windows.h>
 
-#include <QSettings>
 #include <QFile>
 
 #define FRAME_TIMEOUT 5000
@@ -270,6 +271,7 @@ public:
         cam->_descr = cam->_name + ' ' + QString::fromLatin1(descr.serialNumber);
         cam->_configGroup = cam->_name;
         cam->loadConfig();
+        cam->loadConfigMore();
 
         res = IdsLib::peak_Camera_Open(id, &hCam);
         CHECK_ERR("Unable to open camera");
@@ -317,7 +319,7 @@ public:
             break;
         }
 
-        bpp = AppSettings::instance().idsBitsPerPixel;
+        bpp = cam->_bpp;
         peak_pixel_format targetFormat = PEAK_PIXEL_FORMAT_MONO8;
         if (bpp == 12) targetFormat = PEAK_PIXEL_FORMAT_MONO12G24_IDS;
         else if (bpp == 10) targetFormat = PEAK_PIXEL_FORMAT_MONO10G40_IDS;
@@ -369,7 +371,6 @@ public:
         if (c.hdr) {
             hdrBuf = QByteArray(c.w*c.h*2, 0);
             c.buf = (uint8_t*)hdrBuf.data();
-            qDebug() << "Allocated" << hdrBuf.size();
         }
 
         SHOW_CAM_PROP("FPS", IdsLib::peak_FrameRate_Get, double);
@@ -428,12 +429,6 @@ public:
             markRenderTime();
 
             if (res == PEAK_STATUS_SUCCESS) {
-                // if (buf.memorySize != c.w*c.h) {
-                //     qCritical() << LOG_ID << "Unexpected buffer size" << buf.memorySize;
-                //     emit cam->error("Invalid buffer size");
-                //     return;
-                // }
-
                 tm = timer.elapsed();
                 if (bpp == 12)
                     cgn_convert_12g24_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
@@ -598,6 +593,36 @@ void IdsComfortCamera::requestRawImg(QObject *sender)
 {
     if (_peak)
         _peak->requestRawImg(sender);
+}
+
+void IdsComfortCamera::initConfigMore(Ori::Dlg::ConfigDlgOpts &opts)
+{
+    int page = cfgMax+1;
+    _bpp8 = _bpp == 8;
+    _bpp10 = _bpp == 10;
+    _bpp12 = _bpp == 12;
+    opts.pages
+        << Ori::Dlg::ConfigPage(page, tr("Hardware"), ":/toolbar/hardware");
+    opts.items
+        << (new Ori::Dlg::ConfigItemSection(page, tr("Pixel format")))
+            ->withHint(tr("Reselect camera to apply"))
+        << (new Ori::Dlg::ConfigItemBool(page, tr("8 bit"), &_bpp8))->withRadioGroup("pixel_format")
+        << (new Ori::Dlg::ConfigItemBool(page, tr("10 bit"), &_bpp10))->withRadioGroup("pixel_format")
+        << (new Ori::Dlg::ConfigItemBool(page, tr("12 bit"), &_bpp12))->withRadioGroup("pixel_format");
+}
+
+void IdsComfortCamera::saveConfigMore()
+{
+    Ori::Settings s;
+    s.beginGroup(_configGroup);
+    s.setValue("hard.bpp", _bpp12 ? 12 : _bpp10 ? 10 : 8);
+}
+
+void IdsComfortCamera::loadConfigMore()
+{
+    Ori::Settings s;
+    s.beginGroup(_configGroup);
+    _bpp = s.value("hard.bpp", 8).toInt();
 }
 
 //------------------------------------------------------------------------------

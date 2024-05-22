@@ -12,6 +12,10 @@ class TableIntf;
 
 class QWidget;
 
+namespace Ori::Dlg {
+struct ConfigDlgOpts;
+}
+
 class Camera
 {
 public:
@@ -39,7 +43,7 @@ public:
     virtual void requestRawImg(QObject *sender) {}
 
     const CameraConfig& config() const { return _config; }
-    enum ConfigPages { cfgPlot, cfgBgnd, cfgRoi };
+    enum ConfigPages { cfgPlot, cfgBgnd, cfgRoi, cfgMax };
     bool editConfig(int page = -1);
     
     void setAperture(const RoiRect&);
@@ -56,6 +60,9 @@ protected:
     CameraConfig _config;
 
     Camera(PlotIntf *plot, TableIntf *table, const char* configGroup);
+
+    virtual void initConfigMore(Ori::Dlg::ConfigDlgOpts &opts) {}
+    virtual void saveConfigMore() {}
 
     void loadConfig();
     void saveConfig();

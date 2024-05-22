@@ -28,7 +28,6 @@ public:
 #ifdef WITH_IDS
     bool idsEnabled;
     QString idsSdkDir;
-    int idsBitsPerPixel;
 #endif
 
     bool useConsole = false;
