@@ -1,41 +1,13 @@
 history:
-  - version: 0.0.1
-    date: 2024-03-28
+  - version: 0.0.7
+    date: 2024-05-22
     changes:
-      - text: First demo with virtual camera
-
-  - version: 0.0.2
-    date: 2024-04-07
-    changes:
-      - text: Load and process single photo
-      - text: Background subtraction with editable settings
-      - text: Grayscale and rainbow plot mode
-
-  - version: 0.0.3
-    date: 2024-04-15
-    changes:
-      - text: Can specify a part of image to process
-      - text: Can define size of pixel and show plot in custom units
-      - text: Calculate ellipticity
-      - text: Export plot image
-      - text: Warning icon when background subtraction disabled
-
-  - version: 0.0.4
-    date: 2024-04-22
-    changes:
-      - text: Save measurement results to CSV file
-      - text: Option for using hardware pixel scale
-      - text: Camera selector button on the toolbar
-      - text: Warning icon when all pixels below threshold
-
-  - version: 0.0.5
-    date: 2024-04-27
-    changes:
-      - text: Show measurements progress
-      - text: Support for cameras from IDS
-      - text: Save raw beam images during measurements
-      - text: Measurements configuration presets
-      - text: Control hardware exposure and FPS
+      - text: Run-time linking against IDS libs
+      - text: Set max ROI when connect to IDS camera
+      - text: Extract physical pixel size from IDS camera
+      - text: Support 10 and 12 bit images from IDS camera
+      - text: Fix autoexposure crash after closing settings window
+      - text: Fix autoexposure endless loop when underexposed
 
   - version: 0.0.6
     date: 2024-05-13
@@ -47,12 +19,40 @@ history:
       - text: Colorize over full dynamic range (optionally)
       - text: Fix setting loading for IDS cameras
 
-  - version: 0.0.7
-    date: ?
+  - version: 0.0.5
+    date: 2024-04-27
     changes:
-      - text: Run-time linking against IDS libs
-      - text: Set max ROI when connect to IDS camera
-      - text: Extract physical pixel size from IDS camera
-      - text: Support 10 and 12 bit images from IDS camera
-      - text: Fix autoexposure crash after closing settings window
-      - text: Fix autoexposure endless loop when underexposed
+      - text: Show measurements progress
+      - text: Support for cameras from IDS
+      - text: Save raw beam images during measurements
+      - text: Measurements configuration presets
+      - text: Control hardware exposure and FPS
+
+  - version: 0.0.4
+    date: 2024-04-22
+    changes:
+      - text: Save measurement results to CSV file
+      - text: Option for using hardware pixel scale
+      - text: Camera selector button on the toolbar
+      - text: Warning icon when all pixels below threshold
+
+  - version: 0.0.3
+    date: 2024-04-15
+    changes:
+      - text: Can specify a part of image to process
+      - text: Can define size of pixel and show plot in custom units
+      - text: Calculate ellipticity
+      - text: Export plot image
+      - text: Warning icon when background subtraction disabled
+
+  - version: 0.0.2
+    date: 2024-04-07
+    changes:
+      - text: Load and process single photo
+      - text: Background subtraction with editable settings
+      - text: Grayscale and rainbow plot mode
+
+  - version: 0.0.1
+    date: 2024-03-28
+    changes:
+      - text: First demo with virtual camera
