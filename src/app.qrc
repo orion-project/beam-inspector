@@ -29,6 +29,9 @@
         <file alias="zoom_roi">../img/toolbar/zoom_aper.svg</file>
         <file alias="zoom_sensor">../img/toolbar/zoom_sensor.svg</file>
     </qresource>
+    <qresource prefix="/misc">
+        <file alias="no_plot">../img/misc/no_plot.svg</file>
+    </qresource>
     <qresource prefix="/window_icons">
         <file alias="main">../img/icons/cignus.svg</file>
     </qresource>

@@ -40,6 +40,7 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _plot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
     //connect(_plot->xAxis, QOverload<const QCPRange&>::of(&QCPAxis::rangeChanged), this, &Plot::axisRangeChanged);
     //connect(_plot->yAxis, QOverload<const QCPRange&>::of(&QCPAxis::rangeChanged), this, &Plot::axisRangeChanged);
+    _plot->axisRect()->setBackground(QBrush(QIcon(":/misc/no_plot").pixmap(16)));
 
     auto gridLayer = _plot->xAxis->grid()->layer();
     _plot->addLayer("beam", gridLayer, QCustomPlot::limBelow);
@@ -49,7 +50,7 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _colorScale->axis()->setPadding(10);
     _plot->plotLayout()->addElement(0, 1, _colorScale);
 
-    _colorMap = new QCPColorMap(_plot->xAxis, _plot->yAxis);
+    _colorMap = new BeamColorMap(_plot->xAxis, _plot->yAxis);
     _colorMap->setColorScale(_colorScale);
     _colorMap->setInterpolate(false);
     _colorMap->setLayer("beam");
@@ -202,66 +203,10 @@ void Plot::setThemeColors(Theme theme, bool replot)
     if (replot) _plot->replot();
 }
 
-void Plot::setRainbowEnabled(bool on, bool replot)
+void Plot::setColorMap(const QString& fileName, bool replot)
 {
-    if (!on) {
-        _colorMap->setGradient(QCPColorGradient::GradientPreset::gpGrayscale);
-        _plot->axisRect()->setBackground(QColor(0x2b053e));
-        if (replot)
-            _plot->replot();
-        return;
-    }
-
-//    Grad0 in img/gradient.svg
-//    QMap<double, QColor> rainbowColors {
-//        { 0.0, QColor(0x2b053e) },
-//        { 0.1, QColor(0xc2077c) },
-//        { 0.15, QColor(0xbe05f3) },
-//        { 0.2, QColor(0x2306fb) },
-//        { 0.3, QColor(0x0675db) },
-//        { 0.4, QColor(0x05f9ee) },
-//        { 0.5, QColor(0x04ca04) },
-//        { 0.65, QColor(0xfafd05) },
-//        { 0.8, QColor(0xfc8705) },
-//        { 0.9, QColor(0xfc4d06) },
-//        { 1.0, QColor(0xfc5004) },
-//    };
-
-//    Grad1 in img/gradient.svg
-//    QMap<double, QColor> rainbowColors {
-//        { 0.00, QColor(0x2b053e) },
-//        { 0.05, QColor(0xc4138a) },
-//        { 0.10, QColor(0x9e0666) },
-//        { 0.15, QColor(0xbe05f3) },
-//        { 0.20, QColor(0x2306fb) },
-//        { 0.30, QColor(0x0675db) },
-//        { 0.40, QColor(0x05f9ee) },
-//        { 0.50, QColor(0x04ca04) },
-//        { 0.65, QColor(0xfafd05) },
-//        { 0.80, QColor(0xfc8705) },
-//        { 0.90, QColor(0xfc4d06) },
-//        { 1.00, QColor(0xfc5004) },
-//    };
-
-    // Grad2 in img/gradient.svg
-    QMap<double, QColor> rainbowColors {
-        { 0.0, QColor(0x2b053e) },
-        { 0.075, QColor(0xd60c8a) },
-        { 0.15, QColor(0xbe05f3) },
-        { 0.2, QColor(0x2306fb) },
-        { 0.3, QColor(0x0675db) },
-        { 0.4, QColor(0x05f9ee) },
-        { 0.5, QColor(0x04ca04) },
-        { 0.65, QColor(0xfafd05) },
-        { 0.8, QColor(0xfc8705) },
-        { 0.9, QColor(0xfc4d06) },
-        { 1.0, QColor(0xfc5004) },
-    };
-
-    QCPColorGradient rainbow;
-    rainbow.setColorStops(rainbowColors);
-    _colorMap->setGradient(rainbow);
-    _plot->axisRect()->setBackground(Qt::black);
+    PrecalculatedGradient gradient(fileName);
+    _colorMap->setGradient(gradient);
     if (replot) _plot->replot();
 }
 

@@ -29,7 +29,7 @@ public:
     bool idsEnabled;
     QString idsSdkDir;
 #endif
-
+    QString colorMap;
     bool useConsole = false;
     bool isDevMode = false;
 
@@ -44,6 +44,20 @@ public:
     void load();
     void save();
     bool edit();
+
+    struct ColorMap
+    {
+        QString name;
+        QString file;
+        QString descr;
+        bool isCurrent;
+        bool isExists;
+    };
+    QList<ColorMap> colorMaps();
+    QString currentColorMap();
+    void setCurrentColorMap(const QString& fileName);
+    void deleteInvalidColorMaps();
+    QString selectColorMapFile();
 };
 
 #endif // APP_SETTINGS_H
