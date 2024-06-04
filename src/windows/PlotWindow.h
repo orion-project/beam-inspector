@@ -47,18 +47,19 @@ private:
     QSharedPointer<Camera> _camera;
     QSharedPointer<MeasureSaver> _saver;
     QAction *_actionMeasure, *_actionOpenImg, *_actionCamConfig,
-        *_actionGrayscale, *_actionRainbow, *_actionBeamInfo,
+        *_actionBeamInfo, *_actionLoadColorMap, *_actionCleanColorMaps,
         *_actionEditRoi, *_actionUseRoi, *_actionZoomFull, *_actionZoomRoi,
         *_actionCamWelcome, *_actionCamImage, *_actionCamDemo, *_actionRefreshCams,
         *_actionHardConfig, *_actionSaveRaw;
     QAction *_buttonMeasure, *_buttonOpenImg;
+    QActionGroup *_colorMapActions;
     QTableWidget *_table;
     QTableWidgetItem *_itemRenderTime, *_itemErrCount;
     TableIntf *_tableIntf;
     PlotIntf *_plotIntf;
     Ori::MruFileList *_mru;
     Ori::Widgets::StatusBar *_statusBar;
-    QMenu *_camSelectMenu;
+    QMenu *_camSelectMenu, *_colorMapMenu;
     QToolButton *_buttonSelectCam;
     QString _prevImage;
     MeasureProgressBar *_measureProgress;
@@ -85,6 +86,8 @@ private:
     void activateCamIds();
 #endif
     void editHardConfig();
+    void updateColorMapMenu();
+    void selectColorMapFile();
 
     void statsReceived(const CameraStats &stats);
     void captureStopped();

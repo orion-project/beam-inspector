@@ -3,6 +3,7 @@
 #define AppPublisher "orion-project.org"
 #define AppURL       "https://github.com/orion-project/cignus"
 #define BaseDir      "..\..\out\redist"
+#define BinDir       "..\..\bin"
 
 #define FileHandle = FileOpen("..\..\release\version.txt")
 #if FileHandle
@@ -51,6 +52,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "{#BaseDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
+Source: "{#BinDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"

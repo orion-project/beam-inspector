@@ -6,10 +6,10 @@
 #include <QWidget>
 
 class QCustomPlot;
-class QCPColorMap;
 class QCPItemStraightLine;
 
 class RoiRectGraph;
+class BeamColorMap;
 class BeamColorScale;
 class BeamEllipse;
 class BeamInfoText;
@@ -29,7 +29,7 @@ public:
 
     enum Theme { SYSTEM, LIGHT };
     void setThemeColors(Theme theme, bool replot);
-    void setRainbowEnabled(bool on, bool replot);
+    void setColorMap(const QString& fileName, bool replot);
     void setBeamInfoVisible(bool on, bool replot);
     void setImageSize(int sensorW, int sensorH, const PixelScale &scale);
     void setRoi(const RoiRect &a);
@@ -54,7 +54,7 @@ protected:
 private:
     QCustomPlot *_plot;
     PlotIntf *_plotIntf;
-    QCPColorMap *_colorMap;
+    BeamColorMap *_colorMap;
     BeamColorScale *_colorScale;
     QCPItemStraightLine *_lineX, *_lineY;
     BeamInfoText *_beamInfo;

@@ -3,14 +3,24 @@
 
 #include "qcp/src/item.h"
 #include "qcp/src/plottables/plottable-colormap.h"
+#include "qcp/src/colorgradient.h"
 
 #include "cameras/CameraTypes.h"
 
 class QSpinBox;
 
-/**
- * A thin wrapper around QCPColorMapData providing access to protected fields
- */
+//------------------------------------------------------------------------------
+
+class BeamColorMap : public QCPColorMap
+{
+public:
+    explicit BeamColorMap(QCPAxis *keyAxis, QCPAxis *valueAxis);
+
+    void setGradient(const QCPColorGradient &gradient);
+};
+
+//------------------------------------------------------------------------------
+
 class BeamColorMapData : public QCPColorMapData
 {
 public:
@@ -118,6 +128,18 @@ protected:
     void draw(QCPPainter *painter) override;
 
     QString _text;
+};
+
+//------------------------------------------------------------------------------
+
+class PrecalculatedGradient : public QCPColorGradient
+{
+public:
+    PrecalculatedGradient(const QString& presetFile);
+
+private:
+    bool loadColors(const QString& presetFile);
+    void applyDefaultColors();
 };
 
 #endif // BEAM_GRAPH_H

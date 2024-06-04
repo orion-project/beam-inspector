@@ -153,12 +153,10 @@ void PlotWindow::restoreState()
     _mru->load(s.settings());
 
     s.beginGroup("Plot");
-    bool useRainbow = s.value("rainbow", true).toBool();
     bool showBeamInfo = s.value("beamInfo", false).toBool();
-    _actionRainbow->setChecked(useRainbow);
-    _actionGrayscale->setChecked(not useRainbow);
+
     _actionBeamInfo->setChecked(showBeamInfo);
-    _plot->setRainbowEnabled(useRainbow, false);
+    _plot->setColorMap(AppSettings::instance().currentColorMap(), false);
     _plot->setBeamInfoVisible(showBeamInfo, false);
 }
 
@@ -166,7 +164,6 @@ void PlotWindow::storeState()
 {
     Ori::Settings s;
     s.beginGroup("Plot");
-    s.setValue("rainbow", _actionRainbow->isChecked());
     s.setValue("beamInfo", _actionBeamInfo->isChecked());
 }
 
@@ -197,16 +194,17 @@ void PlotWindow::createMenuBar()
     _actionBeamInfo = A_(tr("Plot Beam Info"), this, [this]{ _plot->setBeamInfoVisible(_actionBeamInfo->isChecked(), true); });
     _actionBeamInfo->setCheckable(true);
 
-    auto colorGroup = new QActionGroup(this);
-    _actionGrayscale = A_(tr("Grayscale"), colorGroup, [this]{ _plot->setRainbowEnabled(false, true); });
-    _actionRainbow = A_(tr("Rainbow"), colorGroup, [this]{ _plot->setRainbowEnabled(true, true); });
-    _actionGrayscale->setCheckable(true);
-    _actionRainbow->setCheckable(true);
     _actionZoomFull = A_(tr("Zoom to Sensor"), this, [this]{ _plot->zoomFull(true); }, ":/toolbar/zoom_sensor", QKeySequence("Ctrl+0"));
     _actionZoomRoi = A_(tr("Zoom to ROI"), this, [this]{ _plot->zoomRoi(true); }, ":/toolbar/zoom_roi", QKeySequence("Ctrl+1"));
+    _colorMapMenu = new QMenu(tr("Colour Map"));
+    _actionLoadColorMap = A_(tr("Load From File..."), this, &PlotWindow::selectColorMapFile);
+    _actionCleanColorMaps = A_(tr("Delete Invalid Items"), this, []{ AppSettings::instance().deleteInvalidColorMaps(); });
+    connect(_colorMapMenu, &QMenu::aboutToShow, this, &PlotWindow::updateColorMapMenu);
+    _colorMapActions = new QActionGroup(this);
+    _colorMapActions->setExclusive(true);
     menuBar()->addMenu(M_(tr("View"), {
         _actionBeamInfo, 0,
-        _actionGrayscale, _actionRainbow, 0,
+        _colorMapMenu, 0,
         _actionZoomFull, _actionZoomRoi,
     }));
 
@@ -771,4 +769,40 @@ void PlotWindow::editHardConfig()
 {
     if (_camera->canHardConfig() and _camera->isCapturing())
         _hardConfigWnd = _camera->showHardConfgWindow();
+}
+
+void PlotWindow::updateColorMapMenu()
+{
+    _colorMapMenu->clear();
+    for (const auto& map : AppSettings::instance().colorMaps())
+    {
+        if (map.name.isEmpty()) {
+            _colorMapMenu->addSeparator();
+            continue;
+        }
+        QString name = map.name;
+        if (!map.descr.isEmpty())
+            name = QStringLiteral("%1 - %2").arg(name, map.descr);
+        auto action = _colorMapMenu->addAction(name);
+        action->setCheckable(true);
+        action->setChecked(map.isCurrent);
+        action->setDisabled(!map.isExists);
+        connect(action, &QAction::triggered, this, [this, map]{
+            AppSettings::instance().setCurrentColorMap(map.name);
+            _plot->setColorMap(map.file, true);
+        });
+        _colorMapActions->addAction(action);
+    }
+    _colorMapMenu->addSeparator();
+    _colorMapMenu->addAction(_actionLoadColorMap);
+    _colorMapMenu->addAction(_actionCleanColorMaps);
+}
+
+void PlotWindow::selectColorMapFile()
+{
+    QString fileName = AppSettings::instance().selectColorMapFile();
+    if (!fileName.isEmpty()) {
+        AppSettings::instance().setCurrentColorMap(fileName);
+        _plot->setColorMap(fileName, true);
+    }
 }

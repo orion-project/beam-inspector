@@ -1,9 +1,18 @@
 #include "AppSettings.h"
 
 #include "dialogs/OriConfigDlg.h"
+#include "helpers/OriDialogs.h"
 #include "tools/OriSettings.h"
 
+#include <QApplication>
+#include <QDir>
+#include <QFileDialog>
+
 using namespace Ori::Dlg;
+
+#define GROUP_PLOT "Plot"
+#define KEY_COLOR_MAPS "colorMaps"
+#define KEY_COLOR_MAPS_DIR "colorMapsDir"
 
 //------------------------------------------------------------------------------
 //                            IAppSettingsListener
@@ -57,6 +66,9 @@ void AppSettings::load()
     LOAD(propChangeWheelBig, Int, 100);
     LOAD(propChangeArrowSm, Int, 20);
     LOAD(propChangeArrowBig, Int, 100);
+
+    s.beginGroup("Plot");
+    LOAD(colorMap, String, "CET-L08");
 }
 
 void AppSettings::save()
@@ -75,6 +87,9 @@ void AppSettings::save()
     SAVE(propChangeWheelBig);
     SAVE(propChangeArrowSm);
     SAVE(propChangeArrowBig);
+
+    s.beginGroup(GROUP_PLOT);
+    SAVE(colorMap);
 }
 
 bool AppSettings::edit()
@@ -113,4 +128,107 @@ bool AppSettings::edit()
         return true;
     }
     return false;
+}
+
+static QString colorMapDir()
+{
+    return qApp->applicationDirPath() + QStringLiteral("/colormaps");
+}
+
+QList<AppSettings::ColorMap> AppSettings::colorMaps()
+{
+    QList<AppSettings::ColorMap> result;
+    QDir dir(colorMapDir());
+    dir.setSorting(QDir::Name);
+    dir.setNameFilters({QStringLiteral("*.csv")});
+    auto currentMap = currentColorMap();
+    for (const auto& fi : dir.entryInfoList()) {
+        QString path = fi.absoluteFilePath();
+        ColorMap map {
+            .name = fi.baseName(),
+            .file = path,
+            .isCurrent = path == currentMap,
+            .isExists = true,
+        };
+        QString descrFile = path.replace(QStringLiteral(".csv"), QStringLiteral(".ini"));
+        if (QFileInfo::exists(descrFile)) {
+            QSettings ini(descrFile, QSettings::IniFormat);
+            ini.beginGroup("ColorMap");
+            map.descr = ini.value("descr").toString();
+        }
+        result << map;
+    }
+    result << ColorMap();
+    Ori::Settings s;
+    s.beginGroup(GROUP_PLOT);
+    for (const auto& file : s.value(KEY_COLOR_MAPS).toStringList()) {
+        QFileInfo fi(file);
+        QString path = fi.absoluteFilePath();
+        result << ColorMap {
+            .name = fi.baseName(),
+            .file = path,
+            .descr = path,
+            .isCurrent = path == currentMap,
+            .isExists = fi.exists(),
+        };
+    }
+    return result;
+}
+
+QString AppSettings::currentColorMap()
+{
+    QFileInfo fi(colorMap);
+    if (!fi.isAbsolute())
+        fi = QFileInfo(colorMapDir() + '/' + colorMap);
+    if (fi.suffix().isEmpty())
+        fi = QFileInfo(fi.absoluteFilePath() + QStringLiteral(".csv"));
+    return fi.absoluteFilePath();
+}
+
+void AppSettings::setCurrentColorMap(const QString& fileName)
+{
+    colorMap = fileName;
+    save();
+}
+
+void AppSettings::deleteInvalidColorMaps()
+{
+    Ori::Settings s;
+    s.beginGroup(GROUP_PLOT);
+    auto colorMaps = s.value(KEY_COLOR_MAPS).toStringList();
+    int count = 0;
+    for (int i = colorMaps.size()-1; i >= 0; i--)
+        if (!QFileInfo::exists(colorMaps.at(i))) {
+            colorMaps.removeAt(i);
+            count++;
+        }
+    if (count == 0) {
+        Ori::Dlg::info(tr("All items are ok"));
+        return;
+    }
+    s.setValue(KEY_COLOR_MAPS, colorMaps);
+    Ori::Dlg::info(tr("Items deleted: %1").arg(count));
+}
+
+QString AppSettings::selectColorMapFile()
+{
+    Ori::Settings s;
+    s.beginGroup(GROUP_PLOT);
+    auto recentDir = s.value(KEY_COLOR_MAPS_DIR).toString();
+
+    QString fileName = QFileDialog::getOpenFileName(qApp->activeWindow(), tr("Select Colour Map"), recentDir, tr("CSV files (*.csv);;All files (*.*)"));
+    if (fileName.isEmpty())
+        return {};
+
+    QFileInfo fi(fileName);
+    s.setValue(KEY_COLOR_MAPS_DIR, fi.absoluteDir().absolutePath());
+    fileName = fi.absoluteFilePath();
+
+    auto colorMaps = s.value(KEY_COLOR_MAPS).toStringList();
+    if (int i = colorMaps.indexOf(fileName); i >= 0)
+        colorMaps.removeAt(i);
+    colorMaps.insert(0, fileName);
+    s.setValue(KEY_COLOR_MAPS, colorMaps);
+
+    return fileName;
 }
