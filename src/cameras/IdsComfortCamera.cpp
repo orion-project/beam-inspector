@@ -70,6 +70,7 @@ namespace IdsLib
     IDS_PROC(peak_Frame_Buffer_Get)(peak_frame_handle, peak_buffer*);
     IDS_PROC(peak_Frame_Release)(peak_camera_handle, peak_frame_handle);
     IDS_PROC(peak_GFA_Float_Get)(peak_camera_handle, peak_gfa_module, const char*, double*);
+    IDS_PROC(peak_GFA_String_Get)(peak_camera_handle, peak_gfa_module, const char*, char*, size_t*);
     peak_access_status (__cdecl *peak_GFA_Feature_GetAccessStatus)(peak_camera_handle, peak_gfa_module, const char*);
 
     template <typename T> bool getProc(const char *name, T *proc) {
@@ -159,6 +160,7 @@ IdsComfort* IdsComfort::init()
     GET_PROC(peak_Frame_Buffer_Get);
     GET_PROC(peak_Frame_Release);
     GET_PROC(peak_GFA_Float_Get);
+    GET_PROC(peak_GFA_String_Get);
     GET_PROC(peak_GFA_Feature_GetAccessStatus);
 
     auto res = IdsLib::peak_Library_Init();
@@ -204,7 +206,10 @@ QVector<CameraItem> IdsComfort::getCameras()
         qDebug() << LOG_ID << cam.cameraID << cam.cameraType << cam.modelName << cam.serialNumber;
         result << CameraItem {
             .id = cam.cameraID,
-            .name = QString::fromLatin1(cam.modelName)
+            .name = QString("%1 (*%2)").arg(
+                QString::fromLatin1(cam.modelName),
+                QString::fromLatin1(cam.serialNumber).right(4)
+            )
         };
     }
     return result;
@@ -224,7 +229,7 @@ QString getPeakError(peak_status status);
         return QString(msg ": ") + err; \
     }
 
-#define GFA_GET(prop, value) \
+#define GFA_GET_FLOAT(prop, value) \
     if (PEAK_IS_READABLE(IdsLib::peak_GFA_Feature_GetAccessStatus(hCam, PEAK_GFA_MODULE_REMOTE_DEVICE, prop))) { \
         res = IdsLib::peak_GFA_Float_Get(hCam, PEAK_GFA_MODULE_REMOTE_DEVICE, prop, &value); \
         if (PEAK_ERROR(res)) { \
@@ -269,7 +274,7 @@ public:
         CHECK_ERR("Unable to get camera descriptor");
         cam->_name = QString::fromLatin1(descr.modelName);
         cam->_descr = cam->_name + ' ' + QString::fromLatin1(descr.serialNumber);
-        cam->_configGroup = cam->_name;
+        cam->_configGroup = cam->_name + '-' + QString::fromLatin1(descr.serialNumber);
         cam->loadConfig();
         cam->loadConfigMore();
 
@@ -308,8 +313,8 @@ public:
 
         while (true) {
             double pixelW, pixelH;
-            GFA_GET("SensorPixelWidth", pixelW);
-            GFA_GET("SensorPixelHeight", pixelH);
+            GFA_GET_FLOAT("SensorPixelWidth", pixelW);
+            GFA_GET_FLOAT("SensorPixelHeight", pixelH);
             if (pixelW != pixelH) {
                 qWarning() << LOG_ID << "Non-square pixels are not supported";
                 break;
@@ -501,6 +506,23 @@ public:
             }
         }
     }
+
+    QString gfaGetStr(const char* prop)
+    {
+        auto mod = PEAK_GFA_MODULE_REMOTE_DEVICE;
+        if (!PEAK_IS_READABLE(IdsLib::peak_GFA_Feature_GetAccessStatus(hCam, mod, prop)))
+            return "Is not readable";
+        size_t size;
+        auto res = IdsLib::peak_GFA_String_Get(hCam, mod, prop, nullptr, &size);
+        if (PEAK_ERROR(res))
+            return getPeakError(res);
+        QByteArray buf(size, 0);
+        res = IdsLib::peak_GFA_String_Get(hCam, mod, prop, buf.data(), &size);
+        if (PEAK_ERROR(res))
+            return getPeakError(res);
+        qDebug() << "Reading" << prop << 3;
+        return QString::fromLatin1(buf);
+    }
 };
 
 //------------------------------------------------------------------------------
@@ -600,27 +622,52 @@ void IdsComfortCamera::setRawView(bool on, bool reconfig)
         _peak->setRawView(on, reconfig);
 }
 
+using namespace Ori::Dlg;
+
 void IdsComfortCamera::initConfigMore(Ori::Dlg::ConfigDlgOpts &opts)
 {
-    int page = cfgMax+1;
-    _bpp8 = _bpp == 8;
-    _bpp10 = _bpp == 10;
-    _bpp12 = _bpp == 12;
-    opts.pages
-        << Ori::Dlg::ConfigPage(page, tr("Hardware"), ":/toolbar/hardware");
+    int pageHard = cfgMax+1;
+    int pageInfo = cfgMax+2;
+    _cfg.bpp8 = _bpp == 8;
+    _cfg.bpp10 = _bpp == 10;
+    _cfg.bpp12 = _bpp == 12;
+    opts.pages << ConfigPage(pageHard, tr("Hardware"), ":/toolbar/hardware");
     opts.items
-        << (new Ori::Dlg::ConfigItemSection(page, tr("Pixel format")))
+        << (new ConfigItemSection(pageHard, tr("Pixel format")))
             ->withHint(tr("Reselect camera to apply"))
-        << (new Ori::Dlg::ConfigItemBool(page, tr("8 bit"), &_bpp8))->withRadioGroup("pixel_format")
-        << (new Ori::Dlg::ConfigItemBool(page, tr("10 bit"), &_bpp10))->withRadioGroup("pixel_format")
-        << (new Ori::Dlg::ConfigItemBool(page, tr("12 bit"), &_bpp12))->withRadioGroup("pixel_format");
+        << (new ConfigItemBool(pageHard, tr("8 bit"), &_cfg.bpp8))->withRadioGroup("pixel_format")
+        << (new ConfigItemBool(pageHard, tr("10 bit"), &_cfg.bpp10))->withRadioGroup("pixel_format")
+        << (new ConfigItemBool(pageHard, tr("12 bit"), &_cfg.bpp12))->withRadioGroup("pixel_format")
+    ;
+    if (_peak) {
+        if (!_cfg.intoRequested) {
+            _cfg.intoRequested = true;
+            _cfg.infoModelName = _peak->gfaGetStr("DeviceModelName");
+            _cfg.infoFamilyName = _peak->gfaGetStr("DeviceFamilyName");
+            _cfg.infoSerialNum = _peak->gfaGetStr("DeviceSerialNumber");
+            _cfg.infoVendorName = _peak->gfaGetStr("DeviceVendorName");
+            _cfg.infoManufacturer = _peak->gfaGetStr("DeviceManufacturerInfo");
+            _cfg.infoDeviceVer = _peak->gfaGetStr("DeviceVersion");
+            _cfg.infoFirmwareVer = _peak->gfaGetStr("DeviceFirmwareVersion");
+        }
+        opts.pages << ConfigPage(pageInfo, tr("Info"), ":/toolbar/info");
+        opts.items
+            << (new ConfigItemStr(pageInfo, tr("Model name"), &_cfg.infoModelName))->withReadOnly()
+            << (new ConfigItemStr(pageInfo, tr("Family name"), &_cfg.infoFamilyName))->withReadOnly()
+            << (new ConfigItemStr(pageInfo, tr("Serial number"), &_cfg.infoSerialNum))->withReadOnly()
+            << (new ConfigItemStr(pageInfo, tr("Vendor name"), &_cfg.infoVendorName))->withReadOnly()
+            << (new ConfigItemStr(pageInfo, tr("Manufacturer info"), &_cfg.infoManufacturer))->withReadOnly()
+            << (new ConfigItemStr(pageInfo, tr("Device version"), &_cfg.infoDeviceVer))->withReadOnly()
+            << (new ConfigItemStr(pageInfo, tr("Firmware version"), &_cfg.infoFirmwareVer))->withReadOnly()
+        ;
+    }
 }
 
 void IdsComfortCamera::saveConfigMore()
 {
     Ori::Settings s;
     s.beginGroup(_configGroup);
-    s.setValue("hard.bpp", _bpp12 ? 12 : _bpp10 ? 10 : 8);
+    s.setValue("hard.bpp", _cfg.bpp12 ? 12 : _cfg.bpp10 ? 10 : 8);
 }
 
 void IdsComfortCamera::loadConfigMore()
