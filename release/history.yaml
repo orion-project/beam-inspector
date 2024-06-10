@@ -5,6 +5,8 @@ history:
   - text: Color map file presets
   - text: Raw image view mode
   - text: Show image outside of ROI
+  - text: Show camera serial number in selector
+  - text: Show camera info in settings dialog
 
 - version: 0.0.7
   date: 2024-05-22
