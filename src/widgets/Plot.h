@@ -33,6 +33,7 @@ public:
     void setBeamInfoVisible(bool on, bool replot);
     void setImageSize(int sensorW, int sensorH, const PixelScale &scale);
     void setRoi(const RoiRect &a);
+    void setRawView(bool on, bool replot);
     void selectBackColor();
     void exportImageDlg();
     void zoomAuto(bool replot);
@@ -64,6 +65,8 @@ private:
     enum AutoZoomMode { ZOOM_NONE, ZOOM_FULL, ZOOM_APERTURE };
     AutoZoomMode _autoZoom = ZOOM_FULL;
     bool _autoZooming = false;
+    bool _showBeamInfo = false;
+    bool _rawView = false;
 
     void zoomToBounds(double x1, double y1, double x2, double y2, bool replot);
     void axisRangeChanged();

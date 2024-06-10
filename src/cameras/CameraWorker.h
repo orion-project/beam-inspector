@@ -32,6 +32,7 @@ public:
     TableIntf *table;
     Camera *camera;
     QThread *thread;
+    bool rawView = false;
 
     QDateTime start;
     QElapsedTimer timer;
@@ -162,10 +163,12 @@ public:
 
     inline void calcResult()
     {
-        if (subtract) {
-            cgn_calc_beam_bkgnd(&c, &g, &r);
-        } else {
-            cgn_calc_beam_naive(&c, &r);
+        if (!rawView) {
+            if (subtract) {
+                cgn_calc_beam_bkgnd(&c, &g, &r);
+            } else {
+                cgn_calc_beam_naive(&c, &r);
+            }
         }
 
         saverMutex.lock();
@@ -182,7 +185,7 @@ public:
             QCoreApplication::postEvent(brightRequest, e);
             brightRequest = nullptr;
         }
-        if (saver) {
+        if (!rawView && saver) {
             qint64 time = timer.elapsed();
             if (saveImgInterval > 0 and (prevSaveImg == 0 or time - prevSaveImg >= saveImgInterval)) {
                 prevSaveImg = time;
@@ -220,6 +223,17 @@ public:
             return false;
         prevReady = tm;
         const double rangeTop = (1 << c.bpp) - 1;
+
+        if (rawView)
+        {
+            cgn_copy_to_f64(&c, graph, &g.max);
+            plot->invalidateGraph();
+            r.nan = true;
+            plot->setResult(r, 0, rangeTop);
+            table->setResult(r, avgRenderTime, avgCalcTime);
+            return true;
+        }
+
         if (subtract)
         {
             if (normalize) {
@@ -286,6 +300,17 @@ public:
     {
         saverMutex.lock();
         brightRequest = sender;
+        saverMutex.unlock();
+    }
+
+    void setRawView(bool on, bool reconfig)
+    {
+        saverMutex.lock();
+        if (rawView != on) {
+            rawView = on;
+            if (reconfig)
+                this->reconfig = true;
+        }
         saverMutex.unlock();
     }
 };

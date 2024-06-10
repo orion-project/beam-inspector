@@ -29,6 +29,7 @@ public:
     void stopMeasure() override;
 
     void requestRawImg(QObject *sender) override;
+    void setRawView(bool on, bool reconfig) override;
 
 signals:
     void ready();

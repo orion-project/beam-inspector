@@ -15,6 +15,7 @@
         <file alias="open">../img/toolbar/open.svg</file>
         <file alias="open_img">../img/toolbar/open_img.svg</file>
         <file alias="options">../img/toolbar/options.svg</file>
+        <file alias="raw_view">../img/toolbar/raw_view.svg</file>
         <file alias="roi">../img/toolbar/aper.svg</file>
         <file alias="roi_rect">../img/toolbar/aper_rect.svg</file>
         <file alias="roi_warn">../img/toolbar/aper_warn.svg</file>

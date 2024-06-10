@@ -212,7 +212,8 @@ void Plot::setColorMap(const QString& fileName, bool replot)
 
 void Plot::setBeamInfoVisible(bool on, bool replot)
 {
-    _beamInfo->setVisible(on);
+    _showBeamInfo = on;
+    _beamInfo->setVisible(_showBeamInfo && !_rawView);
     if (on) _plotIntf->showResult();
     if (replot) _plot->replot();
 }
@@ -256,4 +257,15 @@ void Plot::setRoi(const RoiRect& a)
 RoiRect Plot::roi() const
 {
     return _roi->roi();
+}
+
+void Plot::setRawView(bool on, bool replot)
+{
+    _rawView = on;
+    setBeamInfoVisible(_showBeamInfo, false);
+    _roi->setIsVisible(!_rawView);
+    _lineX->setVisible(!_rawView);
+    _lineY->setVisible(!_rawView);
+    _beamShape->setVisible(!_rawView);
+    if (replot) _plot->replot();
 }

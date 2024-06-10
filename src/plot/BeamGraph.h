@@ -70,6 +70,9 @@ public:
     RoiRect roi() const { return _roi; }
     void setRoi(const RoiRect &roi);
 
+    bool isVisible() const { return _isVisible; }
+    void setIsVisible(bool on);
+
     void setImageSize(int sensorW, int sensorH, const PixelScale &scale);
 
     double selectTest(const QPointF&, bool, QVariant*) const override { return 0; }
@@ -98,6 +101,7 @@ private:
     Qt::CursorShape _dragCursor = Qt::ArrowCursor;
     QSpinBox *_seX1, *_seY1, *_seX2, *_seY2, *_seW, *_seH;
     QFrame *_editor = nullptr;
+    bool _isVisible = true;
 
     int roiW() const { return qAbs((int)_x2 - (int)_x1); }
     int roiH() const { return qAbs((int)_y2 - (int)_y1); }
@@ -111,6 +115,7 @@ private:
     void resetDragCusrsor() { showDragCursor(Qt::ArrowCursor); }
     void showCoordTooltip(const QPoint &p);
     void makeEditor();
+    void updateVisibility();
 };
 
 //------------------------------------------------------------------------------
