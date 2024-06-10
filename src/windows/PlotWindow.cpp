@@ -616,6 +616,13 @@ void PlotWindow::openImageDlg()
         delete cam;
         return;
     }
+
+    // qApp->activeWindow() can still return the open dialog here,
+    // then PopupMessage called from stopCapture() crashes the app
+    // because this window is already destroyed.
+    // So have to process all close events first:
+    qApp->processEvents();
+
     stopCapture();
     _camera.reset((Camera*)cam);
     processImage();

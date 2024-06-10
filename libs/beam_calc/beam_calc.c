@@ -71,8 +71,9 @@ void cgn_calc_beam_naive(const CgnBeamCalc *c, CgnBeamResult *r) {
     }
 }
 
-#define cgn_subtract_bkgnd                              \
+#define cgn_subtract_bkgnd                             \
     const int w = c->w;                                 \
+    const int h = c->h;                                 \
     const int x1 = b->ax1, x2 = b->ax2;                 \
     const int y1 = b->ay1, y2 = b->ay2;                 \
     const int dw = (x2 - x1) * b->corner_fraction;      \
@@ -111,6 +112,27 @@ void cgn_calc_beam_naive(const CgnBeamCalc *c, CgnBeamResult *r) {
     b->min = 1e10;                                      \
     b->max = -1e10;                                     \
     b->count = 0;                                       \
+    for (int i = 0; i < y1; i++) {                      \
+        const int offset = i*w;                         \
+        for (int j = 0; j < w; j++) {                   \
+            t[offset + j] = buf[offset + j];            \
+        }                                               \
+    }                                                   \
+    for (int i = y1; i < y2; i++) {                     \
+        const int offset = i*w;                         \
+        for (int j = 0; j < x1; j++) {                  \
+            t[offset + j] = buf[offset + j];            \
+        }                                               \
+        for (int j = x2; j < w; j++) {                  \
+            t[offset + j] = buf[offset + j];            \
+        }                                               \
+    }                                                   \
+    for (int i = y2; i < h; i++) {                      \
+        const int offset = i*w;                         \
+        for (int j = 0; j < w; j++) {                   \
+            t[offset + j] = buf[offset + j];            \
+        }                                               \
+    }                                                   \
     for (int i = y1; i < y2; i++) {                     \
         const int offset = i*w;                         \
         for (int j = x1; j < x2; j++) {                 \

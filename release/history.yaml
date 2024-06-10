@@ -3,6 +3,8 @@ history:
   date: ?
   changes:
   - text: Color map file presets
+  - text: Raw image view mode
+  - text: Show image outside of ROI
 
 - version: 0.0.7
   date: 2024-05-22
