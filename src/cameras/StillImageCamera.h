@@ -21,9 +21,12 @@ public:
 
     void startCapture() override;
 
+    void setRawView(bool on, bool reconfig) override;
+
 private:
     QString _fileName;
     QImage _image;
+    bool _rawView = false;
 };
 
 #endif // STILL_IMAGE_CAMERA_H

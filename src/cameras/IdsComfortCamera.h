@@ -51,6 +51,7 @@ public:
     QPointer<QWidget> showHardConfgWindow() override;
 
     void requestRawImg(QObject *sender) override;
+    void setRawView(bool on, bool reconfig) override;
 
     QVariant id() const { return _id; }
 

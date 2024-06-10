@@ -41,6 +41,7 @@ public:
     virtual QPointer<QWidget> showHardConfgWindow() { return {}; }
 
     virtual void requestRawImg(QObject *sender) {}
+    virtual void setRawView(bool on, bool reconfig) {}
 
     const CameraConfig& config() const { return _config; }
     enum ConfigPages { cfgPlot, cfgBgnd, cfgRoi, cfgMax };

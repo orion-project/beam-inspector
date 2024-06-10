@@ -120,21 +120,35 @@ void StillImageCamera::startCapture()
         r.y2 = c.h;
     }
     QVector<double> subtracted;
-    if (_config.bgnd.on) {
+    if (!_rawView && _config.bgnd.on) {
         subtracted = QVector<double>(sz);
         g.subtracted = subtracted.data();
     }
 
     timer.restart();
-    if (_config.bgnd.on) {
-        cgn_calc_beam_bkgnd(&c, &g, &r);
-    } else {
-        cgn_calc_beam_naive(&c, &r);
+    if (!_rawView)
+    {
+        if (_config.bgnd.on) {
+            cgn_calc_beam_bkgnd(&c, &g, &r);
+        } else {
+            cgn_calc_beam_naive(&c, &r);
+        }
     }
     auto calcTime = timer.elapsed();
 
     timer.restart();
     const double rangeTop = (1 << c.bpp) - 1;
+
+    if (_rawView)
+    {
+        cgn_copy_to_f64(&c, graph, &g.max);
+        _plot->invalidateGraph();
+        r.nan = true;
+        _plot->setResult(r, 0, rangeTop);
+        _table->setResult(r, loadTime, calcTime);
+        return;
+    }
+
     if (_config.bgnd.on) {
         if (_config.plot.normalize) {
             cgn_copy_normalized_f64(g.subtracted, graph, sz, g.min,
@@ -174,4 +188,9 @@ void StillImageCamera::startCapture()
             _plot->setResult(r, g.min, g.max);
     }
     _table->setResult(r, loadTime, calcTime);
+}
+
+void StillImageCamera::setRawView(bool on, bool reconfig)
+{
+    _rawView = on;
 }

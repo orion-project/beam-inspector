@@ -94,7 +94,13 @@ void RoiRectGraph::setRoi(const RoiRect &roi)
 {
     _roi = roi;
     updateCoords();
-    setVisible(_roi.on);
+    updateVisibility();
+}
+
+void RoiRectGraph::setIsVisible(bool on)
+{
+    _isVisible = on;
+    updateVisibility();
 }
 
 void RoiRectGraph::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
@@ -103,6 +109,11 @@ void RoiRectGraph::setImageSize(int sensorW, int sensorH, const PixelScale &scal
     _maxX = scale.sensorToUnit(sensorW);
     _maxY = scale.sensorToUnit(sensorH);
     updateCoords();
+}
+
+void RoiRectGraph::updateVisibility()
+{
+    setVisible(_editing || (_roi.on && _isVisible));
 }
 
 void RoiRectGraph::updateCoords()
@@ -119,7 +130,7 @@ void RoiRectGraph::startEdit()
         return;
     _editing = true;
     makeEditor();
-    setVisible(true);
+    updateVisibility();
     parentPlot()->replot();
 }
 
@@ -138,8 +149,8 @@ void RoiRectGraph::stopEdit(bool apply)
             onEdited();
     } else {
         updateCoords();
-        setVisible(_roi.on);
     }
+    updateVisibility();
     _editor->deleteLater();
     _editor = nullptr;
     QToolTip::hideText();

@@ -594,6 +594,12 @@ void IdsComfortCamera::requestRawImg(QObject *sender)
         _peak->requestRawImg(sender);
 }
 
+void IdsComfortCamera::setRawView(bool on, bool reconfig)
+{
+    if (_peak)
+        _peak->setRawView(on, reconfig);
+}
+
 void IdsComfortCamera::initConfigMore(Ori::Dlg::ConfigDlgOpts &opts)
 {
     int page = cfgMax+1;

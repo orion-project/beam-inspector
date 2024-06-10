@@ -154,8 +154,11 @@ void PlotWindow::restoreState()
 
     s.beginGroup("Plot");
     bool showBeamInfo = s.value("beamInfo", false).toBool();
+    bool rawView = s.value("rawView", false).toBool();
 
     _actionBeamInfo->setChecked(showBeamInfo);
+    _actionRawView->setChecked(rawView);
+    _plot->setRawView(rawView, false);
     _plot->setColorMap(AppSettings::instance().currentColorMap(), false);
     _plot->setBeamInfoVisible(showBeamInfo, false);
 }
@@ -165,6 +168,7 @@ void PlotWindow::storeState()
     Ori::Settings s;
     s.beginGroup("Plot");
     s.setValue("beamInfo", _actionBeamInfo->isChecked());
+    s.setValue("rawView", _actionRawView->isChecked());
 }
 
 void PlotWindow::createMenuBar()
@@ -191,6 +195,8 @@ void PlotWindow::createMenuBar()
         0, actnClose});
     menuBar()->addMenu(menuFile);
 
+    _actionRawView = A_(tr("Raw View"), this, &PlotWindow::toggleRawView, ":/toolbar/raw_view", Qt::Key_F12);
+    _actionRawView->setCheckable(true);
     _actionBeamInfo = A_(tr("Plot Beam Info"), this, [this]{ _plot->setBeamInfoVisible(_actionBeamInfo->isChecked(), true); });
     _actionBeamInfo->setCheckable(true);
 
@@ -203,6 +209,7 @@ void PlotWindow::createMenuBar()
     _colorMapActions = new QActionGroup(this);
     _colorMapActions->setExclusive(true);
     menuBar()->addMenu(M_(tr("View"), {
+        _actionRawView, 0,
         _actionBeamInfo, 0,
         _colorMapMenu, 0,
         _actionZoomFull, _actionZoomRoi,
@@ -266,6 +273,8 @@ void PlotWindow::createToolBar()
     tb->addWidget(_buttonSelectCam);
     tb->addAction(_actionCamConfig);
     tb->addAction(_actionHardConfig);
+    tb->addSeparator();
+    tb->addAction(_actionRawView);
     tb->addSeparator();
     tb->addAction(_actionEditRoi);
     tb->addAction(_actionUseRoi);
@@ -496,6 +505,7 @@ void PlotWindow::updateActions()
     _actionEditRoi->setDisabled(started);
     _actionUseRoi->setDisabled(started);
     _actionOpenImg->setDisabled(started);
+    _actionRawView->setDisabled(started);
     _actionMeasure->setText(started ? tr("Stop Measurements") : tr("Start Measurements"));
     _actionMeasure->setIcon(QIcon(started ? ":/toolbar/stop" : ":/toolbar/start"));
 }
@@ -530,6 +540,10 @@ void PlotWindow::toggleMeasure(bool force)
     auto cfg = MeasureSaver::configure();
     if (!cfg)
         return;
+
+    _plot->setRawView(false, false);
+    cam->setRawView(false, true);
+    _actionRawView->setChecked(false);
 
     auto saver = new MeasureSaver();
     auto res = saver->start(*cfg, cam);
@@ -589,7 +603,7 @@ void PlotWindow::statsReceived(const CameraStats &stats)
 
 void PlotWindow::dataReady()
 {
-    _statusBar->setVisible(STATUS_NO_DATA, _tableIntf->resultInvalid());
+    _statusBar->setVisible(STATUS_NO_DATA, _tableIntf->resultInvalid() && !_actionRawView->isChecked());
     _tableIntf->showResult();
     _plotIntf->showResult();
     _plot->replot();
@@ -626,6 +640,7 @@ void PlotWindow::processImage()
     _tableIntf->cleanResult();
     _itemRenderTime->setText(tr(" Load time "));
     _mru->append(cam->fileName());
+    _camera->setRawView(_actionRawView->isChecked(), false);
     _camera->startCapture();
     // do showCamConfig() after capture(), when image is already loaded and its size gets known
     showCamConfig(false);
@@ -719,6 +734,7 @@ void PlotWindow::activateCamDemo()
     connect(cam, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualDemoCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &VirtualDemoCamera::finished, this, &PlotWindow::captureStopped);
+    cam->setRawView(_actionRawView->isChecked(), false);
     _camera.reset((Camera*)cam);
     showCamConfig(false);
     _plot->zoomAuto(false);
@@ -758,6 +774,7 @@ void PlotWindow::activateCamIds()
             toggleMeasure(true);
         cam->stopCapture();
     });
+    cam->setRawView(_actionRawView->isChecked(), false);
     _camera.reset((Camera*)cam);
     showCamConfig(false);
     _plot->zoomAuto(false);
@@ -805,4 +822,14 @@ void PlotWindow::selectColorMapFile()
         AppSettings::instance().setCurrentColorMap(fileName);
         _plot->setColorMap(fileName, true);
     }
+}
+
+void PlotWindow::toggleRawView()
+{
+    auto rawView = _actionRawView->isChecked();
+    _camera->setRawView(rawView, true);
+    _plot->setRawView(rawView, true);
+
+    if (auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get()); imgCam)
+        processImage();
 }

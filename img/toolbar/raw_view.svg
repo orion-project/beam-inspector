@@ -1,0 +1,18 @@
+<svg height="24" width="24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<linearGradient id="a" gradientTransform="matrix(1.21 0 0 1.08 -5.53 -4.06)" gradientUnits="userSpaceOnUse" x1="4.59" x2="16.45" y1="2.66" y2="16.98">
+<stop offset="0" stop-color="#8f9292"/>
+<stop offset="1" stop-color="#232323"/>
+</linearGradient>
+<linearGradient id="b" gradientTransform="matrix(1.36 0 0 1.2 -3.53 -1.9)" gradientUnits="userSpaceOnUse" x1="16.45" x2="3.7" y1="2.66" y2="19.06">
+<stop offset="0" stop-color="#c4c4c4"/>
+<stop offset="1" stop-color="#707070"/>
+</linearGradient>
+<g fill-rule="evenodd">
+<path d="m23.5.5v23h-23v-23z" fill="url(#a)" stroke="url(#b)" stroke-dashoffset="21.44" stroke-linecap="round" stroke-linejoin="round"/>
+<g stroke-width=".83" transform="matrix(1.05 -.59 .62 1.04 -2.53 -2.53)">
+<ellipse cx="4.23" cy="16.3" fill="#949494" rx="8.24" ry="6.11"/>
+<ellipse cx="4.23" cy="16.3" fill="#d7d7d7" rx="6.39" ry="4.75"/>
+<ellipse cx="4.23" cy="16.3" fill="#fff" rx="3.1" ry="2.29"/>
+</g>
+</g>
+</svg>

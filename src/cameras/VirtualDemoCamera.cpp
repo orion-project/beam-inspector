@@ -178,3 +178,8 @@ void VirtualDemoCamera::requestRawImg(QObject *sender)
 {
     _render->requestRawImg(sender);
 }
+
+void VirtualDemoCamera::setRawView(bool on, bool reconfig)
+{
+    _render->setRawView(on, reconfig);
+}

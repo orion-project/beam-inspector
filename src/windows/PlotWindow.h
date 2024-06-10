@@ -50,7 +50,7 @@ private:
         *_actionBeamInfo, *_actionLoadColorMap, *_actionCleanColorMaps,
         *_actionEditRoi, *_actionUseRoi, *_actionZoomFull, *_actionZoomRoi,
         *_actionCamWelcome, *_actionCamImage, *_actionCamDemo, *_actionRefreshCams,
-        *_actionHardConfig, *_actionSaveRaw;
+        *_actionHardConfig, *_actionSaveRaw, *_actionRawView;
     QAction *_buttonMeasure, *_buttonOpenImg;
     QActionGroup *_colorMapActions;
     QTableWidget *_table;
@@ -103,6 +103,7 @@ private:
     void showCamConfig(bool replot);
     void processImage();
     void toggleRoi();
+    void toggleRawView();
 };
 
 #endif // PLOT_WINDOW_H
