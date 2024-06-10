@@ -56,7 +56,7 @@ https://www.1stvision.com/cameras/IDS/IDS-manuals/en/basics-monochrome-pixel-for
 
 #define CHECK_ERR(msg) \
     if (PEAK_ERROR(res)) { \
-        printf("ERR: %s (code=%#06x)\n", msg); \
+        printf("ERR: %s (code=%#06x)\n", msg, res); \
         goto stop; \
     }
 
