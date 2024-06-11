@@ -114,6 +114,8 @@ private:
 
 PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
 {
+    setObjectName("PlotWindow");
+
     Ori::Gui::PopupMessage::setTarget(this);
 
     _mru = new Ori::MruFileList(this);
@@ -135,7 +137,7 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     setThemeColors();
 
     restoreState();
-    resize(1100, 600);
+    resize(1000, 650);
 
     _plot->setFocus();
 
@@ -290,6 +292,7 @@ void PlotWindow::createToolBar()
     _buttonSelectCam->setToolTip(tr("Active camera"));
 
     auto tb = new Ori::Widgets::FlatToolBar;
+    tb->setObjectName("ToolBarMain");
     addToolBar(tb);
     tb->setMovable(false);
     tb->addWidget(_buttonSelectCam);
@@ -397,6 +400,7 @@ void PlotWindow::createDockPanel()
     _itemErrCount = makeItem(tr("Error frames"));
 
     auto dock = new QDockWidget(tr("Results"));
+    dock->setObjectName("DockResults");
     dock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
     dock->setFeatures(QDockWidget::DockWidgetMovable);
     dock->setWidget(_table);
@@ -405,6 +409,7 @@ void PlotWindow::createDockPanel()
     _stubConfigPanel = new StubHardConfigPanel(this);
     _camConfigPanel = _stubConfigPanel;
     _hardConfigDock = new QDockWidget(tr("Control"));
+    _hardConfigDock->setObjectName("DockHardConfig");
     _hardConfigDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
     _hardConfigDock->setFeatures(QDockWidget::DockWidgetMovable);
     _hardConfigDock->setWidget(_stubConfigPanel);

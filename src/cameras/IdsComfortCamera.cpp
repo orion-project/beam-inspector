@@ -223,6 +223,13 @@ IdsComfort::~IdsComfort()
     else qDebug() << LOG_ID << "Library deinited";
 }
 
+static QString makeCameraName(const peak_camera_descriptor &cam)
+{
+    return QString("%1 (*%2)").arg(
+        QString::fromLatin1(cam.modelName),
+        QString::fromLatin1(cam.serialNumber).right(4));
+}
+
 QVector<CameraItem> IdsComfort::getCameras()
 {
     size_t camCount;
@@ -245,10 +252,7 @@ QVector<CameraItem> IdsComfort::getCameras()
         qDebug() << LOG_ID << cam.cameraID << cam.cameraType << cam.modelName << cam.serialNumber;
         result << CameraItem {
             .id = cam.cameraID,
-            .name = QString("%1 (*%2)").arg(
-                QString::fromLatin1(cam.modelName),
-                QString::fromLatin1(cam.serialNumber).right(4)
-            )
+            .name = makeCameraName(cam)
         };
     }
     return result;
@@ -311,7 +315,7 @@ public:
         peak_camera_descriptor descr;
         res = IdsLib::peak_Camera_GetDescriptor(id, &descr);
         CHECK_ERR("Unable to get camera descriptor");
-        cam->_name = QString::fromLatin1(descr.modelName);
+        cam->_name = makeCameraName(descr);
         cam->_descr = cam->_name + ' ' + QString::fromLatin1(descr.serialNumber);
         cam->_configGroup = cam->_name + '-' + QString::fromLatin1(descr.serialNumber);
         cam->loadConfig();
