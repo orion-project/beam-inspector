@@ -6,7 +6,7 @@ add_compile_options(
 )
 
 add_library(cgn_beam_calc STATIC
-    beam_calc.c
+    beam_calc.h beam_calc.c
 )
 
 #target_compile_definitions(cgn_beam_calc PRIVATE

@@ -6,7 +6,7 @@ add_compile_options(
 )
 
 add_library(cgn_beam_render STATIC
-    beam_render.c
+    beam_render.h beam_render.c
 )
 
 target_include_directories(cgn_beam_render INTERFACE

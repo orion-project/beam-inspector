@@ -43,22 +43,23 @@ set(PROJECT_SOURCES
     src/app.rc
     src/app.qrc
     src/main.cpp
-    src/app/AppSettings.cpp
-    src/app/HelpSystem.cpp
-    src/cameras/Camera.cpp
-    src/cameras/CameraTypes.cpp
-    src/cameras/IdsComfortCamera.cpp
-    src/cameras/MeasureSaver.cpp
-    src/cameras/StillImageCamera.cpp
-    src/cameras/VirtualDemoCamera.cpp
-    src/cameras/WelcomeCamera.cpp
-    src/plot/BeamGraph.cpp
-    src/plot/PlotExport.cpp
-    src/widgets/FileSelector.cpp
-    src/widgets/Plot.cpp
-    src/widgets/PlotIntf.cpp
-    src/widgets/TableIntf.cpp
-    src/windows/PlotWindow.cpp
+    src/app/AppSettings.h src/app/AppSettings.cpp
+    src/app/HelpSystem.h src/app/HelpSystem.cpp
+    src/cameras/Camera.h src/cameras/Camera.cpp
+    src/cameras/CameraTypes.h src/cameras/CameraTypes.cpp
+    src/cameras/CameraWorker.h
+    src/cameras/IdsComfortCamera.h src/cameras/IdsComfortCamera.cpp
+    src/cameras/MeasureSaver.h src/cameras/MeasureSaver.cpp
+    src/cameras/StillImageCamera.h src/cameras/StillImageCamera.cpp
+    src/cameras/VirtualDemoCamera.h src/cameras/VirtualDemoCamera.cpp
+    src/cameras/WelcomeCamera.h src/cameras/WelcomeCamera.cpp
+    src/plot/BeamGraph.h src/plot/BeamGraph.cpp
+    src/plot/PlotExport.h src/plot/PlotExport.cpp
+    src/widgets/FileSelector.h src/widgets/FileSelector.cpp
+    src/widgets/Plot.h src/widgets/Plot.cpp
+    src/widgets/PlotIntf.h src/widgets/PlotIntf.cpp
+    src/widgets/TableIntf.h src/widgets/TableIntf.cpp
+    src/windows/PlotWindow.h src/windows/PlotWindow.cpp
 )
 
 add_subdirectory(libs/qcustomplot)
