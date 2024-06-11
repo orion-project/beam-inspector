@@ -6,6 +6,7 @@
 
 #include "cameras/CameraTypes.h"
 
+class HardConfigPanel;
 class MeasureSaver;
 class PlotIntf;
 class TableIntf;
@@ -36,9 +37,8 @@ public:
     virtual void startMeasure(MeasureSaver*) {}
     virtual void stopMeasure() {}
 
-    virtual bool canHardConfig() const { return false; }
     virtual void saveHardConfig(QSettings*) {}
-    virtual QPointer<QWidget> showHardConfgWindow() { return {}; }
+    virtual HardConfigPanel* hardConfgPanel(QWidget *parent) { return nullptr; }
 
     virtual void requestRawImg(QObject *sender) {}
     virtual void setRawView(bool on, bool reconfig) {}

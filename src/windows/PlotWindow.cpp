@@ -5,6 +5,7 @@
 #ifdef WITH_IDS
     #include "cameras/IdsComfortCamera.h"
 #endif
+#include "cameras/HardConfigPanel.h"
 #include "cameras/MeasureSaver.h"
 #include "cameras/StillImageCamera.h"
 #include "cameras/VirtualDemoCamera.h"
@@ -15,6 +16,7 @@
 #include "widgets/TableIntf.h"
 
 #include "helpers/OriDialogs.h"
+#include "helpers/OriLayouts.h"
 #include "helpers/OriWidgets.h"
 #include "tools/OriMruList.h"
 #include "tools/OriSettings.h"
@@ -132,7 +134,7 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     setThemeColors();
 
     restoreState();
-    resize(800, 600);
+    resize(1100, 600);
 
     _plot->setFocus();
 
@@ -155,6 +157,8 @@ PlotWindow::~PlotWindow()
 void PlotWindow::restoreState()
 {
     Ori::Settings s;
+    s.restoreWindowGeometry(this);
+    s.restoreDockState(this);
 
     _mru->setMaxCount(20);
     _mru->load(s.settings());
@@ -173,6 +177,9 @@ void PlotWindow::restoreState()
 void PlotWindow::storeState()
 {
     Ori::Settings s;
+    s.storeWindowGeometry(this);
+    s.storeDockState(this);
+
     s.beginGroup("Plot");
     s.setValue("beamInfo", _actionBeamInfo->isChecked());
     s.setValue("rawView", _actionRawView->isChecked());
@@ -218,24 +225,26 @@ void PlotWindow::createMenuBar()
     connect(_colorMapMenu, &QMenu::aboutToShow, this, &PlotWindow::updateColorMapMenu);
     _colorMapActions = new QActionGroup(this);
     _colorMapActions->setExclusive(true);
-    menuBar()->addMenu(M_(tr("View"), {
+    _actionHardConfig = A_(tr("Device Control"), this, &PlotWindow::toggleHardConfig, ":/toolbar/hardware");
+    _actionHardConfig->setCheckable(true);
+    auto menuView = M_(tr("View"), {
         _actionRawView, 0,
-        _actionBeamInfo, 0,
+        _actionHardConfig, _actionBeamInfo, 0,
         _colorMapMenu, 0,
         _actionZoomFull, _actionZoomRoi,
-    }));
+    });
+    connect(menuView, &QMenu::aboutToShow, this, &PlotWindow::updateViewMenu);
+    menuBar()->addMenu(menuView);
 
     _actionMeasure = A_(tr("Start Measurements"), this, &PlotWindow::toggleMeasure, ":/toolbar/start", Qt::Key_F9);
     _actionEditRoi = A_(tr("Edit ROI"), this, [this]{ _plot->startEditRoi(); }, ":/toolbar/roi");
     _actionUseRoi = A_(tr("Use ROI"), this, &PlotWindow::toggleRoi, ":/toolbar/roi_rect");
     _actionUseRoi->setCheckable(true);
     _actionCamConfig = A_(tr("Settings..."), this, [this]{ PlotWindow::editCamConfig(-1); }, ":/toolbar/settings");
-    _actionHardConfig = A_(tr("Device Control"), this, &PlotWindow::editHardConfig, ":/toolbar/hardware");
     menuBar()->addMenu(M_(tr("Camera"), {
         _actionMeasure, 0,
         _actionEditRoi, _actionUseRoi, 0,
         _actionCamConfig,
-        _actionHardConfig,
     }));
 
     auto m = menuBar()->addMenu(tr("Help"));
@@ -391,6 +400,14 @@ void PlotWindow::createDockPanel()
     dock->setFeatures(QDockWidget::DockWidgetMovable);
     dock->setWidget(_table);
     addDockWidget(Qt::LeftDockWidgetArea, dock);
+
+    _stubConfigPanel = new StubHardConfigPanel(this);
+    _camConfigPanel = _stubConfigPanel;
+    _hardConfigDock = new QDockWidget(tr("Control"));
+    _hardConfigDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    _hardConfigDock->setFeatures(QDockWidget::DockWidgetMovable);
+    _hardConfigDock->setWidget(_stubConfigPanel);
+    addDockWidget(Qt::RightDockWidgetArea, _hardConfigDock);
 }
 
 void PlotWindow::createPlot()
@@ -456,7 +473,6 @@ void PlotWindow::showCamConfig(bool replot)
     _buttonOpenImg->setVisible(isImage);
     _actionMeasure->setVisible(_camera->canMeasure());
     _buttonMeasure->setVisible(_camera->canMeasure());
-    _actionHardConfig->setVisible(_camera->canHardConfig());
     _buttonSelectCam->setText("  " + (isImage ? _actionCamImage->text() : _camera->name()));
     _actionSaveRaw->setEnabled(_camera->isCapturing());
 
@@ -513,7 +529,6 @@ void PlotWindow::updateActions()
     _mru->setDisabled(started);
     _buttonSelectCam->setDisabled(started);
     _actionCamConfig->setDisabled(started);
-    _actionHardConfig->setDisabled(started);
     _actionEditRoi->setDisabled(started);
     _actionUseRoi->setDisabled(started);
     _actionOpenImg->setDisabled(started);
@@ -545,6 +560,7 @@ void PlotWindow::toggleMeasure(bool force)
         cam->stopMeasure();
         _saver.reset(nullptr);
         _measureProgress->setVisible(false);
+        _camConfigPanel->setReadOnly(false);
         updateActions();
         return;
     }
@@ -575,9 +591,7 @@ void PlotWindow::toggleMeasure(bool force)
     Ori::Gui::PopupMessage::cancel();
     cam->startMeasure(_saver.get());
 
-    if (_hardConfigWnd)
-        _hardConfigWnd->deleteLater();
-
+    _camConfigPanel->setReadOnly(true);
     _measureProgress->reset(cfg->durationInf ? 0 : cfg->durationSecs());
 
     updateActions();
@@ -664,6 +678,7 @@ void PlotWindow::processImage()
     _camera->startCapture();
     // do showCamConfig() after capture(), when image is already loaded and its size gets known
     showCamConfig(false);
+    updateHardConfgPanel();
     _plot->zoomAuto(false);
     dataReady();
     showFps(0);
@@ -722,6 +737,7 @@ void PlotWindow::activateCamWelcome()
     _itemRenderTime->setText(tr(" Render time "));
     _camera.reset((Camera*)new WelcomeCamera(_plotIntf, _tableIntf));
     showCamConfig(false);
+    updateHardConfgPanel();
     showFps(0);
     _camera->startCapture();
     _plot->zoomAuto(false);
@@ -756,6 +772,7 @@ void PlotWindow::activateCamDemo()
     connect(cam, &VirtualDemoCamera::finished, this, &PlotWindow::captureStopped);
     cam->setRawView(_actionRawView->isChecked(), false);
     _camera.reset((Camera*)cam);
+    updateHardConfgPanel();
     showCamConfig(false);
     _plot->zoomAuto(false);
     _camera->startCapture();
@@ -796,16 +813,44 @@ void PlotWindow::activateCamIds()
     });
     cam->setRawView(_actionRawView->isChecked(), false);
     _camera.reset((Camera*)cam);
+    updateHardConfgPanel();
     showCamConfig(false);
     _plot->zoomAuto(false);
     _camera->startCapture();
 }
 #endif
 
-void PlotWindow::editHardConfig()
+void PlotWindow::toggleHardConfig()
 {
-    if (_camera->canHardConfig() and _camera->isCapturing())
-        _hardConfigWnd = _camera->showHardConfgWindow();
+    _hardConfigDock->setVisible(!_hardConfigDock->isVisible());
+    updateHardConfgPanel();
+}
+
+void PlotWindow::updateHardConfgPanel()
+{
+    if (!_hardConfigDock->isVisible())
+        return;
+    auto panel = _camera->hardConfgPanel(this);
+    if (!panel) {
+        if (_camConfigPanel != _stubConfigPanel) {
+            if (_camConfigPanel)
+                _camConfigPanel->deleteLater();
+            _camConfigPanel = _stubConfigPanel;
+            _hardConfigDock->setWidget(_camConfigPanel);
+        }
+        return;
+    }
+    if (panel != _camConfigPanel) {
+        if (_camConfigPanel && _camConfigPanel != _stubConfigPanel)
+            _camConfigPanel->deleteLater();
+        _camConfigPanel = panel;
+        _hardConfigDock->setWidget(_camConfigPanel);
+    }
+}
+
+void PlotWindow::updateViewMenu()
+{
+    _actionHardConfig->setChecked(_hardConfigDock->isVisible());
 }
 
 void PlotWindow::updateColorMapMenu()
