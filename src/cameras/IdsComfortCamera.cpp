@@ -73,6 +73,14 @@ namespace IdsLib
     IDS_PROC(peak_GFA_Float_Get)(peak_camera_handle, peak_gfa_module, const char*, double*);
     IDS_PROC(peak_GFA_String_Get)(peak_camera_handle, peak_gfa_module, const char*, char*, size_t*);
     peak_access_status (__cdecl *peak_GFA_Feature_GetAccessStatus)(peak_camera_handle, peak_gfa_module, const char*);
+    // IDS_PROC(peak_IPL_Gain_GetRange)(peak_camera_handle, peak_gain_channel, double*, double*, double*);
+    // IDS_PROC(peak_IPL_Gain_Set)(peak_camera_handle peak_gain_channel, double);
+    // IDS_PROC(peak_IPL_Gain_Get)(peak_camera_handle, peak_gain_channel, double*);
+    peak_access_status (__cdecl *peak_Gain_GetAccessStatus)(peak_camera_handle, peak_gain_type, peak_gain_channel);
+    IDS_PROC(peak_Gain_GetChannelList)(peak_camera_handle, peak_gain_type, peak_gain_channel*, size_t*);
+    IDS_PROC(peak_Gain_GetRange)(peak_camera_handle, peak_gain_type, peak_gain_channel, double*, double*, double*);
+    IDS_PROC(peak_Gain_Set)(peak_camera_handle, peak_gain_type, peak_gain_channel, double);
+    IDS_PROC(peak_Gain_Get)(peak_camera_handle, peak_gain_type, peak_gain_channel, double*);
 
     template <typename T> bool getProc(const char *name, T *proc) {
         *proc = (T)GetProcAddress(hLib, name);
@@ -163,6 +171,14 @@ IdsComfort* IdsComfort::init()
     GET_PROC(peak_GFA_Float_Get);
     GET_PROC(peak_GFA_String_Get);
     GET_PROC(peak_GFA_Feature_GetAccessStatus);
+    // GET_PROC(peak_IPL_Gain_GetRange);
+    // GET_PROC(peak_IPL_Gain_Set);
+    // GET_PROC(peak_IPL_Gain_Get);
+    GET_PROC(peak_Gain_GetAccessStatus);
+    GET_PROC(peak_Gain_GetChannelList);
+    GET_PROC(peak_Gain_GetRange);
+    GET_PROC(peak_Gain_Set);
+    GET_PROC(peak_Gain_Get);
 
     auto res = IdsLib::peak_Library_Init();
     if (PEAK_ERROR(res)) {
@@ -377,6 +393,15 @@ public:
             hdrBuf = QByteArray(c.w*c.h*2, 0);
             c.buf = (uint8_t*)hdrBuf.data();
         }
+
+        size_t chanCount;
+        res = IdsLib::peak_Gain_GetChannelList(hCam, PEAK_GAIN_TYPE_ANALOG, nullptr, &chanCount);
+        CHECK_ERR("Unable to get gain channel list count");
+        QList<peak_gain_channel> chans(chanCount);
+        res = IdsLib::peak_Gain_GetChannelList(hCam, PEAK_GAIN_TYPE_ANALOG, chans.data(), &chanCount);
+        CHECK_ERR("Unable to get gain channel list");
+        for (auto chan : chans)
+            qDebug() << LOG_ID << "Gain channel" << chan;
 
         SHOW_CAM_PROP("FPS", IdsLib::peak_FrameRate_Get, double);
         SHOW_CAM_PROP("Exposure", IdsLib::peak_ExposureTime_Get, double);
@@ -682,6 +707,7 @@ void IdsComfortCamera::loadConfigMore()
 #include <QGroupBox>
 #include <QLabel>
 #include <QPushButton>
+#include <QScrollArea>
 #include <QStyleHints>
 #include <QWheelEvent>
 
@@ -692,87 +718,107 @@ void IdsComfortCamera::loadConfigMore()
 using namespace Ori::Layouts;
 using namespace Ori::Widgets;
 
-#define PROP_CONTROL(title, group, edit, label, setter) { \
-    label = new QLabel; \
+#define PROP_CONTROL(Prop, title) { \
+    auto label = new QLabel; \
     label->setWordWrap(true); \
     label->setForegroundRole(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Mid); \
-    edit = new CamPropEdit; \
-    edit->scrolled = [this](bool wheel, bool inc, bool big){ setter ## Fast(wheel, inc, big); }; \
+    auto edit = new CamPropEdit; \
+    edit->scrolled = [this](bool wheel, bool inc, bool big){ set##Prop##Fast(wheel, inc, big); }; \
     edit->connect(edit, &ValueEdit::keyPressed, edit, [this](int key){ \
-        if (key == Qt::Key_Return || key == Qt::Key_Enter) setter(); }); \
+        if (key == Qt::Key_Return || key == Qt::Key_Enter) set##Prop(); }); \
     auto btn = new QPushButton(tr("Set")); \
     btn->setFixedWidth(50); \
-    btn->connect(btn, &QPushButton::pressed, btn, [this]{ setter(); }); \
-    group = LayoutV({label, LayoutH({edit, btn})}).makeGroupBox(title); \
+    btn->connect(btn, &QPushButton::pressed, btn, [this]{ set##Prop(); }); \
+    auto group = LayoutV({label, LayoutH({edit, btn})}).makeGroupBox(title); \
     groups << group; \
     layout->addWidget(group); \
+    lab##Prop = label; \
+    ed##Prop = edit; \
+    group##Prop = group; \
 }
 
-#define PROP_SHOW(method, id, edit, label, getValue, getRange, showAux) \
-    void method() { \
+#define CHECK_PROP_STATUS(Prop, getStatus) \
+    if (getStatus(hCam) != PEAK_ACCESS_READWRITE) { \
+        lab##Prop->setText(tr("Not configurable")); \
+        ed##Prop->setDisabled(true); \
+    } else show##Prop();
+
+#define PROP(Prop, setProp, getProp, getRange) \
+    QLabel *lab##Prop; \
+    CamPropEdit *ed##Prop; \
+    QGroupBox *group##Prop; \
+    \
+    void show##Prop() { \
+        auto edit = ed##Prop; \
+        auto label = lab##Prop; \
         double value, min, max, step; \
-        auto res = IdsLib::getValue(hCam, &value); \
+        auto res = getProp(hCam, &value); \
         if (PEAK_ERROR(res)) { \
             label->setText(getPeakError(res)); \
             edit->setValue(0); \
             edit->setDisabled(true); \
-            props[id] = 0; \
+            props[#Prop] = 0; \
             return; \
         } \
         edit->setValue(value); \
         edit->setDisabled(false); \
-        props[id] = value; \
-        res = IdsLib::getRange(hCam, &min, &max, &step); \
+        props[#Prop] = value; \
+        res = getRange(hCam, &min, &max, &step); \
         if (PEAK_ERROR(res)) \
             label->setText(getPeakError(res)); \
         else { \
             label->setText(QString("<b>Min = %1, Max = %2</b>").arg(min, 0, 'f', 2).arg(max, 0, 'f', 2)); \
-            props[id "_min"] = min; \
-            props[id "_max"] = max; \
-            props[id "_step"] = step; \
+            props[#Prop "Min"] = min; \
+            props[#Prop "Max"] = max; \
+            props[#Prop "Step"] = step; \
         }\
-        showAux(value); \
-    }
-
-#define PROP_SET(method, id, edit, setValue) \
-    void method() { \
-        method ## Raw(edit->value()); \
+        if (ed##Prop == edExp) \
+            showExpFreq(value); \
     } \
-    bool method ## Raw(double v) { \
-        auto res = IdsLib::setValue(hCam, v); \
+    void set##Prop() { \
+        set##Prop##Raw(ed##Prop->value()); \
+    } \
+    bool set##Prop##Raw(double v) { \
+        auto res = setProp(hCam, v); \
         if (PEAK_ERROR(res)) { \
             Ori::Dlg::error(getPeakError(res)); \
             return false; \
         } \
-        showExp(); \
-        showFps(); \
+        if (ed##Prop == edFps || ed##Prop == edExp) { \
+            showExp(); \
+            showFps(); \
+        } else show##Prop(); \
         return true; \
     } \
-    void method ## Fast(bool wheel, bool inc, bool big) { \
+    void set##Prop##Fast(bool wheel, bool inc, bool big) { \
         double change = wheel \
             ? (big ? propChangeWheelBig : propChangeWheelSm) \
             : (big ? propChangeArrowBig : propChangeArrowSm); \
-        double val = props[id]; \
+        double step = props[#Prop "Step"]; \
+        double val = props[#Prop]; \
         double newVal; \
         if (inc) { \
-            double max = props[id "_max"]; \
+            double max = props[#Prop "Max"]; \
             if (val >= max) return; \
             newVal = val * change; \
-            newVal = qMin(max, val * change); \
+            if (newVal - val < step) newVal = val + step; \
+            newVal = qMin(max, newVal); \
         } else { \
-            double min = props[id "_min"]; \
+            double min = props[#Prop "Min"]; \
             if (val <= min) return; \
             newVal = val / change; \
-            newVal = qMax(min, val / change); \
+            qDebug() << #Prop << "min=" << min << "step=" << step << "val=" << val; \
+            if (val - newVal < step) newVal = val - step; \
+            newVal = qMax(min, newVal); \
+            qDebug() << #Prop << "set=" << newVal; \
         } \
-        double step = props[id "_step"]; \
-        if (qAbs(val - newVal) < step) \
-            newVal = val + (inc ? step : -step); \
-        auto res = IdsLib::setValue(hCam, newVal); \
+        auto res = setProp(hCam, newVal); \
         if (PEAK_ERROR(res)) \
             Ori::Dlg::error(getPeakError(res)); \
-        showExp(); \
-        showFps(); \
+        if (ed##Prop == edFps || ed##Prop == edExp) { \
+            showExp(); \
+            showFps(); \
+        } else show##Prop(); \
     }
 
 class CamPropEdit : public ValueEdit
@@ -787,15 +833,46 @@ protected:
         } else if (e->key() == Qt::Key_Down) {
             scrolled(false, false, e->modifiers().testFlag(Qt::ControlModifier));
             e->accept();
-        } else {
+        } else
             ValueEdit::keyPressEvent(e);
-        }
     }
     void wheelEvent(QWheelEvent *e) override {
-        scrolled(true, e->angleDelta().y() > 0, e->modifiers().testFlag(Qt::ControlModifier));
-        e->accept();
+        if (hasFocus()) {
+            scrolled(true, e->angleDelta().y() > 0, e->modifiers().testFlag(Qt::ControlModifier));
+            e->accept();
+        } else
+            ValueEdit::wheelEvent(e);
     }
 };
+
+namespace {
+
+peak_status setAnalogGain(peak_camera_handle hCam, double v) {
+    return IdsLib::peak_Gain_Set(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, v);
+}
+peak_status setDigitalGain(peak_camera_handle hCam, double v) {
+    return IdsLib::peak_Gain_Set(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, v);
+}
+peak_status getAnalogGain(peak_camera_handle hCam, double *v) {
+    return IdsLib::peak_Gain_Get(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, v);
+}
+peak_status getDigitalGain(peak_camera_handle hCam, double *v) {
+    return IdsLib::peak_Gain_Get(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, v);
+}
+peak_status getAnalogGainRange(peak_camera_handle hCam, double *min, double *max, double *inc) {
+    return IdsLib::peak_Gain_GetRange(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, min, max, inc);
+}
+peak_status getDigitalGainRange(peak_camera_handle hCam, double *min, double *max, double *inc) {
+    return IdsLib::peak_Gain_GetRange(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, min, max, inc);
+}
+peak_access_status getAnalogGainAccessStatus(peak_camera_handle hCam) {
+    return IdsLib::peak_Gain_GetAccessStatus(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER);
+}
+peak_access_status getDigitlGainAccessStatus(peak_camera_handle hCam) {
+    return IdsLib::peak_Gain_GetAccessStatus(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER);
+}
+
+} // namespace
 
 class IdsHardConfigPanel: public HardConfigPanel, public IAppSettingsListener
 {
@@ -804,16 +881,15 @@ class IdsHardConfigPanel: public HardConfigPanel, public IAppSettingsListener
 public:
     IdsHardConfigPanel(PeakIntf *peak, QWidget *parent) : HardConfigPanel(parent), peak(peak)
     {
-        setWindowFlag(Qt::Tool, true);
-        setWindowFlag(Qt::WindowStaysOnTopHint, true);
-        setAttribute(Qt::WA_DeleteOnClose, true);
-        setWindowTitle(tr("Device Control"));
-
         hCam = peak->hCam;
 
-        auto layout = new QVBoxLayout(this);
+        auto widget = new QWidget;
+        auto layout = new QVBoxLayout(widget);
 
-        PROP_CONTROL(tr("Exposure (us)"), groupExp, edExp, labExp, setExp)
+        PROP_CONTROL(Exp, tr("Exposure (us)"))
+
+        labExpFreq = new QLabel;
+        groupExp->layout()->addWidget(labExpFreq);
 
         {
             auto label = new QLabel(tr("Percent of dynamic range:"));
@@ -828,33 +904,34 @@ public:
             layout->addWidget(group);
         }
 
-        PROP_CONTROL(tr("Frame rate"), groupFps, edFps, labFps, setFps);
+        PROP_CONTROL(Fps, tr("Frame rate"));
+        PROP_CONTROL(AnalogGain, tr("Analog gain"))
+        PROP_CONTROL(DigitalGain, tr("Digital gain"))
 
-        labExpFreq = new QLabel;
-        groupExp->layout()->addWidget(labExpFreq);
-
-        if (IdsLib::peak_ExposureTime_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE) {
-            labExp->setText(tr("Exposure is not configurable"));
-            edExp->setDisabled(true);
-        } else showExp();
-
-        if (IdsLib::peak_FrameRate_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE) {
-            labFps->setText(tr("FPS is not configurable"));
-            edFps->setDisabled(true);
-        } else showFps();
+        CHECK_PROP_STATUS(Exp, IdsLib::peak_ExposureTime_GetAccessStatus)
+        CHECK_PROP_STATUS(Fps, IdsLib::peak_FrameRate_GetAccessStatus)
+        CHECK_PROP_STATUS(AnalogGain, getAnalogGainAccessStatus)
+        CHECK_PROP_STATUS(DigitalGain, getDigitlGainAccessStatus)
 
         layout->addStretch();
+
+        auto scroll = new QScrollArea;
+        scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        scroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+        scroll->setFrameShape(QFrame::NoFrame);
+        scroll->setWidget(widget);
+
+        auto mainLayout = new QVBoxLayout(this);
+        mainLayout->setContentsMargins(0, 0, 0, 0);
+        mainLayout->addWidget(scroll);
 
         applySettings();
     }
 
-    PROP_SET(setExp, "exp", edExp, peak_ExposureTime_Set)
-    PROP_SET(setFps, "fps", edFps, peak_FrameRate_Set)
-
-    PROP_SHOW(showExp, "exp", edExp, labExp, peak_ExposureTime_Get, peak_ExposureTime_GetRange, showExpFreq)
-    PROP_SHOW(showFps, "fps", edFps, labFps, peak_FrameRate_Get, peak_FrameRate_GetRange, showAux)
-
-    void showAux(double v) {}
+    PROP(Exp, IdsLib::peak_ExposureTime_Set, IdsLib::peak_ExposureTime_Get, IdsLib::peak_ExposureTime_GetRange)
+    PROP(Fps, IdsLib::peak_FrameRate_Set, IdsLib::peak_FrameRate_Get, IdsLib::peak_FrameRate_GetRange)
+    PROP(AnalogGain, ::setAnalogGain, getAnalogGain, getAnalogGainRange)
+    PROP(DigitalGain, ::setDigitalGain, getDigitalGain, getDigitalGainRange)
 
     void showExpFreq(double exp)
     {
@@ -869,7 +946,7 @@ public:
 
     void autoExposure()
     {
-        if (props["exp"] == 0) return;
+        if (props["Exp"] == 0) return;
 
         butAutoExp->setDisabled(true);
         edAutoExp->setDisabled(true);
@@ -885,9 +962,9 @@ public:
         s.beginGroup("DeviceControl");
         s.setValue("autoExposurePercent", level);
 
-        if (!setExpRaw(props["exp_min"]))
+        if (!setExpRaw(props["ExpMin"]))
             return;
-        autoExp1 = props["exp"];
+        autoExp1 = props["Exp"];
         autoExp2 = 0;
         autoExpStep = 0;
         watingBrightness = true;
@@ -896,38 +973,38 @@ public:
 
     void autoExposureStep(double level)
     {
-        qDebug() << LOG_ID << "Autoexposure step" << autoExpStep << "| exp" << props["exp"] << "| level" << level;
+        qDebug() << LOG_ID << "Autoexposure step" << autoExpStep << "| exp" << props["Exp"] << "| level" << level;
 
         if (qAbs(level - autoExpLevel) < 0.01) {
-            qDebug() << LOG_ID << "Autoexposure: stop(0)" << props["exp"];
+            qDebug() << LOG_ID << "Autoexposure: stop(0)" << props["Exp"];
             goto stop;
         }
 
         if (level < autoExpLevel) {
             if (autoExp2 == 0) {
-                if (!setExpRaw(qMin(autoExp1*2, props["exp_max"])))
+                if (!setExpRaw(qMin(autoExp1*2, props["ExpMax"])))
                     goto stop;
                 // The above does not fail when setting higher-thah-max exposure
                 // It just clamps it to max and the loop never ends.
                 // So need an explicit check:
-                if (props["exp"] >= props["exp_max"]) {
-                    qDebug() << LOG_ID << "Autoexposure: underexposed" << props["exp"];
+                if (props["Exp"] >= props["ExpMax"]) {
+                    qDebug() << LOG_ID << "Autoexposure: underexposed" << props["Exp"];
                     Ori::Dlg::warning(tr("Underexposed"));
                     goto stop;
                 }
-                autoExp1 = props["exp"];
+                autoExp1 = props["Exp"];
             } else {
-                autoExp1 = props["exp"];
+                autoExp1 = props["Exp"];
                 if (!setExpRaw((autoExp1+autoExp2)/2))
                     goto stop;
-                if (qAbs(autoExp1 - props["exp"]) <= props["exp_step"]) {
-                    qDebug() << LOG_ID << "Autoexposure: stop(1)" << props["exp"];
+                if (qAbs(autoExp1 - props["Exp"]) <= props["ExpStep"]) {
+                    qDebug() << LOG_ID << "Autoexposure: stop(1)" << props["Exp"];
                     goto stop;
                 }
             }
         } else {
             if (autoExp2 == 0) {
-                if (props["exp"] == props["exp_min"]) {
+                if (props["Exp"] == props["ExpMin"]) {
                     qDebug() << LOG_ID << "Autoexposure: Overexposed";
                     Ori::Dlg::warning(tr("Overexposed"));
                     goto stop;
@@ -937,11 +1014,11 @@ public:
                 if (!setExpRaw((autoExp1+autoExp2)/2))
                     goto stop;
             } else {
-                autoExp2 = props["exp"];
+                autoExp2 = props["Exp"];
                 if (!setExpRaw((autoExp1+autoExp2)/2))
                     goto stop;
-                if (qAbs(autoExp2 - props["exp"]) <= props["exp_step"]) {
-                    qDebug() << LOG_ID << "Autoexposure: stop(2)" << props["exp"];
+                if (qAbs(autoExp2 - props["Exp"]) <= props["ExpStep"]) {
+                    qDebug() << LOG_ID << "Autoexposure: stop(2)" << props["Exp"];
                     goto stop;
                 }
             }
@@ -982,11 +1059,10 @@ public:
 
     PeakIntf *peak;
     peak_camera_handle hCam;
-    CamPropEdit *edExp, *edFps, *edAutoExp;
-    QGroupBox *groupExp, *groupFps;
+    CamPropEdit *edAutoExp;
     QList<QGroupBox*> groups;
-    QLabel *labExp, *labFps, *labExpFreq;
     QPushButton *butAutoExp;
+    QLabel *labExpFreq;
     QMap<const char*, double> props;
     double propChangeWheelSm, propChangeWheelBig;
     double propChangeArrowSm, propChangeArrowBig;
@@ -1023,6 +1099,8 @@ protected:
 
 HardConfigPanel* IdsComfortCamera::hardConfgPanel(QWidget *parent)
 {
+    if (!_peak)
+        return nullptr;
     if (!_configPanel)
         _configPanel = new IdsHardConfigPanel(_peak.get(), parent);
     return _configPanel;

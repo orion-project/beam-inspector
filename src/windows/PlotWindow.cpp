@@ -526,16 +526,18 @@ void PlotWindow::updateThemeColors()
 
 void PlotWindow::updateActions()
 {
+    bool opened = _camera && _camera->isCapturing();
     bool started = (bool)_saver;
     _mru->setDisabled(started);
     _buttonSelectCam->setDisabled(started);
-    _actionCamConfig->setDisabled(started);
-    _actionEditRoi->setDisabled(started);
-    _actionUseRoi->setDisabled(started);
+    _actionCamConfig->setDisabled(started || !opened);
+    _actionEditRoi->setDisabled(started || !opened);
+    _actionUseRoi->setDisabled(started || !opened);
     _actionOpenImg->setDisabled(started);
-    _actionRawView->setDisabled(started);
+    _actionRawView->setDisabled(started || !opened);
     _actionMeasure->setText(started ? tr("Stop Measurements") : tr("Start Measurements"));
     _actionMeasure->setIcon(QIcon(started ? ":/toolbar/stop" : ":/toolbar/start"));
+    _actionMeasure->setDisabled(!opened);
 }
 
 void PlotWindow::toggleMeasure(bool force)
@@ -785,11 +787,7 @@ void PlotWindow::activateCamIds()
     if (imgCam) _prevImage = imgCam->fileName();
 
     stopCapture();
-
-    // Selection camera with the same id is for reconnection after settings changed (e.g. pixel format)
-    auto idsCam = dynamic_cast<IdsComfortCamera*>(_camera.get());
-    if (idsCam and idsCam->id() == camId)
-        _camera.reset(nullptr);
+    _camera.reset(nullptr);
 
     _plot->stopEditRoi(false);
     _plotIntf->cleanResult();
@@ -811,6 +809,10 @@ void PlotWindow::activateCamIds()
     showCamConfig(false);
     _plot->zoomAuto(false);
     _camera->startCapture();
+    if (!_camera->isCapturing()) {
+        dataReady();
+    }
+    updateActions();
 }
 #endif
 
