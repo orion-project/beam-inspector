@@ -32,6 +32,7 @@
     </qresource>
     <qresource prefix="/misc">
         <file alias="no_plot">../img/misc/no_plot.svg</file>
+        <file alias="dial">../img/misc/dial.svg</file>
     </qresource>
     <qresource prefix="/window_icons">
         <file alias="main">../img/icons/cignus.svg</file>

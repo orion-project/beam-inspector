@@ -14,6 +14,11 @@ public:
     int bpp() const override { return 8; }
 
     void startCapture() override;
+
+    HardConfigPanel* hardConfgPanel(QWidget *parent) override;
+
+private:
+    HardConfigPanel* _hardConfigPanel = nullptr;
 };
 
 #endif // WELCOME_CAMERA_H

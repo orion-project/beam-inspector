@@ -11,6 +11,7 @@ class QToolButton;
 
 class Camera;
 struct CameraStats;
+class HardConfigPanel;
 class MeasureProgressBar;
 class MeasureSaver;
 class Plot;
@@ -63,7 +64,9 @@ private:
     QToolButton *_buttonSelectCam;
     QString _prevImage;
     MeasureProgressBar *_measureProgress;
-    QPointer<QWidget> _hardConfigWnd;
+    QDockWidget *_hardConfigDock;
+    HardConfigPanel *_stubConfigPanel = nullptr;
+    HardConfigPanel *_camConfigPanel = nullptr;
 
     void createMenuBar();
     void createToolBar();
@@ -85,7 +88,9 @@ private:
 #ifdef WITH_IDS
     void activateCamIds();
 #endif
-    void editHardConfig();
+    void toggleHardConfig();
+    void updateHardConfgPanel();
+    void updateViewMenu();
     void updateColorMapMenu();
     void selectColorMapFile();
 

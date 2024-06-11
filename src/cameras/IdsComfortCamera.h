@@ -9,6 +9,7 @@
 #include <QSharedPointer>
 #include <QThread>
 
+class HardConfigPanel;
 class PeakIntf;
 
 class IdsComfort
@@ -47,8 +48,7 @@ public:
     void stopMeasure() override;
 
     void saveHardConfig(QSettings *s) override;
-    bool canHardConfig() const override { return true; }
-    QPointer<QWidget> showHardConfgWindow() override;
+    HardConfigPanel* hardConfgPanel(QWidget *parent) override;
 
     void requestRawImg(QObject *sender) override;
     void setRawView(bool on, bool reconfig) override;
@@ -78,7 +78,7 @@ private:
     int _bpp = 0;
     PixelScale _pixelScale;
     QSharedPointer<PeakIntf> _peak;
-    QPointer<QWidget> _cfgWnd;
+    HardConfigPanel *_configPanel = nullptr;
     friend class PeakIntf;
 
     struct ConfigEditorData

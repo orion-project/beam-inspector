@@ -1,12 +1,38 @@
 #include "WelcomeCamera.h"
 
+#include "cameras/HardConfigPanel.h"
 #include "widgets/PlotIntf.h"
 #include "widgets/TableIntf.h"
 
 #include "beam_render.h"
 
+#include <QLabel>
+#include <QVBoxLayout>
 #include <QVector>
 #include <QElapsedTimer>
+
+class WelcomeHardConfigPanel : public HardConfigPanel
+{
+public:
+    WelcomeHardConfigPanel(QWidget *parent) : HardConfigPanel(parent)
+    {
+        qDebug() << "WelcomeHardConfigPanel created";
+
+        auto label = new QLabel("WELCOME", this);
+        label->setAlignment(Qt::AlignHCenter);
+        label->setWordWrap(true);
+
+        auto layout = new QVBoxLayout(this);
+        layout->addStretch();
+        layout->addWidget(label);
+        layout->addStretch();
+    }
+
+    ~WelcomeHardConfigPanel()
+    {
+        qDebug() << "WelcomeHardConfigPanel deleted";
+    }
+};
 
 WelcomeCamera::WelcomeCamera(PlotIntf *plot, TableIntf *table) : Camera(plot, table, "WelcomeCamera")
 {
@@ -48,4 +74,11 @@ void WelcomeCamera::startCapture()
     _plot->setResult(r, 0, b.p);
     cgn_render_beam_to_doubles(&b, _plot->rawGraph());
     _plot->invalidateGraph();
+}
+
+HardConfigPanel* WelcomeCamera::hardConfgPanel(QWidget *parent)
+{
+    if (!_hardConfigPanel)
+        _hardConfigPanel = new WelcomeHardConfigPanel(parent);
+    return _hardConfigPanel;
 }

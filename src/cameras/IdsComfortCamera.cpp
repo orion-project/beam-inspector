@@ -5,6 +5,7 @@
 #define LOG_ID "IdsComfortCamera:"
 
 #include "app/AppSettings.h"
+#include "cameras/HardConfigPanel.h"
 #include "cameras/CameraWorker.h"
 
 #include "dialogs/OriConfigDlg.h"
@@ -547,9 +548,6 @@ IdsComfortCamera::IdsComfortCamera(QVariant id, PlotIntf *plot, TableIntf *table
 
 IdsComfortCamera::~IdsComfortCamera()
 {
-    if (_cfgWnd)
-        _cfgWnd->deleteLater();
-
     qDebug() << LOG_ID << "Deleted";
 }
 
@@ -567,8 +565,6 @@ void IdsComfortCamera::stopCapture()
 {
     if (_peak)
         _peak.reset(nullptr);
-    if (_cfgWnd)
-        _cfgWnd->deleteLater();
 }
 
 void IdsComfortCamera::startMeasure(MeasureSaver *saver)
@@ -708,6 +704,7 @@ using namespace Ori::Widgets;
     btn->setFixedWidth(50); \
     btn->connect(btn, &QPushButton::pressed, btn, [this]{ setter(); }); \
     group = LayoutV({label, LayoutH({edit, btn})}).makeGroupBox(title); \
+    groups << group; \
     layout->addWidget(group); \
 }
 
@@ -800,12 +797,12 @@ protected:
     }
 };
 
-class IdsHardConfigWindow : public QWidget, public IAppSettingsListener
+class IdsHardConfigPanel: public HardConfigPanel, public IAppSettingsListener
 {
     Q_DECLARE_TR_FUNCTIONS(IdsHardConfigWindow)
 
 public:
-    IdsHardConfigWindow(PeakIntf *peak) : QWidget(qApp->activeWindow()), peak(peak)
+    IdsHardConfigPanel(PeakIntf *peak, QWidget *parent) : HardConfigPanel(parent), peak(peak)
     {
         setWindowFlag(Qt::Tool, true);
         setWindowFlag(Qt::WindowStaysOnTopHint, true);
@@ -826,7 +823,9 @@ public:
             butAutoExp = new QPushButton(tr("Find"));
             butAutoExp->setFixedWidth(50);
             butAutoExp->connect(butAutoExp, &QPushButton::pressed, butAutoExp, [this]{ autoExposure(); });
-            layout->addWidget(LayoutV({label, LayoutH({edAutoExp, butAutoExp})}).makeGroupBox(tr("Autoexposure")));
+            auto group = LayoutV({label, LayoutH({edAutoExp, butAutoExp})}).makeGroupBox(tr("Autoexposure"));
+            groups << group;
+            layout->addWidget(group);
         }
 
         PROP_CONTROL(tr("Frame rate"), groupFps, edFps, labFps, setFps);
@@ -843,6 +842,8 @@ public:
             labFps->setText(tr("FPS is not configurable"));
             edFps->setDisabled(true);
         } else showFps();
+
+        layout->addStretch();
 
         applySettings();
     }
@@ -973,10 +974,17 @@ public:
         applySettings();
     }
 
+    void setReadOnly(bool on) override
+    {
+        for (auto group : groups)
+            group->setDisabled(on);
+    }
+
     PeakIntf *peak;
     peak_camera_handle hCam;
     CamPropEdit *edExp, *edFps, *edAutoExp;
     QGroupBox *groupExp, *groupFps;
+    QList<QGroupBox*> groups;
     QLabel *labExp, *labFps, *labExpFreq;
     QPushButton *butAutoExp;
     QMap<const char*, double> props;
@@ -1013,13 +1021,11 @@ protected:
     }
 };
 
-QPointer<QWidget> IdsComfortCamera::showHardConfgWindow()
+HardConfigPanel* IdsComfortCamera::hardConfgPanel(QWidget *parent)
 {
-    if (!_cfgWnd)
-        _cfgWnd = new IdsHardConfigWindow(_peak.get());
-    _cfgWnd->show();
-    _cfgWnd->activateWindow();
-    return _cfgWnd;
+    if (!_configPanel)
+        _configPanel = new IdsHardConfigPanel(_peak.get(), parent);
+    return _configPanel;
 }
 
 #endif // WITH_IDS
