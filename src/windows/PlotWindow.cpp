@@ -16,7 +16,6 @@
 #include "widgets/TableIntf.h"
 
 #include "helpers/OriDialogs.h"
-#include "helpers/OriLayouts.h"
 #include "helpers/OriWidgets.h"
 #include "tools/OriMruList.h"
 #include "tools/OriSettings.h"
@@ -115,6 +114,8 @@ private:
 
 PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
 {
+    Ori::Gui::PopupMessage::setTarget(this);
+
     _mru = new Ori::MruFileList(this);
     connect(_mru, &Ori::MruFileList::clicked, this, &PlotWindow::openImage);
 
@@ -642,13 +643,6 @@ void PlotWindow::openImageDlg()
         delete cam;
         return;
     }
-
-    // qApp->activeWindow() can still return the open dialog here,
-    // then PopupMessage called from stopCapture() crashes the app
-    // because this window is already destroyed.
-    // So have to process all close events first:
-    qApp->processEvents();
-
     stopCapture();
     _camera.reset((Camera*)cam);
     processImage();
