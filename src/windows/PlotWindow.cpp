@@ -136,7 +136,14 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
 
     _plot->setFocus();
 
-    QTimer::singleShot(0, this, &PlotWindow::activateCamWelcome);
+    QTimer::singleShot(0, this, [this]{
+        // This initializes all graph structs
+        activateCamWelcome();
+
+        if (!AppSettings::instance().isDevMode)
+            openImage({});
+    });
+
 }
 
 PlotWindow::~PlotWindow()
@@ -175,9 +182,12 @@ void PlotWindow::createMenuBar()
 {
 #define A_ Ori::Gui::action
 #define M_ Ori::Gui::menu
-    _actionCamWelcome = A_("Welcome", this, &PlotWindow::activateCamWelcome, ":/toolbar/camera");
+    if (AppSettings::instance().isDevMode)
+    {
+        _actionCamWelcome = A_("Welcome", this, &PlotWindow::activateCamWelcome, ":/toolbar/camera");
+        _actionCamDemo = A_("Demo", this, &PlotWindow::activateCamDemo, ":/toolbar/camera");
+    }
     _actionCamImage = A_("Image", this, &PlotWindow::activateCamImage, ":/toolbar/camera");
-    _actionCamDemo = A_("Demo", this, &PlotWindow::activateCamDemo, ":/toolbar/camera");
     _actionRefreshCams = A_("Refresh", this, &PlotWindow::fillCamSelector);
     _camSelectMenu = new QMenu(tr("Active Camera"), this);
 
@@ -239,9 +249,11 @@ void PlotWindow::createMenuBar()
 void PlotWindow::fillCamSelector()
 {
     _camSelectMenu->clear();
-    _camSelectMenu->addAction(_actionCamWelcome);
+    if (AppSettings::instance().isDevMode)
+        _camSelectMenu->addAction(_actionCamWelcome);
     _camSelectMenu->addAction(_actionCamImage);
-    _camSelectMenu->addAction(_actionCamDemo);
+    if (AppSettings::instance().isDevMode)
+        _camSelectMenu->addAction(_actionCamDemo);
 
 #ifdef WITH_IDS
     if (_ids)
@@ -630,7 +642,8 @@ void PlotWindow::openImageDlg()
 
 void PlotWindow::openImage(const QString& fileName)
 {
-    stopCapture();
+    if (_camera)
+        stopCapture();
     _camera.reset((Camera*)new StillImageCamera(_plotIntf, _tableIntf, fileName));
     processImage();
 }

@@ -7,6 +7,7 @@ history:
   - text: Show image outside of ROI
   - text: Show camera serial number in selector
   - text: Show camera info in settings dialog
+  - text: Dev cams (Demo and Welcome) hidden by default
 
 - version: 0.0.7
   date: 2024-05-22

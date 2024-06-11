@@ -27,12 +27,23 @@ StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table) : Camera(pl
     if (!fileName.isEmpty()) {
         _fileName = fileName;
         s.setValue("recentDir", QFileInfo(fileName).dir().absolutePath());
+        s.setValue("recentFile", fileName);
     }
 }
 
 StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table, const QString& fileName) :
     Camera(plot, table, "StillImageCamera"), _fileName(fileName)
 {
+    Ori::Settings s;
+    s.beginGroup(_configGroup);
+
+    if (_fileName.isEmpty())
+        _fileName = s.value("recentFile").toString();
+
+    if (_fileName.isEmpty() || !QFile::exists(fileName))
+        _fileName = qApp->applicationDirPath() + "/beam.png";
+
+    s.setValue("recentFile", _fileName);
 }
 
 QString StillImageCamera::name() const
