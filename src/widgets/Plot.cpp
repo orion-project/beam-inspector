@@ -2,6 +2,7 @@
 
 #include "plot/BeamGraph.h"
 #include "plot/PlotExport.h"
+#include "plot/RoiRectGraph.h"
 #include "widgets/PlotIntf.h"
 
 #include "qcp/src/core.h"

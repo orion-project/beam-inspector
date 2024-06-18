@@ -6,7 +6,7 @@ history:
   - text: Control binnig and decimation for IDS cameras
 
 - version: 0.0.8
-  date: ?
+  date: 2024-06-12
   changes:
   - text: Color map file presets
   - text: Raw image view mode
