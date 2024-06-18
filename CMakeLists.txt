@@ -59,6 +59,7 @@ set(PROJECT_SOURCES
     src/cameras/WelcomeCamera.h src/cameras/WelcomeCamera.cpp
     src/plot/BeamGraph.h src/plot/BeamGraph.cpp
     src/plot/PlotExport.h src/plot/PlotExport.cpp
+    src/plot/RoiRectGraph.h src/plot/RoiRectGraph.cpp
     src/widgets/FileSelector.h src/widgets/FileSelector.cpp
     src/widgets/Plot.h src/widgets/Plot.cpp
     src/widgets/PlotIntf.h src/widgets/PlotIntf.cpp
