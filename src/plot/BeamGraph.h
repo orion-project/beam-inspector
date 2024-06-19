@@ -34,6 +34,7 @@ public:
     explicit BeamColorScale(QCustomPlot *parentPlot);
 
     void setFrameColor(const QColor& c);
+    void setGradient(const QCPColorGradient &gradient);
 };
 
 //------------------------------------------------------------------------------

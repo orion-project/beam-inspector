@@ -208,6 +208,7 @@ void Plot::setColorMap(const QString& fileName, bool replot)
 {
     PrecalculatedGradient gradient(fileName);
     _colorMap->setGradient(gradient);
+    _colorScale->setGradient(gradient);
     if (replot) _plot->replot();
 }
 
