@@ -34,6 +34,11 @@ BeamColorMapData::BeamColorMapData(int w, int h)
 //                               BeamColorScale
 //------------------------------------------------------------------------------
 
+class BeamColorScaleAxisRectPrivate : public QCPColorScaleAxisRectPrivate
+{
+    friend class BeamColorScale;
+};
+
 BeamColorScale::BeamColorScale(QCustomPlot *parentPlot) : QCPColorScale(parentPlot)
 {
     setRangeDrag(false);
@@ -44,6 +49,19 @@ void BeamColorScale::setFrameColor(const QColor& c)
 {
     for (auto a : mAxisRect->axes())
         a->setBasePen(QPen(c, 0, Qt::SolidLine));
+}
+
+void BeamColorScale::setGradient(const QCPColorGradient &gradient)
+{
+    // Base setGradient() checks for gradient equality and skips if they are same.
+    // PrecalculatedGradient always gets equal to another one even when they colors differ.
+    // So redeclare setGradient() to get rid of equality check
+    // This also requries overriding of pimpl-class QCPColorScaleAxisRectPrivate (see above).
+    mGradient = gradient;
+    if (mAxisRect)
+        if (auto axisRect = reinterpret_cast<BeamColorScaleAxisRectPrivate*>(mAxisRect.get()); axisRect)
+            axisRect->mGradientImageInvalidated = true;
+    emit gradientChanged(mGradient);
 }
 
 //------------------------------------------------------------------------------
