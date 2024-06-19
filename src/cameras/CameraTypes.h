@@ -36,8 +36,8 @@ struct PixelScale
     double factor = 1;
     QString unit = "um";
 
-    inline double sensorToUnit(const double& v) const { return on ? v*factor : v; }
-    inline double unitToSensor(const double& v) const { return on ? v/factor : v; }
+    inline double pixelToUnit(const double& v) const { return on ? v*factor : v; }
+    inline double unitToPixel(const double& v) const { return on ? v/factor : v; }
 
     bool operator ==(const PixelScale& s) const;
     bool operator !=(const PixelScale& s) const { return !(*this == s); }

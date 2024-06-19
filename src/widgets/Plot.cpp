@@ -1,6 +1,7 @@
 #include "Plot.h"
 
 #include "plot/BeamGraph.h"
+#include "plot/CrosshairOverlay.h"
 #include "plot/PlotExport.h"
 #include "plot/RoiRectGraph.h"
 #include "widgets/PlotIntf.h"
@@ -82,6 +83,8 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
 
     setCursor(Qt::ArrowCursor);
 
+    _crosshairs = new CrosshairsOverlay(_plot);
+
     _plotIntf = new PlotIntf(_colorMap, _colorScale, _beamShape, _beamInfo, _lineX, _lineY);
 }
 
@@ -92,9 +95,10 @@ Plot::~Plot()
 
 void Plot::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
 {
-    _imageW = scale.sensorToUnit(sensorW);
-    _imageH = scale.sensorToUnit(sensorH);
+    _imageW = scale.pixelToUnit(sensorW);
+    _imageH = scale.pixelToUnit(sensorH);
     _roi->setImageSize(sensorW, sensorH, scale);
+    _crosshairs->setImageSize(sensorW, sensorH, scale);
 }
 
 void Plot::adjustWidgetSize()

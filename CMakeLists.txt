@@ -58,6 +58,7 @@ set(PROJECT_SOURCES
     src/cameras/VirtualDemoCamera.h src/cameras/VirtualDemoCamera.cpp
     src/cameras/WelcomeCamera.h src/cameras/WelcomeCamera.cpp
     src/plot/BeamGraph.h src/plot/BeamGraph.cpp
+    src/plot/CrosshairOverlay.h src/plot/CrosshairOverlay.cpp
     src/plot/PlotExport.h src/plot/PlotExport.cpp
     src/plot/RoiRectGraph.h src/plot/RoiRectGraph.cpp
     src/widgets/FileSelector.h src/widgets/FileSelector.cpp

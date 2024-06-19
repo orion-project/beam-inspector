@@ -76,8 +76,8 @@ void RoiRectGraph::setIsVisible(bool on)
 void RoiRectGraph::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
 {
     _scale = scale;
-    _maxX = scale.sensorToUnit(sensorW);
-    _maxY = scale.sensorToUnit(sensorH);
+    _maxX = scale.pixelToUnit(sensorW);
+    _maxY = scale.pixelToUnit(sensorH);
     updateCoords();
 }
 
@@ -88,10 +88,10 @@ void RoiRectGraph::updateVisibility()
 
 void RoiRectGraph::updateCoords()
 {
-    _x1 = _scale.sensorToUnit(_roi.x1);
-    _y1 = _scale.sensorToUnit(_roi.y1);
-    _x2 = _scale.sensorToUnit(_roi.x2);
-    _y2 = _scale.sensorToUnit(_roi.y2);
+    _x1 = _scale.pixelToUnit(_roi.x1);
+    _y1 = _scale.pixelToUnit(_roi.y1);
+    _x2 = _scale.pixelToUnit(_roi.x2);
+    _y2 = _scale.pixelToUnit(_roi.y2);
 }
 
 void RoiRectGraph::startEdit()
@@ -110,10 +110,10 @@ void RoiRectGraph::stopEdit(bool apply)
         return;
     _editing = false;
     if (apply) {
-        _roi.x1 = _scale.unitToSensor(_x1);
-        _roi.y1 = _scale.unitToSensor(_y1);
-        _roi.x2 = _scale.unitToSensor(_x2);
-        _roi.y2 = _scale.unitToSensor(_y2);
+        _roi.x1 = _scale.unitToPixel(_x1);
+        _roi.y1 = _scale.unitToPixel(_y1);
+        _roi.x2 = _scale.unitToPixel(_x2);
+        _roi.y2 = _scale.unitToPixel(_y2);
         _roi.on = true;
         if (onEdited)
             onEdited();
