@@ -303,6 +303,7 @@ public:
     peak_buffer buf;
     peak_frame_handle frame;
     int errCount = 0;
+    QSet<int> supportedBpp;
 
     QByteArray hdrBuf;
 
@@ -384,31 +385,29 @@ public:
             QVector<peak_pixel_format> pixelFormats(formatCount);
             res = IdsLib::peak_PixelFormat_GetList(hCam, pixelFormats.data(), &formatCount);
             CHECK_ERR("Unable to get pixel formats");
-            bool supports8 = false;
-            bool supports10 = false;
-            bool supports12 = false;
+            QMap<int, peak_pixel_format> supportedFormats;
             for (int i = 0; i < formatCount; i++) {
-                qDebug() << LOG_ID << "Supported pixel format" << QString::number(pixelFormats[i], 16);
-                peak_pixel_format_info info;
-                if (pixelFormats[i] == PEAK_PIXEL_FORMAT_MONO8)
-                    supports8 = true;
-                else if (pixelFormats[i] == PEAK_PIXEL_FORMAT_MONO10G40_IDS)
-                    supports10 = true;
-                else if (pixelFormats[i] == PEAK_PIXEL_FORMAT_MONO12G24_IDS)
-                    supports12 = true;
+                auto pf = pixelFormats.at(i);
+                qDebug() << LOG_ID << "Supported pixel format" << QString::number(pf, 16);
+                if (pf == PEAK_PIXEL_FORMAT_MONO8) {
+                    supportedBpp << 8;
+                    supportedFormats.insert(8, pf);
+                } else if (pf == PEAK_PIXEL_FORMAT_MONO10G40_IDS) {
+                    supportedBpp << 10;
+                    supportedFormats.insert(10, pf);
+                } else if (pf == PEAK_PIXEL_FORMAT_MONO12G24_IDS) {
+                    supportedBpp << 12;
+                    supportedFormats.insert(12, pf);
+                }
             }
-            if (c.bpp == 12 && !supports12) {
-                qWarning() << LOG_ID << "Camera does not support 12bpp, use 8bpp";
-                targetFormat = PEAK_PIXEL_FORMAT_MONO8;
-                c.bpp = 8;
+            if (supportedFormats.empty()) {
+                return "Camera doesn't support any of known gray scale formats (Mono8, Mono10g40, Mono12g24)";
             }
-            if (c.bpp == 10 && !supports10) {
-                qWarning() << LOG_ID << "Camera does not support 10bpp, use 8bpp";
-                targetFormat = PEAK_PIXEL_FORMAT_MONO8;
-                c.bpp = 8;
-            }
-            if (c.bpp == 8 && !supports8) {
-                return "Camera doesn't support gray scale format";
+            if (!supportedFormats.contains(c.bpp)) {
+                auto wantedBpp = c.bpp;
+                c.bpp = supportedFormats.firstKey();
+                targetFormat = supportedFormats.first();
+                qWarning() << LOG_ID << "Camera does not support " << wantedBpp << "bpp, use " << c.bpp << "bpp";
             }
             res = IdsLib::peak_PixelFormat_Set(hCam, targetFormat);
             CHECK_ERR("Unable to set pixel format");
@@ -682,9 +681,12 @@ void IdsComfortCamera::initConfigMore(Ori::Dlg::ConfigDlgOpts &opts)
     opts.items
         << (new ConfigItemSection(pageHard, tr("Pixel format")))
             ->withHint(tr("Reselect camera to apply"))
-        << (new ConfigItemBool(pageHard, tr("8 bit"), &_cfg.bpp8))->withRadioGroup("pixel_format")
-        << (new ConfigItemBool(pageHard, tr("10 bit"), &_cfg.bpp10))->withRadioGroup("pixel_format")
-        << (new ConfigItemBool(pageHard, tr("12 bit"), &_cfg.bpp12))->withRadioGroup("pixel_format")
+        << (new ConfigItemBool(pageHard, tr("8 bit"), &_cfg.bpp8))
+            ->setDisabled(!_peak->supportedBpp.contains(8))->withRadioGroup("pixel_format")
+        << (new ConfigItemBool(pageHard, tr("10 bit"), &_cfg.bpp10))
+            ->setDisabled(!_peak->supportedBpp.contains(10))->withRadioGroup("pixel_format")
+        << (new ConfigItemBool(pageHard, tr("12 bit"), &_cfg.bpp12))
+            ->setDisabled(!_peak->supportedBpp.contains(12))->withRadioGroup("pixel_format")
     ;
     if (_peak) {
         if (!_cfg.intoRequested) {
