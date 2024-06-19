@@ -53,10 +53,10 @@ void PlotIntf::showResult()
     const double phi = qDegreesToRadians(_res.phi);
     const double cos_phi = cos(phi);
     const double sin_phi = sin(phi);
-    const double xc = _scale.sensorToUnit(_res.xc);
-    const double yc = _scale.sensorToUnit(_res.yc);
-    const double dx = _scale.sensorToUnit(_res.dx);
-    const double dy = _scale.sensorToUnit(_res.dy);
+    const double xc = _scale.pixelToUnit(_res.xc);
+    const double yc = _scale.pixelToUnit(_res.yc);
+    const double dx = _scale.pixelToUnit(_res.dx);
+    const double dy = _scale.pixelToUnit(_res.dy);
 
     _lineX->point1->setCoords(xc, yc);
     _lineX->point2->setCoords(xc + dx*cos_phi, yc + dx*sin_phi);
@@ -84,6 +84,6 @@ void PlotIntf::showResult()
     else _beamInfo->setText({});
 
     _colorScale->setDataRange(QCPRange(_min, _max));
-    if (_w > 0) _beamData->setKeyRange(QCPRange(0, _scale.sensorToUnit(_w)));
-    if (_h > 0) _beamData->setValueRange(QCPRange(0, _scale.sensorToUnit(_h)));
+    if (_w > 0) _beamData->setKeyRange(QCPRange(0, _scale.pixelToUnit(_w)));
+    if (_h > 0) _beamData->setValueRange(QCPRange(0, _scale.pixelToUnit(_h)));
 }

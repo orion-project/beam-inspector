@@ -4,6 +4,7 @@ history:
   changes:
   - text: Fix opening camera when 8bpp is not supported
   - text: Control binnig and decimation for IDS cameras
+  - text: Fix color-bar gradient updating
 
 - version: 0.0.8
   date: 2024-06-12

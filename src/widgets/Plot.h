@@ -8,12 +8,13 @@
 class QCustomPlot;
 class QCPItemStraightLine;
 
-class RoiRectGraph;
+class CrosshairsOverlay;
 class BeamColorMap;
 class BeamColorScale;
 class BeamEllipse;
 class BeamInfoText;
 class PlotIntf;
+class RoiRectGraph;
 
 class Plot : public QWidget
 {
@@ -61,6 +62,7 @@ private:
     BeamInfoText *_beamInfo;
     BeamEllipse *_beamShape;
     RoiRectGraph *_roi;
+    CrosshairsOverlay* _crosshairs;
     int _imageW, _imageH;
     enum AutoZoomMode { ZOOM_NONE, ZOOM_FULL, ZOOM_APERTURE };
     AutoZoomMode _autoZoom = ZOOM_FULL;
