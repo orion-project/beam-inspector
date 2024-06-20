@@ -1,4 +1,4 @@
-#include "IdsComfortCamera.h"
+#include "IdsCamera.h"
 
 #ifdef WITH_IDS
 
@@ -8,6 +8,8 @@
 #include "cameras/IdsLib.h"
 
 #include "helpers/OriDialogs.h"
+
+#include <QSettings>
 
 #define LOG_ID "IdsComfortCamera:"
 #define FRAME_TIMEOUT 5000
@@ -99,7 +101,7 @@ class PeakIntf : public CameraWorker
 {
 public:
     peak_camera_id id;
-    IdsComfortCamera *cam;
+    IdsCamera *cam;
     peak_camera_handle hCam = PEAK_INVALID_HANDLE;
     peak_status res;
     peak_buffer buf;
@@ -107,7 +109,7 @@ public:
     int errCount = 0;
     QByteArray hdrBuf;
 
-    PeakIntf(peak_camera_id id, PlotIntf *plot, TableIntf *table, IdsComfortCamera *cam)
+    PeakIntf(peak_camera_id id, PlotIntf *plot, TableIntf *table, IdsCamera *cam)
         : CameraWorker(plot, table, cam, cam, LOG_ID), id(id), cam(cam)
     {}
 
@@ -372,10 +374,10 @@ public:
 };
 
 //------------------------------------------------------------------------------
-//                              IdsComfortCamera
+//                              IdsCamera
 //------------------------------------------------------------------------------
 
-IdsComfortCamera::IdsComfortCamera(QVariant id, PlotIntf *plot, TableIntf *table, QObject *parent) :
+IdsCamera::IdsCamera(QVariant id, PlotIntf *plot, TableIntf *table, QObject *parent) :
     Camera(plot, table, "IdsComfortCamera"), QThread(parent), _id(id)
 {
     _cfg.reset(new IdsCameraConfig);
@@ -393,57 +395,57 @@ IdsComfortCamera::IdsComfortCamera(QVariant id, PlotIntf *plot, TableIntf *table
     connect(parent, SIGNAL(camConfigChanged()), this, SLOT(camConfigChanged()));
 }
 
-IdsComfortCamera::~IdsComfortCamera()
+IdsCamera::~IdsCamera()
 {
     qDebug() << LOG_ID << "Deleted";
 }
 
-int IdsComfortCamera::bpp() const
+int IdsCamera::bpp() const
 {
     return _cfg->bpp;
 }
 
-PixelScale IdsComfortCamera::sensorScale() const
+PixelScale IdsCamera::sensorScale() const
 {
     return _pixelScale;
 }
 
-void IdsComfortCamera::startCapture()
+void IdsCamera::startCapture()
 {
     start();
 }
 
-void IdsComfortCamera::stopCapture()
+void IdsCamera::stopCapture()
 {
     if (_peak)
         _peak.reset(nullptr);
 }
 
-void IdsComfortCamera::startMeasure(MeasureSaver *saver)
+void IdsCamera::startMeasure(MeasureSaver *saver)
 {
     if (_peak)
         _peak->startMeasure(saver);
 }
 
-void IdsComfortCamera::stopMeasure()
+void IdsCamera::stopMeasure()
 {
     if (_peak)
         _peak->stopMeasure();
 }
 
-void IdsComfortCamera::run()
+void IdsCamera::run()
 {
     if (_peak)
         _peak->run();
 }
 
-void IdsComfortCamera::camConfigChanged()
+void IdsCamera::camConfigChanged()
 {
     if (_peak)
         _peak->reconfigure();
 }
 
-void IdsComfortCamera::saveHardConfig(QSettings *s)
+void IdsCamera::saveHardConfig(QSettings *s)
 {
     if (!_peak)
         return;
@@ -458,35 +460,35 @@ void IdsComfortCamera::saveHardConfig(QSettings *s)
     else s->setValue("frameRate", v);
 }
 
-void IdsComfortCamera::requestRawImg(QObject *sender)
+void IdsCamera::requestRawImg(QObject *sender)
 {
     if (_peak)
         _peak->requestRawImg(sender);
 }
 
-void IdsComfortCamera::setRawView(bool on, bool reconfig)
+void IdsCamera::setRawView(bool on, bool reconfig)
 {
     if (_peak)
         _peak->setRawView(on, reconfig);
 }
 
-void IdsComfortCamera::initConfigMore(Ori::Dlg::ConfigDlgOpts &opts)
+void IdsCamera::initConfigMore(Ori::Dlg::ConfigDlgOpts &opts)
 {
     if (_peak)
         _cfg->initDlg(_peak->hCam, opts, cfgMax);
 }
 
-void IdsComfortCamera::saveConfigMore()
+void IdsCamera::saveConfigMore()
 {
     _cfg->save(_configGroup);
 }
 
-void IdsComfortCamera::loadConfigMore()
+void IdsCamera::loadConfigMore()
 {
     _cfg->load(_configGroup);
 }
 
-HardConfigPanel* IdsComfortCamera::hardConfgPanel(QWidget *parent)
+HardConfigPanel* IdsCamera::hardConfgPanel(QWidget *parent)
 {
     if (!_peak)
         return nullptr;
