@@ -3,7 +3,7 @@
 #include "app/AppSettings.h"
 #include "app/HelpSystem.h"
 #ifdef WITH_IDS
-    #include "cameras/IdsComfortCamera.h"
+    #include "cameras/IdsCamera.h"
 #endif
 #include "cameras/HardConfigPanel.h"
 #include "cameras/MeasureSaver.h"
@@ -798,11 +798,11 @@ void PlotWindow::activateCamIds()
     _plotIntf->cleanResult();
     _tableIntf->cleanResult();
     _itemRenderTime->setText(tr(" Acq. time "));
-    auto cam = new IdsComfortCamera(camId, _plotIntf, _tableIntf, this);
-    connect(cam, &IdsComfortCamera::ready, this, &PlotWindow::dataReady);
-    connect(cam, &IdsComfortCamera::stats, this, &PlotWindow::statsReceived);
-    connect(cam, &IdsComfortCamera::finished, this, &PlotWindow::captureStopped);
-    connect(cam, &IdsComfortCamera::error, this, [this, cam](const QString& err){
+    auto cam = new IdsCamera(camId, _plotIntf, _tableIntf, this);
+    connect(cam, &IdsCamera::ready, this, &PlotWindow::dataReady);
+    connect(cam, &IdsCamera::stats, this, &PlotWindow::statsReceived);
+    connect(cam, &IdsCamera::finished, this, &PlotWindow::captureStopped);
+    connect(cam, &IdsCamera::error, this, [this, cam](const QString& err){
         Ori::Dlg::error(err);
         if (_saver)
             toggleMeasure(true);

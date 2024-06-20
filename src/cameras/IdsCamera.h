@@ -1,5 +1,5 @@
-#ifndef IDS_COMFORT_CAMERA_H
-#define IDS_COMFORT_CAMERA_H
+#ifndef IDS_CAMERA_H
+#define IDS_CAMERA_H
 #ifdef WITH_IDS
 
 #include "cameras/Camera.h"
@@ -24,13 +24,13 @@ private:
     IdsComfort() {}
 };
 
-class IdsComfortCamera : public QThread, public Camera
+class IdsCamera : public QThread, public Camera
 {
     Q_OBJECT
 
 public:
-    IdsComfortCamera(QVariant id, PlotIntf *plot, TableIntf *table, QObject *parent);
-    ~IdsComfortCamera();
+    IdsCamera(QVariant id, PlotIntf *plot, TableIntf *table, QObject *parent);
+    ~IdsCamera();
 
     QString name() const override { return _name; }
     QString descr() const override { return _descr; }
@@ -83,4 +83,4 @@ private:
 };
 
 #endif // WITH_IDS
-#endif // IDS_COMFORT_CAMERA_H
+#endif // IDS_CAMERA_H
