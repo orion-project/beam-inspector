@@ -18,6 +18,8 @@ public:
 
     QString getPeakError(peak_status status);
 
+    QString gfaGetStr(peak_camera_handle hCam, const char* prop);
+
     #define PROC_S(name) peak_status (__cdecl *name)
     #define PROC_A(name) peak_access_status (__cdecl *name)
     #define PROC_B(name) peak_bool (__cdecl *name)

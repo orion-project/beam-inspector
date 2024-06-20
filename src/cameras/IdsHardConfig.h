@@ -2,9 +2,9 @@
 #define IDS_HARD_CONFIG_H
 #ifdef WITH_IDS
 
-#include "cameras/HardConfigPanel.h"
-
 #include <ids_peak_comfort_c/ids_peak_comfort_c.h>
+
+#include "cameras/HardConfigPanel.h"
 
 class IdsHardConfigPanel : public HardConfigPanel
 {

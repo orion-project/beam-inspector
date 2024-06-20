@@ -49,6 +49,7 @@ set(PROJECT_SOURCES
     src/cameras/HardConfigPanel.h src/cameras/HardConfigPanel.cpp
     src/cameras/CameraTypes.h src/cameras/CameraTypes.cpp
     src/cameras/CameraWorker.h
+    src/cameras/IdsCameraConfig.h src/cameras/IdsCameraConfig.cpp
     src/cameras/IdsComfortCamera.h src/cameras/IdsComfortCamera.cpp
     src/cameras/IdsHardConfig.h src/cameras/IdsHardConfig.cpp
     src/cameras/IdsLib.h src/cameras/IdsLib.cpp
