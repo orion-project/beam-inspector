@@ -1,4 +1,9 @@
 history:
+- version: 0.0.9
+  date: ?
+  changes:
+  - text: Fix opening camera when 8bpp is not supported
+
 - version: 0.0.8
   date: ?
   changes:

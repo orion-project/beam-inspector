@@ -92,6 +92,10 @@ private:
         QString infoManufacturer;
         QString infoDeviceVer;
         QString infoFirmwareVer;
+        QList<quint32> binningsX, binningsY;
+        quint32 binningX = 0, binningY = 0;
+        QList<quint32> decimsX, decimsY;
+        quint32 decimX = 0, decimY = 0;
     };
     ConfigEditorData _cfg;
 };
