@@ -15,54 +15,11 @@
 #define FRAME_TIMEOUT 5000
 //#define LOG_FRAME_TIME
 
-//------------------------------------------------------------------------------
-//                              IdsComfort
-//------------------------------------------------------------------------------
-
-IdsComfort* IdsComfort::init()
-{
-    return IDS.loaded() ? new IdsComfort() : nullptr;
-}
-
-IdsComfort::~IdsComfort()
-{
-    if (IDS.loaded())
-        IDS.unload();
-}
-
 static QString makeCameraName(const peak_camera_descriptor &cam)
 {
     return QString("%1 (*%2)").arg(
         QString::fromLatin1(cam.modelName),
         QString::fromLatin1(cam.serialNumber).right(4));
-}
-
-QVector<CameraItem> IdsComfort::getCameras()
-{
-    size_t camCount;
-    auto res = IDS.peak_CameraList_Update(&camCount);
-    if (PEAK_ERROR(res)) {
-        qWarning() << LOG_ID << "Unable to update camera list" << IDS.getPeakError(res);
-        return {};
-    }
-    else qDebug() << LOG_ID << "Camera list updated. Cameras found:" << camCount;
-
-    QVector<peak_camera_descriptor> cams(camCount);
-    res = IDS.peak_CameraList_Get(cams.data(), &camCount);
-    if (PEAK_ERROR(res)) {
-        qWarning() << LOG_ID << "Unable to get camera list" << IDS.getPeakError(res);
-        return {};
-    }
-
-    QVector<CameraItem> result;
-    for (const auto &cam : cams) {
-        qDebug() << LOG_ID << cam.cameraID << cam.cameraType << cam.modelName << cam.serialNumber;
-        result << CameraItem {
-            .id = cam.cameraID,
-            .name = makeCameraName(cam)
-        };
-    }
-    return result;
 }
 
 //------------------------------------------------------------------------------
@@ -218,7 +175,7 @@ public:
         } else {
             targetFormat = supportedFormats[c.bpp];
         }
-        qDebug() << LOG_ID << "Set pixel format" << targetFormat << c.bpp << "bpp";
+        qDebug() << LOG_ID << "Set pixel format" << QString::number(targetFormat, 16) << c.bpp << "bpp";
         res = IDS.peak_PixelFormat_Set(hCam, targetFormat);
         CHECK_ERR("Unable to set pixel format");
         cam->_cfg->bpp = c.bpp;
@@ -376,6 +333,43 @@ public:
 //------------------------------------------------------------------------------
 //                              IdsCamera
 //------------------------------------------------------------------------------
+
+QVector<CameraItem> IdsCamera::getCameras()
+{
+    if (!IDS.loaded())
+        return {};
+
+    size_t camCount;
+    auto res = IDS.peak_CameraList_Update(&camCount);
+    if (PEAK_ERROR(res)) {
+        qWarning() << LOG_ID << "Unable to update camera list" << IDS.getPeakError(res);
+        return {};
+    }
+    else qDebug() << LOG_ID << "Camera list updated. Cameras found:" << camCount;
+
+    QVector<peak_camera_descriptor> cams(camCount);
+    res = IDS.peak_CameraList_Get(cams.data(), &camCount);
+    if (PEAK_ERROR(res)) {
+        qWarning() << LOG_ID << "Unable to get camera list" << IDS.getPeakError(res);
+        return {};
+    }
+
+    QVector<CameraItem> result;
+    for (const auto &cam : cams) {
+        qDebug() << LOG_ID << cam.cameraID << cam.cameraType << cam.modelName << cam.serialNumber;
+        result << CameraItem {
+            .id = cam.cameraID,
+            .name = makeCameraName(cam)
+        };
+    }
+    return result;
+}
+
+void IdsCamera::unloadLib()
+{
+    if (IDS.loaded())
+        IDS.unload();
+}
 
 IdsCamera::IdsCamera(QVariant id, PlotIntf *plot, TableIntf *table, QObject *parent) :
     Camera(plot, table, "IdsComfortCamera"), QThread(parent), _id(id)
