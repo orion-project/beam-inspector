@@ -50,6 +50,8 @@ set(PROJECT_SOURCES
     src/cameras/CameraTypes.h src/cameras/CameraTypes.cpp
     src/cameras/CameraWorker.h
     src/cameras/IdsComfortCamera.h src/cameras/IdsComfortCamera.cpp
+    src/cameras/IdsHardConfig.h src/cameras/IdsHardConfig.cpp
+    src/cameras/IdsLib.h src/cameras/IdsLib.cpp
     src/cameras/MeasureSaver.h src/cameras/MeasureSaver.cpp
     src/cameras/StillImageCamera.h src/cameras/StillImageCamera.cpp
     src/cameras/VirtualDemoCamera.h src/cameras/VirtualDemoCamera.cpp

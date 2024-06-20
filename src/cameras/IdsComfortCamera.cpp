@@ -5,18 +5,14 @@
 #define LOG_ID "IdsComfortCamera:"
 
 #include "app/AppSettings.h"
-#include "cameras/HardConfigPanel.h"
 #include "cameras/CameraWorker.h"
+#include "cameras/HardConfigPanel.h"
+#include "cameras/IdsLib.h"
 
 #include "dialogs/OriConfigDlg.h"
 #include "helpers/OriDialogs.h"
 #include "tools/OriSettings.h"
 
-#include <ids_peak_comfort_c/ids_peak_comfort_c.h>
-
-#include <windows.h>
-
-#include <QFile>
 
 #define FRAME_TIMEOUT 5000
 //#define LOG_FRAME_TIME
@@ -25,202 +21,17 @@
 //                              IdsComfort
 //------------------------------------------------------------------------------
 
-QString getSysError(DWORD err)
-{
-    const int bufSize = 1024;
-    wchar_t buf[bufSize];
-    auto size = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM, 0, err, 0, buf, bufSize, 0);
-    if (size == 0)
-        return QStringLiteral("code: 0x").arg(err, 0, 16);
-    return QString::fromWCharArray(buf, size).trimmed();
-}
-
-namespace IdsLib
-{
-    HMODULE hLib = 0;
-
-    #define PROC_S(name) peak_status (__cdecl *name)
-    #define PROC_A(name) peak_access_status (__cdecl *name)
-    #define PROC_B(name) peak_bool (__cdecl *name)
-    PROC_S(peak_Library_Init)();
-    PROC_S(peak_Library_Exit)();
-    PROC_S(peak_Library_GetLastError)(peak_status*, char*, size_t*);
-    PROC_S(peak_CameraList_Update)(size_t*);
-    PROC_S(peak_CameraList_Get)(peak_camera_descriptor*, size_t*);
-    PROC_A(peak_ExposureTime_GetAccessStatus)(peak_camera_handle);
-    PROC_S(peak_ExposureTime_GetRange)(peak_camera_handle, double*, double*, double*);
-    PROC_S(peak_ExposureTime_Set)(peak_camera_handle, double);
-    PROC_S(peak_ExposureTime_Get)(peak_camera_handle, double*);
-    PROC_A(peak_FrameRate_GetAccessStatus)(peak_camera_handle);
-    PROC_S(peak_FrameRate_GetRange)(peak_camera_handle, double*, double*, double*);
-    PROC_S(peak_FrameRate_Set)(peak_camera_handle, double);
-    PROC_S(peak_FrameRate_Get)(peak_camera_handle, double*);
-    PROC_B(peak_Acquisition_IsStarted)(peak_camera_handle);
-    PROC_S(peak_Acquisition_Start)(peak_camera_handle, uint32_t);
-    PROC_S(peak_Acquisition_Stop)(peak_camera_handle);
-    PROC_S(peak_Acquisition_WaitForFrame)(peak_camera_handle, uint32_t, peak_frame_handle*);
-    PROC_S(peak_Acquisition_GetInfo)(peak_camera_handle, peak_acquisition_info*);
-    PROC_S(peak_Camera_GetDescriptor)(peak_camera_id, peak_camera_descriptor*);
-    PROC_S(peak_Camera_Open)(peak_camera_id, peak_camera_handle*);
-    PROC_S(peak_Camera_Close)(peak_camera_handle);
-    PROC_S(peak_PixelFormat_GetList)(peak_camera_handle, peak_pixel_format*, size_t*);
-    PROC_S(peak_PixelFormat_GetInfo)(peak_pixel_format, peak_pixel_format_info*);
-    PROC_S(peak_PixelFormat_Get)(peak_camera_handle, peak_pixel_format*);
-    PROC_S(peak_PixelFormat_Set)(peak_camera_handle, peak_pixel_format);
-    PROC_S(peak_ROI_Get)(peak_camera_handle, peak_roi*);
-    PROC_S(peak_ROI_Set)(peak_camera_handle, peak_roi);
-    PROC_S(peak_ROI_Size_GetRange)(peak_camera_handle, peak_size*, peak_size*, peak_size*);
-    PROC_S(peak_Frame_Buffer_Get)(peak_frame_handle, peak_buffer*);
-    PROC_S(peak_Frame_Release)(peak_camera_handle, peak_frame_handle);
-    PROC_S(peak_GFA_Float_Get)(peak_camera_handle, peak_gfa_module, const char*, double*);
-    PROC_S(peak_GFA_String_Get)(peak_camera_handle, peak_gfa_module, const char*, char*, size_t*);
-    PROC_A(peak_GFA_Feature_GetAccessStatus)(peak_camera_handle, peak_gfa_module, const char*);
-    // PROC_S(peak_IPL_Gain_GetRange)(peak_camera_handle, peak_gain_channel, double*, double*, double*);
-    // PROC_S(peak_IPL_Gain_Set)(peak_camera_handle peak_gain_channel, double);
-    // PROC_S(peak_IPL_Gain_Get)(peak_camera_handle, peak_gain_channel, double*);
-    PROC_A(peak_Gain_GetAccessStatus)(peak_camera_handle, peak_gain_type, peak_gain_channel);
-    PROC_S(peak_Gain_GetChannelList)(peak_camera_handle, peak_gain_type, peak_gain_channel*, size_t*);
-    PROC_S(peak_Gain_GetRange)(peak_camera_handle, peak_gain_type, peak_gain_channel, double*, double*, double*);
-    PROC_S(peak_Gain_Set)(peak_camera_handle, peak_gain_type, peak_gain_channel, double);
-    PROC_S(peak_Gain_Get)(peak_camera_handle, peak_gain_type, peak_gain_channel, double*);
-    PROC_A(peak_Mirror_LeftRight_GetAccessStatus)(peak_camera_handle);
-    PROC_S(peak_Mirror_LeftRight_Enable)(peak_camera_handle, peak_bool);
-    PROC_B(peak_Mirror_LeftRight_IsEnabled)(peak_camera_handle);
-    PROC_A(peak_Mirror_UpDown_GetAccessStatus)(peak_camera_handle);
-    PROC_S(peak_Mirror_UpDown_Enable)(peak_camera_handle, peak_bool);
-    PROC_B(peak_Mirror_UpDown_IsEnabled)(peak_camera_handle);
-    PROC_S(peak_IPL_Mirror_UpDown_Enable)(peak_camera_handle, peak_bool);
-    PROC_B(peak_IPL_Mirror_UpDown_IsEnabled)(peak_camera_handle);
-    PROC_S(peak_IPL_Mirror_LeftRight_Enable)(peak_camera_handle, peak_bool);
-    PROC_B(peak_IPL_Mirror_LeftRight_IsEnabled)(peak_camera_handle);
-
-    template <typename T> bool getProc(const char *name, T *proc) {
-        *proc = (T)GetProcAddress(hLib, name);
-        if (*proc == NULL) {
-            auto err = GetLastError();
-            qWarning() << LOG_ID << "Failed to get proc" << name << getSysError(err);
-            return false;
-        }
-        return true;
-    }
-}
-
-QString getPeakError(peak_status status)
-{
-    size_t bufSize = 0;
-    auto res = IdsLib::peak_Library_GetLastError(&status, nullptr, &bufSize);
-    if (PEAK_SUCCESS(res)) {
-        QByteArray buf(bufSize, 0);
-        res = IdsLib::peak_Library_GetLastError(&status, buf.data(), &bufSize);
-        if (PEAK_SUCCESS(res))
-            return QString::fromLatin1(buf.data());
-    }
-    qWarning() << LOG_ID << "Unable to get text for error" << status << "because of error" << res;
-    return QString("errcode=%1").arg(status);
-}
+#define IDS IdsLib::instance()
 
 IdsComfort* IdsComfort::init()
 {
-    if (!AppSettings::instance().idsEnabled)
-        return nullptr;
-
-    QStringList libs = {
-        "GCBase_MD_VC140_v3_2_IDS.dll",
-        "Log_MD_VC140_v3_2_IDS.dll",
-        "MathParser_MD_VC140_v3_2_IDS.dll",
-        "NodeMapData_MD_VC140_v3_2_IDS.dll",
-        "XmlParser_MD_VC140_v3_2_IDS.dll",
-        "GenApi_MD_VC140_v3_2_IDS.dll",
-        "FirmwareUpdate_MD_VC140_v3_2_IDS.dll",
-        "ids_peak_comfort_c.dll",
-    };
-    QString sdkPath = AppSettings::instance().idsSdkDir;
-    for (const auto& lib : libs) {
-        QString libPath = sdkPath + '/' + lib;
-        if (!QFile::exists(libPath)) {
-            qWarning() << LOG_ID << "Library not found" << libPath;
-            return nullptr;
-        }
-        IdsLib::hLib = LoadLibraryW(libPath.toStdWString().c_str());
-        if (IdsLib::hLib == NULL) {
-            auto err = GetLastError();
-            qWarning() << LOG_ID << "Failed to load" << libPath << getSysError(err);
-            return nullptr;
-        }
-    }
-
-    #define GET_PROC(name) if (!IdsLib::getProc(#name, &IdsLib::name)) return nullptr
-    GET_PROC(peak_Library_Init);
-    GET_PROC(peak_Library_Exit);
-    GET_PROC(peak_Library_GetLastError);
-    GET_PROC(peak_CameraList_Update);
-    GET_PROC(peak_CameraList_Get);
-    GET_PROC(peak_ExposureTime_GetAccessStatus);
-    GET_PROC(peak_ExposureTime_GetRange);
-    GET_PROC(peak_ExposureTime_Set);
-    GET_PROC(peak_ExposureTime_Get);
-    GET_PROC(peak_FrameRate_GetAccessStatus);
-    GET_PROC(peak_FrameRate_GetRange);
-    GET_PROC(peak_FrameRate_Set);
-    GET_PROC(peak_FrameRate_Get);
-    GET_PROC(peak_Acquisition_IsStarted);
-    GET_PROC(peak_Acquisition_Start);
-    GET_PROC(peak_Acquisition_Stop);
-    GET_PROC(peak_Acquisition_WaitForFrame);
-    GET_PROC(peak_Acquisition_GetInfo);
-    GET_PROC(peak_Camera_GetDescriptor);
-    GET_PROC(peak_Camera_Open);
-    GET_PROC(peak_Camera_Close);
-    GET_PROC(peak_PixelFormat_GetList);
-    GET_PROC(peak_PixelFormat_GetInfo);
-    GET_PROC(peak_PixelFormat_Get);
-    GET_PROC(peak_PixelFormat_Set);
-    GET_PROC(peak_ROI_Get);
-    GET_PROC(peak_ROI_Set);
-    GET_PROC(peak_ROI_Size_GetRange);
-    GET_PROC(peak_Frame_Buffer_Get);
-    GET_PROC(peak_Frame_Release);
-    GET_PROC(peak_GFA_Float_Get);
-    GET_PROC(peak_GFA_String_Get);
-    GET_PROC(peak_GFA_Feature_GetAccessStatus);
-    // GET_PROC(peak_IPL_Gain_GetRange);
-    // GET_PROC(peak_IPL_Gain_Set);
-    // GET_PROC(peak_IPL_Gain_Get);
-    GET_PROC(peak_Gain_GetAccessStatus);
-    GET_PROC(peak_Gain_GetChannelList);
-    GET_PROC(peak_Gain_GetRange);
-    GET_PROC(peak_Gain_Set);
-    GET_PROC(peak_Gain_Get);
-    GET_PROC(peak_Mirror_LeftRight_GetAccessStatus);
-    GET_PROC(peak_Mirror_LeftRight_Enable);
-    GET_PROC(peak_Mirror_LeftRight_IsEnabled);
-    GET_PROC(peak_Mirror_UpDown_GetAccessStatus);
-    GET_PROC(peak_Mirror_UpDown_Enable);
-    GET_PROC(peak_Mirror_UpDown_IsEnabled);
-    GET_PROC(peak_IPL_Mirror_UpDown_Enable);
-    GET_PROC(peak_IPL_Mirror_UpDown_IsEnabled);
-    GET_PROC(peak_IPL_Mirror_LeftRight_Enable);
-    GET_PROC(peak_IPL_Mirror_LeftRight_IsEnabled);
-
-    auto res = IdsLib::peak_Library_Init();
-    if (PEAK_ERROR(res)) {
-        qCritical() << LOG_ID << "Unable to init library" << getPeakError(res);
-        return nullptr;
-    }
-    qDebug() << LOG_ID << "Library inited";
-    return new IdsComfort();
-}
-
-IdsComfort::IdsComfort()
-{
+    return IDS.loaded() ? new IdsComfort() : nullptr;
 }
 
 IdsComfort::~IdsComfort()
 {
-    auto res = IdsLib::peak_Library_Exit();
-    if (PEAK_ERROR(res))
-        qWarning() << LOG_ID << "Unable to deinit library" << getPeakError(res);
-    else qDebug() << LOG_ID << "Library deinited";
+    if (IDS.loaded())
+        IDS.unload();
 }
 
 static QString makeCameraName(const peak_camera_descriptor &cam)
@@ -233,17 +44,17 @@ static QString makeCameraName(const peak_camera_descriptor &cam)
 QVector<CameraItem> IdsComfort::getCameras()
 {
     size_t camCount;
-    auto res = IdsLib::peak_CameraList_Update(&camCount);
+    auto res = IDS.peak_CameraList_Update(&camCount);
     if (PEAK_ERROR(res)) {
-        qWarning() << LOG_ID << "Unable to update camera list" << getPeakError(res);
+        qWarning() << LOG_ID << "Unable to update camera list" << IDS.getPeakError(res);
         return {};
     }
     else qDebug() << LOG_ID << "Camera list updated. Cameras found:" << camCount;
 
     QVector<peak_camera_descriptor> cams(camCount);
-    res = IdsLib::peak_CameraList_Get(cams.data(), &camCount);
+    res = IDS.peak_CameraList_Get(cams.data(), &camCount);
     if (PEAK_ERROR(res)) {
-        qWarning() << LOG_ID << "Unable to get camera list" << getPeakError(res);
+        qWarning() << LOG_ID << "Unable to get camera list" << IDS.getPeakError(res);
         return {};
     }
 
@@ -262,21 +73,18 @@ QVector<CameraItem> IdsComfort::getCameras()
 //                              PeakIntf
 //------------------------------------------------------------------------------
 
-// Implemented in IdsComfort.cpp
-QString getPeakError(peak_status status);
-
 #define CHECK_ERR(msg) \
     if (PEAK_ERROR(res)) { \
-        auto err = getPeakError(res); \
+        auto err = IDS.getPeakError(res); \
         qCritical() << LOG_ID << msg << err; \
         return QString(msg ": ") + err; \
     }
 
 #define GFA_GET_FLOAT(prop, value) \
-    if (PEAK_IS_READABLE(IdsLib::peak_GFA_Feature_GetAccessStatus(hCam, PEAK_GFA_MODULE_REMOTE_DEVICE, prop))) { \
-        res = IdsLib::peak_GFA_Float_Get(hCam, PEAK_GFA_MODULE_REMOTE_DEVICE, prop, &value); \
+    if (PEAK_IS_READABLE(IDS.peak_GFA_Feature_GetAccessStatus(hCam, PEAK_GFA_MODULE_REMOTE_DEVICE, prop))) { \
+        res = IDS.peak_GFA_Float_Get(hCam, PEAK_GFA_MODULE_REMOTE_DEVICE, prop, &value); \
         if (PEAK_ERROR(res)) { \
-            qWarning() << LOG_ID << "Failed to read" << prop << getPeakError(res); \
+            qWarning() << LOG_ID << "Failed to read" << prop << IDS.getPeakError(res); \
             break; \
         } \
         qDebug() << LOG_ID << prop << value; \
@@ -289,7 +97,7 @@ QString getPeakError(peak_status status);
     typ val; \
     auto res = func(hCam, &val); \
     if (PEAK_ERROR(res)) \
-        qDebug() << LOG_ID << "Unable to get" << prop << getPeakError(res); \
+        qDebug() << LOG_ID << "Unable to get" << prop << IDS.getPeakError(res); \
     else qDebug() << LOG_ID << prop << val; \
 }
 
@@ -314,7 +122,7 @@ public:
     QString init()
     {
         peak_camera_descriptor descr;
-        res = IdsLib::peak_Camera_GetDescriptor(id, &descr);
+        res = IDS.peak_Camera_GetDescriptor(id, &descr);
         CHECK_ERR("Unable to get camera descriptor");
         cam->_name = makeCameraName(descr);
         cam->_descr = cam->_name + ' ' + QString::fromLatin1(descr.serialNumber);
@@ -322,7 +130,7 @@ public:
         cam->loadConfig();
         cam->loadConfigMore();
 
-        res = IdsLib::peak_Camera_Open(id, &hCam);
+        res = IDS.peak_Camera_Open(id, &hCam);
         CHECK_ERR("Unable to open camera");
         qDebug() << LOG_ID << "Camera opened" << id;
 
@@ -340,7 +148,7 @@ public:
         //----------------- Get image size
 
         peak_size roiMin, roiMax, roiInc;
-        res = IdsLib::peak_ROI_Size_GetRange(hCam, &roiMin, &roiMax, &roiInc);
+        res = IDS.peak_ROI_Size_GetRange(hCam, &roiMin, &roiMax, &roiInc);
         CHECK_ERR("Unable to get ROI range");
         qDebug() << LOG_ID << "ROI"
             << QString("min=%1x%24").arg(roiMin.width).arg(roiMin.height)
@@ -348,7 +156,7 @@ public:
             << QString("inc=%1x%24").arg(roiInc.width).arg(roiInc.height);
 
         peak_roi roi = {0, 0, 0, 0};
-        res = IdsLib::peak_ROI_Get(hCam, &roi);
+        res = IDS.peak_ROI_Get(hCam, &roi);
         CHECK_ERR("Unable to get ROI");
         qDebug() << LOG_ID << "ROI"
             << QString("size=%1x%2").arg(roi.size.width).arg(roi.size.height)
@@ -360,7 +168,7 @@ public:
             roi.size.height = roiMax.height;
             qDebug() << LOG_ID << "Set ROI"
                 << QString("size=%1x%2").arg(roiMax.width).arg(roiMax.height);
-            res = IdsLib::peak_ROI_Set(hCam, roi);
+            res = IDS.peak_ROI_Set(hCam, roi);
             CHECK_ERR("Unable to set ROI");
         }
         c.w = roi.size.width;
@@ -384,10 +192,10 @@ public:
         //----------------- Init pixel format
 
         size_t formatCount = 0;
-        res = IdsLib::peak_PixelFormat_GetList(hCam, nullptr, &formatCount);
+        res = IDS.peak_PixelFormat_GetList(hCam, nullptr, &formatCount);
         CHECK_ERR("Unable to get pixel format count");
         QVector<peak_pixel_format> pixelFormats(formatCount);
-        res = IdsLib::peak_PixelFormat_GetList(hCam, pixelFormats.data(), &formatCount);
+        res = IDS.peak_PixelFormat_GetList(hCam, pixelFormats.data(), &formatCount);
         CHECK_ERR("Unable to get pixel formats");
         QMap<int, peak_pixel_format> supportedFormats;
         for (int i = 0; i < formatCount; i++) {
@@ -417,7 +225,7 @@ public:
             targetFormat = supportedFormats[c.bpp];
         }
         qDebug() << LOG_ID << "Set pixel format" << targetFormat << c.bpp << "bpp";
-        res = IdsLib::peak_PixelFormat_Set(hCam, targetFormat);
+        res = IDS.peak_PixelFormat_Set(hCam, targetFormat);
         CHECK_ERR("Unable to set pixel format");
         cam->_bpp = c.bpp;
         if (c.bpp > 8) {
@@ -428,16 +236,16 @@ public:
         //----------------- Show some current props
 
         size_t chanCount;
-        res = IdsLib::peak_Gain_GetChannelList(hCam, PEAK_GAIN_TYPE_ANALOG, nullptr, &chanCount);
+        res = IDS.peak_Gain_GetChannelList(hCam, PEAK_GAIN_TYPE_ANALOG, nullptr, &chanCount);
         CHECK_ERR("Unable to get gain channel list count");
         QList<peak_gain_channel> chans(chanCount);
-        res = IdsLib::peak_Gain_GetChannelList(hCam, PEAK_GAIN_TYPE_ANALOG, chans.data(), &chanCount);
+        res = IDS.peak_Gain_GetChannelList(hCam, PEAK_GAIN_TYPE_ANALOG, chans.data(), &chanCount);
         CHECK_ERR("Unable to get gain channel list");
         for (auto chan : chans)
             qDebug() << LOG_ID << "Gain channel" << chan;
 
-        SHOW_CAM_PROP("FPS", IdsLib::peak_FrameRate_Get, double);
-        SHOW_CAM_PROP("Exposure", IdsLib::peak_ExposureTime_Get, double);
+        SHOW_CAM_PROP("FPS", IDS.peak_FrameRate_Get, double);
+        SHOW_CAM_PROP("Exposure", IDS.peak_ExposureTime_Get, double);
 
         //----------------- Init graph and calcs
 
@@ -448,7 +256,7 @@ public:
 
         //----------------- Start
 
-        res = IdsLib::peak_Acquisition_Start(hCam, PEAK_INFINITE);
+        res = IDS.peak_Acquisition_Start(hCam, PEAK_INFINITE);
         CHECK_ERR("Unable to start acquisition");
         qDebug() << LOG_ID << "Acquisition started";
 
@@ -460,17 +268,17 @@ public:
         if (hCam == PEAK_INVALID_HANDLE)
             return;
 
-        if (IdsLib::peak_Acquisition_IsStarted(hCam))
+        if (IDS.peak_Acquisition_IsStarted(hCam))
         {
-            auto res = IdsLib::peak_Acquisition_Stop(hCam);
+            auto res = IDS.peak_Acquisition_Stop(hCam);
             if (PEAK_ERROR(res))
                 qWarning() << LOG_ID << "Unable to stop acquisition";
             else qDebug() << LOG_ID << "Acquisition stopped";
         }
 
-        auto res = IdsLib::peak_Camera_Close(hCam);
+        auto res = IDS.peak_Camera_Close(hCam);
         if (PEAK_ERROR(res))
-            qWarning() << LOG_ID << "Unable to close camera" << getPeakError(res);
+            qWarning() << LOG_ID << "Unable to close camera" << IDS.getPeakError(res);
         else qDebug() << LOG_ID << "Camera closed" << id;
         hCam = PEAK_INVALID_HANDLE;
     }
@@ -484,11 +292,11 @@ public:
             if (waitFrame()) continue;
 
             tm = timer.elapsed();
-            res = IdsLib::peak_Acquisition_WaitForFrame(hCam, FRAME_TIMEOUT, &frame);
+            res = IDS.peak_Acquisition_WaitForFrame(hCam, FRAME_TIMEOUT, &frame);
             if (PEAK_SUCCESS(res))
-                res = IdsLib::peak_Frame_Buffer_Get(frame, &buf);
+                res = IDS.peak_Frame_Buffer_Get(frame, &buf);
             if (res == PEAK_STATUS_ABORTED) {
-                auto err = getPeakError(res);
+                auto err = IDS.getPeakError(res);
                 qCritical() << LOG_ID << "Interrupted" << err;
                 emit cam->error("Interrupted: " + err);
                 return;
@@ -509,9 +317,9 @@ public:
                 if (showResults())
                     emit cam->ready();
 
-                res = IdsLib::peak_Frame_Release(hCam, frame);
+                res = IDS.peak_Frame_Release(hCam, frame);
                 if (PEAK_ERROR(res)) {
-                    auto err = getPeakError(res);
+                    auto err = IDS.getPeakError(res);
                     qCritical() << LOG_ID << "Unable to release frame" << err;
                     emit cam->error("Unable to release frame: " + err);
                     return;
@@ -532,7 +340,7 @@ public:
                 // TODO: suggest a way for sending arbitrary stats and showing it in the table
                 peak_acquisition_info info;
                 memset(&info, 0, sizeof(info));
-                res = IdsLib::peak_Acquisition_GetInfo(hCam, &info);
+                res = IDS.peak_Acquisition_GetInfo(hCam, &info);
                 if (PEAK_SUCCESS(res)) {
                     errors << QString::number(info.numUnderrun)
                             << QString::number(info.numDropped)
@@ -559,7 +367,7 @@ public:
                     << "avgRenderTime:" << qRound(avgRenderTime)
                     << "avgCalcTime:" << qRound(avgCalcTime)
                     << "errCount: " << errCount
-                    << getPeakError(res);
+                    << IDS.getPeakError(res);
 #endif
                 if (cam->isInterruptionRequested()) {
                     qDebug() << LOG_ID << "Interrupted by user";
@@ -573,16 +381,16 @@ public:
     QString gfaGetStr(const char* prop)
     {
         auto mod = PEAK_GFA_MODULE_REMOTE_DEVICE;
-        if (!PEAK_IS_READABLE(IdsLib::peak_GFA_Feature_GetAccessStatus(hCam, mod, prop)))
+        if (!PEAK_IS_READABLE(IDS.peak_GFA_Feature_GetAccessStatus(hCam, mod, prop)))
             return "Is not readable";
         size_t size;
-        auto res = IdsLib::peak_GFA_String_Get(hCam, mod, prop, nullptr, &size);
+        auto res = IDS.peak_GFA_String_Get(hCam, mod, prop, nullptr, &size);
         if (PEAK_ERROR(res))
-            return getPeakError(res);
+            return IDS.getPeakError(res);
         QByteArray buf(size, 0);
-        res = IdsLib::peak_GFA_String_Get(hCam, mod, prop, buf.data(), &size);
+        res = IDS.peak_GFA_String_Get(hCam, mod, prop, buf.data(), &size);
         if (PEAK_ERROR(res))
-            return getPeakError(res);
+            return IDS.getPeakError(res);
         qDebug() << "Reading" << prop << 3;
         return QString::fromLatin1(buf);
     }
@@ -658,13 +466,13 @@ void IdsComfortCamera::saveHardConfig(QSettings *s)
     if (!_peak)
         return;
     double v;
-    auto res = IdsLib::peak_ExposureTime_Get(_peak->hCam, &v);
+    auto res = IDS.peak_ExposureTime_Get(_peak->hCam, &v);
     if (PEAK_ERROR(res))
-        s->setValue("exposure", getPeakError(res));
+        s->setValue("exposure", IDS.getPeakError(res));
     else s->setValue("exposure", v);
-    res = IdsLib::peak_FrameRate_Get(_peak->hCam, &v);
+    res = IDS.peak_FrameRate_Get(_peak->hCam, &v);
     if (PEAK_ERROR(res))
-        s->setValue("frameRate", getPeakError(res));
+        s->setValue("frameRate", IDS.getPeakError(res));
     else s->setValue("frameRate", v);
 }
 
@@ -862,7 +670,7 @@ using namespace Ori::Widgets;
         double value, min, max, step; \
         auto res = getProp(hCam, &value); \
         if (PEAK_ERROR(res)) { \
-            label->setText(getPeakError(res)); \
+            label->setText(IDS.getPeakError(res)); \
             edit->setValue(0); \
             edit->setDisabled(true); \
             props[#Prop] = 0; \
@@ -873,7 +681,7 @@ using namespace Ori::Widgets;
         props[#Prop] = value; \
         res = getRange(hCam, &min, &max, &step); \
         if (PEAK_ERROR(res)) \
-            label->setText(getPeakError(res)); \
+            label->setText(IDS.getPeakError(res)); \
         else { \
             label->setText(QString("<b>Min = %1, Max = %2</b>").arg(min, 0, 'f', 2).arg(max, 0, 'f', 2)); \
             props[#Prop "Min"] = min; \
@@ -889,7 +697,7 @@ using namespace Ori::Widgets;
     bool set##Prop##Raw(double v) { \
         auto res = setProp(hCam, v); \
         if (PEAK_ERROR(res)) { \
-            Ori::Dlg::error(getPeakError(res)); \
+            Ori::Dlg::error(IDS.getPeakError(res)); \
             return false; \
         } \
         if (ed##Prop == edFps || ed##Prop == edExp) { \
@@ -922,7 +730,7 @@ using namespace Ori::Widgets;
         } \
         auto res = setProp(hCam, newVal); \
         if (PEAK_ERROR(res)) \
-            Ori::Dlg::error(getPeakError(res)); \
+            Ori::Dlg::error(IDS.getPeakError(res)); \
         if (ed##Prop == edFps || ed##Prop == edExp) { \
             showExp(); \
             showFps(); \
@@ -956,28 +764,28 @@ protected:
 namespace {
 
 peak_status setAnalogGain(peak_camera_handle hCam, double v) {
-    return IdsLib::peak_Gain_Set(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, v);
+    return IDS.peak_Gain_Set(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, v);
 }
 peak_status setDigitalGain(peak_camera_handle hCam, double v) {
-    return IdsLib::peak_Gain_Set(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, v);
+    return IDS.peak_Gain_Set(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, v);
 }
 peak_status getAnalogGain(peak_camera_handle hCam, double *v) {
-    return IdsLib::peak_Gain_Get(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, v);
+    return IDS.peak_Gain_Get(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, v);
 }
 peak_status getDigitalGain(peak_camera_handle hCam, double *v) {
-    return IdsLib::peak_Gain_Get(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, v);
+    return IDS.peak_Gain_Get(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, v);
 }
 peak_status getAnalogGainRange(peak_camera_handle hCam, double *min, double *max, double *inc) {
-    return IdsLib::peak_Gain_GetRange(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, min, max, inc);
+    return IDS.peak_Gain_GetRange(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, min, max, inc);
 }
 peak_status getDigitalGainRange(peak_camera_handle hCam, double *min, double *max, double *inc) {
-    return IdsLib::peak_Gain_GetRange(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, min, max, inc);
+    return IDS.peak_Gain_GetRange(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, min, max, inc);
 }
 peak_access_status getAnalogGainAccessStatus(peak_camera_handle hCam) {
-    return IdsLib::peak_Gain_GetAccessStatus(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER);
+    return IDS.peak_Gain_GetAccessStatus(hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER);
 }
 peak_access_status getDigitlGainAccessStatus(peak_camera_handle hCam) {
-    return IdsLib::peak_Gain_GetAccessStatus(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER);
+    return IDS.peak_Gain_GetAccessStatus(hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER);
 }
 
 } // namespace
@@ -1016,26 +824,26 @@ public:
         PROP_CONTROL(AnalogGain, tr("Analog gain"))
         PROP_CONTROL(DigitalGain, tr("Digital gain"))
 
-        CHECK_PROP_STATUS(Exp, IdsLib::peak_ExposureTime_GetAccessStatus)
-        CHECK_PROP_STATUS(Fps, IdsLib::peak_FrameRate_GetAccessStatus)
+        CHECK_PROP_STATUS(Exp, IDS.peak_ExposureTime_GetAccessStatus)
+        CHECK_PROP_STATUS(Fps, IDS.peak_FrameRate_GetAccessStatus)
         CHECK_PROP_STATUS(AnalogGain, getAnalogGainAccessStatus)
         CHECK_PROP_STATUS(DigitalGain, getDigitlGainAccessStatus)
 
         vertMirror = new QCheckBox(tr("Mirror vertically"));
-        if (IdsLib::peak_Mirror_UpDown_GetAccessStatus(hCam) == PEAK_ACCESS_READWRITE) {
-            vertMirror->setChecked(IdsLib::peak_Mirror_UpDown_IsEnabled(hCam));
+        if (IDS.peak_Mirror_UpDown_GetAccessStatus(hCam) == PEAK_ACCESS_READWRITE) {
+            vertMirror->setChecked(IDS.peak_Mirror_UpDown_IsEnabled(hCam));
         } else {
-            vertMirror->setChecked(IdsLib::peak_IPL_Mirror_UpDown_IsEnabled(hCam));
+            vertMirror->setChecked(IDS.peak_IPL_Mirror_UpDown_IsEnabled(hCam));
             vertMirrorIPL = true;
         }
         connect(vertMirror, &QCheckBox::toggled, this, &IdsHardConfigPanel::toggleVertMirror);
         layout->addWidget(vertMirror);
 
         horzMirror = new QCheckBox(tr("Mirror horizontally"));
-        if (IdsLib::peak_Mirror_LeftRight_GetAccessStatus(hCam) == PEAK_ACCESS_READWRITE) {
-            horzMirror->setChecked(IdsLib::peak_Mirror_LeftRight_IsEnabled(hCam));
+        if (IDS.peak_Mirror_LeftRight_GetAccessStatus(hCam) == PEAK_ACCESS_READWRITE) {
+            horzMirror->setChecked(IDS.peak_Mirror_LeftRight_IsEnabled(hCam));
         } else {
-            horzMirror->setChecked(IdsLib::peak_IPL_Mirror_LeftRight_IsEnabled(hCam));
+            horzMirror->setChecked(IDS.peak_IPL_Mirror_LeftRight_IsEnabled(hCam));
             horzMirrorIPL = true;
         }
         connect(horzMirror, &QCheckBox::toggled, this, &IdsHardConfigPanel::toggleHorzMirror);
@@ -1060,8 +868,8 @@ public:
         applySettings();
     }
 
-    PROP(Exp, IdsLib::peak_ExposureTime_Set, IdsLib::peak_ExposureTime_Get, IdsLib::peak_ExposureTime_GetRange)
-    PROP(Fps, IdsLib::peak_FrameRate_Set, IdsLib::peak_FrameRate_Get, IdsLib::peak_FrameRate_GetRange)
+    PROP(Exp, IDS.peak_ExposureTime_Set, IDS.peak_ExposureTime_Get, IDS.peak_ExposureTime_GetRange)
+    PROP(Fps, IDS.peak_FrameRate_Set, IDS.peak_FrameRate_Get, IDS.peak_FrameRate_GetRange)
     PROP(AnalogGain, ::setAnalogGain, getAnalogGain, getAnalogGainRange)
     PROP(DigitalGain, ::setDigitalGain, getDigitalGain, getDigitalGainRange)
 
@@ -1192,20 +1000,20 @@ public:
     void toggleVertMirror(bool on)
     {
         auto res = vertMirrorIPL
-            ? IdsLib::peak_IPL_Mirror_UpDown_Enable(hCam, on)
-            : IdsLib::peak_Mirror_UpDown_Enable(hCam, on);
+            ? IDS.peak_IPL_Mirror_UpDown_Enable(hCam, on)
+            : IDS.peak_Mirror_UpDown_Enable(hCam, on);
         if (PEAK_ERROR(res))
-            Ori::Dlg::error(getPeakError(res));
-        qDebug() << IdsLib::peak_IPL_Mirror_UpDown_IsEnabled(hCam);
+            Ori::Dlg::error(IDS.getPeakError(res));
+        qDebug() << IDS.peak_IPL_Mirror_UpDown_IsEnabled(hCam);
     }
 
     void toggleHorzMirror(bool on)
     {
         auto res = horzMirrorIPL
-            ? IdsLib::peak_IPL_Mirror_LeftRight_Enable(hCam, on)
-            : IdsLib::peak_Mirror_LeftRight_Enable(hCam, on);
+            ? IDS.peak_IPL_Mirror_LeftRight_Enable(hCam, on)
+            : IDS.peak_Mirror_LeftRight_Enable(hCam, on);
         if (PEAK_ERROR(res))
-            Ori::Dlg::error(getPeakError(res));
+            Ori::Dlg::error(IDS.getPeakError(res));
     }
 
     PeakIntf *peak;
