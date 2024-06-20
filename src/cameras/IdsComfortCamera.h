@@ -1,6 +1,5 @@
 #ifndef IDS_COMFORT_CAMERA_H
 #define IDS_COMFORT_CAMERA_H
-
 #ifdef WITH_IDS
 
 #include "cameras/Camera.h"
@@ -21,7 +20,7 @@ public:
     QVector<CameraItem> getCameras();
 
 private:
-    IdsComfort();
+    IdsComfort() {}
 };
 
 class IdsComfortCamera : public QThread, public Camera
