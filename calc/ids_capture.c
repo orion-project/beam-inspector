@@ -20,6 +20,10 @@ https://www.1stvision.com/cameras/IDS/IDS-manuals/en/basics-monochrome-pixel-for
 #define FPS 10
 #define EXP 40000
 #define GAIN 2
+#define BINNING_X 2
+#define BINNING_Y 2
+#define DECIMATION_X 2
+#define DECIMATION_Y 2
 
 //#define BITS_8
 //#define BITS_10
@@ -109,6 +113,67 @@ int main() {
         "    maxValuePerChannel: %d\n", 
         info.numBitsPerPixel, info.numSignificantBitsPerPixel, info.numChannels,
         info.numBitsPerChannel, info.numSignificantBitsPerChannel, info.maxValuePerChannel);
+
+    if (peak_Binning_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE) {
+        printf("Binning is not configurable\n");
+    } else {
+        size_t count;
+        res = peak_Binning_FactorX_GetList(hCam, NULL, &count);
+        CHECK_ERR("Get binning factors count for X")
+        uint32_t *factors = (uint32_t*)malloc(sizeof(uint32_t)*count);
+        res = peak_Binning_FactorX_GetList(hCam, factors, &count);
+        CHECK_ERR("Get binning factors for X")
+        for (int i = 0; i < count; i++) {
+            printf("Supported binning X: %d\n", factors[i]);
+        }
+        free(factors);
+        res = peak_Binning_FactorY_GetList(hCam, NULL, &count);
+        CHECK_ERR("Get binning factors count for Y")
+        factors = (uint32_t*)malloc(sizeof(uint32_t)*count);
+        res = peak_Binning_FactorY_GetList(hCam, factors, &count);
+        CHECK_ERR("Get binning factors for Y")
+        for (int i = 0; i < count; i++) {
+            printf("Supported binning Y: %d\n", factors[i]);
+        }
+        free(factors);
+
+        res = peak_Binning_Set(hCam, BINNING_X, BINNING_Y);
+        CHECK_ERR("Set binning factors")
+
+        uint32_t factor_x, factor_y;
+        res = peak_Binning_Get(hCam, &factor_x, &factor_y);
+        CHECK_ERR("Get binning factors")
+        printf("Binning x=%d, y=%d\n", factor_x, factor_y);
+    }
+    {
+        size_t count;
+        res = peak_Decimation_FactorX_GetList(hCam, NULL, &count);
+        CHECK_ERR("Get decimation factors count for X")
+        uint32_t *factors = (uint32_t*)malloc(sizeof(uint32_t)*count);
+        res = peak_Decimation_FactorX_GetList(hCam, factors, &count);
+        CHECK_ERR("Get decimation factors for X")
+        for (int i = 0; i < count; i++) {
+            printf("Supported decimation X: %d\n", factors[i]);
+        }
+        free(factors);
+        res = peak_Decimation_FactorY_GetList(hCam, NULL, &count);
+        CHECK_ERR("Get decimation factors count for Y")
+        factors = (uint32_t*)malloc(sizeof(uint32_t)*count);
+        res = peak_Decimation_FactorY_GetList(hCam, factors, &count);
+        CHECK_ERR("Get decimation factors for Y")
+        for (int i = 0; i < count; i++) {
+            printf("Supported decimation Y: %d\n", factors[i]);
+        }
+        free(factors);
+
+        res = peak_Decimation_Set(hCam, DECIMATION_X, DECIMATION_Y);
+        CHECK_ERR("Set decimation factors")
+
+        uint32_t factor_x, factor_y;
+        res = peak_Decimation_Get(hCam, &factor_x, &factor_y);
+        CHECK_ERR("Get decimation factors")
+        printf("Decimation x=%d, y=%d\n", factor_x, factor_y);
+    }
 
     peak_roi roi;
     res = peak_ROI_Get(hCam, &roi);

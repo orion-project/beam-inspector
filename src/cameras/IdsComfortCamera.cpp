@@ -326,6 +326,19 @@ public:
         CHECK_ERR("Unable to open camera");
         qDebug() << LOG_ID << "Camera opened" << id;
 
+        //----------------- Init resolution reduction
+
+        cam->_cfg.binningX = 1;
+        cam->_cfg.binningY = 1;
+        cam->_cfg.binningsX = {1, 2};
+        cam->_cfg.binningsY = {1, 2};
+        cam->_cfg.decimX = 1;
+        cam->_cfg.decimY = 1;
+        cam->_cfg.decimsX = {1, 2};
+        cam->_cfg.decimsY = {1, 2};
+
+        //----------------- Get image size
+
         peak_size roiMin, roiMax, roiInc;
         res = IdsLib::peak_ROI_Size_GetRange(hCam, &roiMin, &roiMax, &roiInc);
         CHECK_ERR("Unable to get ROI range");
@@ -368,56 +381,51 @@ public:
             break;
         }
 
-        c.bpp = cam->_bpp;
-        peak_pixel_format targetFormat = PEAK_PIXEL_FORMAT_MONO8;
-        if (c.bpp == 12) targetFormat = PEAK_PIXEL_FORMAT_MONO12G24_IDS;
-        else if (c.bpp == 10) targetFormat = PEAK_PIXEL_FORMAT_MONO10G40_IDS;
+        //----------------- Init pixel format
 
-        peak_pixel_format pixelFormat = PEAK_PIXEL_FORMAT_INVALID;
-        res = IdsLib::peak_PixelFormat_Get(hCam, &pixelFormat);
-        CHECK_ERR("Unable to get pixel format");
-        qDebug() << LOG_ID << "Pixel format" << QString::number(pixelFormat, 16);
-
-        if (targetFormat != pixelFormat) {
-            size_t formatCount = 0;
-            res = IdsLib::peak_PixelFormat_GetList(hCam, nullptr, &formatCount);
-            CHECK_ERR("Unable to get pixel format count");
-            QVector<peak_pixel_format> pixelFormats(formatCount);
-            res = IdsLib::peak_PixelFormat_GetList(hCam, pixelFormats.data(), &formatCount);
-            CHECK_ERR("Unable to get pixel formats");
-            QMap<int, peak_pixel_format> supportedFormats;
-            for (int i = 0; i < formatCount; i++) {
-                auto pf = pixelFormats.at(i);
-                qDebug() << LOG_ID << "Supported pixel format" << QString::number(pf, 16);
-                if (pf == PEAK_PIXEL_FORMAT_MONO8) {
-                    supportedBpp << 8;
-                    supportedFormats.insert(8, pf);
-                } else if (pf == PEAK_PIXEL_FORMAT_MONO10G40_IDS) {
-                    supportedBpp << 10;
-                    supportedFormats.insert(10, pf);
-                } else if (pf == PEAK_PIXEL_FORMAT_MONO12G24_IDS) {
-                    supportedBpp << 12;
-                    supportedFormats.insert(12, pf);
-                }
+        size_t formatCount = 0;
+        res = IdsLib::peak_PixelFormat_GetList(hCam, nullptr, &formatCount);
+        CHECK_ERR("Unable to get pixel format count");
+        QVector<peak_pixel_format> pixelFormats(formatCount);
+        res = IdsLib::peak_PixelFormat_GetList(hCam, pixelFormats.data(), &formatCount);
+        CHECK_ERR("Unable to get pixel formats");
+        QMap<int, peak_pixel_format> supportedFormats;
+        for (int i = 0; i < formatCount; i++) {
+            auto pf = pixelFormats.at(i);
+            qDebug() << LOG_ID << "Supported pixel format" << QString::number(pf, 16);
+            if (pf == PEAK_PIXEL_FORMAT_MONO8) {
+                supportedBpp << 8;
+                supportedFormats.insert(8, pf);
+            } else if (pf == PEAK_PIXEL_FORMAT_MONO10G40_IDS) {
+                supportedBpp << 10;
+                supportedFormats.insert(10, pf);
+            } else if (pf == PEAK_PIXEL_FORMAT_MONO12G24_IDS) {
+                supportedBpp << 12;
+                supportedFormats.insert(12, pf);
             }
-            if (supportedFormats.empty()) {
-                return "Camera doesn't support any of known gray scale formats (Mono8, Mono10g40, Mono12g24)";
-            }
-            if (!supportedFormats.contains(c.bpp)) {
-                auto wantedBpp = c.bpp;
-                c.bpp = supportedFormats.firstKey();
-                targetFormat = supportedFormats.first();
-                qWarning() << LOG_ID << "Camera does not support " << wantedBpp << "bpp, use " << c.bpp << "bpp";
-            }
-            res = IdsLib::peak_PixelFormat_Set(hCam, targetFormat);
-            CHECK_ERR("Unable to set pixel format");
-            qDebug() << LOG_ID << "Pixel format set";
         }
+        if (supportedFormats.empty()) {
+            return "Camera doesn't support any of known gray scale formats (Mono8, Mono10g40, Mono12g24)";
+        }
+        c.bpp = cam->_bpp;
+        peak_pixel_format targetFormat;
+        if (!supportedFormats.contains(c.bpp)) {
+            c.bpp = supportedFormats.firstKey();
+            targetFormat = supportedFormats.first();
+            qWarning() << LOG_ID << "Camera does not support " << cam->_bpp << "bpp, use " << c.bpp << "bpp";
+        } else {
+            targetFormat = supportedFormats[c.bpp];
+        }
+        qDebug() << LOG_ID << "Set pixel format" << targetFormat << c.bpp << "bpp";
+        res = IdsLib::peak_PixelFormat_Set(hCam, targetFormat);
+        CHECK_ERR("Unable to set pixel format");
         cam->_bpp = c.bpp;
         if (c.bpp > 8) {
             hdrBuf = QByteArray(c.w*c.h*2, 0);
             c.buf = (uint8_t*)hdrBuf.data();
         }
+
+        //----------------- Show some current props
 
         size_t chanCount;
         res = IdsLib::peak_Gain_GetChannelList(hCam, PEAK_GAIN_TYPE_ANALOG, nullptr, &chanCount);
@@ -431,14 +439,18 @@ public:
         SHOW_CAM_PROP("FPS", IdsLib::peak_FrameRate_Get, double);
         SHOW_CAM_PROP("Exposure", IdsLib::peak_ExposureTime_Get, double);
 
-        res = IdsLib::peak_Acquisition_Start(hCam, PEAK_INFINITE);
-        CHECK_ERR("Unable to start acquisition");
-        qDebug() << LOG_ID << "Acquisition started";
+        //----------------- Init graph and calcs
 
         plot->initGraph(c.w, c.h);
         graph = plot->rawGraph();
 
         configure();
+
+        //----------------- Start
+
+        res = IdsLib::peak_Acquisition_Start(hCam, PEAK_INFINITE);
+        CHECK_ERR("Unable to start acquisition");
+        qDebug() << LOG_ID << "Acquisition started";
 
         return {};
     }
@@ -668,7 +680,47 @@ void IdsComfortCamera::setRawView(bool on, bool reconfig)
         _peak->setRawView(on, reconfig);
 }
 
+#include <QComboBox>
+
+#include "helpers/OriLayouts.h"
+
 using namespace Ori::Dlg;
+
+class ConfigEditorXY : public ConfigItemEditor
+{
+public:
+    ConfigEditorXY(const QList<quint32> &xs, const QList<quint32> &ys, quint32 *x, quint32 *y) : ConfigItemEditor(), x(x), y(y) {
+        comboX = new QComboBox;
+        comboY = new QComboBox;
+        fillCombo(comboX, xs, *x);
+        fillCombo(comboY, ys, *y);
+        Ori::Layouts::LayoutH({
+            QString("X:"), comboX,
+            Ori::Layouts::SpaceH(4),
+            QString("Y:"), comboY, Ori::Layouts::Stretch(),
+        }).useFor(this);
+    }
+
+    void collect() override {
+        *x = qMax(1u, comboX->currentData().toUInt());
+        *y = qMax(1u, comboY->currentData().toUInt());
+    }
+
+    void fillCombo(QComboBox *combo, const QList<quint32> &items, quint32 cur) {
+        int idx = -1;
+        for (int i = 0; i < items.size(); i++) {
+            quint32 v = items[i];
+            combo->addItem(QString::number(v), v);
+            if (v == cur)
+                idx = i;
+        }
+        if (idx >= 0)
+            combo->setCurrentIndex(idx);
+    }
+
+    quint32 *x, *y;
+    QComboBox *comboX, *comboY;
+};
 
 void IdsComfortCamera::initConfigMore(Ori::Dlg::ConfigDlgOpts &opts)
 {
@@ -688,7 +740,26 @@ void IdsComfortCamera::initConfigMore(Ori::Dlg::ConfigDlgOpts &opts)
         << (new ConfigItemBool(pageHard, tr("12 bit"), &_cfg.bpp12))
             ->setDisabled(!_peak->supportedBpp.contains(12))->withRadioGroup("pixel_format")
     ;
+
+    opts.items
+        << new ConfigItemSpace(pageHard, 12)
+        << (new ConfigItemSection(pageHard, tr("Resolution reduction")))
+            ->withHint(tr("Reselect camera to apply"));
+    if (_cfg.binningX > 0)
+        opts.items << new ConfigItemCustom(pageHard, tr("Binning"), new ConfigEditorXY(
+            _cfg.binningsX, _cfg.binningsY, &_cfg.binningX, &_cfg.binningY));
+    else
+        opts.items << (new ConfigItemEmpty(pageHard, tr("Binning")))
+            ->withHint(tr("Is not configurable"));
+    if (_cfg.decimX > 0)
+        opts.items << new ConfigItemCustom(pageHard, tr("Decimation"), new ConfigEditorXY(
+            _cfg.decimsX, _cfg.decimsY, &_cfg.decimX, &_cfg.decimY));
+    else
+        opts.items << (new ConfigItemEmpty(pageHard, tr("Decimation")))
+            ->withHint(tr("Is not configurable"));
+
     if (_peak) {
+
         if (!_cfg.intoRequested) {
             _cfg.intoRequested = true;
             _cfg.infoModelName = _peak->gfaGetStr("DeviceModelName");
@@ -717,6 +788,10 @@ void IdsComfortCamera::saveConfigMore()
     Ori::Settings s;
     s.beginGroup(_configGroup);
     s.setValue("hard.bpp", _cfg.bpp12 ? 12 : _cfg.bpp10 ? 10 : 8);
+    s.setValue("hard.binning.x", _cfg.binningX);
+    s.setValue("hard.binning.y", _cfg.binningY);
+    s.setValue("hard.decim.x", _cfg.decimX);
+    s.setValue("hard.decim.y", _cfg.decimY);
 }
 
 void IdsComfortCamera::loadConfigMore()
@@ -724,6 +799,10 @@ void IdsComfortCamera::loadConfigMore()
     Ori::Settings s;
     s.beginGroup(_configGroup);
     _bpp = s.value("hard.bpp", 8).toInt();
+    _cfg.binningX = s.value("hard.binning.x").toUInt();
+    _cfg.binningY = s.value("hard.binning.y").toUInt();
+    _cfg.decimX = s.value("hard.decim.x").toUInt();
+    _cfg.decimY = s.value("hard.decim.y").toUInt();
 }
 
 //------------------------------------------------------------------------------
