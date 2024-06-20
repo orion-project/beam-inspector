@@ -2,10 +2,19 @@
 #define IDS_HARD_CONFIG_H
 #ifdef WITH_IDS
 
-class IdsHardConfig
+#include "cameras/HardConfigPanel.h"
+
+#include <ids_peak_comfort_c/ids_peak_comfort_c.h>
+
+class IdsHardConfigPanel : public HardConfigPanel
 {
 public:
-    IdsHardConfig();
+    IdsHardConfigPanel(peak_camera_handle hCam, std::function<void(QObject*)> requestBrightness, QWidget *parent);
+
+    void setReadOnly(bool on) override;
+
+private:
+    class IdsHardConfigPanelImpl *_impl;
 };
 
 #endif // WITH_IDS

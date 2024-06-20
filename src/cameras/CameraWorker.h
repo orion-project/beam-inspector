@@ -13,6 +13,7 @@
 #include <QApplication>
 #include <QDebug>
 #include <QMutex>
+#include <QThread>
 
 #define CAMERA_LOOP_TICK_MS 5
 #define CAMERA_FRAME_DELAY_MS 30
@@ -70,8 +71,10 @@ public:
 
     QMap<QString, QVariant> stats;
 
-    CameraWorker(PlotIntf *plot, TableIntf *table, Camera *cam, QThread *thread)
-        : plot(plot), table(table), camera(cam), thread(thread)
+    QString logId;
+
+    CameraWorker(PlotIntf *plot, TableIntf *table, Camera *cam, QThread *thread, const QString &logId)
+        : plot(plot), table(table), camera(cam), thread(thread), logId(logId)
     {
         resultBuf1.resize(MEASURE_BUF_SIZE);
         resultBuf2.resize(MEASURE_BUF_SIZE);
@@ -129,7 +132,7 @@ public:
         cfgMutex.lock();
         if (reconfig) {
             configure();
-            qDebug() << LOG_ID << "Reconfigured";
+            qDebug() << logId << "Reconfigured";
         }
         cfgMutex.unlock();
     }

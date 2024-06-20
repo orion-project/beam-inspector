@@ -62,14 +62,6 @@ public:
     QByteArray buf;
 };
 
-class BrightEvent : public QEvent
-{
-public:
-    BrightEvent() : QEvent(QEvent::User) {}
-
-    double level;
-};
-
 class MeasureSaver : public QObject
 {
     Q_OBJECT
