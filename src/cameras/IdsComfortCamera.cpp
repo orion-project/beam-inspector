@@ -3,12 +3,11 @@
 #ifdef WITH_IDS
 
 #include "cameras/CameraWorker.h"
+#include "cameras/IdsCameraConfig.h"
 #include "cameras/IdsHardConfig.h"
 #include "cameras/IdsLib.h"
 
-#include "dialogs/OriConfigDlg.h"
 #include "helpers/OriDialogs.h"
-#include "tools/OriSettings.h"
 
 #define LOG_ID "IdsComfortCamera:"
 #define FRAME_TIMEOUT 5000
@@ -106,8 +105,6 @@ public:
     peak_buffer buf;
     peak_frame_handle frame;
     int errCount = 0;
-    QSet<int> supportedBpp;
-
     QByteArray hdrBuf;
 
     PeakIntf(peak_camera_id id, PlotIntf *plot, TableIntf *table, IdsComfortCamera *cam)
@@ -131,14 +128,14 @@ public:
 
         //----------------- Init resolution reduction
 
-        cam->_cfg.binningX = 1;
-        cam->_cfg.binningY = 1;
-        cam->_cfg.binningsX = {1, 2};
-        cam->_cfg.binningsY = {1, 2};
-        cam->_cfg.decimX = 1;
-        cam->_cfg.decimY = 1;
-        cam->_cfg.decimsX = {1, 2};
-        cam->_cfg.decimsY = {1, 2};
+        cam->_cfg->binningX = 1;
+        cam->_cfg->binningY = 1;
+        cam->_cfg->binningsX = {1, 2};
+        cam->_cfg->binningsY = {1, 2};
+        cam->_cfg->decimX = 1;
+        cam->_cfg->decimY = 1;
+        cam->_cfg->decimsX = {1, 2};
+        cam->_cfg->decimsY = {1, 2};
 
         //----------------- Get image size
 
@@ -197,32 +194,32 @@ public:
             auto pf = pixelFormats.at(i);
             qDebug() << LOG_ID << "Supported pixel format" << QString::number(pf, 16);
             if (pf == PEAK_PIXEL_FORMAT_MONO8) {
-                supportedBpp << 8;
+                cam->_cfg->supportedBpp << 8;
                 supportedFormats.insert(8, pf);
             } else if (pf == PEAK_PIXEL_FORMAT_MONO10G40_IDS) {
-                supportedBpp << 10;
+                cam->_cfg->supportedBpp << 10;
                 supportedFormats.insert(10, pf);
             } else if (pf == PEAK_PIXEL_FORMAT_MONO12G24_IDS) {
-                supportedBpp << 12;
+                cam->_cfg->supportedBpp << 12;
                 supportedFormats.insert(12, pf);
             }
         }
         if (supportedFormats.empty()) {
             return "Camera doesn't support any of known gray scale formats (Mono8, Mono10g40, Mono12g24)";
         }
-        c.bpp = cam->_bpp;
+        c.bpp = cam->_cfg->bpp;
         peak_pixel_format targetFormat;
         if (!supportedFormats.contains(c.bpp)) {
             c.bpp = supportedFormats.firstKey();
             targetFormat = supportedFormats.first();
-            qWarning() << LOG_ID << "Camera does not support " << cam->_bpp << "bpp, use " << c.bpp << "bpp";
+            qWarning() << LOG_ID << "Camera does not support " << cam->_cfg->bpp << "bpp, use " << c.bpp << "bpp";
         } else {
             targetFormat = supportedFormats[c.bpp];
         }
         qDebug() << LOG_ID << "Set pixel format" << targetFormat << c.bpp << "bpp";
         res = IDS.peak_PixelFormat_Set(hCam, targetFormat);
         CHECK_ERR("Unable to set pixel format");
-        cam->_bpp = c.bpp;
+        cam->_cfg->bpp = c.bpp;
         if (c.bpp > 8) {
             hdrBuf = QByteArray(c.w*c.h*2, 0);
             c.buf = (uint8_t*)hdrBuf.data();
@@ -372,23 +369,6 @@ public:
             }
         }
     }
-
-    QString gfaGetStr(const char* prop)
-    {
-        auto mod = PEAK_GFA_MODULE_REMOTE_DEVICE;
-        if (!PEAK_IS_READABLE(IDS.peak_GFA_Feature_GetAccessStatus(hCam, mod, prop)))
-            return "Is not readable";
-        size_t size;
-        auto res = IDS.peak_GFA_String_Get(hCam, mod, prop, nullptr, &size);
-        if (PEAK_ERROR(res))
-            return IDS.getPeakError(res);
-        QByteArray buf(size, 0);
-        res = IDS.peak_GFA_String_Get(hCam, mod, prop, buf.data(), &size);
-        if (PEAK_ERROR(res))
-            return IDS.getPeakError(res);
-        qDebug() << "Reading" << prop << 3;
-        return QString::fromLatin1(buf);
-    }
 };
 
 //------------------------------------------------------------------------------
@@ -398,6 +378,8 @@ public:
 IdsComfortCamera::IdsComfortCamera(QVariant id, PlotIntf *plot, TableIntf *table, QObject *parent) :
     Camera(plot, table, "IdsComfortCamera"), QThread(parent), _id(id)
 {
+    _cfg.reset(new IdsCameraConfig);
+
     auto peak = new PeakIntf(id.value<peak_camera_id>(), plot, table, this);
     auto res = peak->init();
     if (!res.isEmpty())
@@ -414,6 +396,11 @@ IdsComfortCamera::IdsComfortCamera(QVariant id, PlotIntf *plot, TableIntf *table
 IdsComfortCamera::~IdsComfortCamera()
 {
     qDebug() << LOG_ID << "Deleted";
+}
+
+int IdsComfortCamera::bpp() const
+{
+    return _cfg->bpp;
 }
 
 PixelScale IdsComfortCamera::sensorScale() const
@@ -483,129 +470,20 @@ void IdsComfortCamera::setRawView(bool on, bool reconfig)
         _peak->setRawView(on, reconfig);
 }
 
-#include <QComboBox>
-
-#include "helpers/OriLayouts.h"
-
-using namespace Ori::Dlg;
-
-class ConfigEditorXY : public ConfigItemEditor
-{
-public:
-    ConfigEditorXY(const QList<quint32> &xs, const QList<quint32> &ys, quint32 *x, quint32 *y) : ConfigItemEditor(), x(x), y(y) {
-        comboX = new QComboBox;
-        comboY = new QComboBox;
-        fillCombo(comboX, xs, *x);
-        fillCombo(comboY, ys, *y);
-        Ori::Layouts::LayoutH({
-            QString("X:"), comboX,
-            Ori::Layouts::SpaceH(4),
-            QString("Y:"), comboY, Ori::Layouts::Stretch(),
-        }).useFor(this);
-    }
-
-    void collect() override {
-        *x = qMax(1u, comboX->currentData().toUInt());
-        *y = qMax(1u, comboY->currentData().toUInt());
-    }
-
-    void fillCombo(QComboBox *combo, const QList<quint32> &items, quint32 cur) {
-        int idx = -1;
-        for (int i = 0; i < items.size(); i++) {
-            quint32 v = items[i];
-            combo->addItem(QString::number(v), v);
-            if (v == cur)
-                idx = i;
-        }
-        if (idx >= 0)
-            combo->setCurrentIndex(idx);
-    }
-
-    quint32 *x, *y;
-    QComboBox *comboX, *comboY;
-};
-
 void IdsComfortCamera::initConfigMore(Ori::Dlg::ConfigDlgOpts &opts)
 {
-    int pageHard = cfgMax+1;
-    int pageInfo = cfgMax+2;
-    _cfg.bpp8 = _bpp == 8;
-    _cfg.bpp10 = _bpp == 10;
-    _cfg.bpp12 = _bpp == 12;
-    opts.pages << ConfigPage(pageHard, tr("Hardware"), ":/toolbar/hardware");
-    opts.items
-        << (new ConfigItemSection(pageHard, tr("Pixel format")))
-            ->withHint(tr("Reselect camera to apply"))
-        << (new ConfigItemBool(pageHard, tr("8 bit"), &_cfg.bpp8))
-            ->setDisabled(!_peak->supportedBpp.contains(8))->withRadioGroup("pixel_format")
-        << (new ConfigItemBool(pageHard, tr("10 bit"), &_cfg.bpp10))
-            ->setDisabled(!_peak->supportedBpp.contains(10))->withRadioGroup("pixel_format")
-        << (new ConfigItemBool(pageHard, tr("12 bit"), &_cfg.bpp12))
-            ->setDisabled(!_peak->supportedBpp.contains(12))->withRadioGroup("pixel_format")
-    ;
-
-    opts.items
-        << new ConfigItemSpace(pageHard, 12)
-        << (new ConfigItemSection(pageHard, tr("Resolution reduction")))
-            ->withHint(tr("Reselect camera to apply"));
-    if (_cfg.binningX > 0)
-        opts.items << new ConfigItemCustom(pageHard, tr("Binning"), new ConfigEditorXY(
-            _cfg.binningsX, _cfg.binningsY, &_cfg.binningX, &_cfg.binningY));
-    else
-        opts.items << (new ConfigItemEmpty(pageHard, tr("Binning")))
-            ->withHint(tr("Is not configurable"));
-    if (_cfg.decimX > 0)
-        opts.items << new ConfigItemCustom(pageHard, tr("Decimation"), new ConfigEditorXY(
-            _cfg.decimsX, _cfg.decimsY, &_cfg.decimX, &_cfg.decimY));
-    else
-        opts.items << (new ConfigItemEmpty(pageHard, tr("Decimation")))
-            ->withHint(tr("Is not configurable"));
-
-    if (_peak) {
-
-        if (!_cfg.intoRequested) {
-            _cfg.intoRequested = true;
-            _cfg.infoModelName = _peak->gfaGetStr("DeviceModelName");
-            _cfg.infoFamilyName = _peak->gfaGetStr("DeviceFamilyName");
-            _cfg.infoSerialNum = _peak->gfaGetStr("DeviceSerialNumber");
-            _cfg.infoVendorName = _peak->gfaGetStr("DeviceVendorName");
-            _cfg.infoManufacturer = _peak->gfaGetStr("DeviceManufacturerInfo");
-            _cfg.infoDeviceVer = _peak->gfaGetStr("DeviceVersion");
-            _cfg.infoFirmwareVer = _peak->gfaGetStr("DeviceFirmwareVersion");
-        }
-        opts.pages << ConfigPage(pageInfo, tr("Info"), ":/toolbar/info");
-        opts.items
-            << (new ConfigItemStr(pageInfo, tr("Model name"), &_cfg.infoModelName))->withReadOnly()
-            << (new ConfigItemStr(pageInfo, tr("Family name"), &_cfg.infoFamilyName))->withReadOnly()
-            << (new ConfigItemStr(pageInfo, tr("Serial number"), &_cfg.infoSerialNum))->withReadOnly()
-            << (new ConfigItemStr(pageInfo, tr("Vendor name"), &_cfg.infoVendorName))->withReadOnly()
-            << (new ConfigItemStr(pageInfo, tr("Manufacturer info"), &_cfg.infoManufacturer))->withReadOnly()
-            << (new ConfigItemStr(pageInfo, tr("Device version"), &_cfg.infoDeviceVer))->withReadOnly()
-            << (new ConfigItemStr(pageInfo, tr("Firmware version"), &_cfg.infoFirmwareVer))->withReadOnly()
-        ;
-    }
+    if (_peak)
+        _cfg->initDlg(_peak->hCam, opts, cfgMax);
 }
 
 void IdsComfortCamera::saveConfigMore()
 {
-    Ori::Settings s;
-    s.beginGroup(_configGroup);
-    s.setValue("hard.bpp", _cfg.bpp12 ? 12 : _cfg.bpp10 ? 10 : 8);
-    s.setValue("hard.binning.x", _cfg.binningX);
-    s.setValue("hard.binning.y", _cfg.binningY);
-    s.setValue("hard.decim.x", _cfg.decimX);
-    s.setValue("hard.decim.y", _cfg.decimY);
+    _cfg->save(_configGroup);
 }
 
 void IdsComfortCamera::loadConfigMore()
 {
-    Ori::Settings s;
-    s.beginGroup(_configGroup);
-    _bpp = s.value("hard.bpp", 8).toInt();
-    _cfg.binningX = s.value("hard.binning.x").toUInt();
-    _cfg.binningY = s.value("hard.binning.y").toUInt();
-    _cfg.decimX = s.value("hard.decim.x").toUInt();
-    _cfg.decimY = s.value("hard.decim.y").toUInt();
+    _cfg->load(_configGroup);
 }
 
 HardConfigPanel* IdsComfortCamera::hardConfgPanel(QWidget *parent)

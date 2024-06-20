@@ -162,4 +162,20 @@ void IdsLib::unload()
     __hLib = 0;
 }
 
+QString IdsLib::gfaGetStr(peak_camera_handle hCam, const char* prop)
+{
+    auto mod = PEAK_GFA_MODULE_REMOTE_DEVICE;
+    if (!PEAK_IS_READABLE(peak_GFA_Feature_GetAccessStatus(hCam, mod, prop)))
+        return "Is not readable";
+    size_t size;
+    auto res = peak_GFA_String_Get(hCam, mod, prop, nullptr, &size);
+    if (PEAK_ERROR(res))
+        return getPeakError(res);
+    QByteArray buf(size, 0);
+    res = peak_GFA_String_Get(hCam, mod, prop, buf.data(), &size);
+    if (PEAK_ERROR(res))
+        return getPeakError(res);
+    return QString::fromLatin1(buf);
+}
+
 #endif // WITH_IDS
