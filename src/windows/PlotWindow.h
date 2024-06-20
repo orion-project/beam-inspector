@@ -42,9 +42,6 @@ protected:
 
 private:
     Plot *_plot;
-#ifdef WITH_IDS
-    QSharedPointer<class IdsComfort> _ids;
-#endif
     QSharedPointer<Camera> _camera;
     QSharedPointer<MeasureSaver> _saver;
     QAction *_actionMeasure, *_actionOpenImg, *_actionCamConfig,

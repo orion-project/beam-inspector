@@ -12,18 +12,6 @@ class HardConfigPanel;
 class IdsCameraConfig;
 class PeakIntf;
 
-class IdsComfort
-{
-public:
-    static IdsComfort* init();
-    ~IdsComfort();
-
-    QVector<CameraItem> getCameras();
-
-private:
-    IdsComfort() {}
-};
-
 class IdsCamera : public QThread, public Camera
 {
     Q_OBJECT
@@ -54,6 +42,9 @@ public:
     void setRawView(bool on, bool reconfig) override;
 
     QVariant id() const { return _id; }
+
+    static QVector<CameraItem> getCameras();
+    static void unloadLib();
 
 signals:
     void ready();

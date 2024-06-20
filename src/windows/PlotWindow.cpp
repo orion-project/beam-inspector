@@ -121,10 +121,6 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     _mru = new Ori::MruFileList(this);
     connect(_mru, &Ori::MruFileList::clicked, this, &PlotWindow::openImage);
 
-#ifdef WITH_IDS
-    if (auto ids = IdsComfort::init(); ids) _ids.reset(ids);
-#endif
-
     createMenuBar();
     createToolBar();
     createStatusBar();
@@ -148,13 +144,16 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
         if (!AppSettings::instance().isDevMode)
             openImage({});
     });
-
 }
 
 PlotWindow::~PlotWindow()
 {
     storeState();
     delete _tableIntf;
+
+#ifdef WITH_IDS
+    IdsCamera::unloadLib();
+#endif
 }
 
 void PlotWindow::restoreState()
@@ -268,11 +267,10 @@ void PlotWindow::fillCamSelector()
         _camSelectMenu->addAction(_actionCamDemo);
 
 #ifdef WITH_IDS
-    if (_ids)
-        for (const auto& cam : _ids->getCameras()) {
-            auto a = _camSelectMenu->addAction(QIcon(":/toolbar/camera"), cam.name, this, &PlotWindow::activateCamIds);
-            a->setData(cam.id);
-        }
+    for (const auto& cam : IdsCamera::getCameras()) {
+        auto a = _camSelectMenu->addAction(QIcon(":/toolbar/camera"), cam.name, this, &PlotWindow::activateCamIds);
+        a->setData(cam.id);
+    }
 #endif
 
     // TODO: do something if active camera disappeared
