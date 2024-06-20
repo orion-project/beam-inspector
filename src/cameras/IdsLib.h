@@ -6,6 +6,8 @@
 
 #include <QString>
 
+#define IDS IdsLib::instance()
+
 class IdsLib
 {
 public:

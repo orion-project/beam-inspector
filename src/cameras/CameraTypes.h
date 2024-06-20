@@ -1,7 +1,7 @@
 #ifndef CAMERA_TYPES_H
 #define CAMERA_TYPES_H
 
-#include <QString>
+#include <QEvent>
 #include <QVariant>
 
 class QSettings;
@@ -79,6 +79,14 @@ struct CameraStats
     int fps;
     qint64 measureTime;
     QString errorFrames;
+};
+
+class BrightEvent : public QEvent
+{
+public:
+    BrightEvent() : QEvent(QEvent::User) {}
+
+    double level;
 };
 
 #endif // CAMERA_TYPES_H

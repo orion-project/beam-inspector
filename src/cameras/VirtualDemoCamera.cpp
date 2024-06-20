@@ -1,11 +1,10 @@
 #include "VirtualDemoCamera.h"
 
-#define LOG_ID "VirtualDemoCamera:"
-
 #include "cameras/CameraWorker.h"
 
 #include <QRandomGenerator>
 
+#define LOG_ID "VirtualDemoCamera:"
 #define CAMERA_WIDTH 2592
 #define CAMERA_HEIGHT 2048
 //#define LOG_FRAME_TIME
@@ -49,7 +48,7 @@ public:
     RandomOffset phi_offset;
 
     BeamRenderer(PlotIntf *plot, TableIntf *table, VirtualDemoCamera *cam, QThread *thread)
-        : CameraWorker(plot, table, cam, cam), cam(cam)
+        : CameraWorker(plot, table, cam, cam, LOG_ID), cam(cam)
     {
         b.w = CAMERA_WIDTH;
         b.h = CAMERA_HEIGHT;
