@@ -33,27 +33,6 @@ static QString makeCameraName(const peak_camera_descriptor &cam)
         return QString(msg ": ") + err; \
     }
 
-#define GFA_GET_FLOAT(prop, value) \
-    if (PEAK_IS_READABLE(IDS.peak_GFA_Feature_GetAccessStatus(hCam, PEAK_GFA_MODULE_REMOTE_DEVICE, prop))) { \
-        res = IDS.peak_GFA_Float_Get(hCam, PEAK_GFA_MODULE_REMOTE_DEVICE, prop, &value); \
-        if (PEAK_ERROR(res)) { \
-            qWarning() << LOG_ID << "Failed to read" << prop << IDS.getPeakError(res); \
-            break; \
-        } \
-        qDebug() << LOG_ID << prop << value; \
-    } else { \
-        qDebug() << LOG_ID << prop << "is not readable"; \
-        break; \
-    }
-
-#define SHOW_CAM_PROP(prop, func, typ) {\
-    typ val; \
-    auto res = func(hCam, &val); \
-    if (PEAK_ERROR(res)) \
-        qDebug() << LOG_ID << "Unable to get" << prop << IDS.getPeakError(res); \
-    else qDebug() << LOG_ID << prop << val; \
-}
-
 class PeakIntf : public CameraWorker
 {
 public:
@@ -104,6 +83,7 @@ public:
             }
         }
 
+        // Load factors when both are 1x1, before changing anything
         #define LOAD_FACTORS(method, target) { \
             size_t count; \
             res = IDS.method(hCam, nullptr, &count); \
@@ -112,13 +92,6 @@ public:
             res = IDS.method(hCam, cam->_cfg->target.data(), &count); \
             CHECK_ERR("Unable to get " #target); \
         }
-        #define CLAMP_FACTOR(factor, list) \
-            if (cam->_cfg->factor < 1) cam->_cfg->factor = 1; \
-            else if (!cam->_cfg->list.contains(cam->_cfg->factor)) { \
-                qWarning() << LOG_ID << #factor << cam->_cfg->factor << "is out of range, reset to 1"; \
-                cam->_cfg->factor = 1; \
-           }
-        // Load factors when both are 1x1, before changing anything
         if (cam->_cfg->binning.configurable) {
             LOAD_FACTORS(peak_Binning_FactorX_GetList, binning.xs);
             LOAD_FACTORS(peak_Binning_FactorY_GetList, binning.ys);
@@ -127,6 +100,14 @@ public:
             LOAD_FACTORS(peak_Decimation_FactorX_GetList, decimation.xs);
             LOAD_FACTORS(peak_Decimation_FactorY_GetList, decimation.ys);
         }
+        #undef LOAD_FACTORS
+
+        #define CLAMP_FACTOR(factor, list) \
+            if (cam->_cfg->factor < 1) cam->_cfg->factor = 1; \
+            else if (!cam->_cfg->list.contains(cam->_cfg->factor)) { \
+                qWarning() << LOG_ID << #factor << cam->_cfg->factor << "is out of range, reset to 1"; \
+                cam->_cfg->factor = 1; \
+           }
         if (cam->_cfg->binning.configurable) {
             CLAMP_FACTOR(binning.x, binning.xs);
             CLAMP_FACTOR(binning.y, binning.ys);
@@ -153,31 +134,12 @@ public:
             }
             qDebug() << LOG_ID << "Decimation" << cam->_cfg->decimation.str();
         }
-
         #undef CLAMP_FACTOR
-        #undef LOAD_FACTORS
         return {};
     }
 
-    QString init()
+    QString getImageSize()
     {
-        peak_camera_descriptor descr;
-        res = IDS.peak_Camera_GetDescriptor(id, &descr);
-        CHECK_ERR("Unable to get camera descriptor");
-        cam->_name = makeCameraName(descr);
-        cam->_descr = cam->_name + ' ' + QString::fromLatin1(descr.serialNumber);
-        cam->_configGroup = cam->_name + '-' + QString::fromLatin1(descr.serialNumber);
-        cam->loadConfig();
-        cam->loadConfigMore();
-
-        res = IDS.peak_Camera_Open(id, &hCam);
-        CHECK_ERR("Unable to open camera");
-        qDebug() << LOG_ID << "Camera opened" << id;
-
-        if (auto err = initResolution(); !err.isEmpty()) return err;
-
-        //----------------- Get image size
-
         peak_size roiMin, roiMax, roiInc;
         res = IDS.peak_ROI_Size_GetRange(hCam, &roiMin, &roiMax, &roiInc);
         CHECK_ERR("Unable to get ROI range");
@@ -207,6 +169,18 @@ public:
         cam->_width = c.w;
         cam->_height = c.h;
 
+        #define GFA_GET_FLOAT(prop, value) \
+            if (PEAK_IS_READABLE(IDS.peak_GFA_Feature_GetAccessStatus(hCam, PEAK_GFA_MODULE_REMOTE_DEVICE, prop))) { \
+                res = IDS.peak_GFA_Float_Get(hCam, PEAK_GFA_MODULE_REMOTE_DEVICE, prop, &value); \
+                if (PEAK_ERROR(res)) { \
+                    qWarning() << LOG_ID << "Failed to read" << prop << IDS.getPeakError(res); \
+                    break; \
+                } \
+                qDebug() << LOG_ID << prop << value; \
+            } else { \
+                qDebug() << LOG_ID << prop << "is not readable"; \
+                break; \
+            }
         while (true) {
             double pixelW, pixelH;
             GFA_GET_FLOAT("SensorPixelWidth", pixelW);
@@ -219,9 +193,13 @@ public:
             cam->_pixelScale.factor = pixelW;
             break;
         }
+        #undef GFA_GET_FLOAT
 
-        //----------------- Init pixel format
+        return {};
+    }
 
+    QString initPixelFormat()
+    {
         size_t formatCount = 0;
         res = IDS.peak_PixelFormat_GetList(hCam, nullptr, &formatCount);
         CHECK_ERR("Unable to get pixel format count");
@@ -263,9 +241,11 @@ public:
             hdrBuf = QByteArray(c.w*c.h*2, 0);
             c.buf = (uint8_t*)hdrBuf.data();
         }
+        return {};
+    }
 
-        //----------------- Show some current props
-
+    QString showCurrProps()
+    {
         size_t chanCount;
         res = IDS.peak_Gain_GetChannelList(hCam, PEAK_GAIN_TYPE_ANALOG, nullptr, &chanCount);
         CHECK_ERR("Unable to get gain channel list count");
@@ -275,17 +255,43 @@ public:
         for (auto chan : chans)
             qDebug() << LOG_ID << "Gain channel" << chan;
 
+        #define SHOW_CAM_PROP(prop, func, typ) {\
+            typ val; \
+            auto res = func(hCam, &val); \
+            if (PEAK_ERROR(res)) \
+                qDebug() << LOG_ID << "Unable to get" << prop << IDS.getPeakError(res); \
+            else qDebug() << LOG_ID << prop << val; \
+        }
         SHOW_CAM_PROP("FPS", IDS.peak_FrameRate_Get, double);
         SHOW_CAM_PROP("Exposure", IDS.peak_ExposureTime_Get, double);
+        #undef SHOW_CAM_PROP
+        return {};
+    }
 
-        //----------------- Init graph and calcs
+    QString init()
+    {
+        peak_camera_descriptor descr;
+        res = IDS.peak_Camera_GetDescriptor(id, &descr);
+        CHECK_ERR("Unable to get camera descriptor");
+        cam->_name = makeCameraName(descr);
+        cam->_descr = cam->_name + ' ' + QString::fromLatin1(descr.serialNumber);
+        cam->_configGroup = cam->_name + '-' + QString::fromLatin1(descr.serialNumber);
+        cam->loadConfig();
+        cam->loadConfigMore();
+
+        res = IDS.peak_Camera_Open(id, &hCam);
+        CHECK_ERR("Unable to open camera");
+        qDebug() << LOG_ID << "Camera opened" << id;
+
+        if (auto err = initResolution(); !err.isEmpty()) return err;
+        if (auto err = getImageSize(); !err.isEmpty()) return err;
+        if (auto err = initPixelFormat(); !err.isEmpty()) return err;
+        if (auto err = showCurrProps(); !err.isEmpty()) return err;
 
         plot->initGraph(c.w, c.h);
         graph = plot->rawGraph();
 
         configure();
-
-        //----------------- Start
 
         res = IDS.peak_Acquisition_Start(hCam, PEAK_INFINITE);
         CHECK_ERR("Unable to start acquisition");

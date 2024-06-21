@@ -152,6 +152,8 @@ PlotWindow::~PlotWindow()
     delete _tableIntf;
 
 #ifdef WITH_IDS
+    // Close camera explicitly, otherwise it gets closed after the lib unloaded
+    _camera.reset();
     IdsCamera::unloadLib();
 #endif
 }
