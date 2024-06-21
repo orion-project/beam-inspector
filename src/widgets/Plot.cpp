@@ -43,6 +43,8 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     //connect(_plot->xAxis, QOverload<const QCPRange&>::of(&QCPAxis::rangeChanged), this, &Plot::axisRangeChanged);
     //connect(_plot->yAxis, QOverload<const QCPRange&>::of(&QCPAxis::rangeChanged), this, &Plot::axisRangeChanged);
     _plot->axisRect()->setBackground(QBrush(QIcon(":/misc/no_plot").pixmap(16)));
+    _plot->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(_plot, &QWidget::customContextMenuRequested, this, &Plot::showContextMenu);
 
     auto gridLayer = _plot->xAxis->grid()->layer();
     _plot->addLayer("beam", gridLayer, QCustomPlot::limBelow);
@@ -274,4 +276,20 @@ void Plot::setRawView(bool on, bool replot)
     _lineY->setVisible(!_rawView);
     _beamShape->setVisible(!_rawView);
     if (replot) _plot->replot();
+}
+
+void Plot::showContextMenu(const QPoint& pos)
+{
+    if (_crosshairs->visible() && _crosshairs->isEditing())
+        _crosshairs->showContextMenu(pos);
+}
+
+void Plot::storeState(QSettings *s)
+{
+    _crosshairs->save(s);
+}
+
+void Plot::restoreState(QSettings *s)
+{
+    _crosshairs->load(s);
 }
