@@ -3,6 +3,7 @@ history:
   date: ?
   changes:
   - text: Fix opening camera when 8bpp is not supported
+  - text: Control binnig and decimation for IDS cameras
 
 - version: 0.0.8
   date: ?

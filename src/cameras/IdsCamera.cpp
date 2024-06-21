@@ -70,6 +70,95 @@ public:
         : CameraWorker(plot, table, cam, cam, LOG_ID), id(id), cam(cam)
     {}
 
+    QString initResolution()
+    {
+        cam->_cfg->binning.configurable = false;
+        cam->_cfg->decimation.configurable = false;
+
+        if (IDS.peak_Binning_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE) {
+            if (IDS.peak_Decimation_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE) {
+                qWarning() << LOG_ID << "Resolution is not configurable";
+                return {};
+            }
+            res = IDS.peak_Decimation_Set(hCam, 1, 1);
+            CHECK_ERR("Unable to reset decimation");
+            cam->_cfg->decimation.configurable = true;
+            if (IDS.peak_Binning_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE) {
+                qDebug() << LOG_ID << "Binning is not configurable";
+            } else {
+                res = IDS.peak_Binning_Set(hCam, 1, 1);
+                CHECK_ERR("Unable to reset binning");
+                cam->_cfg->binning.configurable = true;
+            }
+        } else {
+            res = IDS.peak_Binning_Set(hCam, 1, 1);
+            CHECK_ERR("Unable to reset binning");
+            cam->_cfg->binning.configurable = true;
+
+            if (IDS.peak_Decimation_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE) {
+                qDebug() << LOG_ID << "Decimation is not configurable";
+            } else {
+                res = IDS.peak_Decimation_Set(hCam, 1, 1);
+                CHECK_ERR("Unable to reset decimation");
+                cam->_cfg->decimation.configurable = true;
+            }
+        }
+
+        #define LOAD_FACTORS(method, target) { \
+            size_t count; \
+            res = IDS.method(hCam, nullptr, &count); \
+            CHECK_ERR("Unable to get count of " #target); \
+            cam->_cfg->target.resize(count); \
+            res = IDS.method(hCam, cam->_cfg->target.data(), &count); \
+            CHECK_ERR("Unable to get " #target); \
+        }
+        #define CLAMP_FACTOR(factor, list) \
+            if (cam->_cfg->factor < 1) cam->_cfg->factor = 1; \
+            else if (!cam->_cfg->list.contains(cam->_cfg->factor)) { \
+                qWarning() << LOG_ID << #factor << cam->_cfg->factor << "is out of range, reset to 1"; \
+                cam->_cfg->factor = 1; \
+           }
+        // Load factors when both are 1x1, before changing anything
+        if (cam->_cfg->binning.configurable) {
+            LOAD_FACTORS(peak_Binning_FactorX_GetList, binning.xs);
+            LOAD_FACTORS(peak_Binning_FactorY_GetList, binning.ys);
+        }
+        if (cam->_cfg->decimation.configurable) {
+            LOAD_FACTORS(peak_Decimation_FactorX_GetList, decimation.xs);
+            LOAD_FACTORS(peak_Decimation_FactorY_GetList, decimation.ys);
+        }
+        if (cam->_cfg->binning.configurable) {
+            CLAMP_FACTOR(binning.x, binning.xs);
+            CLAMP_FACTOR(binning.y, binning.ys);
+            if (cam->_cfg->binning.on()) {
+                res = IDS.peak_Binning_Set(hCam, cam->_cfg->binning.x, cam->_cfg->binning.y);
+                CHECK_ERR("Unable to set binning");
+                res = IDS.peak_Binning_Get(hCam, &cam->_cfg->binning.x, &cam->_cfg->binning.y);
+                CHECK_ERR("Unable to get binning");
+                if (cam->_cfg->decimation.configurable && cam->_cfg->decimation.on()) {
+                    qWarning() << "Unable to set both binning and decimation, binning is already set, reset decimation to 1";
+                    cam->_cfg->decimation.reset();
+                }
+            }
+            qDebug() << LOG_ID << "Binning" << cam->_cfg->binning.str();
+        }
+        if (cam->_cfg->decimation.configurable) {
+            CLAMP_FACTOR(decimation.x, decimation.xs);
+            CLAMP_FACTOR(decimation.y, decimation.ys);
+            if (cam->_cfg->decimation.on()) {
+                res = IDS.peak_Decimation_Set(hCam, cam->_cfg->decimation.x, cam->_cfg->decimation.y);
+                CHECK_ERR("Unable to set decimation");
+                res = IDS.peak_Decimation_Get(hCam, &cam->_cfg->decimation.x, &cam->_cfg->decimation.y);
+                CHECK_ERR("Unable to get decimation");
+            }
+            qDebug() << LOG_ID << "Decimation" << cam->_cfg->decimation.str();
+        }
+
+        #undef CLAMP_FACTOR
+        #undef LOAD_FACTORS
+        return {};
+    }
+
     QString init()
     {
         peak_camera_descriptor descr;
@@ -85,16 +174,7 @@ public:
         CHECK_ERR("Unable to open camera");
         qDebug() << LOG_ID << "Camera opened" << id;
 
-        //----------------- Init resolution reduction
-
-        cam->_cfg->binningX = 1;
-        cam->_cfg->binningY = 1;
-        cam->_cfg->binningsX = {1, 2};
-        cam->_cfg->binningsY = {1, 2};
-        cam->_cfg->decimX = 1;
-        cam->_cfg->decimY = 1;
-        cam->_cfg->decimsX = {1, 2};
-        cam->_cfg->decimsY = {1, 2};
+        if (auto err = initResolution(); !err.isEmpty()) return err;
 
         //----------------- Get image size
 
