@@ -122,6 +122,16 @@ IdsLib::IdsLib()
     GET_PROC(peak_IPL_Mirror_UpDown_IsEnabled);
     GET_PROC(peak_IPL_Mirror_LeftRight_Enable);
     GET_PROC(peak_IPL_Mirror_LeftRight_IsEnabled);
+    GET_PROC(peak_Binning_GetAccessStatus);
+    GET_PROC(peak_Binning_FactorX_GetList);
+    GET_PROC(peak_Binning_FactorY_GetList);
+    GET_PROC(peak_Binning_Set);
+    GET_PROC(peak_Binning_Get);
+    GET_PROC(peak_Decimation_GetAccessStatus);
+    GET_PROC(peak_Decimation_FactorX_GetList);
+    GET_PROC(peak_Decimation_FactorY_GetList);
+    GET_PROC(peak_Decimation_Set);
+    GET_PROC(peak_Decimation_Get);
 
     auto res = IdsLib::peak_Library_Init();
     if (PEAK_ERROR(res)) {

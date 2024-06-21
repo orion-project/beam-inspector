@@ -17,22 +17,33 @@ using namespace Ori::Layouts;
 //                               ConfigEditorXY
 //------------------------------------------------------------------------------
 
-class ConfigEditorXY : public ConfigItemEditor
+class ConfigEditorFactorXY : public ConfigItemEditor
 {
 public:
-    ConfigEditorXY(const QList<quint32> &xs, const QList<quint32> &ys, quint32 *x, quint32 *y) : ConfigItemEditor(), x(x), y(y)
+    ConfigEditorFactorXY(IdsCameraConfig::FactorXY *factor, ConfigEditorFactorXY *other) : ConfigItemEditor(), factor(factor), other(other)
     {
         comboX = new QComboBox;
         comboY = new QComboBox;
-        fillCombo(comboX, xs, *x);
-        fillCombo(comboY, ys, *y);
+        fillCombo(comboX, factor->xs, factor->x);
+        fillCombo(comboY, factor->ys, factor->y);
+        connect(comboX, &QComboBox::activated, this, &ConfigEditorFactorXY::updateOther);
+        connect(comboY, &QComboBox::activated, this, &ConfigEditorFactorXY::updateOther);
         LayoutH({ QString("X:"), comboX, SpaceH(4), QString("Y:"), comboY, Stretch() }).useFor(this);
+        if (other) {
+            other->other = this;
+            other->updateOther();
+        }
+        updateOther();
     }
+
+    uint32_t factorX() const { return qMax(1u, comboX->currentData().toUInt()); }
+    uint32_t factorY() const { return qMax(1u, comboY->currentData().toUInt()); }
+    bool on() const { return factorX() > 1 or factorY() > 1; }
 
     void collect() override
     {
-        *x = qMax(1u, comboX->currentData().toUInt());
-        *y = qMax(1u, comboY->currentData().toUInt());
+        factor->x = factorX();
+        factor->y = factorY();
     }
 
     void fillCombo(QComboBox *combo, const QList<quint32> &items, quint32 cur)
@@ -48,7 +59,15 @@ public:
             combo->setCurrentIndex(idx);
     }
 
-    quint32 *x, *y;
+    void updateOther() {
+        if (!other) return;
+        bool thisOn = on();
+        other->comboX->setDisabled(thisOn);
+        other->comboY->setDisabled(thisOn);
+    }
+
+    IdsCameraConfig::FactorXY *factor;
+    ConfigEditorFactorXY *other = nullptr;
     QComboBox *comboX, *comboY;
 };
 
@@ -77,20 +96,19 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
 
     opts.items
         << new ConfigItemSpace(pageHard, 12)
-        << (new ConfigItemSection(pageHard, tr("Resolution reduction")))
-            ->withHint(tr("Reselect camera to apply"));
-    if (binningX > 0)
-        opts.items << new ConfigItemCustom(pageHard, tr("Binning"), new ConfigEditorXY(
-            binningsX, binningsY, &binningX, &binningY));
-    else
-        opts.items << (new ConfigItemEmpty(pageHard, tr("Binning")))
-            ->withHint(tr("Is not configurable"));
-    if (decimX > 0)
-        opts.items << new ConfigItemCustom(pageHard, tr("Decimation"), new ConfigEditorXY(
-            decimsX, decimsY, &decimX, &decimY));
-    else
-        opts.items << (new ConfigItemEmpty(pageHard, tr("Decimation")))
-            ->withHint(tr("Is not configurable"));
+        << (new ConfigItemSection(pageHard, tr("Resolution reduction")))->withHint(tr("Reselect camera to apply"));
+    ConfigEditorFactorXY *binnigEditor = nullptr;
+    if (binning.configurable) {
+        binnigEditor = new ConfigEditorFactorXY(&binning, nullptr);
+        opts.items << new ConfigItemCustom(pageHard, tr("Binning"), binnigEditor);
+    } else {
+        opts.items << (new ConfigItemEmpty(pageHard, tr("Binning")))->withHint(tr("Is not configurable"));
+    }
+    if (decimation.configurable) {
+        opts.items << new ConfigItemCustom(pageHard, tr("Decimation"), new ConfigEditorFactorXY(&decimation, binnigEditor));
+    } else {
+        opts.items << (new ConfigItemEmpty(pageHard, tr("Decimation")))->withHint(tr("Is not configurable"));
+    }
 
     if (!intoRequested) {
         intoRequested = true;
@@ -119,10 +137,10 @@ void IdsCameraConfig::save(const QString& group)
     Ori::Settings s;
     s.beginGroup(group);
     s.setValue("hard.bpp", bpp12 ? 12 : bpp10 ? 10 : 8);
-    s.setValue("hard.binning.x", binningX);
-    s.setValue("hard.binning.y", binningY);
-    s.setValue("hard.decim.x", decimX);
-    s.setValue("hard.decim.y", decimY);
+    s.setValue("hard.binning.x", binning.x);
+    s.setValue("hard.binning.y", binning.y);
+    s.setValue("hard.decimation.x", decimation.x);
+    s.setValue("hard.decimation.y", decimation.y);
 }
 
 void IdsCameraConfig::load(const QString& group)
@@ -130,10 +148,12 @@ void IdsCameraConfig::load(const QString& group)
     Ori::Settings s;
     s.beginGroup(group);
     bpp = s.value("hard.bpp", 8).toInt();
-    binningX = s.value("hard.binning.x").toUInt();
-    binningY = s.value("hard.binning.y").toUInt();
-    decimX = s.value("hard.decim.x").toUInt();
-    decimY = s.value("hard.decim.y").toUInt();
+    binning.x = qMax(1u, s.value("hard.binning.x", 1).toUInt());
+    binning.y = qMax(1u, s.value("hard.binning.y", 1).toUInt());
+    decimation.x = qMax(1u, s.value("hard.decimation.x", 1).toUInt());
+    decimation.y = qMax(1u, s.value("hard.decimation.y", 1).toUInt());
+    if (binning.on() && decimation.on())
+        decimation.reset();
 }
 
 #endif // WITH_IDS

@@ -75,6 +75,16 @@ public:
     PROC_B(peak_IPL_Mirror_UpDown_IsEnabled)(peak_camera_handle);
     PROC_S(peak_IPL_Mirror_LeftRight_Enable)(peak_camera_handle, peak_bool);
     PROC_B(peak_IPL_Mirror_LeftRight_IsEnabled)(peak_camera_handle);
+    PROC_A(peak_Binning_GetAccessStatus)(peak_camera_handle);
+    PROC_S(peak_Binning_FactorX_GetList)(peak_camera_handle, uint32_t*, size_t*);
+    PROC_S(peak_Binning_FactorY_GetList)(peak_camera_handle, uint32_t*, size_t*);
+    PROC_S(peak_Binning_Set)(peak_camera_handle, uint32_t, uint32_t);
+    PROC_S(peak_Binning_Get)(peak_camera_handle, uint32_t*, uint32_t*);
+    PROC_A(peak_Decimation_GetAccessStatus)(peak_camera_handle);
+    PROC_S(peak_Decimation_FactorX_GetList)(peak_camera_handle, uint32_t*, size_t*);
+    PROC_S(peak_Decimation_FactorY_GetList)(peak_camera_handle, uint32_t*, size_t*);
+    PROC_S(peak_Decimation_Set)(peak_camera_handle, uint32_t, uint32_t);
+    PROC_S(peak_Decimation_Get)(peak_camera_handle, uint32_t*, uint32_t*);
 
     #undef PROC_S
     #undef PROC_A

@@ -15,6 +15,18 @@ class IdsCameraConfig
      Q_DECLARE_TR_FUNCTIONS(IdsCameraConfig)
 
 public:
+    struct FactorXY
+    {
+        uint32_t x = 1;
+        uint32_t y = 1;
+        QList<uint32_t> xs;
+        QList<uint32_t> ys;
+        bool configurable = false;
+        QString str() const { return QStringLiteral("x=%1, y=%2").arg(x).arg(y); }
+        bool on() const { return x > 1 or y > 1; }
+        void reset() { x = 1, y = 1; }
+    };
+
     int bpp = 0;
     bool bpp8, bpp10, bpp12;
     bool intoRequested = false;
@@ -25,10 +37,7 @@ public:
     QString infoManufacturer;
     QString infoDeviceVer;
     QString infoFirmwareVer;
-    QList<quint32> binningsX, binningsY;
-    quint32 binningX = 0, binningY = 0;
-    QList<quint32> decimsX, decimsY;
-    quint32 decimX = 0, decimY = 0;
+    FactorXY binning, decimation;
     QSet<int> supportedBpp;
 
     void initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &opts, int maxPageId);
