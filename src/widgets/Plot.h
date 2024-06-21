@@ -36,15 +36,22 @@ public:
     void setRoi(const RoiRect &a);
     void setRawView(bool on, bool replot);
     void selectBackColor();
+
     void exportImageDlg();
+
     void zoomAuto(bool replot);
     void zoomFull(bool replot);
     void zoomRoi(bool replot);
+
     void startEditRoi();
     void stopEditRoi(bool apply);
     bool isRoiEditing() const;
     RoiRect roi() const;
+
     void adjustWidgetSize();
+
+    void storeState(QSettings *s);
+    void restoreState(QSettings *s);
 
 signals:
     void roiEdited();
@@ -72,6 +79,7 @@ private:
 
     void zoomToBounds(double x1, double y1, double x2, double y2, bool replot);
     void axisRangeChanged();
+    void showContextMenu(const QPoint& pos);
 };
 
 #endif // PLOT_WIDGET_H

@@ -170,12 +170,14 @@ void PlotWindow::restoreState()
     s.beginGroup("Plot");
     bool showBeamInfo = s.value("beamInfo", false).toBool();
     bool rawView = s.value("rawView", false).toBool();
+    s.endGroups();
 
     _actionBeamInfo->setChecked(showBeamInfo);
     _actionRawView->setChecked(rawView);
     _plot->setRawView(rawView, false);
     _plot->setColorMap(AppSettings::instance().currentColorMap(), false);
     _plot->setBeamInfoVisible(showBeamInfo, false);
+    _plot->restoreState(s.settings());
 }
 
 void PlotWindow::storeState()
@@ -187,6 +189,9 @@ void PlotWindow::storeState()
     s.beginGroup("Plot");
     s.setValue("beamInfo", _actionBeamInfo->isChecked());
     s.setValue("rawView", _actionRawView->isChecked());
+    s.endGroups();
+
+    _plot->storeState(s.settings());
 }
 
 void PlotWindow::createMenuBar()
