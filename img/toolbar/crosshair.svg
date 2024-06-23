@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
-
 <svg
-   width="24"
    height="24"
-   viewBox="0 0 6.3499999 6.35"
+   viewBox="0 0 6.35 6.35"
+   width="24"
    version="1.1"
-   id="svg1"
-   inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
+   id="svg4"
    sodipodi:docname="crosshair.svg"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs4" />
   <sodipodi:namedview
-     id="namedview1"
+     id="namedview4"
      pagecolor="#ffffff"
      bordercolor="#000000"
      borderopacity="0.25"
@@ -22,67 +22,61 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:document-units="mm"
-     showgrid="true"
-     inkscape:zoom="19"
-     inkscape:cx="3.3157895"
-     inkscape:cy="1.2631579"
+     inkscape:zoom="38"
+     inkscape:cx="-1.1315789"
+     inkscape:cy="14.5"
      inkscape:window-width="3840"
      inkscape:window-height="2054"
      inkscape:window-x="-11"
      inkscape:window-y="-11"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer1">
-    <inkscape:grid
-       id="grid1"
-       units="px"
-       originx="0"
-       originy="0"
-       spacingx="0.26458333"
-       spacingy="0.26458333"
-       empcolor="#0099e5"
-       empopacity="0.30196078"
-       color="#0099e5"
-       opacity="0.14901961"
-       empspacing="5"
-       dotted="false"
-       gridanglex="30"
-       gridanglez="30"
-       visible="true" />
-  </sodipodi:namedview>
-  <defs
-     id="defs1" />
-  <g
-     inkscape:label="Layer 1"
-     inkscape:groupmode="layer"
-     id="layer1">
-    <path
-       style="fill:#b1c1d0;fill-opacity:1;stroke:#e4e7eb;stroke-width:1.05833333;stroke-linecap:square;stroke-dasharray:none;stroke-opacity:0.49411765"
-       d="M 3.175,3.6666667e-7 V 6.3500001"
-       id="path7" />
-    <path
-       style="fill:#b1c1d0;fill-opacity:1;stroke:#e4e7eb;stroke-width:1.05833333;stroke-linecap:square;stroke-dasharray:none;stroke-opacity:0.49411765"
-       d="M 1.5e-7,3.1750002 H 6.3499998"
-       id="path8" />
-    <circle
-       style="fill:none;fill-rule:evenodd;stroke:#e4e7eb;stroke-width:1.05833333;stroke-dasharray:none;stroke-opacity:0.49411801"
-       id="circle8"
-       cx="3.175"
-       cy="3.1750007"
-       r="2.1166666" />
-    <path
-       style="fill:#b1c1d0;fill-opacity:1;stroke:#566b7f;stroke-width:0.529167;stroke-linecap:square;stroke-dasharray:none;stroke-opacity:1"
-       d="M 3.175,0 V 6.3499997"
-       id="path5" />
-    <path
-       style="fill:#b1c1d0;fill-opacity:1;stroke:#566b7f;stroke-width:0.529167;stroke-linecap:square;stroke-dasharray:none;stroke-opacity:1"
-       d="M 1.5e-7,3.1749998 H 6.3499998"
-       id="path6" />
-    <circle
-       style="fill:none;fill-rule:evenodd;stroke:#566b7f;stroke-width:0.529167;stroke-dasharray:none;stroke-opacity:1"
-       id="circle6"
-       cx="3.175"
-       cy="3.175"
-       r="2.1166666" />
-  </g>
+     inkscape:current-layer="svg4" />
+  <circle
+     cx="3.175"
+     cy="3.175"
+     fill="none"
+     id="circle5"
+     style="fill:#e4e7eb;fill-opacity:0.490196;stroke:none;stroke-width:1.06;stroke-opacity:0.49"
+     r="3.175" />
+  <path
+     d="M -7.4033334,0 V 6.35"
+     fill="#b1c1d0"
+     stroke-linecap="square"
+     id="path1"
+     style="stroke:#e4e7eb;stroke-width:1.06;stroke-opacity:0.49" />
+  <path
+     d="m -10.583333,3.18 h 6.3499996"
+     fill="#b1c1d0"
+     stroke-linecap="square"
+     id="path2"
+     style="stroke:#e4e7eb;stroke-width:1.06;stroke-opacity:0.49" />
+  <circle
+     cx="-7.4033332"
+     cy="3.1800001"
+     fill="none"
+     r="2.1199999"
+     id="circle2"
+     style="stroke:#e4e7eb;stroke-width:1.06;stroke-opacity:0.49" />
+  <path
+     d="m3.18 0v6.35"
+     fill="#b1c1d0"
+     stroke="#566b7f"
+     stroke-linecap="square"
+     stroke-width=".53"
+     id="path3" />
+  <path
+     d="m0 3.17h6.35"
+     fill="#b1c1d0"
+     stroke="#566b7f"
+     stroke-linecap="square"
+     stroke-width=".53"
+     id="path4" />
+  <circle
+     cx="3.18"
+     cy="3.18"
+     fill="none"
+     r="2.12"
+     stroke="#566b7f"
+     stroke-width=".53"
+     id="circle4" />
 </svg>

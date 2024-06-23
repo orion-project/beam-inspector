@@ -5,6 +5,7 @@
         <file alias="camera">../img/toolbar/camera.svg</file>
         <file alias="check">../img/toolbar/check.svg</file>
         <file alias="crosshair">../img/toolbar/crosshair.svg</file>
+        <file alias="crosshair_edit">../img/toolbar/crosshair_edit.svg</file>
         <file alias="delete">../img/toolbar/delete.svg</file>
         <file alias="error">../img/toolbar/error.svg</file>
         <file alias="exclame">../img/toolbar/exclame.svg</file>

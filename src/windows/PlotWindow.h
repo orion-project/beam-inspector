@@ -48,7 +48,8 @@ private:
         *_actionBeamInfo, *_actionLoadColorMap, *_actionCleanColorMaps,
         *_actionEditRoi, *_actionUseRoi, *_actionZoomFull, *_actionZoomRoi,
         *_actionCamWelcome, *_actionCamImage, *_actionCamDemo, *_actionRefreshCams,
-        *_actionHardConfig, *_actionSaveRaw, *_actionRawView;
+        *_actionHardConfig, *_actionSaveRaw, *_actionRawView,
+        *_actionCrosshairsShow, *_actionCrosshairsEdit;
     QAction *_buttonMeasure, *_buttonOpenImg;
     QActionGroup *_colorMapActions;
     QTableWidget *_table;
@@ -106,6 +107,8 @@ private:
     void processImage();
     void toggleRoi();
     void toggleRawView();
+    void toggleCrosshairsEditing();
+    void toggleCrosshairsVisbility();
 };
 
 #endif // PLOT_WINDOW_H

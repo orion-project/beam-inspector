@@ -48,6 +48,14 @@ public:
     bool isRoiEditing() const;
     RoiRect roi() const;
 
+    bool isCrosshairsVisible() const;
+    bool isCrosshairsEditing() const;
+    void toggleCrosshairsVisbility();
+    void toggleCrosshairsEditing();
+    void clearCrosshairs();
+    void loadCrosshairs();
+    void saveCrosshairs();
+
     void adjustWidgetSize();
 
     void storeState(QSettings *s);

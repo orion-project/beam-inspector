@@ -190,6 +190,8 @@ void CrosshairsOverlay::addItem()
 void CrosshairsOverlay::save(QSettings *s)
 {
     s->beginGroup("Crosshairs");
+    s->beginGroup("items");
+    s->remove("");
     for (int i = 0; i < _items.size(); i++) {
         s->beginGroup(QString::number(i));
         const auto& c = _items.at(i);
@@ -200,21 +202,86 @@ void CrosshairsOverlay::save(QSettings *s)
         s->endGroup();
     }
     s->endGroup();
+    s->endGroup();
 }
 
 void CrosshairsOverlay::load(QSettings *s)
 {
     s->beginGroup("Crosshairs");
+    s->beginGroup("items");
     for (const auto& g : s->childGroups()) {
         s->beginGroup(g);
         Crosshair c;
-        c.pixelX = s->value("x").toDouble();
-        c.pixelY = s->value("y").toDouble();
+        c.pixelX = s->value("x").toInt();
+        c.pixelY = s->value("y").toInt();
         c.setLabel(s->value("label").toString());
         c.color = QColor(s->value("color").toString());
         _items << c;
         s->endGroup();
     }
     s->endGroup();
+    s->endGroup();
+}
+
+void CrosshairsOverlay::clear()
+{
+    _items.clear();
+}
+
+QString CrosshairsOverlay::save(const QString& fileName)
+{
+    QJsonArray items;
+    for (const auto &c : _items) {
+        items << QJsonObject {
+            {"x", c.pixelX},
+            {"y", c.pixelY},
+            {"label", c.label},
+            {"color", c.color.name()},
+        };
+    }
+    QJsonObject root;
+    root["crosshairs"] = items;
+    QJsonDocument doc(root);
+
+    QFile file(fileName);
+    if (!file.open(QFile::WriteOnly | QFile::Text)) {
+        qWarning() << "CrosshairsOverlay::save" << fileName << file.errorString();
+        return file.errorString();
+    }
+    QTextStream stream(&file);
+    stream << doc.toJson();
+    file.close();
+    return {};
+}
+
+QString CrosshairsOverlay::load(const QString& fileName)
+{
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        qWarning() << "CrosshairsOverlay::load" << fileName << file.errorString();
+        return file.errorString();
+    }
+    auto data = file.readAll();
+    file.close();
+
+    QJsonParseError error;
+    QJsonDocument doc = QJsonDocument::fromJson(data, &error);
+    if (doc.isNull())
+        return error.errorString();
+    QJsonObject root = doc.object();
+
+    _items.clear();
+    auto items = root["crosshairs"].toArray();
+    for (auto it = items.begin(); it != items.end(); it++) {
+        auto item = it->toObject();
+        Crosshair c;
+        c.pixelX = item["x"].toInt();
+        c.pixelY = item["y"].toInt();
+        c.setLabel(item["label"].toString());
+        c.color = QColor(item["color"].toString());
+        _items << c;
+    }
     updateCoords();
+    return {};
 }

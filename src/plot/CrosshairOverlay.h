@@ -7,7 +7,7 @@
 
 struct Crosshair
 {
-    double pixelX, pixelY;
+    int pixelX, pixelY;
     double unitX, unitY;
     QString label;
     QColor color;
@@ -21,7 +21,11 @@ class CrosshairsOverlay : public QCPAbstractItem
 public:
     explicit CrosshairsOverlay(QCustomPlot *parentPlot);
 
+    void setEditing(bool on) { _editing = on; }
     bool isEditing() const { return _editing; }
+
+    void clear();
+    bool isEmpty() const { return _items.isEmpty(); }
 
     void setImageSize(int sensorW, int sensorH, const PixelScale &scale);
 
@@ -31,6 +35,8 @@ public:
 
     void save(QSettings *s);
     void load(QSettings *s);
+    QString save(const QString& fileName);
+    QString load(const QString& fileName);
 
 protected:
     void draw(QCPPainter *painter) override;
@@ -38,7 +44,7 @@ protected:
 private:
     QList<Crosshair> _items;
     double _dragX, _dragY;
-    bool _editing = true;
+    bool _editing = false;
     int _draggingIdx = -1;
     int _selectedIdx = -1;
     QPoint _selectedPos;
