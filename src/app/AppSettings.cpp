@@ -216,7 +216,8 @@ QString AppSettings::selectColorMapFile()
     s.beginGroup(GROUP_PLOT);
     auto recentDir = s.value(KEY_COLOR_MAPS_DIR).toString();
 
-    QString fileName = QFileDialog::getOpenFileName(qApp->activeWindow(), tr("Select Colour Map"), recentDir, tr("CSV files (*.csv);;All files (*.*)"));
+    QString fileName = QFileDialog::getOpenFileName(qApp->activeWindow(),
+        tr("Select Colour Map"), recentDir, tr("CSV files (*.csv);;All files (*.*)"));
     if (fileName.isEmpty())
         return {};
 

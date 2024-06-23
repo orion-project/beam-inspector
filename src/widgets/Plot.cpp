@@ -6,11 +6,17 @@
 #include "plot/RoiRectGraph.h"
 #include "widgets/PlotIntf.h"
 
+#include "helpers/OriDialogs.h"
+#include "tools/OriSettings.h"
+#include "widgets/OriPopupMessage.h"
+
 #include "qcp/src/core.h"
 #include "qcp/src/layoutelements/layoutelement-axisrect.h"
 #include "qcp/src/items/item-straightline.h"
 
 #define APERTURE_ZOOM_MARGIN 0.01
+
+using Ori::Gui::PopupMessage;
 
 static QColor themeAxisColor(Plot::Theme theme)
 {
@@ -286,10 +292,117 @@ void Plot::showContextMenu(const QPoint& pos)
 
 void Plot::storeState(QSettings *s)
 {
+    s->beginGroup("Plot");
+    s->setValue("crosshairs", _crosshairs->visible());
+    s->endGroup();
+
     _crosshairs->save(s);
 }
 
 void Plot::restoreState(QSettings *s)
 {
+    s->beginGroup("Plot");
+    _crosshairs->setVisible(s->value("crosshairs", false).toBool());
+    s->endGroup();
+
     _crosshairs->load(s);
+}
+
+bool Plot::isCrosshairsVisible() const
+{
+    return _crosshairs->visible();
+}
+
+bool Plot::isCrosshairsEditing() const
+{
+    return _crosshairs->isEditing();
+}
+
+void Plot::toggleCrosshairsVisbility()
+{
+    _crosshairs->setVisible(!_crosshairs->visible());
+    if (!_crosshairs->visible())
+        _crosshairs->setEditing(false);
+    if (_crosshairs->visible() && _crosshairs->isEmpty())
+        PopupMessage::show({
+            .mode = Ori::Gui::PopupMessage::HINT,
+            .text = tr("Crosshairs are not defined."
+                "<br>To add them use the command:<p>"
+                "<code>Overlays -> Edit Crosshairs</code>"),
+            .duration = 0,
+            .textAlign = Qt::AlignLeft,
+            .pixmap = QIcon(":/toolbar/crosshair").pixmap(48)
+        }, this);
+    replot();
+}
+
+void Plot::toggleCrosshairsEditing()
+{
+    _crosshairs->setEditing(!_crosshairs->isEditing());
+    if (_crosshairs->isEditing() && !_crosshairs->visible()) {
+        _crosshairs->setVisible(true);
+        replot();
+    }
+    if (_crosshairs->isEditing() && _crosshairs->isEmpty())
+        PopupMessage::show({
+            .mode = Ori::Gui::PopupMessage::HINT,
+            .text = tr("Crosshairs are not yet defined."
+                "<p>Use context menu to add them"),
+            .textAlign = Qt::AlignLeft,
+            .pixmap = QIcon(":/toolbar/crosshair").pixmap(48)
+        }, this);
+}
+
+void Plot::clearCrosshairs()
+{
+    if (_crosshairs->isEmpty()) {
+        PopupMessage::hint(tr("There are no crosshairs on the plot"));
+        return;
+    }
+    if (Ori::Dlg::yes(tr("Remove all crosshairs?"))) {
+        _crosshairs->clear();
+        replot();
+    }
+}
+
+void Plot::loadCrosshairs()
+{
+    Ori::Settings s;
+    s.beginGroup("Crosshairs");
+    auto recentDir = s.value("recentDir").toString();
+
+    QString fileName = QFileDialog::getOpenFileName(qApp->activeWindow(),
+        tr("Load Crosshairs"), recentDir, tr("JSON files (*.json);;All files (*.*)"));
+    if (fileName.isEmpty())
+        return;
+
+    QFileInfo fi(fileName);
+    s.setValue("recentDir", fi.absoluteDir().absolutePath());
+    fileName = fi.absoluteFilePath();
+
+    auto res = _crosshairs->load(fileName);
+    if (!res.isEmpty())
+        Ori::Dlg::error(res);
+    else
+        replot();
+}
+
+void Plot::saveCrosshairs()
+{
+    Ori::Settings s;
+    s.beginGroup("Crosshairs");
+    auto recentDir = s.value("recentDir").toString();
+
+    QString fileName = QFileDialog::getSaveFileName(qApp->activeWindow(),
+        tr("Save Crosshairs"), recentDir, tr("JSON files (*.json);;All files (*.*)"));
+    if (fileName.isEmpty())
+        return;
+
+    QFileInfo fi(fileName);
+    s.setValue("recentDir", fi.absoluteDir().absolutePath());
+    fileName = fi.absoluteFilePath();
+
+    auto res = _crosshairs->save(fileName);
+    if (!res.isEmpty())
+        Ori::Dlg::error(res);
 }

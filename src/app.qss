@@ -7,6 +7,7 @@
 #OriPopupMessage QLabel {
   font-size: 10pt;
   margin: 10px;
+  color: black;
 }
 #OriPopupMessage[mode=warning] {
   border: 1px solid #f3af8f;
@@ -19,4 +20,8 @@
 #OriPopupMessage[mode=error] {
   border: 1px solid #e87e7e;
   background: #ffb5b5;
+}
+#OriPopupMessage[mode=hint] {
+  border: 1px solid #e6cc33;
+  background: #fff3af;
 }

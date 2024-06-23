@@ -121,11 +121,11 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     _mru = new Ori::MruFileList(this);
     connect(_mru, &Ori::MruFileList::clicked, this, &PlotWindow::openImage);
 
+    createPlot();
     createMenuBar();
     createToolBar();
     createStatusBar();
     createDockPanel();
-    createPlot();
     setCentralWidget(_plot);
     fillCamSelector();
 
@@ -178,6 +178,7 @@ void PlotWindow::restoreState()
     _plot->setColorMap(AppSettings::instance().currentColorMap(), false);
     _plot->setBeamInfoVisible(showBeamInfo, false);
     _plot->restoreState(s.settings());
+    _actionCrosshairsShow->setChecked(_plot->isCrosshairsVisible());
 }
 
 void PlotWindow::storeState()
@@ -256,6 +257,19 @@ void PlotWindow::createMenuBar()
         _actionCamConfig,
     }));
 
+    _actionCrosshairsShow = A_(tr("Show Crosshairs"), this, &PlotWindow::toggleCrosshairsVisbility, ":/toolbar/crosshair");
+    _actionCrosshairsShow->setCheckable(true);
+    _actionCrosshairsEdit = A_(tr("Edit Crosshairs"), this, &PlotWindow::toggleCrosshairsEditing, ":/toolbar/crosshair_edit");
+    _actionCrosshairsEdit->setCheckable(true);
+    auto actnClearCrosshairs = A_(tr("Clear Crosshairs"), _plot, &Plot::clearCrosshairs, ":/toolbar/trash");
+    auto actnLoadCrosshairs = A_(tr("Load From File..."), _plot, &Plot::loadCrosshairs, ":/toolbar/open");
+    auto actnSaveCrosshairs = A_(tr("Save To File..."), _plot, &Plot::saveCrosshairs, ":/toolbar/save");
+    auto menuOverlays = M_(tr("Overlays"), {
+        _actionCrosshairsShow, 0, _actionCrosshairsEdit, actnClearCrosshairs,
+        0, actnLoadCrosshairs, actnSaveCrosshairs,
+    });
+    menuBar()->addMenu(menuOverlays);
+
     auto m = menuBar()->addMenu(tr("Help"));
     auto help = HelpSystem::instance();
     m->addAction(QIcon(":/toolbar/home"), tr("Visit Homepage"), help, &HelpSystem::visitHomePage);
@@ -314,6 +328,9 @@ void PlotWindow::createToolBar()
     tb->addSeparator();
     tb->addAction(_actionZoomFull);
     tb->addAction(_actionZoomRoi);
+    tb->addSeparator();
+    tb->addAction(_actionCrosshairsShow);
+    tb->addAction(_actionCrosshairsEdit);
 }
 
 void PlotWindow::createStatusBar()
@@ -903,4 +920,16 @@ void PlotWindow::toggleRawView()
 
     if (auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get()); imgCam)
         processImage();
+}
+
+void PlotWindow::toggleCrosshairsEditing()
+{
+    _plot->toggleCrosshairsEditing();
+    _actionCrosshairsShow->setChecked(_plot->isCrosshairsVisible());
+}
+
+void PlotWindow::toggleCrosshairsVisbility()
+{
+    _plot->toggleCrosshairsVisbility();
+    _actionCrosshairsEdit->setChecked(_plot->isCrosshairsEditing());
 }
