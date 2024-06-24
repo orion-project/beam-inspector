@@ -5,24 +5,33 @@
 
 #include "cameras/CameraTypes.h"
 
+class QTableWidget;
+
 class QTableWidgetItem;
 
 class TableIntf
 {
 public:
+    TableIntf(QTableWidget *table);
+
+    void setRows(const QList<QPair<int, QString>>& rows);
     void setScale(const PixelScale& scale) { _scale = scale; }
-    void setResult(const CgnBeamResult& r, double acqTime, double calcTime);
+    void setResult(const CgnBeamResult& r, const QMap<int, CamTableData>& data);
     void cleanResult();
     void showResult();
     bool resultInvalid() const;
 
-    QTableWidgetItem *itXc, *itYc, *itDx, *itDy, *itPhi, *itEps;
-    QTableWidgetItem *itAcqTime, *itCalcTime;
-
 private:
+    QTableWidget *_table;
+    QTableWidgetItem *_itXc, *_itYc, *_itDx, *_itDy, *_itPhi, *_itEps;
+    int _maxStdRow = 0;
+    QMap<int, int> _camRows;
+    QMap<int, CamTableData> _camData;
     PixelScale _scale;
     CgnBeamResult _res;
-    double _acqTime, _calcTime;
+    int _warnColor;
+
+    QTableWidgetItem* makeRow(int &row, const QString& title);
 };
 
 #endif // TABLE_INTF_H

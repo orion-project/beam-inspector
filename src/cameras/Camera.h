@@ -43,6 +43,8 @@ public:
     virtual void requestRawImg(QObject *sender) {}
     virtual void setRawView(bool on, bool reconfig) {}
 
+    virtual QList<QPair<int, QString>> dataRows() const { return {}; }
+
     const CameraConfig& config() const { return _config; }
     enum ConfigPages { cfgPlot, cfgBgnd, cfgRoi, cfgMax };
     bool editConfig(int page = -1);

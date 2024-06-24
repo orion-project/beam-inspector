@@ -15,6 +15,9 @@
 #define FRAME_TIMEOUT 5000
 //#define LOG_FRAME_TIME
 
+enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME,
+    ROW_FRAME_ERR, ROW_FRAME_UNDERRUN, ROW_FRAME_DROPPED, ROW_FRAME_INCOMPLETE };
+
 static QString makeCameraName(const peak_camera_descriptor &cam)
 {
     return QString("%1 (*%2)").arg(
@@ -42,12 +45,27 @@ public:
     peak_status res;
     peak_buffer buf;
     peak_frame_handle frame;
-    int errCount = 0;
     QByteArray hdrBuf;
+
+    int framesErr = 0;
+    int framesDropped = 0;
+    int framesUnderrun = 0;
+    int framesIncomplete = 0;
 
     PeakIntf(peak_camera_id id, PlotIntf *plot, TableIntf *table, IdsCamera *cam)
         : CameraWorker(plot, table, cam, cam, LOG_ID), id(id), cam(cam)
-    {}
+    {
+        tableData = [this]{
+            return QMap<int, CamTableData>{
+                { ROW_RENDER_TIME, {avgAcqTime} },
+                { ROW_CALC_TIME, {avgCalcTime} },
+                { ROW_FRAME_ERR, {framesErr, CamTableData::COUNT, framesErr > 0} },
+                { ROW_FRAME_DROPPED, {framesDropped, CamTableData::COUNT, framesDropped > 0} },
+                { ROW_FRAME_UNDERRUN, {framesUnderrun, CamTableData::COUNT, framesUnderrun > 0} },
+                { ROW_FRAME_INCOMPLETE, {framesIncomplete, CamTableData::COUNT, framesIncomplete > 0} }
+            };
+        };
+    }
 
     QString initResolution()
     {
@@ -365,8 +383,8 @@ public:
                     return;
                 }
             } else {
-                errCount++;
-                stats[QStringLiteral("errorFrame")] = errCount;
+                framesErr++;
+                stats[QStringLiteral("frameErrors")] = framesErr;
                 QString errKey = QStringLiteral("frameError_") + QString::number(res, 16);
                 stats[errKey] = stats[errKey].toInt() + 1;
             }
@@ -374,20 +392,16 @@ public:
             if (tm - prevStat >= STAT_DELAY_MS) {
                 prevStat = tm;
 
-                QStringList errors;
-                errors << QString::number(errCount);
-
-                // TODO: suggest a way for sending arbitrary stats and showing it in the table
                 peak_acquisition_info info;
                 memset(&info, 0, sizeof(info));
                 res = IDS.peak_Acquisition_GetInfo(hCam, &info);
                 if (PEAK_SUCCESS(res)) {
-                    errors << QString::number(info.numUnderrun)
-                            << QString::number(info.numDropped)
-                            << QString::number(info.numIncomplete);
-                    stats[QStringLiteral("underrunFrames")] = info.numUnderrun;
-                    stats[QStringLiteral("droppedFrames")] = info.numDropped;
-                    stats[QStringLiteral("incompleteFrames")] = info.numIncomplete;
+                    framesDropped = info.numDropped;
+                    framesUnderrun = info.numUnderrun;
+                    framesIncomplete = info.numIncomplete;
+                    stats[QStringLiteral("framesDropped")] = framesDropped;
+                    stats[QStringLiteral("framesUnderrun")] = framesUnderrun;
+                    stats[QStringLiteral("framesIncomplete")] = framesIncomplete;
                 }
 
                 double hardFps;
@@ -403,7 +417,6 @@ public:
                     .fps = 1000.0/ft,
                     .hardFps = hardFps,
                     .measureTime = measureStart > 0 ? timer.elapsed() - measureStart : -1,
-                    .errorFrames = errors.join(','),
                 };
                 emit cam->stats(st);
 
@@ -498,6 +511,18 @@ int IdsCamera::bpp() const
 PixelScale IdsCamera::sensorScale() const
 {
     return _pixelScale;
+}
+
+QList<QPair<int, QString>> IdsCamera::dataRows() const
+{
+    return {
+        { ROW_RENDER_TIME,      qApp->tr("Acq. time") },
+        { ROW_CALC_TIME,        qApp->tr("Calc time") },
+        { ROW_FRAME_ERR,        qApp->tr("Errors") },
+        { ROW_FRAME_DROPPED,    qApp->tr("Dropped") },
+        { ROW_FRAME_UNDERRUN,   qApp->tr("Underrun") },
+        { ROW_FRAME_INCOMPLETE, qApp->tr("Incomplete") },
+    };
 }
 
 void IdsCamera::startCapture()

@@ -68,6 +68,7 @@ public:
     QObject *brightRequest = nullptr;
 
     QMap<QString, QVariant> stats;
+    std::function<QMap<int, CamTableData>()> tableData;
 
     QString logId;
 
@@ -214,7 +215,7 @@ public:
             plot->invalidateGraph();
             r.nan = true;
             plot->setResult(r, 0, rangeTop);
-            table->setResult(r, avgAcqTime, avgCalcTime);
+            table->setResult(r, tableData());
             return true;
         }
 
@@ -248,7 +249,7 @@ public:
                 plot->setResult(r, 0, rangeTop);
             else plot->setResult(r, g.min, g.max);
         }
-        table->setResult(r, avgAcqTime, avgCalcTime);
+        table->setResult(r, tableData());
         return true;
     }
 

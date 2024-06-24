@@ -79,7 +79,13 @@ struct CameraStats
     double fps;
     double hardFps = 0;
     qint64 measureTime;
-    QString errorFrames;
+};
+
+struct CamTableData
+{
+    QVariant value;
+    enum { NONE, MS, COUNT } type = MS;
+    bool warn = false;
 };
 
 class BrightEvent : public QEvent

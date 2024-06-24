@@ -29,7 +29,6 @@
 #include <QApplication>
 #include <QDebug>
 #include <QDockWidget>
-#include <QHeaderView>
 #include <QLabel>
 #include <QMenuBar>
 #include <QProcess>
@@ -373,57 +372,7 @@ class DataTableWidget : public QTableWidget {
 void PlotWindow::createDockPanel()
 {
     _table = new DataTableWidget;
-    _table->setColumnCount(2);
-    _table->setHorizontalHeaderLabels({ tr("Name"), tr("Value") });
-    _table->verticalHeader()->setVisible(false);
-    _table->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    _table->setSelectionBehavior(QAbstractItemView::SelectRows);
-    auto h = _table->horizontalHeader();
-    h->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    h->setSectionResizeMode(1, QHeaderView::Stretch);
-    h->setHighlightSections(false);
-
-    int row = 0;
-    auto makeHeader = [this, &row](const QString& title) {
-        _table->setRowCount(row+1);
-        auto it = new QTableWidgetItem(title);
-        auto f = it->font();
-        f.setBold(true);
-        it->setFont(f);
-        it->setTextAlignment(Qt::AlignCenter);
-        _table->setItem(row, 0, it);
-        _table->setSpan(row, 0, 1, 2);
-        row++;
-    };
-    auto makeItem = [this, &row](const QString& title, QTableWidgetItem **headerItem = nullptr) {
-        _table->setRowCount(row+1);
-        auto it = new QTableWidgetItem(" " + title + " ");
-        auto f = it->font();
-        f.setBold(true);
-        f.setPointSize(f.pointSize()+1);
-        it->setFont(f);
-        _table->setItem(row, 0, it);
-        if (headerItem)
-            *headerItem = it;
-
-        it = new QTableWidgetItem("---");
-        f.setBold(false);
-        it->setFont(f);
-        _table->setItem(row++, 1, it);
-        return it;
-    };
-    _tableIntf = new TableIntf;
-    makeHeader(tr(" Centroid "));
-    _tableIntf->itXc = makeItem(tr("Center X"));
-    _tableIntf->itYc = makeItem(tr("Center Y"));
-    _tableIntf->itDx = makeItem(tr("Width X"));
-    _tableIntf->itDy = makeItem(tr("Width Y"));
-    _tableIntf->itPhi = makeItem(tr("Azimuth"));
-    _tableIntf->itEps = makeItem(tr("Ellipticity"));
-    makeHeader(tr(" Debug "));
-    _tableIntf->itAcqTime = makeItem(tr("Acq. time"), &_itemAcqTime);
-    _tableIntf->itCalcTime = makeItem(tr("Calc time"));
-    _itemErrCount = makeItem(tr("Error frames"));
+    _tableIntf = new TableIntf(_table);
 
     auto dock = new QDockWidget(tr("Results"));
     dock->setObjectName("DockResults");
@@ -668,7 +617,6 @@ void PlotWindow::statsReceived(const CameraStats &stats)
     showFps(stats.fps, stats.hardFps);
     if (stats.measureTime >= 0)
         _measureProgress->setElapsed(stats.measureTime);
-    _itemErrCount->setText(QStringLiteral(" %1 ").arg(stats.errorFrames));
 }
 
 void PlotWindow::dataReady()
@@ -688,6 +636,7 @@ void PlotWindow::openImageDlg()
     }
     stopCapture();
     _camera.reset((Camera*)cam);
+    _tableIntf->setRows(_camera->dataRows());
     processImage();
 }
 
@@ -696,6 +645,7 @@ void PlotWindow::openImage(const QString& fileName)
     if (_camera)
         stopCapture();
     _camera.reset((Camera*)new StillImageCamera(_plotIntf, _tableIntf, fileName));
+    _tableIntf->setRows(_camera->dataRows());
     processImage();
 }
 
@@ -771,6 +721,7 @@ void PlotWindow::activateCamWelcome()
     if (imgCam) _prevImage = imgCam->fileName();
 
     _camera.reset((Camera*)new WelcomeCamera(_plotIntf, _tableIntf));
+    _tableIntf->setRows(_camera->dataRows());
     showCamConfig(false);
     updateHardConfgPanel();
     showFps(0, 0);
@@ -806,6 +757,7 @@ void PlotWindow::activateCamDemo()
     connect(cam, &VirtualDemoCamera::finished, this, &PlotWindow::captureStopped);
     cam->setRawView(_actionRawView->isChecked(), false);
     _camera.reset((Camera*)cam);
+    _tableIntf->setRows(_camera->dataRows());
     updateHardConfgPanel();
     showCamConfig(false);
     _plot->zoomAuto(false);
@@ -842,6 +794,7 @@ void PlotWindow::activateCamIds()
     });
     cam->setRawView(_actionRawView->isChecked(), false);
     _camera.reset((Camera*)cam);
+    _tableIntf->setRows(_camera->dataRows());
     updateHardConfgPanel();
     showCamConfig(false);
     _plot->zoomAuto(false);

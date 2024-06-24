@@ -15,6 +15,8 @@
 #include <QFileDialog>
 #include <QMessageBox>
 
+enum CamDataRow { ROW_LOAD_TIME, ROW_CALC_TIME };
+
 StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table) : Camera(plot, table, "StillImageCamera")
 {
     Ori::Settings s;
@@ -71,6 +73,14 @@ int StillImageCamera::height() const
 int StillImageCamera::bpp() const
 {
     return _image.depth();
+}
+
+QList<QPair<int, QString>> StillImageCamera::dataRows() const
+{
+    return {
+        { ROW_LOAD_TIME, qApp->tr("Load time") },
+        { ROW_CALC_TIME, qApp->tr("Calc time") },
+    };
 }
 
 void StillImageCamera::startCapture()
@@ -156,7 +166,10 @@ void StillImageCamera::startCapture()
         _plot->invalidateGraph();
         r.nan = true;
         _plot->setResult(r, 0, rangeTop);
-        _table->setResult(r, loadTime, calcTime);
+        _table->setResult(r, {
+            { ROW_LOAD_TIME, {loadTime} },
+            { ROW_CALC_TIME, {calcTime} },
+        });
         return;
     }
 
@@ -198,7 +211,10 @@ void StillImageCamera::startCapture()
         else
             _plot->setResult(r, g.min, g.max);
     }
-    _table->setResult(r, loadTime, calcTime);
+    _table->setResult(r, {
+        { ROW_LOAD_TIME, {loadTime} },
+        { ROW_CALC_TIME, {calcTime} },
+    });
 }
 
 void StillImageCamera::setRawView(bool on, bool reconfig)

@@ -12,6 +12,8 @@
 #define CAMERA_HARD_FPS 30
 //#define LOG_FRAME_TIME
 
+enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME };
+
 struct RandomOffset
 {
     inline double rnd() {
@@ -77,6 +79,13 @@ public:
 
         plot->initGraph(c.w, c.h);
         graph = plot->rawGraph();
+
+        tableData = [this]{
+            return QMap<int, CamTableData>{
+                { ROW_RENDER_TIME, {avgAcqTime} },
+                { ROW_CALC_TIME, {avgCalcTime} },
+            };
+        };
 
         configure();
     }
@@ -167,6 +176,14 @@ int VirtualDemoCamera::width() const
 int VirtualDemoCamera::height() const
 {
     return CAMERA_HEIGHT;
+}
+
+QList<QPair<int, QString> > VirtualDemoCamera::dataRows() const
+{
+    return {
+        { ROW_RENDER_TIME, qApp->tr("Render time") },
+        { ROW_CALC_TIME, qApp->tr("Calc time") },
+    };
 }
 
 void VirtualDemoCamera::startCapture()

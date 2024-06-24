@@ -40,9 +40,6 @@ WelcomeCamera::WelcomeCamera(PlotIntf *plot, TableIntf *table) : Camera(plot, ta
 
 void WelcomeCamera::startCapture()
 {
-    QElapsedTimer timer;
-    timer.start();
-
     CgnBeamRender b;
     b.w = width();
     b.h = height();
@@ -56,9 +53,6 @@ void WelcomeCamera::startCapture()
     b.buf = buf.data();
     cgn_render_beam(&b);
 
-    auto renderTime = timer.elapsed();
-    timer.restart();
-
     CgnBeamResult r;
     memset(&r, 0, sizeof(CgnBeamResult));
     r.xc = b.xc;
@@ -67,9 +61,7 @@ void WelcomeCamera::startCapture()
     r.dy = b.dy;
     r.phi = b.phi;
 
-    auto calcTime = timer.elapsed();
-
-    _table->setResult(r, renderTime, calcTime);
+    _table->setResult(r, {});
     _plot->initGraph(b.w, b.h);
     _plot->setResult(r, 0, b.p);
     cgn_render_beam_to_doubles(&b, _plot->rawGraph());

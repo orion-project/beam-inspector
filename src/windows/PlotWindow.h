@@ -6,7 +6,6 @@
 
 class QAction;
 class QTableWidget;
-class QTableWidgetItem;
 class QToolButton;
 
 class Camera;
@@ -53,7 +52,6 @@ private:
     QAction *_buttonMeasure, *_buttonOpenImg;
     QActionGroup *_colorMapActions;
     QTableWidget *_table;
-    QTableWidgetItem *_itemAcqTime, *_itemErrCount;
     TableIntf *_tableIntf;
     PlotIntf *_plotIntf;
     Ori::MruFileList *_mru;
