@@ -16,6 +16,10 @@ class BeamInfoText;
 class PlotIntf;
 class RoiRectGraph;
 
+namespace Ori {
+class MruFileList;
+}
+
 class Plot : public QWidget
 {
     Q_OBJECT
@@ -55,6 +59,7 @@ public:
     void clearCrosshairs();
     void loadCrosshairs();
     void saveCrosshairs();
+    Ori::MruFileList *mruCrosshairs() { return _mruCrosshairs; }
 
     void adjustWidgetSize();
 
@@ -77,7 +82,8 @@ private:
     BeamInfoText *_beamInfo;
     BeamEllipse *_beamShape;
     RoiRectGraph *_roi;
-    CrosshairsOverlay* _crosshairs;
+    CrosshairsOverlay *_crosshairs;
+    Ori::MruFileList *_mruCrosshairs;
     int _imageW, _imageH;
     enum AutoZoomMode { ZOOM_NONE, ZOOM_FULL, ZOOM_APERTURE };
     AutoZoomMode _autoZoom = ZOOM_FULL;

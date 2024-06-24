@@ -8,6 +8,7 @@
 
 #include "helpers/OriDialogs.h"
 #include "tools/OriSettings.h"
+#include "tools/OriMruList.h"
 #include "widgets/OriPopupMessage.h"
 
 #include "qcp/src/core.h"
@@ -94,6 +95,10 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _crosshairs = new CrosshairsOverlay(_plot);
 
     _plotIntf = new PlotIntf(_colorMap, _colorScale, _beamShape, _beamInfo, _lineX, _lineY);
+
+    _mruCrosshairs = new Ori::MruFileList(this);
+    _mruCrosshairs->load("mruCrosshairs");
+    connect(_mruCrosshairs, &Ori::MruFileList::clicked, this, [this](const QString& fileName){ _crosshairs->load(fileName); });
 }
 
 Plot::~Plot()
@@ -379,6 +384,7 @@ void Plot::loadCrosshairs()
     QFileInfo fi(fileName);
     s.setValue("recentDir", fi.absoluteDir().absolutePath());
     fileName = fi.absoluteFilePath();
+    _mruCrosshairs->append(fileName);
 
     auto res = _crosshairs->load(fileName);
     if (!res.isEmpty())
@@ -401,6 +407,7 @@ void Plot::saveCrosshairs()
     QFileInfo fi(fileName);
     s.setValue("recentDir", fi.absoluteDir().absolutePath());
     fileName = fi.absoluteFilePath();
+    _mruCrosshairs->append(fileName);
 
     auto res = _crosshairs->save(fileName);
     if (!res.isEmpty())
