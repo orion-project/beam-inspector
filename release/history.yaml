@@ -1,6 +1,6 @@
 history:
 - version: 0.0.9
-  date: ?
+  date: 2024-06-24
   changes:
   - text: Crosshairs overlay
   - text: Control binnig and decimation for IDS cameras
