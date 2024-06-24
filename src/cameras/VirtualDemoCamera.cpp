@@ -9,7 +9,8 @@
 #define CAMERA_HEIGHT 2048
 #define CAMERA_LOOP_TICK_MS 5
 #define CAMERA_FRAME_DELAY_MS 30
-#define LOG_FRAME_TIME
+#define CAMERA_HARD_FPS 30
+//#define LOG_FRAME_TIME
 
 struct RandomOffset
 {
@@ -128,7 +129,8 @@ public:
                 avgFrameTime = 0;
                 avgFrameCount = 0;
                 CameraStats st {
-                    .fps = qRound(1000.0/ft),
+                    .fps = 1000.0/ft,
+                    .hardFps = CAMERA_HARD_FPS,
                     .measureTime = measureStart > 0 ? timer.elapsed() - measureStart : -1,
                 };
                 emit cam->stats(st);

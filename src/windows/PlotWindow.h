@@ -102,7 +102,7 @@ private:
     void updateActions();
     void updateThemeColors();
     void setThemeColors();
-    void showFps(int fps);
+    void showFps(double fps, double hardFps);
     void showCamConfig(bool replot);
     void processImage();
     void toggleRoi();

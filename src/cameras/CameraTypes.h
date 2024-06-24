@@ -76,7 +76,8 @@ struct CameraConfig
 
 struct CameraStats
 {
-    int fps;
+    double fps;
+    double hardFps = 0;
     qint64 measureTime;
     QString errorFrames;
 };

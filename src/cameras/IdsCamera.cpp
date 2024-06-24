@@ -13,7 +13,7 @@
 
 #define LOG_ID "IdsComfortCamera:"
 #define FRAME_TIMEOUT 5000
-#define LOG_FRAME_TIME
+//#define LOG_FRAME_TIME
 
 static QString makeCameraName(const peak_camera_descriptor &cam)
 {
@@ -390,11 +390,18 @@ public:
                     stats[QStringLiteral("incompleteFrames")] = info.numIncomplete;
                 }
 
+                double hardFps;
+                res = IDS.peak_FrameRate_Get(hCam, &hardFps);
+                if (PEAK_ERROR(res)) {
+                    hardFps = 0;
+                }
+
                 double ft = avgFrameTime / avgFrameCount;
                 avgFrameTime = 0;
                 avgFrameCount = 0;
                 CameraStats st {
-                    .fps = qRound(1000.0/ft),
+                    .fps = 1000.0/ft,
+                    .hardFps = hardFps,
                     .measureTime = measureStart > 0 ? timer.elapsed() - measureStart : -1,
                     .errorFrames = errors.join(','),
                 };

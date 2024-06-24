@@ -492,11 +492,21 @@ void PlotWindow::newWindow()
         qWarning() << "Unable to start another instance";
 }
 
-void PlotWindow::showFps(int fps)
+void PlotWindow::showFps(double fps, double hardFps)
 {
-    if (fps <= 0)
+    if (fps <= 0) {
         _statusBar->setText(STATUS_FPS, QStringLiteral("FPS: NA"));
-    else _statusBar->setText(STATUS_FPS, QStringLiteral("FPS: ") % QString::number(fps));
+        _statusBar->setHint(STATUS_FPS, {});
+        return;
+    }
+    _statusBar->setText(STATUS_FPS, QStringLiteral("FPS: ") % QString::number(fps, 'f', 2));
+    if (hardFps > 0 && fps < hardFps) {
+        _statusBar->setHint(STATUS_FPS, tr("The system likely run out of CPU resources.\nActual FPS is lower than camera produces."));
+        _statusBar->setStyleSheet(STATUS_FPS, QStringLiteral("QLabel{background:red;font-weight:bold;color:white}"));
+    } else {
+        _statusBar->setHint(STATUS_FPS, {});
+        _statusBar->setStyleSheet(STATUS_FPS, {});
+    }
 }
 
 void PlotWindow::showCamConfig(bool replot)
@@ -650,12 +660,12 @@ void PlotWindow::stopCapture()
 
 void PlotWindow::captureStopped()
 {
-    showFps(0);
+    showFps(0, 0);
 }
 
 void PlotWindow::statsReceived(const CameraStats &stats)
 {
-    showFps(stats.fps);
+    showFps(stats.fps, stats.hardFps);
     if (stats.measureTime >= 0)
         _measureProgress->setElapsed(stats.measureTime);
     _itemErrCount->setText(QStringLiteral(" %1 ").arg(stats.errorFrames));
@@ -707,7 +717,7 @@ void PlotWindow::processImage()
     updateHardConfgPanel();
     _plot->zoomAuto(false);
     dataReady();
-    showFps(0);
+    showFps(0, 0);
 }
 
 void PlotWindow::editCamConfig(int pageId)
@@ -763,7 +773,7 @@ void PlotWindow::activateCamWelcome()
     _camera.reset((Camera*)new WelcomeCamera(_plotIntf, _tableIntf));
     showCamConfig(false);
     updateHardConfgPanel();
-    showFps(0);
+    showFps(0, 0);
     _camera->startCapture();
     _plot->zoomAuto(false);
     dataReady();
