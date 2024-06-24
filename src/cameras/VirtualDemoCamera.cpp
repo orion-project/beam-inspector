@@ -7,7 +7,9 @@
 #define LOG_ID "VirtualDemoCamera:"
 #define CAMERA_WIDTH 2592
 #define CAMERA_HEIGHT 2048
-//#define LOG_FRAME_TIME
+#define CAMERA_LOOP_TICK_MS 5
+#define CAMERA_FRAME_DELAY_MS 30
+#define LOG_FRAME_TIME
 
 struct RandomOffset
 {
@@ -78,6 +80,23 @@ public:
         configure();
     }
 
+    inline bool waitFrame()
+    {
+        tm = timer.elapsed();
+        if (tm - prevFrame < CAMERA_FRAME_DELAY_MS) {
+            // Sleep gives a bad precision because OS decides how long the thread should sleep.
+            // When we disable sleep, its possible to get an exact number of FPS,
+            // e.g. 40 FPS when CAMERA_FRAME_DELAY_MS=25, but at cost of increased CPU usage.
+            // Sleep allows to get about 30 FPS, which is enough, and relaxes CPU loading
+            thread->msleep(CAMERA_LOOP_TICK_MS);
+            return true;
+        }
+        avgFrameCount++;
+        avgFrameTime += tm - prevFrame;
+        prevFrame = tm;
+        return false;
+    }
+
     void run() {
         qDebug() << LOG_ID << "Started" << QThread::currentThreadId();
         start = QDateTime::currentDateTime();
@@ -87,7 +106,7 @@ public:
 
             tm = timer.elapsed();
             cgn_render_beam_tilted(&b);
-            markRenderTime();
+            markAcqTime();
 
             b.dx = dx_offset.next();
             b.dy = dy_offset.next();
@@ -117,7 +136,7 @@ public:
                 qDebug()
                     << "FPS:" << st.fps
                     << "avgFrameTime:" << qRound(ft)
-                    << "avgRenderTime:" << qRound(avgRenderTime)
+                    << "avgRenderTime:" << qRound(avgAcqTime)
                     << "avgCalcTime:" << qRound(avgCalcTime);
             #endif
                 if (cam->isInterruptionRequested()) {

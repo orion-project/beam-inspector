@@ -13,7 +13,7 @@
 
 #define LOG_ID "IdsComfortCamera:"
 #define FRAME_TIMEOUT 5000
-//#define LOG_FRAME_TIME
+#define LOG_FRAME_TIME
 
 static QString makeCameraName(const peak_camera_descriptor &cam)
 {
@@ -326,7 +326,10 @@ public:
         start = QDateTime::currentDateTime();
         timer.start();
         while (true) {
-            if (waitFrame()) continue;
+            tm = timer.elapsed();
+            avgFrameCount++;
+            avgFrameTime += tm - prevFrame;
+            prevFrame = tm;
 
             tm = timer.elapsed();
             res = IDS.peak_Acquisition_WaitForFrame(hCam, FRAME_TIMEOUT, &frame);
@@ -338,7 +341,7 @@ public:
                 emit cam->error("Interrupted: " + err);
                 return;
             }
-            markRenderTime();
+            markAcqTime();
 
             if (res == PEAK_STATUS_SUCCESS) {
                 tm = timer.elapsed();
@@ -401,7 +404,7 @@ public:
                 qDebug()
                     << "FPS:" << st.fps
                     << "avgFrameTime:" << qRound(ft)
-                    << "avgRenderTime:" << qRound(avgRenderTime)
+                    << "avgAcqTime:" << qRound(avgAcqTime)
                     << "avgCalcTime:" << qRound(avgCalcTime)
                     << "errCount: " << errCount
                     << IDS.getPeakError(res);

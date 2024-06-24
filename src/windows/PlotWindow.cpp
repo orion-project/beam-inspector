@@ -421,7 +421,7 @@ void PlotWindow::createDockPanel()
     _tableIntf->itPhi = makeItem(tr("Azimuth"));
     _tableIntf->itEps = makeItem(tr("Ellipticity"));
     makeHeader(tr(" Debug "));
-    _tableIntf->itRenderTime = makeItem(tr("Render time"), &_itemRenderTime);
+    _tableIntf->itAcqTime = makeItem(tr("Acq. time"), &_itemAcqTime);
     _tableIntf->itCalcTime = makeItem(tr("Calc time"));
     _itemErrCount = makeItem(tr("Error frames"));
 
@@ -699,7 +699,6 @@ void PlotWindow::processImage()
     _plot->stopEditRoi(false);
     _plotIntf->cleanResult();
     _tableIntf->cleanResult();
-    _itemRenderTime->setText(tr(" Load time "));
     _mru->append(cam->fileName());
     _camera->setRawView(_actionRawView->isChecked(), false);
     _camera->startCapture();
@@ -761,7 +760,6 @@ void PlotWindow::activateCamWelcome()
     auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get());
     if (imgCam) _prevImage = imgCam->fileName();
 
-    _itemRenderTime->setText(tr(" Render time "));
     _camera.reset((Camera*)new WelcomeCamera(_plotIntf, _tableIntf));
     showCamConfig(false);
     updateHardConfgPanel();
@@ -792,7 +790,6 @@ void PlotWindow::activateCamDemo()
     _plot->stopEditRoi(false);
     _plotIntf->cleanResult();
     _tableIntf->cleanResult();
-    _itemRenderTime->setText(tr(" Render time "));
     auto cam = new VirtualDemoCamera(_plotIntf, _tableIntf, this);
     connect(cam, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualDemoCamera::stats, this, &PlotWindow::statsReceived);
@@ -823,7 +820,6 @@ void PlotWindow::activateCamIds()
     _plot->stopEditRoi(false);
     _plotIntf->cleanResult();
     _tableIntf->cleanResult();
-    _itemRenderTime->setText(tr(" Acq. time "));
     auto cam = new IdsCamera(camId, _plotIntf, _tableIntf, this);
     connect(cam, &IdsCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &IdsCamera::stats, this, &PlotWindow::statsReceived);

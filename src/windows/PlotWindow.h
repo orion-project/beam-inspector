@@ -53,7 +53,7 @@ private:
     QAction *_buttonMeasure, *_buttonOpenImg;
     QActionGroup *_colorMapActions;
     QTableWidget *_table;
-    QTableWidgetItem *_itemRenderTime, *_itemErrCount;
+    QTableWidgetItem *_itemAcqTime, *_itemErrCount;
     TableIntf *_tableIntf;
     PlotIntf *_plotIntf;
     Ori::MruFileList *_mru;

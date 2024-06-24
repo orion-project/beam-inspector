@@ -6,6 +6,7 @@ history:
   - text: Control binnig and decimation for IDS cameras
   - text: Fix opening camera when 8bpp is not supported
   - text: Fix color-bar gradient updating
+  - text: Fix soft FPS limiting for IDS cameras
 
 - version: 0.0.8
   date: 2024-06-12

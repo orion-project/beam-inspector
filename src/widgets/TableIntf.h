@@ -11,18 +11,18 @@ class TableIntf
 {
 public:
     void setScale(const PixelScale& scale) { _scale = scale; }
-    void setResult(const CgnBeamResult& r, double renderTime, double calcTime);
+    void setResult(const CgnBeamResult& r, double acqTime, double calcTime);
     void cleanResult();
     void showResult();
     bool resultInvalid() const;
 
     QTableWidgetItem *itXc, *itYc, *itDx, *itDy, *itPhi, *itEps;
-    QTableWidgetItem *itRenderTime, *itCalcTime;
+    QTableWidgetItem *itAcqTime, *itCalcTime;
 
 private:
     PixelScale _scale;
     CgnBeamResult _res;
-    double _renderTime, _calcTime;
+    double _acqTime, _calcTime;
 };
 
 #endif // TABLE_INTF_H

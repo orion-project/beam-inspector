@@ -5,14 +5,14 @@
 void TableIntf::cleanResult()
 {
     memset(&_res, 0, sizeof(CgnBeamResult));
-    _renderTime = 0;
+    _acqTime = 0;
     _calcTime = 0;
 }
 
-void TableIntf::setResult(const CgnBeamResult& r, double renderTime, double calcTime)
+void TableIntf::setResult(const CgnBeamResult& r, double acqTime, double calcTime)
 {
     _res = r;
-    _renderTime = renderTime;
+    _acqTime = acqTime;
     _calcTime = calcTime;
 }
 
@@ -23,7 +23,7 @@ inline void setTextInvald(QTableWidgetItem *it)
 
 void TableIntf::showResult()
 {
-    itRenderTime->setText(QStringLiteral(" %1 ms ").arg(qRound(_renderTime)));
+    itAcqTime->setText(QStringLiteral(" %1 ms ").arg(qRound(_acqTime)));
     itCalcTime->setText(QStringLiteral(" %1 ms ").arg(qRound(_calcTime)));
 
     if (_res.nan)

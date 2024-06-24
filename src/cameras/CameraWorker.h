@@ -15,8 +15,6 @@
 #include <QMutex>
 #include <QThread>
 
-#define CAMERA_LOOP_TICK_MS 5
-#define CAMERA_FRAME_DELAY_MS 30
 #define PLOT_FRAME_DELAY_MS 200
 #define STAT_DELAY_MS 1000
 #define MEASURE_BUF_SIZE 1000
@@ -44,7 +42,7 @@ public:
     qint64 prevSaveImg = 0;
     double avgFrameCount = 0;
     double avgFrameTime = 0;
-    double avgRenderTime = 0;
+    double avgAcqTime = 0;
     double avgCalcTime = 0;
 
     QMutex cfgMutex;
@@ -137,26 +135,9 @@ public:
         cfgMutex.unlock();
     }
 
-    inline bool waitFrame()
+    inline void markAcqTime()
     {
-        tm = timer.elapsed();
-        if (tm - prevFrame < CAMERA_FRAME_DELAY_MS) {
-            // Sleep gives a bad precision because OS decides how long the thread should sleep.
-            // When we disable sleep, its possible to get an exact number of FPS,
-            // e.g. 40 FPS when CAMERA_FRAME_DELAY_MS=25, but at cost of increased CPU usage.
-            // Sleep allows to get about 30 FPS, which is enough, and relaxes CPU loading
-            thread->msleep(CAMERA_LOOP_TICK_MS);
-            return true;
-        }
-        avgFrameCount++;
-        avgFrameTime += tm - prevFrame;
-        prevFrame = tm;
-        return false;
-    }
-
-    inline void markRenderTime()
-    {
-        avgRenderTime = avgRenderTime*0.9 + (timer.elapsed() - tm)*0.1;
+        avgAcqTime = avgAcqTime*0.9 + (timer.elapsed() - tm)*0.1;
     }
 
     inline void markCalcTime()
@@ -233,7 +214,7 @@ public:
             plot->invalidateGraph();
             r.nan = true;
             plot->setResult(r, 0, rangeTop);
-            table->setResult(r, avgRenderTime, avgCalcTime);
+            table->setResult(r, avgAcqTime, avgCalcTime);
             return true;
         }
 
@@ -267,7 +248,7 @@ public:
                 plot->setResult(r, 0, rangeTop);
             else plot->setResult(r, g.min, g.max);
         }
-        table->setResult(r, avgRenderTime, avgCalcTime);
+        table->setResult(r, avgAcqTime, avgCalcTime);
         return true;
     }
 
