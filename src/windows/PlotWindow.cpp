@@ -449,8 +449,8 @@ void PlotWindow::showFps(double fps, double hardFps)
         return;
     }
     _statusBar->setText(STATUS_FPS, QStringLiteral("FPS: ") % QString::number(fps, 'f', 2));
-    if (hardFps > 0 && fps < hardFps) {
-        _statusBar->setHint(STATUS_FPS, tr("The system likely run out of CPU resources.\nActual FPS is lower than camera produces."));
+    if (hardFps > 0 && qCeil(fps) < qFloor(hardFps)) {
+        _statusBar->setHint(STATUS_FPS, tr("The system likely run out of CPU resources.\nActual FPS is lower than camera produces (%1).").arg(hardFps));
         _statusBar->setStyleSheet(STATUS_FPS, QStringLiteral("QLabel{background:red;font-weight:bold;color:white}"));
     } else {
         _statusBar->setHint(STATUS_FPS, {});
