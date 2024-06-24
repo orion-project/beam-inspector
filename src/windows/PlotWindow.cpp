@@ -138,6 +138,9 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     _plot->setFocus();
 
     QTimer::singleShot(0, this, [this]{
+        // dock still is not visible when asking in resoreState
+        _actionHardConfig->setChecked(_hardConfigDock->isVisible());
+
         // This initializes all graph structs
         activateCamWelcome();
 
@@ -268,6 +271,7 @@ void PlotWindow::createMenuBar()
         _actionCrosshairsShow, 0, _actionCrosshairsEdit, actnClearCrosshairs,
         0, actnLoadCrosshairs, actnSaveCrosshairs,
     });
+    new Ori::Widgets::MruMenuPart(_plot->mruCrosshairs(), menuOverlays, actnLoadCrosshairs, this);
     menuBar()->addMenu(menuOverlays);
 
     auto m = menuBar()->addMenu(tr("Help"));
