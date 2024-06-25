@@ -37,7 +37,7 @@
         <file alias="dial">../img/misc/dial.svg</file>
     </qresource>
     <qresource prefix="/window_icons">
-        <file alias="main">../img/icons/cignus.svg</file>
+        <file alias="main">../img/icons/main.png</file>
     </qresource>
     <qresource prefix="/style">
         <file alias="app">app.qss</file>

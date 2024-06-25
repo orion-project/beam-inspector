@@ -1,7 +1,7 @@
-#define AppName      "Cignus"
-#define AppExe       "cignus.exe"
+#define AppName      "Beam Inspector"
+#define AppExe       "beam-inspector.exe"
 #define AppPublisher "orion-project.org"
-#define AppURL       "https://github.com/orion-project/cignus"
+#define AppURL       "https://github.com/orion-project/beam-inspector"
 #define BaseDir      "..\..\out\redist"
 #define BinDir       "..\..\bin"
 
@@ -14,7 +14,7 @@
 #endif
 
 [Setup]
-AppId={{D800B8D4-FB2E-491A-898D-A001FC9127D0}
+AppId={{1B0CEA8D-07D7-4E04-B506-82AD3DB85A2D}
 AppName={#AppName}
 AppVerName={#AppName} {#AppVerFull}
 AppVersion={#AppVerFull}
@@ -22,7 +22,7 @@ AppPublisher={#AppPublisher}
 AppPublisherURL={#AppURL}
 AppSupportURL={#AppURL}
 AppUpdatesURL={#AppURL}
-SetupMutex={#AppName}_SetupMutex
+SetupMutex={#AppExe}_SetupMutex
 CloseApplications=yes
 DefaultDirName={autopf64}\{#AppName}
 DefaultGroupName={#AppName}
@@ -30,7 +30,7 @@ AllowNoIcons=yes
 LicenseFile={#BaseDir}\..\..\LICENSE
 ;Output=no
 OutputDir={#BaseDir}\..\install
-OutputBaseFilename="cignus-setup-{#AppVerFull}"
+OutputBaseFilename="beam-inspector-{#AppVerFull}"
 ;Compression=lzma
 Compression=zip
 SolidCompression=yes
@@ -39,6 +39,7 @@ ChangesAssociations=yes
 VersionInfoVersion={#AppVerFull}.0
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
+WizardSmallImageFile=logo.bmp
 
 ; Windows 10 (1809) is the minimum supported by Qt6
 ; https://doc.qt.io/qt-6/supported-platforms.html

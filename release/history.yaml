@@ -1,4 +1,9 @@
 history:
+- version: 0.0.10
+  date: 2024-06-25
+  changes:
+  - text: Rename to Beam Inspector
+
 - version: 0.0.9
   date: 2024-06-24
   changes:

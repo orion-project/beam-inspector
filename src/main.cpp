@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 #endif
 
     QApplication app(argc, argv);
-    app.setApplicationName("Cignus");
+    app.setApplicationName("Beam Inspector");
     app.setOrganizationName("orion-project.org");
     app.setApplicationVersion(HelpSystem::appVersion());
     app.setStyle("Fusion");

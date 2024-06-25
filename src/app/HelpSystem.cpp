@@ -7,8 +7,8 @@ namespace {
 
 HelpSystem *__instance = nullptr;
 
-static QString homePageUrl() { return "https://github.com/orion-project/cignus"; }
-static QString newIssueUrl() { return "https://github.com/orion-project/cignus/issues/new"; }
+static QString homePageUrl() { return "https://github.com/orion-project/beam-inspector"; }
+static QString newIssueUrl() { return "https://github.com/orion-project/beam-inspector/issues/new"; }
 
 } // namespace
 
