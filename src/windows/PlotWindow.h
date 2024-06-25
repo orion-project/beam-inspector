@@ -47,7 +47,7 @@ private:
         *_actionBeamInfo, *_actionLoadColorMap, *_actionCleanColorMaps,
         *_actionEditRoi, *_actionUseRoi, *_actionZoomFull, *_actionZoomRoi,
         *_actionCamWelcome, *_actionCamImage, *_actionCamDemo, *_actionRefreshCams,
-        *_actionHardConfig, *_actionSaveRaw, *_actionRawView,
+        *_actionResultsPanel, *_actionHardConfig, *_actionSaveRaw, *_actionRawView,
         *_actionCrosshairsShow, *_actionCrosshairsEdit;
     QAction *_buttonMeasure, *_buttonOpenImg;
     QActionGroup *_colorMapActions;
@@ -60,7 +60,7 @@ private:
     QToolButton *_buttonSelectCam;
     QString _prevImage;
     MeasureProgressBar *_measureProgress;
-    QDockWidget *_hardConfigDock;
+    QDockWidget *_resultsDock, *_hardConfigDock;
     HardConfigPanel *_stubConfigPanel = nullptr;
     HardConfigPanel *_camConfigPanel = nullptr;
 
@@ -84,9 +84,9 @@ private:
 #ifdef WITH_IDS
     void activateCamIds();
 #endif
+    void toggleResultsPanel();
     void toggleHardConfig();
     void updateHardConfgPanel();
-    void updateViewMenu();
     void updateColorMapMenu();
     void selectColorMapFile();
 

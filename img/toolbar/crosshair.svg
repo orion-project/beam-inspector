@@ -1,82 +1,8 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg
-   height="24"
-   viewBox="0 0 6.35 6.35"
-   width="24"
-   version="1.1"
-   id="svg4"
-   sodipodi:docname="crosshair.svg"
-   inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <defs
-     id="defs4" />
-  <sodipodi:namedview
-     id="namedview4"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="38"
-     inkscape:cx="-1.1315789"
-     inkscape:cy="14.5"
-     inkscape:window-width="3840"
-     inkscape:window-height="2054"
-     inkscape:window-x="-11"
-     inkscape:window-y="-11"
-     inkscape:window-maximized="1"
-     inkscape:current-layer="svg4" />
-  <circle
-     cx="3.175"
-     cy="3.175"
-     fill="none"
-     id="circle5"
-     style="fill:#e4e7eb;fill-opacity:0.490196;stroke:none;stroke-width:1.06;stroke-opacity:0.49"
-     r="3.175" />
-  <path
-     d="M -7.4033334,0 V 6.35"
-     fill="#b1c1d0"
-     stroke-linecap="square"
-     id="path1"
-     style="stroke:#e4e7eb;stroke-width:1.06;stroke-opacity:0.49" />
-  <path
-     d="m -10.583333,3.18 h 6.3499996"
-     fill="#b1c1d0"
-     stroke-linecap="square"
-     id="path2"
-     style="stroke:#e4e7eb;stroke-width:1.06;stroke-opacity:0.49" />
-  <circle
-     cx="-7.4033332"
-     cy="3.1800001"
-     fill="none"
-     r="2.1199999"
-     id="circle2"
-     style="stroke:#e4e7eb;stroke-width:1.06;stroke-opacity:0.49" />
-  <path
-     d="m3.18 0v6.35"
-     fill="#b1c1d0"
-     stroke="#566b7f"
-     stroke-linecap="square"
-     stroke-width=".53"
-     id="path3" />
-  <path
-     d="m0 3.17h6.35"
-     fill="#b1c1d0"
-     stroke="#566b7f"
-     stroke-linecap="square"
-     stroke-width=".53"
-     id="path4" />
-  <circle
-     cx="3.18"
-     cy="3.18"
-     fill="none"
-     r="2.12"
-     stroke="#566b7f"
-     stroke-width=".53"
-     id="circle4" />
+<svg height="24" viewBox="0 0 6.35 6.35" width="24" xmlns="http://www.w3.org/2000/svg">
+<circle cx="3.18" cy="3.18" fill="#e4e7eb" fill-opacity=".49" r="3.18"/>
+<g stroke="#566b7f" stroke-width=".53">
+<path d="m3.18 0v6.35" fill="#b1c1d0" stroke-linecap="square"/>
+<path d="m0 3.17h6.35" fill="#b1c1d0" stroke-linecap="square"/>
+<circle cx="3.18" cy="3.18" fill="none" r="2.12"/>
+</g>
 </svg>

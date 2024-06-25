@@ -1,4 +1,10 @@
 history:
+- version: 0.0.11
+  date: ?
+  changes:
+  - text: Toggle button for results panel
+  - text: Fix setting ROI after binning
+
 - version: 0.0.10
   date: 2024-06-25
   changes:

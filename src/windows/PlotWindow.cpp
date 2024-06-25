@@ -138,6 +138,7 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
 
     QTimer::singleShot(0, this, [this]{
         // dock still is not visible when asking in resoreState
+        _actionResultsPanel->setChecked(_resultsDock->isVisible());
         _actionHardConfig->setChecked(_hardConfigDock->isVisible());
 
         // This initializes all graph structs
@@ -237,15 +238,16 @@ void PlotWindow::createMenuBar()
     connect(_colorMapMenu, &QMenu::aboutToShow, this, &PlotWindow::updateColorMapMenu);
     _colorMapActions = new QActionGroup(this);
     _colorMapActions->setExclusive(true);
+    _actionResultsPanel = A_(tr("Results Panel"), this, &PlotWindow::toggleResultsPanel, ":/toolbar/table");
+    _actionResultsPanel->setCheckable(true);
     _actionHardConfig = A_(tr("Device Control"), this, &PlotWindow::toggleHardConfig, ":/toolbar/hardware");
     _actionHardConfig->setCheckable(true);
     auto menuView = M_(tr("View"), {
         _actionRawView, 0,
-        _actionHardConfig, _actionBeamInfo, 0,
-        _colorMapMenu, 0,
+        _actionResultsPanel, _actionHardConfig, 0,
+        _actionBeamInfo, _colorMapMenu, 0,
         _actionZoomFull, _actionZoomRoi,
     });
-    connect(menuView, &QMenu::aboutToShow, this, &PlotWindow::updateViewMenu);
     menuBar()->addMenu(menuView);
 
     _actionMeasure = A_(tr("Start Measurements"), this, &PlotWindow::toggleMeasure, ":/toolbar/start", Qt::Key_F9);
@@ -321,9 +323,11 @@ void PlotWindow::createToolBar()
     tb->setMovable(false);
     tb->addWidget(_buttonSelectCam);
     tb->addAction(_actionCamConfig);
-    tb->addAction(_actionHardConfig);
     tb->addSeparator();
     tb->addAction(_actionRawView);
+    tb->addSeparator();
+    tb->addAction(_actionResultsPanel);
+    tb->addAction(_actionHardConfig);
     tb->addSeparator();
     tb->addAction(_actionEditRoi);
     tb->addAction(_actionUseRoi);
@@ -376,12 +380,12 @@ void PlotWindow::createDockPanel()
     _table = new DataTableWidget;
     _tableIntf = new TableIntf(_table);
 
-    auto dock = new QDockWidget(tr("Results"));
-    dock->setObjectName("DockResults");
-    dock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-    dock->setFeatures(QDockWidget::DockWidgetMovable);
-    dock->setWidget(_table);
-    addDockWidget(Qt::LeftDockWidgetArea, dock);
+    _resultsDock = new QDockWidget(tr("Results"));
+    _resultsDock->setObjectName("DockResults");
+    _resultsDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    _resultsDock->setFeatures(QDockWidget::DockWidgetMovable);
+    _resultsDock->setWidget(_table);
+    addDockWidget(Qt::LeftDockWidgetArea, _resultsDock);
 
     _stubConfigPanel = new StubHardConfigPanel(this);
     _camConfigPanel = _stubConfigPanel;
@@ -808,6 +812,11 @@ void PlotWindow::activateCamIds()
 }
 #endif
 
+void PlotWindow::toggleResultsPanel()
+{
+    _resultsDock->setVisible(!_resultsDock->isVisible());
+}
+
 void PlotWindow::toggleHardConfig()
 {
     _hardConfigDock->setVisible(!_hardConfigDock->isVisible());
@@ -834,11 +843,6 @@ void PlotWindow::updateHardConfgPanel()
         _camConfigPanel = panel;
         _hardConfigDock->setWidget(_camConfigPanel);
     }
-}
-
-void PlotWindow::updateViewMenu()
-{
-    _actionHardConfig->setChecked(_hardConfigDock->isVisible());
 }
 
 void PlotWindow::updateColorMapMenu()

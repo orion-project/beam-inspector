@@ -28,6 +28,7 @@
         <file alias="star">../img/toolbar/star.svg</file>
         <file alias="start">../img/toolbar/start.svg</file>
         <file alias="stop">../img/toolbar/pause.svg</file>
+        <file alias="table">../img/toolbar/table.svg</file>
         <file alias="trash">../img/toolbar/trash.svg</file>
         <file alias="zoom_roi">../img/toolbar/zoom_aper.svg</file>
         <file alias="zoom_sensor">../img/toolbar/zoom_sensor.svg</file>
