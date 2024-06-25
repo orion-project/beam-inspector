@@ -20,6 +20,7 @@ public:
 public slots:
     void visitHomePage();
     void sendBugReport();
+    void showAbout();
 
 private:
     HelpSystem();
