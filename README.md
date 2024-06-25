@@ -2,7 +2,7 @@
 
 Camera based laser beam profiling application.
 
-<img src="img/logo.png" width=400>
+<img src="img/logos/logo.png" width=400>
 
 ## About
 
