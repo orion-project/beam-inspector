@@ -14,4 +14,4 @@ Beam Inspector is a standalone desktop application for calculation of beam sizes
 
 Thank to our friends who made this possible and available for everybody:
 
-<a href="https://www.n2-photonics.de"><img src="img/logos/n2-photonics.webp" alt="n2 Photonics"></a>
+<a href="https://www.n2-photonics.de"><img src="img/logos/n2-photonics.png" alt="n2 Photonics"></a>
