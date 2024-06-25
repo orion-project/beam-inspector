@@ -277,6 +277,8 @@ void PlotWindow::createMenuBar()
     auto help = HelpSystem::instance();
     m->addAction(QIcon(":/toolbar/home"), tr("Visit Homepage"), help, &HelpSystem::visitHomePage);
     m->addAction(QIcon(":/toolbar/bug"), tr("Send Bug Report"), help, &HelpSystem::sendBugReport);
+    m->addSeparator();
+    m->addAction(tr("About..."), help, &HelpSystem::showAbout);
 #undef M_
 #undef A_
 }
