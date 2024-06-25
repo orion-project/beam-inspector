@@ -120,6 +120,32 @@ public:
         }
         #undef LOAD_FACTORS
 
+        // Reset ROI to max before settings binning/decimation
+        peak_size roiMin, roiMax, roiInc;
+        res = IDS.peak_ROI_Size_GetRange(hCam, &roiMin, &roiMax, &roiInc);
+        CHECK_ERR("Unable to get ROI range");
+        qDebug() << LOG_ID << "ROI"
+            << QString("min=%1x%24").arg(roiMin.width).arg(roiMin.height)
+            << QString("max=%1x%24").arg(roiMax.width).arg(roiMax.height)
+            << QString("inc=%1x%24").arg(roiInc.width).arg(roiInc.height);
+
+        peak_roi roi;
+        res = IDS.peak_ROI_Get(hCam, &roi);
+        CHECK_ERR("Unable to get ROI");
+        qDebug() << LOG_ID << "ROI"
+            << QString("size=%1x%2").arg(roi.size.width).arg(roi.size.height)
+            << QString("offset=%1x%2").arg(roi.offset.x).arg(roi.offset.y);
+        if (roi.size.width != roiMax.width || roi.size.height != roiMax.height) {
+            roi.offset.x = 0;
+            roi.offset.y = 0;
+            roi.size.width = roiMax.width;
+            roi.size.height = roiMax.height;
+            qDebug() << LOG_ID << "Set ROI"
+                << QString("size=%1x%2").arg(roi.size.width).arg(roi.size.height);
+            res = IDS.peak_ROI_Set(hCam, roi);
+            CHECK_ERR("Unable to set ROI");
+        }
+
         #define CLAMP_FACTOR(factor, list) \
             if (cam->_cfg->factor < 1) cam->_cfg->factor = 1; \
             else if (!cam->_cfg->list.contains(cam->_cfg->factor)) { \
@@ -153,34 +179,13 @@ public:
             qDebug() << LOG_ID << "Decimation" << cam->_cfg->decimation.str();
         }
         #undef CLAMP_FACTOR
-        return {};
-    }
 
-    QString getImageSize()
-    {
-        peak_size roiMin, roiMax, roiInc;
-        res = IDS.peak_ROI_Size_GetRange(hCam, &roiMin, &roiMax, &roiInc);
-        CHECK_ERR("Unable to get ROI range");
-        qDebug() << LOG_ID << "ROI"
-            << QString("min=%1x%24").arg(roiMin.width).arg(roiMin.height)
-            << QString("max=%1x%24").arg(roiMax.width).arg(roiMax.height)
-            << QString("inc=%1x%24").arg(roiInc.width).arg(roiInc.height);
-
-        peak_roi roi = {0, 0, 0, 0};
-        res = IDS.peak_ROI_Get(hCam, &roi);
-        CHECK_ERR("Unable to get ROI");
-        qDebug() << LOG_ID << "ROI"
-            << QString("size=%1x%2").arg(roi.size.width).arg(roi.size.height)
-            << QString("offset=%1x%2").arg(roi.offset.x).arg(roi.offset.y);
-        if (roi.size.width != roiMax.width || roi.size.height != roiMax.height) {
-            roi.offset.x = 0;
-            roi.offset.y = 0;
-            roi.size.width = roiMax.width;
-            roi.size.height = roiMax.height;
-            qDebug() << LOG_ID << "Set ROI"
-                << QString("size=%1x%2").arg(roiMax.width).arg(roiMax.height);
-            res = IDS.peak_ROI_Set(hCam, roi);
-            CHECK_ERR("Unable to set ROI");
+        // Get reduced image size after binning/decimation has been set
+        if ((cam->_cfg->binning.configurable && cam->_cfg->binning.on()) ||
+            (cam->_cfg->decimation.configurable && cam->_cfg->decimation.on())) {
+            res = IDS.peak_ROI_Get(hCam, &roi);
+            CHECK_ERR("Unable to get ROI");
+            qDebug() << LOG_ID << "ROI" << QString("size=%1x%2").arg(roi.size.width).arg(roi.size.height);
         }
         c.w = roi.size.width;
         c.h = roi.size.height;
@@ -302,7 +307,6 @@ public:
         qDebug() << LOG_ID << "Camera opened" << id;
 
         if (auto err = initResolution(); !err.isEmpty()) return err;
-        if (auto err = getImageSize(); !err.isEmpty()) return err;
         if (auto err = initPixelFormat(); !err.isEmpty()) return err;
         if (auto err = showCurrProps(); !err.isEmpty()) return err;
 
