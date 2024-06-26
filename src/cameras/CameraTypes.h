@@ -10,8 +10,14 @@ QString formatSecs(int secs);
 
 struct CameraItem
 {
-    QVariant id;
-    QString name;
+    /// Some internal id known by the camera framework using to open a camera.
+    QVariant cameraId;
+
+    /// An id used to get and set a custom name for a camera, should be unique over the system.
+    QString customId;
+
+    /// Default display name to be shown in the camera selector.
+    QString displayName;
 };
 
 struct RoiRect

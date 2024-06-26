@@ -43,6 +43,7 @@
 #include <QWindowStateChangeEvent>
 
 #define LOG_ID "PlotWindow:"
+#define INI_GROUP_CAM_NAMES "CameraNames"
 
 enum StatusPanels
 {
@@ -254,11 +255,12 @@ void PlotWindow::createMenuBar()
     _actionEditRoi = A_(tr("Edit ROI"), this, [this]{ _plot->startEditRoi(); }, ":/toolbar/roi");
     _actionUseRoi = A_(tr("Use ROI"), this, &PlotWindow::toggleRoi, ":/toolbar/roi_rect");
     _actionUseRoi->setCheckable(true);
+    _actionSetCamCustomName = A_(tr("Set Custom Name..."), this, &PlotWindow::setCamCustomName);
     _actionCamConfig = A_(tr("Settings..."), this, [this]{ PlotWindow::editCamConfig(-1); }, ":/toolbar/settings");
     menuBar()->addMenu(M_(tr("Camera"), {
         _actionMeasure, 0,
         _actionEditRoi, _actionUseRoi, 0,
-        _actionCamConfig,
+        _actionSetCamCustomName, _actionCamConfig,
     }));
 
     _actionCrosshairsShow = A_(tr("Show Crosshairs"), this, &PlotWindow::toggleCrosshairsVisbility, ":/toolbar/crosshair");
@@ -294,10 +296,20 @@ void PlotWindow::fillCamSelector()
     if (AppSettings::instance().isDevMode)
         _camSelectMenu->addAction(_actionCamDemo);
 
+    _camCustomNames.clear();
+
 #ifdef WITH_IDS
+    Ori::Settings s;
+    s.beginGroup(INI_GROUP_CAM_NAMES);
     for (const auto& cam : IdsCamera::getCameras()) {
-        auto a = _camSelectMenu->addAction(QIcon(":/toolbar/camera"), cam.name, this, &PlotWindow::activateCamIds);
-        a->setData(cam.id);
+        auto name = cam.displayName;
+        auto customName = s.value(cam.customId).toString();
+        if (!customName.isEmpty()) {
+            _camCustomNames.insert(cam.customId, customName);
+            name = customName;
+        }
+        auto a = _camSelectMenu->addAction(QIcon(":/toolbar/camera"), name, this, &PlotWindow::activateCamIds);
+        a->setData(cam.cameraId);
     }
 #endif
 
@@ -464,16 +476,24 @@ void PlotWindow::showFps(double fps, double hardFps)
     }
 }
 
+void PlotWindow::showSelectedCamera()
+{
+    bool isImage = dynamic_cast<StillImageCamera*>(_camera.get());
+    auto name = _camCustomNames.value(_camera->customId(), _camera->name());
+    _buttonSelectCam->setText("  " + (isImage ? _actionCamImage->text() : name));
+    setWindowTitle(name + " - " + qApp->applicationName());
+}
+
 void PlotWindow::showCamConfig(bool replot)
 {
     bool isImage = dynamic_cast<StillImageCamera*>(_camera.get());
     _buttonOpenImg->setVisible(isImage);
     _actionMeasure->setVisible(_camera->canMeasure());
     _buttonMeasure->setVisible(_camera->canMeasure());
-    _buttonSelectCam->setText("  " + (isImage ? _actionCamImage->text() : _camera->name()));
     _actionSaveRaw->setEnabled(_camera->isCapturing());
+    _actionSetCamCustomName->setVisible(!_camera->customId().isEmpty());
+    showSelectedCamera();
 
-    setWindowTitle(qApp->applicationName() +  " [" + _camera->name() + ']');
     _statusBar->setText(STATUS_CAMERA, _camera->name(), _camera->descr());
     _statusBar->setText(STATUS_RESOLUTION, _camera->resolutionStr());
 
@@ -901,4 +921,23 @@ void PlotWindow::toggleCrosshairsVisbility()
 {
     _plot->toggleCrosshairsVisbility();
     _actionCrosshairsEdit->setChecked(_plot->isCrosshairsEditing());
+}
+
+void PlotWindow::setCamCustomName()
+{
+    Ori::Settings s;
+    s.beginGroup(INI_GROUP_CAM_NAMES);
+    Ori::Dlg::InputTextOptions opts{
+        .label = tr("Custom name for\n%1").arg(_camera->descr()),
+        .value = s.value(_camera->customId()).toString(),
+        .maxLength = 30,
+    };
+    if (!Ori::Dlg::inputText(opts))
+        return;
+    if (opts.value.isEmpty())
+        s.settings()->remove(_camera->customId());
+    else
+        s.setValue(_camera->customId(), opts.value);
+    fillCamSelector();
+    showSelectedCamera();
 }

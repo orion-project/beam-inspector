@@ -42,7 +42,7 @@ public:
     void requestRawImg(QObject *sender) override;
     void setRawView(bool on, bool reconfig) override;
 
-    QVariant id() const { return _id; }
+    QString customId() const override { return _customId; }
 
     static QVector<CameraItem> getCameras();
     static void unloadLib();
@@ -63,8 +63,7 @@ private slots:
     void camConfigChanged();
 
 private:
-    QVariant _id;
-    QString _name, _descr;
+    QString _name, _descr, _customId;
     int _width = 0;
     int _height = 0;
     PixelScale _pixelScale;

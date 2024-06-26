@@ -43,6 +43,8 @@ public:
     virtual void requestRawImg(QObject *sender) {}
     virtual void setRawView(bool on, bool reconfig) {}
 
+    virtual QString customId() const { return {}; }
+
     virtual QList<QPair<int, QString>> dataRows() const { return {}; }
 
     const CameraConfig& config() const { return _config; }

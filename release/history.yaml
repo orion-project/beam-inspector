@@ -1,4 +1,9 @@
 history:
+- version: 0.0.12
+  date: ?
+  changes:
+  - text: Can set custom name for camera
+
 - version: 0.0.11
   date: 2024-06-26
   changes:

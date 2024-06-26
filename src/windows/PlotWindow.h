@@ -48,7 +48,7 @@ private:
         *_actionEditRoi, *_actionUseRoi, *_actionZoomFull, *_actionZoomRoi,
         *_actionCamWelcome, *_actionCamImage, *_actionCamDemo, *_actionRefreshCams,
         *_actionResultsPanel, *_actionHardConfig, *_actionSaveRaw, *_actionRawView,
-        *_actionCrosshairsShow, *_actionCrosshairsEdit;
+        *_actionCrosshairsShow, *_actionCrosshairsEdit, *_actionSetCamCustomName;
     QAction *_buttonMeasure, *_buttonOpenImg;
     QActionGroup *_colorMapActions;
     QTableWidget *_table;
@@ -63,50 +63,54 @@ private:
     QDockWidget *_resultsDock, *_hardConfigDock;
     HardConfigPanel *_stubConfigPanel = nullptr;
     HardConfigPanel *_camConfigPanel = nullptr;
+    QMap<QString, QString> _camCustomNames;
 
-    void createMenuBar();
-    void createToolBar();
-    void createStatusBar();
     void createDockPanel();
+    void createMenuBar();
     void createPlot();
+    void createStatusBar();
+    void createToolBar();
+
     void restoreState();
     void storeState();
-    void fillCamSelector();
 
-    void newWindow();
-    void openImageDlg();
-    void toggleMeasure(bool force);
-    void stopCapture();
-    void editCamConfig(int pageId = -1);
     void activateCamWelcome();
     void activateCamImage();
     void activateCamDemo();
 #ifdef WITH_IDS
     void activateCamIds();
 #endif
-    void toggleResultsPanel();
-    void toggleHardConfig();
-    void updateHardConfgPanel();
-    void updateColorMapMenu();
+    void editCamConfig(int pageId = -1);
+    void newWindow();
+    void openImageDlg();
     void selectColorMapFile();
+    void setCamCustomName();
+    void toggleCrosshairsEditing();
+    void toggleCrosshairsVisbility();
+    void toggleHardConfig();
+    void toggleMeasure(bool force);
+    void toggleRawView();
+    void toggleResultsPanel();
+    void toggleRoi();
 
-    void statsReceived(const CameraStats &stats);
     void captureStopped();
+    void configChanged();
     void dataReady();
     void roiEdited();
-    void configChanged();
+    void statsReceived(const CameraStats &stats);
 
+    void fillCamSelector();
     void openImage(const QString& fileName);
-    void updateActions();
-    void updateThemeColors();
+    void processImage();
     void setThemeColors();
     void showFps(double fps, double hardFps);
     void showCamConfig(bool replot);
-    void processImage();
-    void toggleRoi();
-    void toggleRawView();
-    void toggleCrosshairsEditing();
-    void toggleCrosshairsVisbility();
+    void showSelectedCamera();
+    void stopCapture();
+    void updateActions();
+    void updateColorMapMenu();
+    void updateHardConfgPanel();
+    void updateThemeColors();
 };
 
 #endif // PLOT_WINDOW_H

@@ -18,11 +18,18 @@
 enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME,
     ROW_FRAME_ERR, ROW_FRAME_UNDERRUN, ROW_FRAME_DROPPED, ROW_FRAME_INCOMPLETE };
 
-static QString makeCameraName(const peak_camera_descriptor &cam)
+static QString makeDisplayName(const peak_camera_descriptor &cam)
 {
     return QString("%1 (*%2)").arg(
         QString::fromLatin1(cam.modelName),
         QString::fromLatin1(cam.serialNumber).right(4));
+}
+
+static QString makeCustomId(const peak_camera_descriptor &cam)
+{
+    return QString("IDS-%1-%2").arg(
+        QString::fromLatin1(cam.modelName),
+        QString::fromLatin1(cam.serialNumber));
 }
 
 //------------------------------------------------------------------------------
@@ -296,9 +303,12 @@ public:
         peak_camera_descriptor descr;
         res = IDS.peak_Camera_GetDescriptor(id, &descr);
         CHECK_ERR("Unable to get camera descriptor");
-        cam->_name = makeCameraName(descr);
-        cam->_descr = QString::fromLatin1(descr.modelName) + '-' + QString::fromLatin1(descr.serialNumber);
-        cam->_configGroup = QString::fromLatin1(descr.modelName) + '-' + QString::fromLatin1(descr.serialNumber);
+        cam->_name = makeDisplayName(descr);
+        cam->_customId = makeCustomId(descr);
+        cam->_descr = QString("%1 (SN: %2)").arg(
+            QString::fromLatin1(descr.modelName),
+            QString::fromLatin1(descr.serialNumber));
+        cam->_configGroup = cam->_customId;
         cam->loadConfig();
 
         res = IDS.peak_Camera_Open(id, &hCam);
@@ -470,8 +480,9 @@ QVector<CameraItem> IdsCamera::getCameras()
     for (const auto &cam : cams) {
         qDebug() << LOG_ID << cam.cameraID << cam.cameraType << cam.modelName << cam.serialNumber;
         result << CameraItem {
-            .id = cam.cameraID,
-            .name = makeCameraName(cam)
+            .cameraId = cam.cameraID,
+            .customId = makeCustomId(cam),
+            .displayName = makeDisplayName(cam),
         };
     }
     return result;
@@ -484,7 +495,7 @@ void IdsCamera::unloadLib()
 }
 
 IdsCamera::IdsCamera(QVariant id, PlotIntf *plot, TableIntf *table, QObject *parent) :
-    Camera(plot, table, "IdsComfortCamera"), QThread(parent), _id(id)
+    Camera(plot, table, "IdsComfortCamera"), QThread(parent)
 {
     _cfg.reset(new IdsCameraConfig);
 
