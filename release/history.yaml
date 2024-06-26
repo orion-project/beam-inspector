@@ -1,9 +1,10 @@
 history:
 - version: 0.0.11
-  date: ?
+  date: 2024-06-26
   changes:
   - text: Toggle button for results panel
   - text: Fix setting ROI after binning
+  - text: Can copy auto exposure log
 
 - version: 0.0.10
   date: 2024-06-25
