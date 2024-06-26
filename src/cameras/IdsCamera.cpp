@@ -297,8 +297,8 @@ public:
         res = IDS.peak_Camera_GetDescriptor(id, &descr);
         CHECK_ERR("Unable to get camera descriptor");
         cam->_name = makeCameraName(descr);
-        cam->_descr = cam->_name + ' ' + QString::fromLatin1(descr.serialNumber);
-        cam->_configGroup = cam->_name + '-' + QString::fromLatin1(descr.serialNumber);
+        cam->_descr = QString::fromLatin1(descr.modelName) + '-' + QString::fromLatin1(descr.serialNumber);
+        cam->_configGroup = QString::fromLatin1(descr.modelName) + '-' + QString::fromLatin1(descr.serialNumber);
         cam->loadConfig();
         cam->loadConfigMore();
 

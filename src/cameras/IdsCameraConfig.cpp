@@ -100,7 +100,8 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
     ConfigEditorFactorXY *binnigEditor = nullptr;
     if (binning.configurable) {
         binnigEditor = new ConfigEditorFactorXY(&binning, nullptr);
-        opts.items << new ConfigItemCustom(pageHard, tr("Binning"), binnigEditor);
+        opts.items << (new ConfigItemCustom(pageHard, tr("Binning"), binnigEditor))
+            ->withHint(tr("Some models support only combined binning mode, please check the spec"));
     } else {
         opts.items << (new ConfigItemEmpty(pageHard, tr("Binning")))->withHint(tr("Is not configurable"));
     }
