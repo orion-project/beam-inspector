@@ -52,42 +52,40 @@ void HelpSystem::showAbout()
     auto w = new QDialog;
     w->setAttribute(Qt::WA_DeleteOnClose);
     w->setWindowTitle(tr("About %1").arg(qApp->applicationName()));
-    QSize sz(800, 500);
-    w->setMaximumSize(sz);
-    w->setMinimumSize(sz);
-    w->resize(sz);
+
+    QPixmap bg(":/about/bg");
+    w->setMaximumSize(bg.size());
+    w->setMinimumSize(bg.size());
+    w->resize(bg.size());
 
     auto p = w->palette();
-    p.setBrush(QPalette::Window, QBrush(QPixmap(":/misc/about_bg")));
+    p.setBrush(QPalette::Window, QBrush(bg));
     w->setPalette(p);
-
-    auto labelLogo = new QLabel;
-    labelLogo->setPixmap(QIcon(":/logos/main").pixmap(500));
 
     auto labelVersion = new QLabel("0.0.10");
     labelVersion->setStyleSheet("font-weight:bold;font-size:50pt;color:#333344;padding-left:-40px");
     labelVersion->setAlignment(Qt::AlignRight);
 
     auto labelGit = new Label;
-    labelGit->setPixmap(QIcon(":/logos/github").pixmap(60));
+    labelGit->setPixmap(QIcon(":/about/github").pixmap(60));
     labelGit->setCursor(Qt::PointingHandCursor);
     labelGit->setToolTip(homePageUrl());
     connect(labelGit, &Label::clicked, this, [this]{ visitHomePage(); });
 
     auto labelQt = new Label;
-    labelQt->setPixmap(QIcon(":/logos/qt").pixmap(60));
+    labelQt->setPixmap(QIcon(":/about/qt").pixmap(60));
     labelQt->setCursor(Qt::PointingHandCursor);
     labelQt->setToolTip(tr("About Qt"));
     connect(labelQt, &Label::clicked, this, []{ qApp->aboutQt(); });
 
     auto labelSupport1 = new Label;
-    labelSupport1->setPixmap(QPixmap(":/logos/n2-photonics"));
+    labelSupport1->setPixmap(QPixmap(":/about/n2-photonics"));
     labelSupport1->setCursor(Qt::PointingHandCursor);
     labelSupport1->setToolTip("https://www.n2-photonics.de");
     connect(labelSupport1, &Label::clicked, this, []{ QDesktopServices::openUrl(QUrl("https://www.n2-photonics.de")); });
 
     LayoutH({
-        labelLogo,
+        Space(bg.height()),
         LayoutV({
             labelVersion,
             Stretch(),

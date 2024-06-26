@@ -36,13 +36,12 @@
     <qresource prefix="/misc">
         <file alias="no_plot">../img/misc/no_plot.svg</file>
         <file alias="dial">../img/misc/dial.svg</file>
-        <file alias="about_bg">../img/about_bg.png</file>
     </qresource>
-    <qresource prefix="/logos">
-        <file alias="main">../img/logos/logo.png</file>
+    <qresource prefix="/about">
+        <file alias="bg">../img/about_bg.png</file>
         <file alias="github">../img/logos/github.svg</file>
-        <file alias="qt">../img/logos/qt.svg</file>
         <file alias="n2-photonics">../img/logos/n2-photonics.png</file>
+        <file alias="qt">../img/logos/qt.svg</file>
     </qresource>
     <qresource prefix="/window_icons">
         <file alias="main">../img/icons/main.png</file>
