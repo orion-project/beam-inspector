@@ -14,6 +14,7 @@
 #include <QApplication>
 #include <QBoxLayout>
 #include <QCheckBox>
+#include <QClipboard>
 #include <QGroupBox>
 #include <QLabel>
 #include <QPushButton>
@@ -205,10 +206,15 @@ public:
                 if (key == Qt::Key_Return || key == Qt::Key_Enter) autoExposure(); });
             butAutoExp = new QPushButton(tr("Find"));
             butAutoExp->setFixedWidth(50);
-            butAutoExp->connect(butAutoExp, &QPushButton::pressed, butAutoExp, [this]{ autoExposure(); });
+            connect(butAutoExp, &QPushButton::pressed, this, &IdsHardConfigPanelImpl::autoExposure);
             auto group = LayoutV({label, LayoutH({edAutoExp, butAutoExp})}).makeGroupBox(tr("Autoexposure"));
             groups << group;
             layout->addWidget(group);
+
+            auto actnCopyLog = new QAction(tr("Copy Report"), this);
+            connect(actnCopyLog, &QAction::triggered, this, &IdsHardConfigPanelImpl::copyAutoExpLog);
+            butAutoExp->addAction(actnCopyLog);
+            butAutoExp->setContextMenuPolicy(Qt::ActionsContextMenu);
         }
 
         PROP_CONTROL(Fps, tr("Frame rate"));
@@ -269,90 +275,204 @@ public:
     {
         if (props["Exp"] == 0) return;
 
-        butAutoExp->setDisabled(true);
-        edAutoExp->setDisabled(true);
-
         auto level = edAutoExp->value();
         if (level <= 0) level = 1;
         else if (level > 100) level = 100;
         edAutoExp->setValue(level);
-        autoExpLevel = level / 100.0;
-        qDebug() << LOG_ID << "Autoexposure" << autoExpLevel;
 
         Ori::Settings s;
         s.beginGroup("DeviceControl");
         s.setValue("autoExposurePercent", level);
 
-        if (!setExpRaw(props["ExpMin"]))
-            return;
-        autoExp1 = props["Exp"];
-        autoExp2 = 0;
-        autoExpStep = 0;
-        watingBrightness = true;
-        requestBrightness(this);
+        autoExp = AutoExp(hCam, level / 100.0,
+            [this]{ watingBrightness = true; requestBrightness(this); },
+            [this](double exp, double fps){ edExp->setValue(exp); edFps->setValue(fps); },
+            [this]{ stopAutoExp(); });
+
+        for (auto group : groups)
+            group->setDisabled(true);
+        if (!autoExp->start())
+            stopAutoExp();
     }
 
-    void autoExposureStep(double level)
+    void stopAutoExp()
     {
-        qDebug() << LOG_ID << "Autoexposure step" << autoExpStep << "| exp" << props["Exp"] << "| level" << level;
-
-        if (qAbs(level - autoExpLevel) < 0.01) {
-            qDebug() << LOG_ID << "Autoexposure: stop(0)" << props["Exp"];
-            goto stop;
+        watingBrightness = false;
+        for (auto group : groups)
+            group->setDisabled(false);
+        double fps = props["Fps"];
+        if (auto res = IDS.peak_FrameRate_Set(hCam, fps); PEAK_ERROR(res)) {
+            qWarning() << LOG_ID << "Failed to restore FPS after autoexposure" << IDS.getPeakError(res);
         }
-
-        if (level < autoExpLevel) {
-            if (autoExp2 == 0) {
-                if (!setExpRaw(qMin(autoExp1*2, props["ExpMax"])))
-                    goto stop;
-                // The above does not fail when setting higher-thah-max exposure
-                // It just clamps it to max and the loop never ends.
-                // So need an explicit check:
-                if (props["Exp"] >= props["ExpMax"]) {
-                    qDebug() << LOG_ID << "Autoexposure: underexposed" << props["Exp"];
-                    Ori::Dlg::warning(tr("Underexposed"));
-                    goto stop;
-                }
-                autoExp1 = props["Exp"];
-            } else {
-                autoExp1 = props["Exp"];
-                if (!setExpRaw((autoExp1+autoExp2)/2))
-                    goto stop;
-                if (qAbs(autoExp1 - props["Exp"]) <= props["ExpStep"]) {
-                    qDebug() << LOG_ID << "Autoexposure: stop(1)" << props["Exp"];
-                    goto stop;
-                }
-            }
-        } else {
-            if (autoExp2 == 0) {
-                if (props["Exp"] == props["ExpMin"]) {
-                    qDebug() << LOG_ID << "Autoexposure: Overexposed";
-                    Ori::Dlg::warning(tr("Overexposed"));
-                    goto stop;
-                }
-                autoExp2 = autoExp1;
-                autoExp1 = autoExp2/2;
-                if (!setExpRaw((autoExp1+autoExp2)/2))
-                    goto stop;
-            } else {
-                autoExp2 = props["Exp"];
-                if (!setExpRaw((autoExp1+autoExp2)/2))
-                    goto stop;
-                if (qAbs(autoExp2 - props["Exp"]) <= props["ExpStep"]) {
-                    qDebug() << LOG_ID << "Autoexposure: stop(2)" << props["Exp"];
-                    goto stop;
-                }
-            }
-        }
-        autoExpStep++;
-        watingBrightness = true;
-        requestBrightness(this);
-        return;
-
-    stop:
-        butAutoExp->setDisabled(false);
-        edAutoExp->setDisabled(false);
+        showExp();
+        showFps();
     }
+
+    void copyAutoExpLog()
+    {
+        if (autoExp)
+            qApp->clipboard()->setText(autoExp->logLines.join('\n'));
+    }
+
+    struct AutoExp
+    {
+        peak_camera_handle hCam;
+        int step, subStep;
+        double targetLevel, fps;
+        double exp, exp1, exp2, expMin, expMax, expStep;
+        QStringList logLines;
+        QString logLine;
+        std::function<void()> getLevel;
+        std::function<void()> finished;
+        std::function<void(double, double)> showExpFps;
+
+        AutoExp(peak_camera_handle hCam, double level, std::function<void()> getLevel,
+            std::function<void(double, double)> showExpFps, std::function<void()> finished)
+            : hCam(hCam), targetLevel(level), getLevel(getLevel), showExpFps(showExpFps), finished(finished) {}
+
+        class LogLine : public QTextStream
+        {
+        public:
+            LogLine(QStringList &log, QString *line) : QTextStream(line), log(log), line(line) {}
+            ~LogLine() { qDebug() << LOG_ID << "Autoexposure:" << (*line); log << (*line); }
+            QStringList &log;
+            QString *line;
+        };
+
+        LogLine log() {
+            logLine = {};
+            return LogLine(logLines, &logLine);
+        }
+
+        bool setExp(double v) {
+            if (auto res = IDS.peak_ExposureTime_Set(hCam, v); PEAK_ERROR(res)) {
+                QString msg = QString("Failed to set exposure to %1: %2").arg(v).arg(IDS.getPeakError(res));
+                Ori::Dlg::error(msg);
+                log() << msg;
+                return false;
+            }
+            if (auto res = IDS.peak_ExposureTime_Get(hCam, &exp); PEAK_ERROR(res)) {
+                QString msg = QString("Failed to get exposure after setting: %1").arg(IDS.getPeakError(res));
+                Ori::Dlg::error(msg);
+                log() << msg;
+                return false;
+            }
+            if (auto res = IDS.peak_FrameRate_Get(hCam, &fps); PEAK_ERROR(res)) {
+                QString msg = QString("Failed to get FPS after setting exposure: %1").arg(IDS.getPeakError(res));
+                Ori::Dlg::error(msg);
+                log() << msg;
+                return false;
+            }
+            showExpFps(exp, fps);
+            return true;
+        }
+
+        bool start()
+        {
+            log() << "target_level=" << targetLevel;
+
+            if (auto res = IDS.peak_ExposureTime_GetRange(hCam, &expMin, &expMax, &expStep); PEAK_ERROR(res)) {
+                QString msg = QString("Failed to get exposure range: %1").arg(IDS.getPeakError(res));
+                Ori::Dlg::error(msg);
+                log() << msg;
+                return false;
+            }
+            exp = expMin;
+            if (auto res = IDS.peak_ExposureTime_Set(hCam, exp); PEAK_ERROR(res)) {
+                QString msg = QString("Failed to set exposure to %1: %2").arg(exp).arg(IDS.getPeakError(res));
+                Ori::Dlg::error(msg);
+                log() << msg;
+                return false;
+            }
+            double fpsMin, fpsMax, fpsInc;
+            if (auto res = IDS.peak_FrameRate_GetRange(hCam, &fpsMin, &fpsMax, &fpsInc); PEAK_ERROR(res)) {
+                QString msg = QString("Failed to get FPS range: %1").arg(IDS.getPeakError(res));
+                Ori::Dlg::error(msg);
+                log() << msg;
+                return false;
+            }
+            fps = qMin(10.0, fpsMax);
+            if (auto res = IDS.peak_FrameRate_Set(hCam, fps); PEAK_ERROR(res)) {
+                QString msg = QString("Failed to set FPS to %1: %2").arg(fps).arg(IDS.getPeakError(res));
+                Ori::Dlg::error(msg);
+                log() << msg;
+                return false;
+            }
+            exp1 = exp;
+            exp2 = 0;
+            step = 0;
+            subStep = 0;
+            getLevel();
+            return true;
+        }
+
+        void doStep(double level)
+        {
+            log() << "step=" << step << " sub_step=" << subStep
+                << " exp=" << exp << " fps=" << fps << " level=" << level;
+            if (subStep == 0) {
+                subStep++;
+                getLevel();
+                return;
+            }
+
+            if (qAbs(level - targetLevel) < 0.01) {
+                log() << "stop_0=" << exp;
+                goto stop;
+            }
+
+            if (level < targetLevel) {
+                if (exp2 == 0) {
+                    if (!setExp(qMin(exp1*2, expMax)))
+                        goto stop;
+                    // The above does not fail when setting higher-thah-max exposure
+                    // It just clamps it to max and the loop never ends.
+                    // So need an explicit check:
+                    if (exp >= expMax) {
+                        log() << "underexposed=" << exp;
+                        Ori::Dlg::warning(tr("Underexposed"));
+                        goto stop;
+                    }
+                    exp1 = exp;
+                } else {
+                    exp1 = exp;
+                    if (!setExp((exp1+exp2)/2.0))
+                        goto stop;
+                    if (qAbs(exp1 - exp) <= expStep) {
+                        log() << "stop_1 " << exp;
+                        goto stop;
+                    }
+                }
+            } else {
+                if (exp2 == 0) {
+                    if (exp == expMin) {
+                        log() << "overexposed=" << exp;
+                        Ori::Dlg::warning(tr("Overexposed"));
+                        goto stop;
+                    }
+                    exp2 = exp1;
+                    exp1 /= 2.0;
+                    if (!setExp((exp1+exp2)/2.0))
+                        goto stop;
+                } else {
+                    exp2 = exp;
+                    if (!setExp((exp1+exp2)/2.0))
+                        goto stop;
+                    if (qAbs(exp2 - exp) <= expStep) {
+                        log() << "stop_2=" << exp;
+                        goto stop;
+                    }
+                }
+            }
+            step++;
+            subStep = 0;
+            getLevel();
+            return;
+
+        stop:
+            finished();
+        }
+    };
 
     void applySettings()
     {
@@ -392,8 +512,8 @@ public:
     }
 
     peak_camera_handle hCam;
-    CamPropEdit *edAutoExp;
     QList<QGroupBox*> groups;
+    CamPropEdit *edAutoExp;
     QPushButton *butAutoExp;
     QLabel *labExpFreq;
     QCheckBox *vertMirror, *horzMirror;
@@ -401,11 +521,10 @@ public:
     QMap<const char*, double> props;
     double propChangeWheelSm, propChangeWheelBig;
     double propChangeArrowSm, propChangeArrowBig;
-    double autoExpLevel, autoExp1, autoExp2;
     bool watingBrightness = false;
     bool closeRequested = false;
-    int autoExpStep;
     std::function<void(QObject*)> requestBrightness;
+    std::optional<AutoExp> autoExp;
 
 protected:
     void closeEvent(QCloseEvent *e) override
@@ -425,8 +544,8 @@ protected:
             watingBrightness = false;
             if (closeRequested)
                 close();
-            else
-                autoExposureStep(e->level);
+            else if (autoExp)
+                autoExp->doStep(e->level);
             return true;
         }
         return QWidget::event(event);
