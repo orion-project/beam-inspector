@@ -29,7 +29,7 @@ public:
     virtual int bpp() const = 0;
     virtual PixelScale sensorScale() const { return {}; }
 
-    virtual bool isCapturing() const { return false; }
+    virtual bool isCapturing() const { return true; }
     virtual void startCapture() = 0;
     virtual void stopCapture() {}
 

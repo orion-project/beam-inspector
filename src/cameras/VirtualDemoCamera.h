@@ -22,7 +22,6 @@ public:
     PixelScale sensorScale() const override { return { .on=true, .factor=2.5, .unit="um" }; }
     QList<QPair<int, QString>> dataRows() const override;
 
-    bool isCapturing() const override { return true; }
     void startCapture() override;
 
     bool canMeasure() const override { return true; }

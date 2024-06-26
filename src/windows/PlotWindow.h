@@ -107,7 +107,7 @@ private:
     void showCamConfig(bool replot);
     void showSelectedCamera();
     void stopCapture();
-    void updateActions();
+    void updateControls();
     void updateColorMapMenu();
     void updateHardConfgPanel();
     void updateThemeColors();

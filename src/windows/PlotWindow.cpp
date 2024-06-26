@@ -296,11 +296,10 @@ void PlotWindow::fillCamSelector()
     if (AppSettings::instance().isDevMode)
         _camSelectMenu->addAction(_actionCamDemo);
 
-    _camCustomNames.clear();
-
 #ifdef WITH_IDS
     Ori::Settings s;
     s.beginGroup(INI_GROUP_CAM_NAMES);
+    _camCustomNames.clear();
     for (const auto& cam : IdsCamera::getCameras()) {
         auto name = cam.displayName;
         auto customName = s.value(cam.customId).toString();
@@ -312,8 +311,6 @@ void PlotWindow::fillCamSelector()
         a->setData(cam.cameraId);
     }
 #endif
-
-    // TODO: do something if active camera disappeared
 
     _camSelectMenu->addSeparator();
     _camSelectMenu->addAction(_actionRefreshCams);
@@ -540,7 +537,7 @@ void PlotWindow::updateThemeColors()
     });
 }
 
-void PlotWindow::updateActions()
+void PlotWindow::updateControls()
 {
     bool opened = _camera && _camera->isCapturing();
     bool started = (bool)_saver;
@@ -554,6 +551,7 @@ void PlotWindow::updateActions()
     _actionMeasure->setText(started ? tr("Stop Measurements") : tr("Start Measurements"));
     _actionMeasure->setIcon(QIcon(started ? ":/toolbar/stop" : ":/toolbar/start"));
     _actionMeasure->setDisabled(!opened);
+    _camConfigPanel->setReadOnly(started || !opened);
 }
 
 void PlotWindow::toggleMeasure(bool force)
@@ -579,8 +577,7 @@ void PlotWindow::toggleMeasure(bool force)
         cam->stopMeasure();
         _saver.reset(nullptr);
         _measureProgress->setVisible(false);
-        _camConfigPanel->setReadOnly(false);
-        updateActions();
+        updateControls();
         return;
     }
 
@@ -610,10 +607,9 @@ void PlotWindow::toggleMeasure(bool force)
     Ori::Gui::PopupMessage::cancel();
     cam->startMeasure(_saver.get());
 
-    _camConfigPanel->setReadOnly(true);
     _measureProgress->reset(cfg->durationInf ? 0 : cfg->durationSecs());
 
-    updateActions();
+    updateControls();
 }
 
 void PlotWindow::stopCapture()
@@ -691,6 +687,7 @@ void PlotWindow::processImage()
     // do showCamConfig() after capture(), when image is already loaded and its size gets known
     showCamConfig(false);
     updateHardConfgPanel();
+    updateControls();
     _plot->zoomAuto(false);
     dataReady();
     showFps(0, 0);
@@ -752,6 +749,7 @@ void PlotWindow::activateCamWelcome()
     updateHardConfgPanel();
     showFps(0, 0);
     _camera->startCapture();
+    updateControls();
     _plot->zoomAuto(false);
     dataReady();
 }
@@ -788,6 +786,7 @@ void PlotWindow::activateCamDemo()
     showCamConfig(false);
     _plot->zoomAuto(false);
     _camera->startCapture();
+    updateControls();
 }
 
 #ifdef WITH_IDS
@@ -813,10 +812,11 @@ void PlotWindow::activateCamIds()
     connect(cam, &IdsCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &IdsCamera::finished, this, &PlotWindow::captureStopped);
     connect(cam, &IdsCamera::error, this, [this, cam](const QString& err){
-        Ori::Dlg::error(err);
         if (_saver)
             toggleMeasure(true);
         cam->stopCapture();
+        updateControls();
+        Ori::Dlg::error(err);
     });
     cam->setRawView(_actionRawView->isChecked(), false);
     _camera.reset((Camera*)cam);
@@ -828,7 +828,7 @@ void PlotWindow::activateCamIds()
     if (!_camera->isCapturing()) {
         dataReady();
     }
-    updateActions();
+    updateControls();
 }
 #endif
 
