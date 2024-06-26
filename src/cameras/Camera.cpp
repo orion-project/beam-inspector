@@ -11,7 +11,6 @@ using namespace Ori::Dlg;
 Camera::Camera(PlotIntf *plot, TableIntf *table, const char* configGroup) :
     _plot(plot), _table(table), _configGroup(configGroup)
 {
-    loadConfig();
 }
 
 QString Camera::resolutionStr() const
@@ -24,13 +23,16 @@ void Camera::loadConfig()
     Ori::Settings s;
     s.beginGroup(_configGroup);
     _config.load(s.settings());
+    loadConfigMore(s.settings());
 }
 
-void Camera::saveConfig()
+void Camera::saveConfig(bool saveMore)
 {
     Ori::Settings s;
     s.beginGroup(_configGroup);
     _config.save(s.settings());
+    if (saveMore)
+        saveConfigMore(s.settings());
 }
 
 bool Camera::editConfig(int page)
@@ -104,8 +106,7 @@ bool Camera::editConfig(int page)
         _config.plot.customScale.on = useCustomScale;
         _config.bgnd.corner = cornerFraction / 100.0;
         _config.roi.fix(width(), height());
-        saveConfig();
-        saveConfigMore();
+        saveConfig(true);
         return true;
     }
     return false;

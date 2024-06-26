@@ -12,7 +12,7 @@ class HardConfigPanel;
 class IdsCameraConfig;
 class PeakIntf;
 
-class IdsCamera : public QThread, public Camera
+class IdsCamera final : public QThread, public Camera
 {
     Q_OBJECT
 
@@ -56,8 +56,8 @@ protected:
     void run() override;
 
     void initConfigMore(Ori::Dlg::ConfigDlgOpts &opts) override;
-    void saveConfigMore() override;
-    void loadConfigMore();
+    void saveConfigMore(QSettings *s) override;
+    void loadConfigMore(QSettings *s) override;
 
 private slots:
     void camConfigChanged();

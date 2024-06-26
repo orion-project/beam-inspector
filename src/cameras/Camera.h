@@ -65,10 +65,11 @@ protected:
     Camera(PlotIntf *plot, TableIntf *table, const char* configGroup);
 
     virtual void initConfigMore(Ori::Dlg::ConfigDlgOpts &opts) {}
-    virtual void saveConfigMore() {}
+    virtual void loadConfigMore(QSettings*) {}
+    virtual void saveConfigMore(QSettings*) {}
 
     void loadConfig();
-    void saveConfig();
+    void saveConfig(bool saveMore = false);
 };
 
 #endif // CAMERA_BASE_H

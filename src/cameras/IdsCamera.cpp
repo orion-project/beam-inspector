@@ -300,7 +300,6 @@ public:
         cam->_descr = QString::fromLatin1(descr.modelName) + '-' + QString::fromLatin1(descr.serialNumber);
         cam->_configGroup = QString::fromLatin1(descr.modelName) + '-' + QString::fromLatin1(descr.serialNumber);
         cam->loadConfig();
-        cam->loadConfigMore();
 
         res = IDS.peak_Camera_Open(id, &hCam);
         CHECK_ERR("Unable to open camera");
@@ -597,14 +596,14 @@ void IdsCamera::initConfigMore(Ori::Dlg::ConfigDlgOpts &opts)
         _cfg->initDlg(_peak->hCam, opts, cfgMax);
 }
 
-void IdsCamera::saveConfigMore()
+void IdsCamera::saveConfigMore(QSettings *s)
 {
-    _cfg->save(_configGroup);
+    _cfg->save(s);
 }
 
-void IdsCamera::loadConfigMore()
+void IdsCamera::loadConfigMore(QSettings *s)
 {
-    _cfg->load(_configGroup);
+    _cfg->load(s);
 }
 
 HardConfigPanel* IdsCamera::hardConfgPanel(QWidget *parent)

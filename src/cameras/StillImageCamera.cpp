@@ -19,6 +19,8 @@ enum CamDataRow { ROW_LOAD_TIME, ROW_CALC_TIME };
 
 StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table) : Camera(plot, table, "StillImageCamera")
 {
+    loadConfig();
+
     Ori::Settings s;
     s.beginGroup(_configGroup);
 
@@ -36,6 +38,8 @@ StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table) : Camera(pl
 StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table, const QString& fileName) :
     Camera(plot, table, "StillImageCamera"), _fileName(fileName)
 {
+    loadConfig();
+
     Ori::Settings s;
     s.beginGroup(_configGroup);
 

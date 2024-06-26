@@ -163,6 +163,8 @@ public:
 VirtualDemoCamera::VirtualDemoCamera(PlotIntf *plot, TableIntf *table, QObject *parent) :
     Camera(plot, table, "VirtualDemoCamera"), QThread(parent)
 {
+    loadConfig();
+
     _render.reset(new BeamRenderer(plot, table, this, this));
 
     connect(parent, SIGNAL(camConfigChanged()), this, SLOT(camConfigChanged()));

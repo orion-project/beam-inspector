@@ -6,9 +6,9 @@
 
 #include "dialogs/OriConfigDlg.h"
 #include "helpers/OriLayouts.h"
-#include "tools/OriSettings.h"
 
 #include <QComboBox>
+#include <QSettings>
 
 using namespace Ori::Dlg;
 using namespace Ori::Layouts;
@@ -133,26 +133,22 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
     ;
 }
 
-void IdsCameraConfig::save(const QString& group)
+void IdsCameraConfig::save(QSettings *s)
 {
-    Ori::Settings s;
-    s.beginGroup(group);
-    s.setValue("hard.bpp", bpp12 ? 12 : bpp10 ? 10 : 8);
-    s.setValue("hard.binning.x", binning.x);
-    s.setValue("hard.binning.y", binning.y);
-    s.setValue("hard.decimation.x", decimation.x);
-    s.setValue("hard.decimation.y", decimation.y);
+    s->setValue("hard.bpp", bpp12 ? 12 : bpp10 ? 10 : 8);
+    s->setValue("hard.binning.x", binning.x);
+    s->setValue("hard.binning.y", binning.y);
+    s->setValue("hard.decimation.x", decimation.x);
+    s->setValue("hard.decimation.y", decimation.y);
 }
 
-void IdsCameraConfig::load(const QString& group)
+void IdsCameraConfig::load(QSettings *s)
 {
-    Ori::Settings s;
-    s.beginGroup(group);
-    bpp = s.value("hard.bpp", 8).toInt();
-    binning.x = qMax(1u, s.value("hard.binning.x", 1).toUInt());
-    binning.y = qMax(1u, s.value("hard.binning.y", 1).toUInt());
-    decimation.x = qMax(1u, s.value("hard.decimation.x", 1).toUInt());
-    decimation.y = qMax(1u, s.value("hard.decimation.y", 1).toUInt());
+    bpp = s->value("hard.bpp", 8).toInt();
+    binning.x = qMax(1u, s->value("hard.binning.x", 1).toUInt());
+    binning.y = qMax(1u, s->value("hard.binning.y", 1).toUInt());
+    decimation.x = qMax(1u, s->value("hard.decimation.x", 1).toUInt());
+    decimation.y = qMax(1u, s->value("hard.decimation.y", 1).toUInt());
     if (binning.on() && decimation.on())
         decimation.reset();
 }

@@ -6,6 +6,8 @@
 
 #include <QApplication>
 
+class QSettings;
+
 namespace Ori::Dlg {
 struct ConfigDlgOpts;
 }
@@ -41,8 +43,8 @@ public:
     QSet<int> supportedBpp;
 
     void initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &opts, int maxPageId);
-    void save(const QString& group);
-    void load(const QString& group);
+    void save(QSettings *s);
+    void load(QSettings *s);
 };
 
 #endif // WITH_IDS
