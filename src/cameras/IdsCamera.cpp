@@ -16,7 +16,8 @@
 //#define LOG_FRAME_TIME
 
 enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME,
-    ROW_FRAME_ERR, ROW_FRAME_UNDERRUN, ROW_FRAME_DROPPED, ROW_FRAME_INCOMPLETE };
+    ROW_FRAME_ERR, ROW_FRAME_UNDERRUN, ROW_FRAME_DROPPED, ROW_FRAME_INCOMPLETE,
+    ROW_BRIGHTNESS };
 
 static QString makeDisplayName(const peak_camera_descriptor &cam)
 {
@@ -62,15 +63,18 @@ public:
     PeakIntf(peak_camera_id id, PlotIntf *plot, TableIntf *table, IdsCamera *cam)
         : CameraWorker(plot, table, cam, cam, LOG_ID), id(id), cam(cam)
     {
-        tableData = [this]{
-            return QMap<int, CamTableData>{
+        tableData = [cam, this]{
+            QMap<int, CamTableData> data = {
                 { ROW_RENDER_TIME, {avgAcqTime} },
                 { ROW_CALC_TIME, {avgCalcTime} },
                 { ROW_FRAME_ERR, {framesErr, CamTableData::COUNT, framesErr > 0} },
                 { ROW_FRAME_DROPPED, {framesDropped, CamTableData::COUNT, framesDropped > 0} },
                 { ROW_FRAME_UNDERRUN, {framesUnderrun, CamTableData::COUNT, framesUnderrun > 0} },
-                { ROW_FRAME_INCOMPLETE, {framesIncomplete, CamTableData::COUNT, framesIncomplete > 0} }
+                { ROW_FRAME_INCOMPLETE, {framesIncomplete, CamTableData::COUNT, framesIncomplete > 0} },
             };
+            if (cam->_cfg->calcBrightness)
+                data[ROW_BRIGHTNESS] = {brightness, CamTableData::VALUE3};
+            return data;
         };
     }
 
@@ -328,6 +332,8 @@ public:
         CHECK_ERR("Unable to start acquisition");
         qDebug() << LOG_ID << "Acquisition started";
 
+        calcBrightness = cam->_cfg->calcBrightness;
+
         return {};
     }
 
@@ -529,7 +535,8 @@ PixelScale IdsCamera::sensorScale() const
 
 QList<QPair<int, QString>> IdsCamera::dataRows() const
 {
-    return {
+    QList<QPair<int, QString>> rows =
+    {
         { ROW_RENDER_TIME,      qApp->tr("Acq. time") },
         { ROW_CALC_TIME,        qApp->tr("Calc time") },
         { ROW_FRAME_ERR,        qApp->tr("Errors") },
@@ -537,6 +544,9 @@ QList<QPair<int, QString>> IdsCamera::dataRows() const
         { ROW_FRAME_UNDERRUN,   qApp->tr("Underrun") },
         { ROW_FRAME_INCOMPLETE, qApp->tr("Incomplete") },
     };
+    if (_cfg->calcBrightness)
+        rows << QPair<int, QString>{ ROW_BRIGHTNESS, qApp->tr("Brightness") };
+    return rows;
 }
 
 void IdsCamera::startCapture()

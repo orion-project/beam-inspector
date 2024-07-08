@@ -90,7 +90,7 @@ struct CameraStats
 struct CamTableData
 {
     QVariant value;
-    enum { NONE, MS, COUNT } type = MS;
+    enum { NONE, MS, COUNT, VALUE3 } type = MS;
     bool warn = false;
 };
 

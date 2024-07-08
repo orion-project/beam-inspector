@@ -66,6 +66,8 @@ public:
     qint64 saveImgInterval = 0;
     QObject *rawImgRequest = nullptr;
     QObject *brightRequest = nullptr;
+    double brightness = 0;
+    bool calcBrightness = false;
 
     QMap<QString, QVariant> stats;
     std::function<QMap<int, CamTableData>()> tableData;
@@ -208,6 +210,9 @@ public:
             return false;
         prevReady = tm;
         const double rangeTop = (1 << c.bpp) - 1;
+
+        if (calcBrightness)
+            brightness = cgn_calc_brightness(&c);
 
         if (rawView)
         {

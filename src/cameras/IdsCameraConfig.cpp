@@ -79,6 +79,7 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
 {
     int pageHard = maxPageId + 1;
     int pageInfo = maxPageId + 2;
+    int pageMisc = maxPageId + 3;
     bpp8 = bpp == 8;
     bpp10 = bpp == 10;
     bpp12 = bpp == 12;
@@ -131,6 +132,11 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
         << (new ConfigItemStr(pageInfo, tr("Device version"), &infoDeviceVer))->withReadOnly()
         << (new ConfigItemStr(pageInfo, tr("Firmware version"), &infoFirmwareVer))->withReadOnly()
     ;
+
+    opts.pages << ConfigPage(pageMisc, tr("Options"), ":/toolbar/options");
+    opts.items
+        << (new ConfigItemBool(pageMisc, tr("Show frame brightness in results table"), &calcBrightness))
+            ->withHint(tr("Reselect camera to apply"));
 }
 
 void IdsCameraConfig::save(QSettings *s)
@@ -140,6 +146,7 @@ void IdsCameraConfig::save(QSettings *s)
     s->setValue("hard.binning.y", binning.y);
     s->setValue("hard.decimation.x", decimation.x);
     s->setValue("hard.decimation.y", decimation.y);
+    s->setValue("calcBrightness", calcBrightness);
 }
 
 void IdsCameraConfig::load(QSettings *s)
@@ -151,6 +158,7 @@ void IdsCameraConfig::load(QSettings *s)
     decimation.y = qMax(1u, s->value("hard.decimation.y", 1).toUInt());
     if (binning.on() && decimation.on())
         decimation.reset();
+    calcBrightness = s->value("calcBrightness", false).toBool();
 }
 
 #endif // WITH_IDS
