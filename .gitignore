@@ -1,3 +1,4 @@
+.vscode
 .venv
 .ipynb_checkpoints
 __pycache__
@@ -6,6 +7,6 @@ tmp
 out
 build
 *.exe
-calc/*.pgm
+calc/**/*.pgm
 CMakeLists.txt.user*
 CMakeLists.txt.autosave
