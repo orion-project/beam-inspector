@@ -39,6 +39,7 @@ struct Measurement
     double dx;
     double dy;
     double phi;
+    QMap<int, double> cols;
     inline double eps() const { return qMin(dx, dy) / qMax(dx, dy); }
 };
 
@@ -101,6 +102,9 @@ private:
     double _avg_xc, _avg_yc, _avg_dx, _avg_dy, _avg_phi, _avg_eps;
     double _avg_cnt;
     int _savedImgCount = 0;
+    QList<int> _auxCols;
+    QMap<int, double> _auxAvgVals;
+    double _auxAvgCnt;
 
     void processMeasure(MeasureEvent *e);
     void saveImage(ImageEvent *e);

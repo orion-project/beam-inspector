@@ -20,6 +20,8 @@
 #define MEASURE_BUF_SIZE 1000
 #define MEASURE_BUF_COUNT 2
 
+enum MeasureDataCol { COL_BRIGHTNESS };
+
 class CameraWorker
 {
 public:
@@ -67,7 +69,8 @@ public:
     QObject *rawImgRequest = nullptr;
     QObject *brightRequest = nullptr;
     double brightness = 0;
-    bool calcBrightness = false;
+    bool showBrightness = false;
+    bool saveBrightness = false;
 
     QMap<QString, QVariant> stats;
     std::function<QMap<int, CamTableData>()> tableData;
@@ -188,6 +191,8 @@ public:
             results->xc = r.xc;
             results->yc = r.yc;
             results->phi = r.phi;
+            if (saveBrightness)
+                results->cols[COL_BRIGHTNESS] = cgn_calc_brightness(&c);
             if (++resultIdx == MEASURE_BUF_SIZE) {
                 auto e = new MeasureEvent;
                 e->num = resultBufIdx;
@@ -211,7 +216,7 @@ public:
         prevReady = tm;
         const double rangeTop = (1 << c.bpp) - 1;
 
-        if (calcBrightness)
+        if (showBrightness)
             brightness = cgn_calc_brightness(&c);
 
         if (rawView)

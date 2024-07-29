@@ -28,7 +28,10 @@
 #include <QActionGroup>
 #include <QApplication>
 #include <QDebug>
+#include <QDesktopServices>
+#include <QDir>
 #include <QDockWidget>
+#include <QFileInfo>
 #include <QLabel>
 #include <QMenuBar>
 #include <QProcess>
@@ -40,6 +43,7 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QToolTip>
+#include <QUrl>
 #include <QWindowStateChangeEvent>
 
 #define LOG_ID "PlotWindow:"
@@ -68,12 +72,13 @@ enum StatusPanels
 class MeasureProgressBar : public QProgressBar
 {
 public:
-    void reset(int duration)
+    void reset(int duration, const QString &fileName)
     {
         setElapsed(0);
         setMaximum(duration);
         setVisible(true);
         setFormat("%p%");
+        _fileName = fileName;
     }
 
     void setElapsed(qint64 ms) {
@@ -93,18 +98,36 @@ protected:
         return true;
     }
 
+    void contextMenuEvent(QContextMenuEvent *e) override {
+        if (!_contextMenu) {
+            _contextMenu = new QMenu(this);
+            _contextMenu->addAction(tr("Open file location"), this, &MeasureProgressBar::openFileLocation);
+        }
+        _contextMenu->popup(e->globalPos());
+    }
+
 private:
     int _secs;
+    QString _fileName;
+    QMenu *_contextMenu = nullptr;
 
     QString formatTooltip() const {
         int max = maximum();
         if (max == 0)
-            return tr("Measurements<br>Elapsed: <b>%1</b>").arg(formatSecs(_secs));
+            return tr("Measurements"
+                "<br>Elapsed: <b>%1</b>"
+                "<br>File: <b>%2</b>")
+                .arg(formatSecs(_secs), _fileName);
         return tr("Measurements"
             "<br>Duration: <b>%1</b>"
             "<br>Elapsed: <b>%2</b>"
-            "<br>Remaining: <b>%3</b>")
-            .arg(formatSecs(max), formatSecs(_secs), formatSecs(max - _secs));
+            "<br>Remaining: <b>%3</b>"
+            "<br>File: <b>%4</b>")
+            .arg(formatSecs(max), formatSecs(_secs), formatSecs(max - _secs), _fileName);
+    }
+
+    void openFileLocation() {
+        QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(_fileName).dir().absolutePath()));
     }
 };
 
@@ -607,7 +630,7 @@ void PlotWindow::toggleMeasure(bool force)
     Ori::Gui::PopupMessage::cancel();
     cam->startMeasure(_saver.get());
 
-    _measureProgress->reset(cfg->durationInf ? 0 : cfg->durationSecs());
+    _measureProgress->reset(cfg->durationInf ? 0 : cfg->durationSecs(), cfg->fileName);
 
     updateControls();
 }

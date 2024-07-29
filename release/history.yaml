@@ -1,4 +1,10 @@
 history:
+- version: 0.0.13
+  date: ?
+  changes:
+  - text: Save frame brightness in measurement file (optionally)
+  - text: Show and open file location from measurement progress bar
+
 - version: 0.0.12
   date: 2024-07-08
   changes:

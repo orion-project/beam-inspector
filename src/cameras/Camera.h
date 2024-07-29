@@ -45,7 +45,11 @@ public:
 
     virtual QString customId() const { return {}; }
 
+    /// Additional data rows to be show in the Result table
     virtual QList<QPair<int, QString>> dataRows() const { return {}; }
+
+    /// Additional data cols to be saved in measurement file
+    virtual QList<QPair<int, QString>> measurCols() const { return {}; }
 
     const CameraConfig& config() const { return _config; }
     enum ConfigPages { cfgPlot, cfgBgnd, cfgRoi, cfgMax };

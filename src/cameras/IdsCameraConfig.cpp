@@ -135,8 +135,11 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
 
     opts.pages << ConfigPage(pageMisc, tr("Options"), ":/toolbar/options");
     opts.items
-        << (new ConfigItemBool(pageMisc, tr("Show frame brightness in results table"), &calcBrightness))
-            ->withHint(tr("Reselect camera to apply"));
+        << (new ConfigItemSection(pageMisc, tr("Frame brightness")))
+            ->withHint(tr("Reselect camera to apply"))
+        << new ConfigItemBool(pageMisc, tr("Show in results table"), &showBrightness)
+        << new ConfigItemBool(pageMisc, tr("Save in measurement file"), &saveBrightness)
+    ;
 }
 
 void IdsCameraConfig::save(QSettings *s)
@@ -146,7 +149,8 @@ void IdsCameraConfig::save(QSettings *s)
     s->setValue("hard.binning.y", binning.y);
     s->setValue("hard.decimation.x", decimation.x);
     s->setValue("hard.decimation.y", decimation.y);
-    s->setValue("calcBrightness", calcBrightness);
+    s->setValue("showBrightness", showBrightness);
+    s->setValue("saveBrightness", saveBrightness);
 }
 
 void IdsCameraConfig::load(QSettings *s)
@@ -158,7 +162,8 @@ void IdsCameraConfig::load(QSettings *s)
     decimation.y = qMax(1u, s->value("hard.decimation.y", 1).toUInt());
     if (binning.on() && decimation.on())
         decimation.reset();
-    calcBrightness = s->value("calcBrightness", false).toBool();
+    showBrightness = s->value("showBrightness", false).toBool();
+    saveBrightness = s->value("saveBrightness", false).toBool();
 }
 
 #endif // WITH_IDS

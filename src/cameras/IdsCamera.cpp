@@ -72,7 +72,7 @@ public:
                 { ROW_FRAME_UNDERRUN, {framesUnderrun, CamTableData::COUNT, framesUnderrun > 0} },
                 { ROW_FRAME_INCOMPLETE, {framesIncomplete, CamTableData::COUNT, framesIncomplete > 0} },
             };
-            if (cam->_cfg->calcBrightness)
+            if (cam->_cfg->showBrightness)
                 data[ROW_BRIGHTNESS] = {brightness, CamTableData::VALUE3};
             return data;
         };
@@ -332,7 +332,8 @@ public:
         CHECK_ERR("Unable to start acquisition");
         qDebug() << LOG_ID << "Acquisition started";
 
-        calcBrightness = cam->_cfg->calcBrightness;
+        showBrightness = cam->_cfg->showBrightness;
+        saveBrightness = cam->_cfg->saveBrightness;
 
         return {};
     }
@@ -544,9 +545,17 @@ QList<QPair<int, QString>> IdsCamera::dataRows() const
         { ROW_FRAME_UNDERRUN,   qApp->tr("Underrun") },
         { ROW_FRAME_INCOMPLETE, qApp->tr("Incomplete") },
     };
-    if (_cfg->calcBrightness)
+    if (_cfg->showBrightness)
         rows << QPair<int, QString>{ ROW_BRIGHTNESS, qApp->tr("Brightness") };
     return rows;
+}
+
+QList<QPair<int, QString>> IdsCamera::measurCols() const
+{
+    QList<QPair<int, QString>> cols;
+    if (_cfg->showBrightness)
+        cols << QPair<int, QString>{ COL_BRIGHTNESS, qApp->tr("Brightness") };
+    return cols;
 }
 
 void IdsCamera::startCapture()

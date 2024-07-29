@@ -41,7 +41,8 @@ public:
     QString infoFirmwareVer;
     FactorXY binning, decimation;
     QSet<int> supportedBpp;
-    bool calcBrightness = false;
+    bool showBrightness = false;
+    bool saveBrightness = false;
 
     void initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &opts, int maxPageId);
     void save(QSettings *s);

@@ -27,6 +27,7 @@ public:
     int bpp() const override;
     PixelScale sensorScale() const override;
     QList<QPair<int, QString>> dataRows() const override;
+    QList<QPair<int, QString>> measurCols() const override;
 
     bool isCapturing() const override { return (bool)_peak; }
     void startCapture() override;

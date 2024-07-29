@@ -220,14 +220,23 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
         return tr("Failed to create resuls file:\n%1").arg(csvFile.errorString());
     }
     QTextStream out(&csvFile);
-    out << "Index" << SEP
-        << "Timestamp" << SEP
-        << "Center X" << SEP
-        << "Center Y" << SEP
-        << "Width X" << SEP
-        << "Width Y" << SEP
-        << "Azimuth" << SEP
-        << "Ellipticity" << '\n';
+    out << "Index"
+        << SEP << "Timestamp"
+        << SEP << "Center X"
+        << SEP << "Center Y"
+        << SEP << "Width X"
+        << SEP << "Width Y"
+        << SEP << "Azimuth"
+        << SEP << "Ellipticity";
+    _auxCols = {};
+    const auto& cols = cam->measurCols();
+    if (!cols.isEmpty()) {
+        for (const auto &col : cols) {
+            _auxCols << col.first;
+            out << SEP << col.second;
+        }
+    }
+    out << '\n';
     csvFile.close();
 
 #ifdef SAVE_CHECK_FILE
@@ -251,23 +260,30 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     _avg_dx = 0, _avg_dy = 0;
     _avg_phi = 0, _avg_eps = 0;
     _avg_cnt = 0;
+    _auxAvgVals = {};
+    _auxAvgCnt = 0;
 
     return {};
 }
 
-#define OUT_VALS(xc, yc, dx, dy, phi, eps)              \
-    out << QString::number(xc * _scale, 'f', 1) << SEP  \
-        << QString::number(yc * _scale, 'f', 1) << SEP  \
-        << QString::number(dx * _scale, 'f', 1) << SEP  \
-        << QString::number(dy * _scale, 'f', 1) << SEP  \
-        << QString::number(phi, 'f', 1) << SEP          \
-        << QString::number(eps, 'f', 3) << '\n'
+#define OUT_VALS(xc, yc, dx, dy, phi, eps, aux) {       \
+    out << SEP << QString::number(xc * _scale, 'f', 1)  \
+        << SEP << QString::number(yc * _scale, 'f', 1)  \
+        << SEP << QString::number(dx * _scale, 'f', 1)  \
+        << SEP << QString::number(dy * _scale, 'f', 1)  \
+        << SEP << QString::number(phi, 'f', 1)          \
+        << SEP << QString::number(eps, 'f', 3);         \
+    if (!_auxCols.empty())                              \
+        for (const auto& id : _auxCols)                 \
+            out << SEP << aux.value(id);                \
+    out << '\n';                                        \
+}
 
-#define OUT_ROW(nan, xc, yc, dx, dy, phi, eps)                                 \
+#define OUT_ROW(nan, xc, yc, dx, dy, phi, eps, aux)                            \
     out << _interval_idx << SEP                                                \
-        << _captureStart.addMSecs(r->time).toString(Qt::ISODateWithMs) << SEP; \
-    if (nan) OUT_VALS(0, 0, 0, 0, 0, 0);                                       \
-    else OUT_VALS(xc, yc, dx, dy, phi, eps)
+        << _captureStart.addMSecs(r->time).toString(Qt::ISODateWithMs);        \
+    if (nan) OUT_VALS(0, 0, 0, 0, 0, 0, aux)                                   \
+    else OUT_VALS(xc, yc, dx, dy, phi, eps, aux)
 
 bool MeasureSaver::event(QEvent *event)
 {
@@ -294,7 +310,7 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
         QTextStream out(&checkFile);
         int interval_idx = _interval_idx;
         for (auto r = e->results; r - e->results < e->count; r++) {
-            OUT_ROW(r->nan, r->xc, r->yc, r->dx, r->dy, r->phi, r->eps());
+            OUT_ROW(r->nan, r->xc, r->yc, r->dx, r->dy, r->phi, r->eps(), r->cols);
             _interval_idx++;
         }
         _interval_idx = interval_idx;
@@ -313,7 +329,7 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
     for (auto r = e->results; r - e->results < e->count; r++) {
         if (_config.allFrames)
         {
-            OUT_ROW(r->nan, r->xc, r->yc, r->dx, r->dy, r->phi, r->eps());
+            OUT_ROW(r->nan, r->xc, r->yc, r->dx, r->dy, r->phi, r->eps(), r->cols);
             _interval_idx++;
             continue;
         }
@@ -327,6 +343,11 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
             _avg_eps += r->eps();
             _avg_cnt++;
         }
+        if (_config.average and !_auxCols.empty()) {
+            for (const auto& id : _auxCols)
+                _auxAvgVals[id] += r->cols.value(id);
+            _auxAvgCnt++;
+        }
 
         if (_interval_beg < 0) {
             _interval_beg = r->time;
@@ -334,7 +355,7 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
             // If we don't average, there is no need to wait
             // for the whole interval to get the first value
             if (!_config.average) {
-                OUT_ROW(r->nan, r->xc, r->yc, r->dx, r->dy, r->phi, r->eps());
+                OUT_ROW(r->nan, r->xc, r->yc, r->dx, r->dy, r->phi, r->eps(), r->cols);
                 _interval_idx++;
             }
             continue;
@@ -346,11 +367,15 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
         //qDebug() << _interval_idx << r->time << _interval_beg << _interval_len;
 
         if (!_config.average) {
-            OUT_ROW(r->nan, r->xc, r->yc, r->dx, r->dy, r->phi, r->eps());
+            OUT_ROW(r->nan, r->xc, r->yc, r->dx, r->dy, r->phi, r->eps(), r->cols);
             _interval_idx++;
             _interval_beg = r->time;
             continue;
         }
+
+        if (!_auxCols.empty())
+            for (const auto &id : _auxCols)
+                _auxAvgVals[id] /= _auxAvgCnt;
 
         OUT_ROW(_avg_cnt == 0,
                 _avg_xc / _avg_cnt,
@@ -358,7 +383,8 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
                 _avg_dx / _avg_cnt,
                 _avg_dy / _avg_cnt,
                 _avg_phi / _avg_cnt,
-                _avg_eps / _avg_cnt);
+                _avg_eps / _avg_cnt,
+                _auxAvgVals);
 
         _interval_idx++;
         _interval_beg = r->time;
@@ -366,6 +392,8 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
         _avg_dx = 0, _avg_dy = 0;
         _avg_phi = 0, _avg_eps = 0;
         _avg_cnt = 0;
+        _auxAvgVals = {};
+        _auxAvgCnt = 0;
     }
 
     auto elapsed = QDateTime::currentSecsSinceEpoch() - _measureStart;

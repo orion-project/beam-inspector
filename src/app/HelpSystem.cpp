@@ -62,7 +62,7 @@ void HelpSystem::showAbout()
     p.setBrush(QPalette::Window, QBrush(bg));
     w->setPalette(p);
 
-    auto labelVersion = new QLabel("0.0.10");
+    auto labelVersion = new QLabel(qApp->applicationVersion());
     labelVersion->setStyleSheet("font-weight:bold;font-size:50pt;color:#333344;padding-left:-40px");
     labelVersion->setAlignment(Qt::AlignRight);
 
