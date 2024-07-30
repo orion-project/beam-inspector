@@ -139,6 +139,10 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
             ->withHint(tr("Reselect camera to apply"))
         << new ConfigItemBool(pageMisc, tr("Show in results table"), &showBrightness)
         << new ConfigItemBool(pageMisc, tr("Save in measurement file"), &saveBrightness)
+        << new ConfigItemSpace(pageMisc, 12)
+        << new ConfigItemSection(pageMisc, tr("Autoexposure"))
+        << (new ConfigItemInt(pageMisc, tr("Frame count for averaging"), &autoExpFramesAvg))
+            ->withMinMax(1, 100)
     ;
 }
 
@@ -151,6 +155,7 @@ void IdsCameraConfig::save(QSettings *s)
     s->setValue("hard.decimation.y", decimation.y);
     s->setValue("showBrightness", showBrightness);
     s->setValue("saveBrightness", saveBrightness);
+    s->setValue("autoExpFramesAvg", autoExpFramesAvg);
 }
 
 void IdsCameraConfig::load(QSettings *s)
@@ -164,6 +169,7 @@ void IdsCameraConfig::load(QSettings *s)
         decimation.reset();
     showBrightness = s->value("showBrightness", false).toBool();
     saveBrightness = s->value("saveBrightness", false).toBool();
+    autoExpFramesAvg = s->value("autoExpFramesAvg", 4).toInt();
 }
 
 #endif // WITH_IDS

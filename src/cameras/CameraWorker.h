@@ -171,7 +171,7 @@ public:
         }
         if (brightRequest) {
             auto e = new BrightEvent;
-            e->level = cgn_calc_brightness(&c);
+            e->level = cgn_calc_brightness_1(&c);
             QCoreApplication::postEvent(brightRequest, e);
             brightRequest = nullptr;
         }
@@ -192,7 +192,7 @@ public:
             results->yc = r.yc;
             results->phi = r.phi;
             if (saveBrightness)
-                results->cols[COL_BRIGHTNESS] = cgn_calc_brightness(&c);
+                results->cols[COL_BRIGHTNESS] = cgn_calc_brightness_1(&c);
             if (++resultIdx == MEASURE_BUF_SIZE) {
                 auto e = new MeasureEvent;
                 e->num = resultBufIdx;
@@ -217,7 +217,7 @@ public:
         const double rangeTop = (1 << c.bpp) - 1;
 
         if (showBrightness)
-            brightness = cgn_calc_brightness(&c);
+            brightness = cgn_calc_brightness_1(&c);
 
         if (rawView)
         {

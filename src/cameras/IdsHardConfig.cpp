@@ -284,10 +284,13 @@ public:
         s.beginGroup("DeviceControl");
         s.setValue("autoExposurePercent", level);
 
-        autoExp = AutoExp(hCam, level / 100.0,
-            [this]{ watingBrightness = true; requestBrightness(this); },
-            [this](double exp, double fps){ edExp->setValue(exp); edFps->setValue(fps); },
-            [this]{ stopAutoExp(); });
+        autoExp = AutoExp();
+        autoExp->hCam = hCam;
+        autoExp->targetLevel = level / 100.0;
+        autoExp->subStepMax = qMax(1, getCamProp(IdsHardConfigPanel::AUTOEXP_FRAMES_AVG).toInt());
+        autoExp->getLevel = [this]{ watingBrightness = true; requestBrightness(this); };
+        autoExp->showExpFps = [this](double exp, double fps){ edExp->setValue(exp); edFps->setValue(fps); };
+        autoExp->finished = [this]{ stopAutoExp(); };
 
         for (auto group : groups)
             group->setDisabled(true);
@@ -317,18 +320,14 @@ public:
     struct AutoExp
     {
         peak_camera_handle hCam;
-        int step, subStep;
-        double targetLevel, fps;
+        int step, subStep, subStepMax;
+        double targetLevel, accLevel, fps;
         double exp, exp1, exp2, expMin, expMax, expStep;
         QStringList logLines;
         QString logLine;
         std::function<void()> getLevel;
         std::function<void()> finished;
         std::function<void(double, double)> showExpFps;
-
-        AutoExp(peak_camera_handle hCam, double level, std::function<void()> getLevel,
-            std::function<void(double, double)> showExpFps, std::function<void()> finished)
-            : hCam(hCam), targetLevel(level), getLevel(getLevel), showExpFps(showExpFps), finished(finished) {}
 
         class LogLine : public QTextStream
         {
@@ -369,7 +368,7 @@ public:
 
         bool start()
         {
-            log() << "target_level=" << targetLevel;
+            log() << "target_level=" << targetLevel << " avg_frames=" << subStepMax;
 
             if (auto res = IDS.peak_ExposureTime_GetRange(hCam, &expMin, &expMax, &expStep); PEAK_ERROR(res)) {
                 QString msg = QString("Failed to get exposure range: %1").arg(IDS.getPeakError(res));
@@ -391,7 +390,7 @@ public:
                 log() << msg;
                 return false;
             }
-            fps = qMin(10.0, fpsMax);
+            fps = fpsMax;
             if (auto res = IDS.peak_FrameRate_Set(hCam, fps); PEAK_ERROR(res)) {
                 QString msg = QString("Failed to set FPS to %1: %2").arg(fps).arg(IDS.getPeakError(res));
                 Ori::Dlg::error(msg);
@@ -402,19 +401,26 @@ public:
             exp2 = 0;
             step = 0;
             subStep = 0;
+            accLevel = 0;
             getLevel();
             return true;
         }
 
         void doStep(double level)
         {
+            accLevel += level;
+            subStep++;
+
             log() << "step=" << step << " sub_step=" << subStep
-                << " exp=" << exp << " fps=" << fps << " level=" << level;
-            if (subStep == 0) {
-                subStep++;
+                << " exp=" << exp << " fps=" << fps << " level=" << level
+                << " avg_level=" << accLevel/double(subStep);
+
+            if (subStep < subStepMax) {
                 getLevel();
                 return;
             }
+
+            level = accLevel / double(subStep);
 
             if (qAbs(level - targetLevel) < 0.01) {
                 log() << "stop_0=" << exp;
@@ -466,6 +472,7 @@ public:
             }
             step++;
             subStep = 0;
+            accLevel = 0;
             getLevel();
             return;
 
@@ -524,6 +531,7 @@ public:
     bool watingBrightness = false;
     bool closeRequested = false;
     std::function<void(QObject*)> requestBrightness;
+    std::function<QVariant(IdsHardConfigPanel::CamProp)> getCamProp;
     std::optional<AutoExp> autoExp;
 
 protected:
@@ -556,10 +564,14 @@ protected:
 //                              IdsHardConfigPanel
 //-----------------------------------------------------------------------------
 
-IdsHardConfigPanel::IdsHardConfigPanel(peak_camera_handle hCam, std::function<void(QObject*)> requestBrightness, QWidget *parent) : HardConfigPanel(parent)
+IdsHardConfigPanel::IdsHardConfigPanel(peak_camera_handle hCam,
+    std::function<void(QObject*)> requestBrightness,
+    std::function<QVariant(CamProp)> getCamProp,
+    QWidget *parent) : HardConfigPanel(parent)
 {
     _impl = new IdsHardConfigPanelImpl(hCam);
     _impl->requestBrightness = requestBrightness;
+    _impl->getCamProp = getCamProp;
 
     auto scroll = new QScrollArea;
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);

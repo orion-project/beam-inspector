@@ -9,7 +9,12 @@
 class IdsHardConfigPanel : public HardConfigPanel
 {
 public:
-    IdsHardConfigPanel(peak_camera_handle hCam, std::function<void(QObject*)> requestBrightness, QWidget *parent);
+    enum CamProp { AUTOEXP_FRAMES_AVG };
+
+    IdsHardConfigPanel(peak_camera_handle hCam,
+        std::function<void(QObject*)> requestBrightness,
+        std::function<QVariant(CamProp)> getCamProp,
+        QWidget *parent);
 
     void setReadOnly(bool on) override;
 

@@ -43,6 +43,7 @@ public:
     QSet<int> supportedBpp;
     bool showBrightness = false;
     bool saveBrightness = false;
+    int autoExpFramesAvg = 4;
 
     void initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &opts, int maxPageId);
     void save(QSettings *s);

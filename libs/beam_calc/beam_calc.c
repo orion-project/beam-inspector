@@ -228,10 +228,11 @@ void cgn_copy_normalized_f64(double *src, double *tgt, int sz, double min, doubl
 
 #define _cgn_calc_brightness               \
     double b_img = 0;                       \
+    int w8 = (w / 8) * 8;                   \
     for (int i = 0; i < h; i++) {           \
         double b_row = 0;                   \
         const int offset = i*w;             \
-        for (int j = 0; j < w; j += 8) {    \
+        for (int j = 0; j < w8; j += 8) {   \
             double b0 = 0;                  \
             for (int k = 0; k < 8; k++)     \
                 b0 += buf[offset + j + k];  \
@@ -256,6 +257,48 @@ double cgn_calc_brightness(const CgnBeamCalc *c) {
         return cgn_calc_brightness_u16((const uint16_t*)(c->buf), c->w, c->h, c->bpp);
     } else {
         return cgn_calc_brightness_u8((const uint8_t*)(c->buf), c->w, c->h);
+    }
+}
+
+#define _cgn_calc_brightness_1             \
+    double b_img = 0;                       \
+    int h8 = (h / 8) * 8;                   \
+    int w8 = (w / 8) * 8;                   \
+    for (int i = 0; i < h8; i += 8) {       \
+        double b_row = 0;                   \
+        for (int j = 0; j < w8; j += 8) {   \
+            double b0 = 0;                  \
+            for (int k = 0; k < 8; k++) {   \
+                b0 += buf[w*(i+0) + j + k]; \
+                b0 += buf[w*(i+1) + j + k]; \
+                b0 += buf[w*(i+2) + j + k]; \
+                b0 += buf[w*(i+3) + j + k]; \
+                b0 += buf[w*(i+4) + j + k]; \
+                b0 += buf[w*(i+5) + j + k]; \
+                b0 += buf[w*(i+6) + j + k]; \
+                b0 += buf[w*(i+7) + j + k]; \
+            }                               \
+            b0 /= 64.0;                     \
+            if (b0 > b_row) b_row = b0;     \
+        }                                   \
+        if (b_row > b_img) b_img = b_row;   \
+    }
+
+double cgn_calc_brightness_1_u8(const uint8_t *buf, int w, int h) {
+    _cgn_calc_brightness_1
+    return b_img / 255.0;
+}
+
+double cgn_calc_brightness_1_u16(const uint16_t *buf, int w, int h, int bpp) {
+    _cgn_calc_brightness_1
+    return b_img / ((1 << bpp) - 1);
+}
+
+double cgn_calc_brightness_1(const CgnBeamCalc *c) {
+    if (c->bpp > 8) {
+        return cgn_calc_brightness_1_u16((const uint16_t*)(c->buf), c->w, c->h, c->bpp);
+    } else {
+        return cgn_calc_brightness_1_u8((const uint8_t*)(c->buf), c->w, c->h);
     }
 }
 

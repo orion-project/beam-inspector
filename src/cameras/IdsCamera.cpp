@@ -642,7 +642,14 @@ HardConfigPanel* IdsCamera::hardConfgPanel(QWidget *parent)
         return nullptr;
     if (!_configPanel) {
         auto requestBrightness = [this](QObject *s){ _peak->requestBrightness(s); };
-        _configPanel = new IdsHardConfigPanel(_peak->hCam, requestBrightness, parent);
+        auto getCamProp = [this](IdsHardConfigPanel::CamProp prop) -> QVariant {
+            switch (prop) {
+            case IdsHardConfigPanel::AUTOEXP_FRAMES_AVG:
+                return _cfg->autoExpFramesAvg;
+            }
+            return {};
+        };
+        _configPanel = new IdsHardConfigPanel(_peak->hCam, requestBrightness, getCamProp, parent);
     }
     return _configPanel;
 }
