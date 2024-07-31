@@ -20,7 +20,7 @@
 #define MEASURE_BUF_SIZE 1000
 #define MEASURE_BUF_COUNT 2
 
-enum MeasureDataCol { COL_BRIGHTNESS };
+enum MeasureDataCol { COL_BRIGHTNESS, COL_DEBUG_1, COL_DEBUG_2 };
 
 class CameraWorker
 {
@@ -65,6 +65,7 @@ public:
     int resultIdx = 0;
     int resultBufIdx = 0;
     qint64 measureStart = -1;
+    qint64 measureDuration = -1;
     qint64 saveImgInterval = 0;
     QObject *rawImgRequest = nullptr;
     QObject *brightRequest = nullptr;
@@ -193,10 +194,11 @@ public:
             results->phi = r.phi;
             if (saveBrightness)
                 results->cols[COL_BRIGHTNESS] = cgn_calc_brightness_1(&c);
-            if (++resultIdx == MEASURE_BUF_SIZE) {
+            if (++resultIdx == MEASURE_BUF_SIZE ||
+                (measureDuration > 0 && (time - measureStart >= measureDuration))) {
                 auto e = new MeasureEvent;
                 e->num = resultBufIdx;
-                e->count = MEASURE_BUF_SIZE;
+                e->count = resultIdx;
                 e->results = resultBufs[resultBufIdx % MEASURE_BUF_COUNT];
                 e->stats = stats;
                 QCoreApplication::postEvent(saver, e);
@@ -270,6 +272,7 @@ public:
         resultBufIdx = 0;
         results = resultBufs[0];
         measureStart = timer.elapsed();
+        measureDuration = s->config().durationInf ? -1 : s->config().durationSecs() * 1000;
         saveImgInterval = s->config().saveImg ? s->config().imgIntervalSecs() * 1000 : 0;
         saver = s;
         saver->setCaptureStart(start);
@@ -281,6 +284,7 @@ public:
         saverMutex.lock();
         saver = nullptr;
         measureStart = -1;
+        measureDuration = -1;
         saverMutex.unlock();
     }
 

@@ -302,6 +302,36 @@ double cgn_calc_brightness_1(const CgnBeamCalc *c) {
     }
 }
 
+#define _cgn_calc_brightness_2             \
+    double b_img = 0;                       \
+    int y1 = max(0, yc-4);                  \
+    int x1 = max(0, xc-4);                  \
+    int y2 = min(h-1, yc+4);                \
+    int x2 = min(w-1, xc+4);                \
+    double cnt = 0;                         \
+    for (int i = y1; i <= y2; i++)          \
+        for (int j = x1; j <= x2; j++)      \
+            b_img += buf[i*w + j], cnt++;   \
+    b_img /= cnt;
+
+double cgn_calc_brightness_2_u8(const uint8_t *buf, int w, int h, int xc, int yc) {
+    _cgn_calc_brightness_2
+    return b_img / 255.0;
+}
+
+double cgn_calc_brightness_2_u16(const uint16_t *buf, int w, int h, int xc, int yc, int bpp) {
+    _cgn_calc_brightness_2
+    return b_img / ((1 << bpp) - 1);
+}
+
+double cgn_calc_brightness_2(const CgnBeamCalc *c, int xc, int yc) {
+    if (c->bpp > 8) {
+        return cgn_calc_brightness_2_u16((const uint16_t*)(c->buf), c->w, c->h, xc, yc, c->bpp);
+    } else {
+        return cgn_calc_brightness_2_u8((const uint8_t*)(c->buf), c->w, c->h, xc, yc);
+    }
+}
+
 typedef struct { uint8_t b0, b1, b2, b3, b4; } PixelGroup10;
 void cgn_convert_10g40_to_u16(uint8_t *dst, uint8_t *src, int sz) {
     int j = 0;

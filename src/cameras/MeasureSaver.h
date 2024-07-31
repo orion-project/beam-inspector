@@ -96,9 +96,9 @@ private:
     double _scale = 1;
     int _duration = 0;
     qint64 _measureStart;
-    qint64 _interval_beg;
-    qint64 _interval_len;
-    int _interval_idx;
+    qint64 _intervalBeg;
+    qint64 _intervalLen;
+    int _intervalIdx;
     double _avg_xc, _avg_yc, _avg_dx, _avg_dy, _avg_phi, _avg_eps;
     double _avg_cnt;
     int _savedImgCount = 0;

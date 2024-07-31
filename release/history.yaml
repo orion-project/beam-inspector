@@ -1,10 +1,11 @@
 history:
 - version: 0.0.13
-  date: ?
+  date: 2024-07-31
   changes:
   - text: Save frame brightness in measurement file (optionally)
   - text: Show and open file location from measurement progress bar
   - text: Average brightness of several frames for autoexposure
+  - text: Finish measurements before buffer is fully filled when time is out
 
 - version: 0.0.12
   date: 2024-07-08

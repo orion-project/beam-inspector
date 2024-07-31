@@ -116,6 +116,7 @@ void cgn_normalize_f64(double *buf, int sz, double min, double max);
 void cgn_copy_normalized_f64(double *src, double *tgt, int sz, double min, double max);
 double cgn_calc_brightness(const CgnBeamCalc *c);
 double cgn_calc_brightness_1(const CgnBeamCalc *c);
+double cgn_calc_brightness_2(const CgnBeamCalc *c, int xc, int yc);
 void cgn_convert_10g40_to_u16(uint8_t *dst, uint8_t *src, int sz);
 void cgn_convert_12g24_to_u16(uint8_t *dst, uint8_t *src, int sz);
 
