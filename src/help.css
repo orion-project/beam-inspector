@@ -1,0 +1,18 @@
+html {
+  font-family: "Helvetica Neue",Helvetica,"Segoe UI",Arial,freesans,sans-serif;
+  font-size: 11pt;
+  color: #333;
+}
+
+body {
+  margin-left: 10px;
+}
+
+a {
+  color: #0366d6;
+  text-decoration: none;
+}
+
+h2 {
+  margin-top: 30px;
+}

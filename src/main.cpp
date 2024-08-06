@@ -2,8 +2,9 @@
 #include "app/HelpSystem.h"
 #include "windows/PlotWindow.h"
 
-#include "tools/OriDebug.h"
 #include "helpers/OriTheme.h"
+#include "tools/OriDebug.h"
+#include "tools/OriHelpWindow.h"
 
 #include <QApplication>
 #include <QCommandLineParser>
@@ -58,6 +59,7 @@ int main(int argc, char *argv[])
 
     // Load application settings before any command start
     AppSettings::instance().isDevMode = parser.isSet(optionDevMode);
+    Ori::HelpWindow::isDevMode = parser.isSet(optionDevMode);
 
     // Call `setStyleSheet` after setting loaded
     // to be able to apply custom colors.

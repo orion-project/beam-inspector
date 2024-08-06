@@ -1,6 +1,8 @@
 #include "HelpSystem.h"
 
+
 #include "helpers/OriLayouts.h"
+#include "tools/OriHelpWindow.h"
 #include "widgets/OriLabels.h"
 
 #include <QApplication>
@@ -35,6 +37,16 @@ HelpSystem* HelpSystem::instance()
 QString HelpSystem::appVersion()
 {
     return QString("%1.%2.%3").arg(APP_VER_MAJOR).arg(APP_VER_MINOR).arg(APP_VER_PATCH);
+}
+
+void HelpSystem::showContent()
+{
+    Ori::HelpWindow::showContent();
+}
+
+void HelpSystem::showTopic(const QString& topic)
+{
+    Ori::HelpWindow::showTopic(topic);
 }
 
 void HelpSystem::visitHomePage()

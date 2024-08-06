@@ -17,7 +17,11 @@ public:
 
     static QString appVersion();
 
+    static void topic(const QString& topic) { instance()->showTopic(topic); }
+
 public slots:
+    void showContent();
+    void showTopic(const QString& topic);
     void visitHomePage();
     void sendBugReport();
     void showAbout();

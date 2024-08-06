@@ -46,7 +46,11 @@
     <qresource prefix="/window_icons">
         <file alias="main">../img/icons/main.png</file>
     </qresource>
+    <qresource prefix="/syntax">
+        <file alias="css">../libs/orion/syntax/css.ohl</file>
+    </qresource>
     <qresource prefix="/style">
         <file alias="app">app.qss</file>
+        <file alias="help">help.css</file>
     </qresource>
 </RCC>
