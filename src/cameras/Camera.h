@@ -52,7 +52,7 @@ public:
     virtual QList<QPair<int, QString>> measurCols() const { return {}; }
 
     const CameraConfig& config() const { return _config; }
-    enum ConfigPages { cfgPlot, cfgBgnd, cfgRoi, cfgMax };
+    enum ConfigPages { cfgPlot, cfgBgnd, cfgCentr, cfgRoi, cfgMax };
     bool editConfig(int page = -1);
     
     void setAperture(const RoiRect&);

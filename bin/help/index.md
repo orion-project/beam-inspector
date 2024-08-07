@@ -1,19 +1,19 @@
 # Beam Inspector
 
-[Beam Inspector](https://www.n2-photonics.de/beaminspector) is a standalone desktop application for calculation of beam sizes according the ISO 11146 method of variances. It can process a single monochrome image or a data stream from some types of industrial cameras.
-
-Main features:
-
-- Basic control of the camera exposure parameters (exposure time, analog & digital gain)
-- Laser beam width, position, and ellipticity measurements according to ISO 11146.
-- Background subtraction
-- Area of interest selection
-- Laser beam parameter tracking for stability measurements
-- Beam position reference overlay
-- Analysis of static images
-- Variable color maps
-
-## Content
-
+- [Introduction](./intro.md)
 - [Supported Hardware](./hardware.md)
-- [ISO 11146](./iso.md)
+- [ISO 11146 Equations](./iso.md)
+- [References](./refs.md)
+
+## Application Settings
+
+- [IDS Camera](./app_settings_ids.md)
+
+## Camera Settings
+
+- [Plot](./cam_settings_plot.md)
+- [Background](./cam_settings_bgnd.md)
+- [Centroid](./cam_settings_centr.md)
+- [ROI](./cam_settings_roi.md)
+
+&nbsp;

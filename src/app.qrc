@@ -3,6 +3,7 @@
         <file alias="beam">../img/toolbar/beam.svg</file>
         <file alias="bug">../img/toolbar/bug.svg</file>
         <file alias="camera">../img/toolbar/camera.svg</file>
+        <file alias="centroid">../img/toolbar/centroid.svg</file>
         <file alias="check">../img/toolbar/check.svg</file>
         <file alias="crosshair">../img/toolbar/crosshair.svg</file>
         <file alias="crosshair_edit">../img/toolbar/crosshair_edit.svg</file>

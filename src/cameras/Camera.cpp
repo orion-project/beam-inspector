@@ -1,5 +1,7 @@
 #include "Camera.h"
 
+#include "app/HelpSystem.h"
+
 #include "dialogs/OriConfigDlg.h"
 #include "tools/OriSettings.h"
 
@@ -42,11 +44,21 @@ bool Camera::editConfig(int page)
     opts.objectName = "CamConfigDlg";
     opts.pageIconSize = 32;
     opts.pages = {
-        ConfigPage(cfgPlot, qApp->tr("Plot"), ":/toolbar/zoom_sensor"),
-        ConfigPage(cfgBgnd, qApp->tr("Background"), ":/toolbar/beam").withSpacing(12),
-        ConfigPage(cfgRoi, qApp->tr("ROI"), ":/toolbar/roi").withSpacing(12)
-            .withLongTitle(qApp->tr("Region of Interest")),
+        ConfigPage(cfgPlot, qApp->tr("Plot"), ":/toolbar/zoom_sensor")
+            .withHelpTopic("cam_settings_plot"),
+        ConfigPage(cfgBgnd, qApp->tr("Background"), ":/toolbar/beam")
+            .withSpacing(12)
+            .withHelpTopic("cam_settings_bgnd"),
+        ConfigPage(cfgCentr, qApp->tr("Centroid"), ":/toolbar/centroid")
+            .withSpacing(12)
+            .withLongTitle(qApp->tr("Centroid Calculation"))
+            .withHelpTopic("cam_settings_centr"),
+        ConfigPage(cfgRoi, qApp->tr("ROI"), ":/toolbar/roi")
+            .withSpacing(12)
+            .withLongTitle(qApp->tr("Region of Interest"))
+            .withHelpTopic("cam_settings_roi"),
     };
+    opts.onHelpRequested = [](const QString &topic){ HelpSystem::topic(topic); };
     auto hardScale = sensorScale();
     bool useSensorScale = !_config.plot.customScale.on;
     bool useCustomScale = _config.plot.customScale.on;
@@ -75,15 +87,16 @@ bool Camera::editConfig(int page)
             ->withAlignment(Qt::AlignRight),
 
         new ConfigItemBool(cfgBgnd, qApp->tr("Subtract background"), &_config.bgnd.on),
-        (new ConfigItemInt(cfgBgnd, qApp->tr("Max iterations"), &_config.bgnd.iters))
-            ->withMinMax(0, 50),
-        new ConfigItemReal(cfgBgnd, qApp->tr("Precision"), &_config.bgnd.precision),
         (new ConfigItemReal(cfgBgnd, qApp->tr("Corner Fraction %"), &cornerFraction))
             ->withHint(qApp->tr("ISO 11146 recommends 2-5%"), false),
         (new ConfigItemReal(cfgBgnd, qApp->tr("Noise Factor"), &_config.bgnd.noise))
             ->withHint(qApp->tr("ISO 11146 recommends 2-4"), false),
-        (new ConfigItemReal(cfgBgnd, qApp->tr("Mask Diameter"), &_config.bgnd.mask))
+
+        (new ConfigItemReal(cfgCentr, qApp->tr("Mask Diameter"), &_config.bgnd.mask))
             ->withHint(qApp->tr("ISO 11146 recommends 3"), false),
+        (new ConfigItemInt(cfgCentr, qApp->tr("Max Iterations"), &_config.bgnd.iters))
+            ->withMinMax(0, 50),
+        new ConfigItemReal(cfgCentr, qApp->tr("Precision"), &_config.bgnd.precision),
 
         (new ConfigItemBool(cfgRoi, qApp->tr("Use region"), &_config.roi.on))
             ->withHint(qApp->tr(
