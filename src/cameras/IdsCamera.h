@@ -40,6 +40,7 @@ public:
     void saveHardConfig(QSettings *s) override;
     HardConfigPanel* hardConfgPanel(QWidget *parent) override;
 
+    bool canSaveRawImg() const override { return true; }
     void requestRawImg(QObject *sender) override;
     void setRawView(bool on, bool reconfig) override;
 

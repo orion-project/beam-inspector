@@ -1,13 +1,13 @@
 #include "MeasureSaver.h"
 
+#include "app/HelpSystem.h"
 #include "cameras/Camera.h"
 #include "cameras/CameraTypes.h"
+
 #include "helpers/OriDialogs.h"
 #include "helpers/OriLayouts.h"
 #include "tools/OriSettings.h"
 #include "widgets/FileSelector.h"
-
-#include "helpers/OriDialogs.h"
 #include "widgets/OriPopupMessage.h"
 
 #include <QApplication>
@@ -733,6 +733,8 @@ public:
             .withPersistenceId("measureCfgDlg")
             .withTitle(tr("Measurement Configuration"))
             .withAcceptTitle(tr("Start"))
+            .withOnHelp([](){ HelpSystem::topic("measure"); })
+            .windowModal()
             .exec();
     }
 

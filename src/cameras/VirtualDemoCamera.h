@@ -28,6 +28,7 @@ public:
     void startMeasure(MeasureSaver *saver) override;
     void stopMeasure() override;
 
+    bool canSaveRawImg() const override { return true; }
     void requestRawImg(QObject *sender) override;
     void setRawView(bool on, bool reconfig) override;
 

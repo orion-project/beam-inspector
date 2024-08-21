@@ -10,6 +10,7 @@
 #include "cameras/StillImageCamera.h"
 #include "cameras/VirtualDemoCamera.h"
 #include "cameras/WelcomeCamera.h"
+#include "helpers/OriDialogs.h"
 #include "plot/PlotExport.h"
 #include "widgets/Plot.h"
 #include "widgets/PlotIntf.h"
@@ -32,10 +33,12 @@
 #include <QDir>
 #include <QDockWidget>
 #include <QFileInfo>
+#include <QFormLayout>
 #include <QLabel>
 #include <QMenuBar>
 #include <QProcess>
 #include <QProgressBar>
+#include <QSpinBox>
 #include <QStatusBar>
 #include <QStyleHints>
 #include <QTableWidget>
@@ -156,7 +159,6 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     setThemeColors();
 
     restoreState();
-    resize(1000, 650);
 
     _plot->setFocus();
 
@@ -256,7 +258,7 @@ void PlotWindow::createMenuBar()
 
     _actionZoomFull = A_(tr("Zoom to Sensor"), this, [this]{ _plot->zoomFull(true); }, ":/toolbar/zoom_sensor", QKeySequence("Ctrl+0"));
     _actionZoomRoi = A_(tr("Zoom to ROI"), this, [this]{ _plot->zoomRoi(true); }, ":/toolbar/zoom_roi", QKeySequence("Ctrl+1"));
-    _colorMapMenu = new QMenu(tr("Colour Map"));
+    _colorMapMenu = new QMenu(tr("Color Map"));
     _actionLoadColorMap = A_(tr("Load From File..."), this, &PlotWindow::selectColorMapFile);
     _actionCleanColorMaps = A_(tr("Delete Invalid Items"), this, []{ AppSettings::instance().deleteInvalidColorMaps(); });
     connect(_colorMapMenu, &QMenu::aboutToShow, this, &PlotWindow::updateColorMapMenu);
@@ -272,6 +274,13 @@ void PlotWindow::createMenuBar()
         _actionBeamInfo, _colorMapMenu, 0,
         _actionZoomFull, _actionZoomRoi,
     });
+    if (AppSettings::instance().isDevMode) {
+        menuView->addSeparator();
+        menuView->addAction(tr("Resize Main Window..."), this, &PlotWindow::devResizeWindow);
+        menuView->addAction(tr("Resize Results Panel..."), this, [this]{ devResizeDock(_resultsDock); });
+        menuView->addAction(tr("Resize Control Panel..."), this, [this]{ devResizeDock(_hardConfigDock); });
+    }
+
     menuBar()->addMenu(menuView);
 
     _actionMeasure = A_(tr("Start Measurements"), this, &PlotWindow::toggleMeasure, ":/toolbar/start", Qt::Key_F9);
@@ -511,7 +520,7 @@ void PlotWindow::showCamConfig(bool replot)
     _buttonOpenImg->setVisible(isImage);
     _actionMeasure->setVisible(_camera->canMeasure());
     _buttonMeasure->setVisible(_camera->canMeasure());
-    _actionSaveRaw->setEnabled(_camera->isCapturing());
+    _actionSaveRaw->setEnabled(_camera->canSaveRawImg() && _camera->isCapturing());
     _actionSetCamCustomName->setVisible(!_camera->customId().isEmpty());
     showSelectedCamera();
 
@@ -954,6 +963,7 @@ void PlotWindow::setCamCustomName()
     Ori::Dlg::InputTextOptions opts{
         .label = tr("Custom name for\n%1").arg(_camera->descr()),
         .value = s.value(_camera->customId()).toString(),
+        .onHelp = []{ HelpSystem::topic("cam_name"); },
         .maxLength = 30,
     };
     if (!Ori::Dlg::inputText(opts))
@@ -964,4 +974,23 @@ void PlotWindow::setCamCustomName()
         s.setValue(_camera->customId(), opts.value);
     fillCamSelector();
     showSelectedCamera();
+}
+
+void PlotWindow::devResizeWindow()
+{
+    auto edW = Ori::Gui::spinBox(100, 5000, width());
+    auto edH = Ori::Gui::spinBox(100, 5000, height());
+    QWidget w;
+    auto layout = new QFormLayout(&w);
+    layout->addRow("Width", edW);
+    layout->addRow("Height", edH);
+    if (Ori::Dlg::Dialog(&w, false).exec())
+        resize(edW->value(), edH->value());
+}
+
+void PlotWindow::devResizeDock(QDockWidget *dock)
+{
+    std::shared_ptr<QSpinBox> ed(Ori::Gui::spinBox(20, 1000, dock->width()));
+    if (Ori::Dlg::showDialogWithPromptH("Width", ed.get()))
+        dock->resize(ed->value(), dock->height());
 }

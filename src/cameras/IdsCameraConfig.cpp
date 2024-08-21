@@ -83,7 +83,7 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
     bpp8 = bpp == 8;
     bpp10 = bpp == 10;
     bpp12 = bpp == 12;
-    opts.pages << ConfigPage(pageHard, tr("Hardware"), ":/toolbar/hardware");
+    opts.pages << ConfigPage(pageHard, tr("Hardware"), ":/toolbar/hardware").withHelpTopic("cam_settings_hard");
     opts.items
         << (new ConfigItemSection(pageHard, tr("Pixel format")))
             ->withHint(tr("Reselect camera to apply"))
@@ -133,7 +133,7 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
         << (new ConfigItemStr(pageInfo, tr("Firmware version"), &infoFirmwareVer))->withReadOnly()
     ;
 
-    opts.pages << ConfigPage(pageMisc, tr("Options"), ":/toolbar/options");
+    opts.pages << ConfigPage(pageMisc, tr("Options"), ":/toolbar/options").withHelpTopic("cam_settings_opts");
     opts.items
         << (new ConfigItemSection(pageMisc, tr("Frame brightness")))
             ->withHint(tr("Reselect camera to apply"))

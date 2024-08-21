@@ -40,6 +40,7 @@ public:
     virtual void saveHardConfig(QSettings*) {}
     virtual HardConfigPanel* hardConfgPanel(QWidget *parent) { return nullptr; }
 
+    virtual bool canSaveRawImg() const { return false; }
     virtual void requestRawImg(QObject *sender) {}
     virtual void setRawView(bool on, bool reconfig) {}
 

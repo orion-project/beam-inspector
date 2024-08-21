@@ -80,6 +80,8 @@ private:
 #ifdef WITH_IDS
     void activateCamIds();
 #endif
+    void devResizeWindow();
+    void devResizeDock(QDockWidget*);
     void editCamConfig(int pageId = -1);
     void newWindow();
     void openImageDlg();

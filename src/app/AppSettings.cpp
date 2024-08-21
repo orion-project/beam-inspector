@@ -1,5 +1,7 @@
 #include "AppSettings.h"
 
+#include "app/HelpSystem.h"
+
 #include "dialogs/OriConfigDlg.h"
 #include "helpers/OriDialogs.h"
 #include "tools/OriSettings.h"
@@ -98,13 +100,17 @@ bool AppSettings::edit()
     opts.objectName = "AppSettingsDlg";
     opts.pageIconSize = 32;
     opts.pages = {
-        ConfigPage(cfgDev, tr("Device Control"), ":/toolbar/hardware"),
+        ConfigPage(cfgDev, tr("Device Control"), ":/toolbar/hardware")
+            .withHelpTopic("app_settings_hard"),
     #ifdef WITH_IDS
-        ConfigPage(cfgIds, tr("IDS Camera"), ":/toolbar/camera"),
+        ConfigPage(cfgIds, tr("IDS Camera"), ":/toolbar/camera")
+            .withHelpTopic("app_settings_ids"),
     #endif
         ConfigPage(cfgDbg, tr("Debug"), ":/toolbar/bug"),
     };
+    opts.onHelpRequested = [](const QString &topic){ HelpSystem::topic(topic); };
     opts.items = {
+        new ConfigItemSection(cfgDev, tr("Input Fields")),
         (new ConfigItemInt(cfgDev, tr("Small change by mouse wheel, %"), &propChangeWheelSm))
             ->withMinMax(1, 1000),
         (new ConfigItemInt(cfgDev, tr("Big change by mouse wheel, %"), &propChangeWheelBig))
@@ -217,7 +223,7 @@ QString AppSettings::selectColorMapFile()
     auto recentDir = s.value(KEY_COLOR_MAPS_DIR).toString();
 
     QString fileName = QFileDialog::getOpenFileName(qApp->activeWindow(),
-        tr("Select Colour Map"), recentDir, tr("CSV files (*.csv);;All files (*.*)"));
+        tr("Select Color Map"), recentDir, tr("CSV files (*.csv);;All files (*.*)"));
     if (fileName.isEmpty())
         return {};
 

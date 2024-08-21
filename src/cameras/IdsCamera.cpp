@@ -553,7 +553,7 @@ QList<QPair<int, QString>> IdsCamera::dataRows() const
 QList<QPair<int, QString>> IdsCamera::measurCols() const
 {
     QList<QPair<int, QString>> cols;
-    if (_cfg->showBrightness)
+    if (_cfg->saveBrightness)
         cols << QPair<int, QString>{ COL_BRIGHTNESS, qApp->tr("Brightness") };
     return cols;
 }

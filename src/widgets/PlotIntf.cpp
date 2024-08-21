@@ -73,7 +73,7 @@ void PlotIntf::showResult()
     if (_beamInfo->visible() && !_res.nan)
     {
         double eps = qMin(_res.dx, _res.dy) / qMax(_res.dx, _res.dy);
-        _beamInfo->setText(QStringLiteral("Xc = %1\nYc = %2\nD = %3\nDy = %4\nφ = %5°\nε = %6")
+        _beamInfo->setText(QStringLiteral("Xc = %1\nYc = %2\nDx = %3\nDy = %4\nφ = %5°\nε = %6")
             .arg(_scale.format(_res.xc),
                  _scale.format(_res.yc),
                  _scale.format(_res.dx),

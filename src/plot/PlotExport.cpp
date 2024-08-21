@@ -1,5 +1,7 @@
 #include "PlotExport.h"
 
+#include "app/HelpSystem.h"
+
 #include "widgets/FileSelector.h"
 
 #include "helpers/OriDialogs.h"
@@ -146,6 +148,7 @@ public:
             .withPersistenceId("exportImageDlg")
             .withTitle(tr("Export Image"))
             .withAcceptTitle(tr("Save"))
+            .withOnHelp([]{ HelpSystem::topic("export_plot"); })
             .exec();
     }
 
@@ -247,6 +250,7 @@ public:
             .withPersistenceId("exportRawImageDlg")
             .withTitle(tr("Export Raw Image"))
             .withAcceptTitle(tr("Save"))
+            .withOnHelp([]{ HelpSystem::topic("export_raw"); })
             .exec();
     }
 

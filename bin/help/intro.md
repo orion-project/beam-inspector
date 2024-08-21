@@ -4,11 +4,11 @@
 
 Main features:
 
-- Basic control of the camera exposure parameters (exposure time, analog & digital gain)
+- [Basic control of the camera exposure parameters (exposure time, analog & digital gain)](./cam_control.md)
 - [Laser beam width, position, and ellipticity measurements according to ISO 11146](./iso.md).
 - [Background subtraction](./cam_settings_bgnd.md)
 - [Area of interest selection](./cam_settings_roi.md)
-- Laser beam parameter tracking for stability measurements
+- [Laser beam parameter tracking for stability measurements](./measure.md)
 - Beam position reference overlay
 - Analysis of static images
-- Variable color maps
+- [Variable color maps](./color_map.md)

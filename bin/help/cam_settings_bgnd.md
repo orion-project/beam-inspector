@@ -1,12 +1,14 @@
-# Camera Settings - Background
+# Camera Settings
+
+Camera settings are stored on a per-camera basis, so when another [camera is selected](./cam_selector.md) then other settings will be loaded. Camera model name and serial number used as a key for settings string. And there is a separate set of settings for [static images processing](./static_img.md), they do not differ for different images.
+
+## Background
 
 ```
 ► Camera ► Settings ► Background
 ```
 
 ![Screenshot](./img/cam_settings_bgnd.png)
-
-## Options
 
 ### Subtract background
 
