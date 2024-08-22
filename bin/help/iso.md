@@ -18,11 +18,11 @@ The center of the beam can be found by
 
 ![Beam center](./img/eq_center.png)
 
-These parameters are displayed as **Center X** and **Center Y** in the [Results table](./results_table.md) and in [Measurement files](./measure.md), as **Xc** and **Yc** on the [Beam view](./plot.md).
+These parameters are displayed as **Center X** and **Center Y** in the [Results table](./results_table.md) and in [Measurement files](./measure.md); as **Xc** and **Yc** on the [Beam view](./plot.md).
 
 ### Variance
 
-A useful parameter characterizing a general two-dimensional distribution <i>E(x,y)</i> is the variance in the <i>x</i> and <i>y</i> directions
+A useful parameter characterizing a general two-dimensional distribution <i>E(x, y)</i> is the variance in the <i>x</i> and <i>y</i> directions
 
 ![Variance X](./img/eq_variance_x.png)
 
@@ -42,7 +42,7 @@ This leads to the definition of the beam radius adopted by ISO 11146
 
 ### Principal axes
 
-Axes of the maximum and minimum beam extent based on the centered second order moments of the power density distribution in a cross section of the beam.
+Axes of the maximum and minimum beam extent based on the centered second order moments of the power density distribution in a cross-section of the beam.
 
 The <i>x</i>-axis diameter <i>d<sub>x</sub> = 2w<sub>x</sub></i> is given by
 
@@ -52,7 +52,7 @@ The <i>y</i>-axis diameter <i>d<sub>y</sub> = 2w<sub>y</sub></i> is given by
 
 ![Diameter Y](./img/eq_dy.png)
 
-These parameters are displayed as **Width X** and **Width Y** in the [Results table](./results_table.md) and in [Measurement files](./measure.md), as **Dx** and **Dy** on the [Beam view](./plot.md).
+These parameters are displayed as **Width X** and **Width Y** in the [Results table](./results_table.md) and in [Measurement files](./measure.md); as **Dx** and **Dy** on the [Beam view](./plot.md).
 
 ### Tilt angle
 
@@ -62,7 +62,7 @@ This is measured as a positive angle counter-clockwise between the <i>x</i>-axis
 
 If the principal axes make the angle <i>π/4</i> with the <i>x</i>- and <i>y</i>-axes of the laboratory coordinate system, then <i>d<sub>x</sub></i> is by convention the larger beam width.
 
-This parameter is displayed as **Azimuth** in the [Results table](./results_table.md) and in [Measurement files](./measure.md), as **φ** on the [Beam view](./plot.md).
+This parameter is displayed as **Azimuth** in the [Results table](./results_table.md) and in [Measurement files](./measure.md); as **φ** on the [Beam view](./plot.md).
 
 ### Ellipticity
 
@@ -72,7 +72,7 @@ Ratio between the minimum and maximum beam widths
 
 Circular power density distribution - power density distribution having an ellipticity greater than 0.87.
 
-This parameter is displayed as **Ellipticity** in the [Results table](./results_table.md) and in [Measurement files](./measure.md), as **ε** on the [Beam view](./plot.md).
+This parameter is displayed as **Ellipticity** in the [Results table](./results_table.md) and in [Measurement files](./measure.md); as **ε** on the [Beam view](./plot.md).
 
 ### Eccentricity
 

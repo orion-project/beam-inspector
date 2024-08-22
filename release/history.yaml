@@ -1,4 +1,10 @@
 history:
+- version: 0.0.14
+  date: 2024-08-22
+  changes:
+  - text: Add user manual files
+  - text: Minor fixes
+
 - version: 0.0.13
   date: 2024-07-31
   changes:

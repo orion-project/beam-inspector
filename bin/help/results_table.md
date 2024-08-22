@@ -12,11 +12,11 @@ Results of beam [centroid evaluation](./cam_settings_centr.md) calculated using 
 
 ### Center X, CenterY
 
-Coordinates of the beam ellipse center in pixels or in physical units (e.g. microns), if they are configured in the [camera settings](./cam_settings_plot.md#rescale-pixels).
+Coordinates of the beam ellipse center in pixels or in physical units (e.g., microns), if they are configured in the [camera settings](./cam_settings_plot.md#rescale-pixels).
 
 ### Width X, Width Y
 
-Sizes of the beam ellipse center in pixels or in physical units (e.g. microns), if they are configured in the [camera settings](./cam_settings_plot.md#rescale-pixels). The X-axis is drawn in yellow in the [Beam view](./plot.md).
+Sizes of the beam ellipse center in pixels or in physical units (e.g., microns), if they are configured in the [camera settings](./cam_settings_plot.md#rescale-pixels). The X-axis is drawn in yellow in the [Beam view](./plot.md).
 
 ### Azimuth
 
@@ -34,11 +34,11 @@ Some data dependent on [selected camera](./hardware.md).
 
 #### Errors
 
-The number of generic errors happened during frame processing. The table does not explain errors, only shows their count. But when the [measurements](./measure.md) are started the error messages are saved into measurement files.
+The number of generic errors happened during frame processing. The table does not explain errors, only shows their count. But when the [measurements](./measure.md) are started, the error messages are saved into measurement files.
 
 #### Dropped
 
-The number of frames received out of order. This can mean that selected acquisition frame rate is too high and connection bandwidth gets overloaded.
+The number of frames received out of order. This can mean that the selected acquisition frame rate is too high, and connection bandwidth gets overloaded.
 
 #### Underrun
 

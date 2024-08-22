@@ -10,11 +10,11 @@ Panels of the status bar from left to right:
 
 ### Camera identifier
 
-Displays model name and shortened serial number of the [selected camera](./cam_selector.md). A tooltip shows the full serial number. This panel does not respect [custom names](./cam_name.md) for cameras and always shows the hardware identifier. When processing [static images](./static_img.md) it displays the image file name.
+Displays model name and shortened serial number of the [selected camera](./cam_selector.md). A tooltip shows the full serial number. This panel does not respect [custom names](./cam_name.md) for cameras and always shows the hardware identifier. When processing [static images](./static_img.md), it displays the image file name.
 
 ### Image resolution
 
-Shows pixel size and bit depth of [camera frame](./cam_settings_hard.md) or loaded [static image](./static_img.md).
+Shows pixel size and the bit depth of [camera frame](./cam_settings_hard.md) or loaded [static image](./static_img.md).
 
 ### ROI
 
@@ -30,7 +30,7 @@ The exclamation warning icon is displayed when [background subtraction](./cam_se
 
 ### Measurements progress
 
-When [measurements](./measure.md) are started a bar is displayed showing the measurements progress in percent. Hover the mouse to see a tooltip providing additional info about the measurements - remaining time, target file, etc.
+When [measurements](./measure.md) are started, a bar is displayed showing the measurements progress in percent. Hover the mouse to see a tooltip providing additional info about the measurements: remaining time, target file, etc.
 
 ## See also
 

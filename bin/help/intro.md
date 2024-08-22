@@ -1,6 +1,6 @@
 # Introduction
 
-[Beam Inspector](https://www.n2-photonics.de/beaminspector) is a standalone desktop application for calculation of beam sizes according the ISO 11146 method of variances. It can process a single monochrome image or a data stream from some types of industrial cameras.
+[Beam Inspector](https://www.n2-photonics.de/beaminspector) is a standalone desktop application for calculation of beam sizes according to the ISO 11146 method of variances. It can process a single monochrome image or a data stream from some types of industrial cameras.
 
 Main features:
 
