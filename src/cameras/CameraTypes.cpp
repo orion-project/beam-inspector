@@ -1,5 +1,7 @@
 #include "CameraTypes.h"
 
+#include "core/OriFloatingPoint.h"
+
 #include <QSettings>
 
 QString formatSecs(int secs) {
@@ -37,10 +39,10 @@ void CameraConfig::load(QSettings *s)
     LOAD(bgnd.mask, Double, 3);
 
     LOAD(roi.on, Bool, false);
-    LOAD(roi.x1, Int, 0);
-    LOAD(roi.y1, Int, 0);
-    LOAD(roi.x2, Int, 0);
-    LOAD(roi.y2, Int, 0);
+    LOAD(roi.left, Double, 0.25);
+    LOAD(roi.top, Double, 0.25);
+    LOAD(roi.right, Double, 0.75);
+    LOAD(roi.bottom, Double, 0.75);
 }
 
 void CameraConfig::save(QSettings *s, bool min) const
@@ -65,10 +67,10 @@ void CameraConfig::save(QSettings *s, bool min) const
 
     SAVE(roi.on);
     if (!min or roi.on) {
-        SAVE(roi.x1);
-        SAVE(roi.y1);
-        SAVE(roi.x2);
-        SAVE(roi.y2);
+        SAVE(roi.left);
+        SAVE(roi.top);
+        SAVE(roi.right);
+        SAVE(roi.bottom);
     }
 }
 
@@ -101,35 +103,37 @@ bool PixelScale::operator ==(const PixelScale& s) const {
 //                               RoiRect
 //------------------------------------------------------------------------------
 
-bool RoiRect::isValid(int w, int h) const
+bool RoiRect::isValid() const
 {
-    return x1 >= 0 && x2 > x1 && x2 <= w && y1 >= 0 && y2 > y1 && y2 <= h;
+    return left >= 0 && right > left && right <= 1 && top >= 0 && bottom > top && top <= 1;
 }
 
 bool RoiRect::isZero() const
 {
-    return x1 == 0 && y1 == 0 && x2 == 0 && y2 == 0;
+    return Double(left).isZero() && Double(top).isZero() && Double(right).isZero() && Double(bottom).isZero();
 }
 
-QString RoiRect::sizeStr() const
+QString RoiRect::sizeStr(int w, int h) const
 {
-    return QStringLiteral("%1 × %2").arg(x2-x1).arg(y2-y1);
+    return QStringLiteral("%1 × %2")
+        .arg(qRound(double(w)*(right-left)))
+        .arg(qRound(double(h)*(bottom-top)));
 }
 
-void RoiRect::fix(int w, int h)
+void RoiRect::fix()
 {
-    if (x1 > x2) std::swap(x1, x2);
-    if (y1 > y2) std::swap(y1, y2);
-    if (x1 < 0) x1 = 0;
-    if (y1 < 0) y1 = 0;
-    if (x2 > w) x2 = w;
-    if (y2 > h) y2 = h;
-    if (x1 == x2) {
-        if (x2 == w) x1 = 0;
-        else x2 = w;
+    if (left > right) std::swap(left, right);
+    if (top > bottom) std::swap(top, bottom);
+    if (left < 0) left = 0;
+    if (top < 0) top = 0;
+    if (right > 1) right = 1;
+    if (bottom > 1) bottom = 1;
+    if (Double(left).is(right)) {
+        if (Double(right).is(1)) left = 0;
+        else right = 1;
     }
-    if (y1 == y2) {
-        if (y2 == h) y1 = 0;
-        else y2 = h;
+    if (Double(top).is(bottom)) {
+        if (Double(bottom).is(1)) top = 0;
+        else bottom = 1;
     }
 }

@@ -24,7 +24,10 @@ Some cameras allow for defining ROI on hardware or driver level. This camera fea
 
 ROI bounds are set in raw pixels. Even if the [Rescale pixels](./cam_settings_plot.md#rescale-pixels) option is activated, it is not used here. If it's important to define ROI bounds in physical units, then use the [Live ROI](./roi_live.md) feature.
 
-When ROI is enabled, the aperture icon and ROI size displayed in the [status bar](./status_bar.md). The icon turns red when some ROI edges exceed the image bounds. This can happen when the [camera resolution](./cam_settings_hard.md) is changed, or in case of [static images](./static_img.md) processing another smaller image has been loaded. Invalid ROI does not break calculations, just the nearest image bound is used then.
+ROI bounds are stored in relative coordinates. This makes them resilient to changing camera [binning or decimation](./cam_settings_hard.md#resolution-reduction). But after reopening the dialog, you can see difference ±1 pixel due to rounding errors after recalculation into relative values and back to pixels.
+
+When ROI is enabled, the aperture icon and ROI size displayed in the [status bar](./status_bar.md). The icon turns red when some ROI edges exceed the image bounds. Normally, this should not happen because ROI bounds gets corrected automatically after loading or editing. Anyway, invalid ROI does not break calculations, just the nearest image bound is used then.
+<!-- This can happen when the [camera resolution](./cam_settings_hard.md) is changed, or in case of [static images](./static_img.md) processing another smaller image has been loaded. Invalid ROI does not break calculations, just the nearest image bound is used then. -->
 
 ## Related commands
 

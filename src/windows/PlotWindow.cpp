@@ -538,7 +538,7 @@ void PlotWindow::showCamConfig(bool replot)
         QString icon = valid ? ":/toolbar/roi" : ":/toolbar/roi_warn";
         _statusBar->setIcon(STATUS_ROI_ICON, icon);
         _statusBar->setHint(STATUS_ROI_ICON, hint);
-        _statusBar->setText(STATUS_ROI, c.roi.sizeStr());
+        _statusBar->setText(STATUS_ROI, c.roi.sizeStr(_camera->width(), _camera->height()));
         _statusBar->setHint(STATUS_ROI, hint);
     }
 
@@ -547,7 +547,7 @@ void PlotWindow::showCamConfig(bool replot)
     auto s = _camera->pixelScale();
     _plot->setImageSize(_camera->width(), _camera->height(), s);
     if (c.roi.isZero())
-        _plot->setRoi({false, 0, 0, _camera->width(), _camera->height()});
+        _plot->setRoi({false, 0, 0, 1, 1});
     else _plot->setRoi(c.roi);
     _tableIntf->setScale(s);
     _plotIntf->setScale(s);

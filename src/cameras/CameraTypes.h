@@ -23,17 +23,17 @@ struct CameraItem
 struct RoiRect
 {
     bool on = false;
-    int x1 = 0;
-    int y1 = 0;
-    int x2 = 0;
-    int y2 = 0;
+    double left = 0;
+    double top = 0;
+    double right = 0;
+    double bottom = 0;
 
-    int width() const { return x2 - x1; }
-    int height() const { return y2 - y1; }
-    bool isValid(int w, int h) const;
+    int width() const { return right - left; }
+    int height() const { return bottom - top; }
+    bool isValid() const;
     bool isZero() const;
-    void fix(int w, int h);
-    QString sizeStr() const;
+    void fix();
+    QString sizeStr(int w, int h) const;
 };
 
 struct PixelScale

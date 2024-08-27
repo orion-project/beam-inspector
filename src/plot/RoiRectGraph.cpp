@@ -76,8 +76,10 @@ void RoiRectGraph::setIsVisible(bool on)
 void RoiRectGraph::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
 {
     _scale = scale;
-    _maxX = scale.pixelToUnit(sensorW);
-    _maxY = scale.pixelToUnit(sensorH);
+    _maxPixelX = sensorW;
+    _maxPixelY = sensorH;
+    _maxUnitX = scale.pixelToUnit(sensorW);
+    _maxUnitY = scale.pixelToUnit(sensorH);
     updateCoords();
 }
 
@@ -88,10 +90,10 @@ void RoiRectGraph::updateVisibility()
 
 void RoiRectGraph::updateCoords()
 {
-    _x1 = _scale.pixelToUnit(_roi.x1);
-    _y1 = _scale.pixelToUnit(_roi.y1);
-    _x2 = _scale.pixelToUnit(_roi.x2);
-    _y2 = _scale.pixelToUnit(_roi.y2);
+    _x1 = _scale.pixelToUnit(_roi.left * _maxPixelX);
+    _y1 = _scale.pixelToUnit(_roi.top * _maxPixelY);
+    _x2 = _scale.pixelToUnit(_roi.right * _maxPixelX);
+    _y2 = _scale.pixelToUnit(_roi.bottom * _maxPixelY);
 }
 
 void RoiRectGraph::startEdit()
@@ -110,10 +112,10 @@ void RoiRectGraph::stopEdit(bool apply)
         return;
     _editing = false;
     if (apply) {
-        _roi.x1 = _scale.unitToPixel(_x1);
-        _roi.y1 = _scale.unitToPixel(_y1);
-        _roi.x2 = _scale.unitToPixel(_x2);
-        _roi.y2 = _scale.unitToPixel(_y2);
+        _roi.left = _scale.unitToPixel(_x1) / _maxPixelX;
+        _roi.top = _scale.unitToPixel(_y1) / _maxPixelY;
+        _roi.right = _scale.unitToPixel(_x2) / _maxPixelX;
+        _roi.bottom = _scale.unitToPixel(_y2) / _maxPixelY;
         _roi.on = true;
         if (onEdited)
             onEdited();
@@ -184,7 +186,7 @@ void RoiRectGraph::mouseMove(QMouseEvent *e)
         }
         if (_drag0 || _dragX2) {
             _x2 = parentPlot()->xAxis->pixelToCoord(x2+dx);
-            _x2 = qMin(_x2, _maxX);
+            _x2 = qMin(_x2, _maxUnitX);
             _seX2->setValue(_x2);
             _seW->setValue(roiW());
         }
@@ -196,7 +198,7 @@ void RoiRectGraph::mouseMove(QMouseEvent *e)
         }
         if (_drag0 || _dragY2) {
             _y2 = parentPlot()->yAxis->pixelToCoord(y2+dy);
-            _y2 = qMin(_y2, _maxY);
+            _y2 = qMin(_y2, _maxUnitY);
             _seY2->setValue(_y2);
             _seH->setValue(roiH());
         }
@@ -277,12 +279,12 @@ void RoiRectGraph::showCoordTooltip(const QPoint &p)
 
 void RoiRectGraph::makeEditor()
 {
-    _seX1 = new RoiBoundEdit(_x1, _maxX, +1);
-    _seY1 = new RoiBoundEdit(_y1, _maxY, -1);
-    _seX2 = new RoiBoundEdit(_x2, _maxX, +1);
-    _seY2 = new RoiBoundEdit(_y2, _maxY, -1);
-    _seW = new RoiBoundEdit(roiW(), _maxX, 1);
-    _seH = new RoiBoundEdit(roiH(), _maxY, 1);
+    _seX1 = new RoiBoundEdit(_x1, _maxUnitX, +1);
+    _seY1 = new RoiBoundEdit(_y1, _maxUnitY, -1);
+    _seX2 = new RoiBoundEdit(_x2, _maxUnitX, +1);
+    _seY2 = new RoiBoundEdit(_y2, _maxUnitY, -1);
+    _seW = new RoiBoundEdit(roiW(), _maxUnitX, 1);
+    _seH = new RoiBoundEdit(roiH(), _maxUnitY, 1);
     _seW->setReadOnly(true);
     _seH->setReadOnly(true);
 

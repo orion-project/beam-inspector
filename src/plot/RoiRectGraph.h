@@ -44,7 +44,8 @@ private:
     PixelScale _scale;
     bool _editing = false;
     bool _dragging = false;
-    double _maxX = 0, _maxY = 0;
+    double _maxPixelX = 0, _maxPixelY = 0;
+    double _maxUnitX = 0, _maxUnitY = 0;
     double _x1, _y1, _x2, _y2, _dragX, _dragY;
     bool _drag0, _dragX1, _dragX2, _dragY1, _dragY2;
     Qt::CursorShape _dragCursor = Qt::ArrowCursor;

@@ -65,6 +65,10 @@ bool Camera::editConfig(int page)
     bool scaleFullRange = _config.plot.fullRange;
     bool scaleDataRange = !_config.plot.fullRange;
     double cornerFraction = _config.bgnd.corner * 100;
+    int roiPixelLeft = qRound(double(width()) * _config.roi.left);
+    int roiPixelRight = qRound(double(width()) * _config.roi.right);
+    int roiPixelTop = qRound(double(height()) * _config.roi.top);
+    int roiPixelBottom = qRound(double(height()) * _config.roi.bottom);
     opts.items = {
         new ConfigItemBool(cfgPlot, qApp->tr("Normalize data"), &_config.plot.normalize),
         new ConfigItemSpace(cfgPlot, 12),
@@ -103,13 +107,13 @@ bool Camera::editConfig(int page)
                 "These are raw pixels values. "
                 "Use the menu command <b>Camera ► Edit ROI</b> "
                 "to change region interactively in scaled units"), true),
-        (new ConfigItemInt(cfgRoi, qApp->tr("Left"), &_config.roi.x1))
+        (new ConfigItemInt(cfgRoi, qApp->tr("Left"), &roiPixelLeft))
             ->withMinMax(0, width()),
-        (new ConfigItemInt(cfgRoi, qApp->tr("Top"), &_config.roi.y1))
+        (new ConfigItemInt(cfgRoi, qApp->tr("Top"), &roiPixelTop))
             ->withMinMax(0, height()),
-        (new ConfigItemInt(cfgRoi, qApp->tr("Right"), &_config.roi.x2))
+        (new ConfigItemInt(cfgRoi, qApp->tr("Right"), &roiPixelRight))
             ->withMinMax(0, width()),
-        (new ConfigItemInt(cfgRoi, qApp->tr("Bottom"), &_config.roi.y2))
+        (new ConfigItemInt(cfgRoi, qApp->tr("Bottom"), &roiPixelBottom))
             ->withMinMax(0, height())
     };
     initConfigMore(opts);
@@ -118,7 +122,11 @@ bool Camera::editConfig(int page)
         _config.plot.fullRange = scaleFullRange;
         _config.plot.customScale.on = useCustomScale;
         _config.bgnd.corner = cornerFraction / 100.0;
-        _config.roi.fix(width(), height());
+        _config.roi.left = double(roiPixelLeft)/double(width());
+        _config.roi.right = double(roiPixelRight)/double(width());
+        _config.roi.top = double(roiPixelTop)/double(height());
+        _config.roi.bottom = double(roiPixelBottom)/double(height());
+        _config.roi.fix();
         saveConfig(true);
         return true;
     }
@@ -129,7 +137,7 @@ void Camera::setAperture(const RoiRect &a)
 {
     _config.roi = a;
     if (_config.roi.on)
-        _config.roi.fix(width(), height());
+        _config.roi.fix();
     saveConfig();
 }
 
@@ -137,17 +145,17 @@ void Camera::toggleAperture(bool on)
 {
     _config.roi.on = on;
     if (on && _config.roi.isZero()) {
-        _config.roi.x1 = width() / 4;
-        _config.roi.y1 = height() / 4;
-        _config.roi.x2 = width() / 4 * 3;
-        _config.roi.y2 = height() / 4 * 3;
+        _config.roi.left = 0.25;
+        _config.roi.top = 0.25;
+        _config.roi.right = 0.75;
+        _config.roi.bottom = 0.75;
     }
     saveConfig();
 }
 
 bool Camera::isRoiValid() const
 {
-    return _config.roi.isValid(width(), height());
+    return _config.roi.isValid();
 }
 
 PixelScale Camera::pixelScale() const

@@ -101,15 +101,15 @@ public:
         g.corner_fraction = cfg.bgnd.corner;
         g.nT = cfg.bgnd.noise;
         g.mask_diam = cfg.bgnd.mask;
-        if (cfg.roi.on && cfg.roi.isValid(c.w, c.h)) {
-            g.ax1 = cfg.roi.x1;
-            g.ay1 = cfg.roi.y1;
-            g.ax2 = cfg.roi.x2;
-            g.ay2 = cfg.roi.y2;
-            r.x1 = cfg.roi.x1;
-            r.y1 = cfg.roi.y1;
-            r.x2 = cfg.roi.x2;
-            r.y2 = cfg.roi.y2;
+        if (cfg.roi.on && cfg.roi.isValid()) {
+            g.ax1 = qRound(cfg.roi.left * double(c.w));
+            g.ay1 = qRound(cfg.roi.top * double(c.h));
+            g.ax2 = qRound(cfg.roi.right * double(c.w));
+            g.ay2 = qRound(cfg.roi.bottom * double(c.h));
+            r.x1 = g.ax1;
+            r.y1 = g.ay1;
+            r.x2 = g.ax2;
+            r.y2 = g.ay2;
         } else {
             g.ax2 = c.w;
             g.ay2 = c.h;

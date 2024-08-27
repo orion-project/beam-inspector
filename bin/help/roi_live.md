@@ -14,6 +14,8 @@ Accept changed bounds by pressing the “Checkmark” button on the panel, or hi
 
 Reject changes by pressing the “Cross” button on the panel, or hitting the `[Esc]` on the keyboard.
 
+ROI bounds are stored in relative coordinates. This makes them resilient to changing camera [binning or decimation](./cam_settings_hard.md#resolution-reduction). But after activation the mode the next time, you can see difference ±1 pixel compared to previously entered values due to rounding errors after recalculation into relative values and back to pixels.
+
 ## Related commands
 
 - `Camera ► Settings ► ROI`

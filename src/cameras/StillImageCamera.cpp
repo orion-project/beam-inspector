@@ -129,15 +129,15 @@ void StillImageCamera::startCapture()
     g.corner_fraction = _config.bgnd.corner;
     g.nT = _config.bgnd.noise;
     g.mask_diam = _config.bgnd.mask;
-    if (_config.roi.on && _config.roi.isValid(c.w, c.h)) {
-        g.ax1 = _config.roi.x1;
-        g.ay1 = _config.roi.y1;
-        g.ax2 = _config.roi.x2;
-        g.ay2 = _config.roi.y2;
-        r.x1 = _config.roi.x1;
-        r.y1 = _config.roi.y1;
-        r.x2 = _config.roi.x2;
-        r.y2 = _config.roi.y2;
+    if (_config.roi.on && _config.roi.isValid()) {
+        g.ax1 = qRound(_config.roi.left * double(c.w));
+        g.ay1 = qRound(_config.roi.top * double(c.h));
+        g.ax2 = qRound(_config.roi.right * double(c.w));
+        g.ay2 = qRound(_config.roi.bottom * double(c.h));
+        r.x1 = g.ax1;
+        r.y1 = g.ay1;
+        r.x2 = g.ax2;
+        r.y2 = g.ay2;
     } else {
         g.ax2 = c.w;
         g.ay2 = c.h;
