@@ -58,6 +58,7 @@ public:
     void toggleCrosshairsEditing();
     void clearCrosshairs();
     void loadCrosshairs();
+    void loadCrosshairs(const QString &fileName);
     void saveCrosshairs();
     Ori::MruFileList *mruCrosshairs() { return _mruCrosshairs; }
 

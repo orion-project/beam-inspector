@@ -3,6 +3,7 @@ history:
   date: 2024-08-22
   changes:
   - text: Add user manual files
+  - text: Store crosshairs in relative coordinates
   - text: Minor fixes
 
 - version: 0.0.13
@@ -35,7 +36,7 @@ history:
   date: 2024-06-24
   changes:
   - text: Crosshairs overlay
-  - text: Control binnig and decimation for IDS cameras
+  - text: Control binning and decimation for IDS cameras
   - text: Show warning when FPS does not match
   - text: Fix opening camera when 8bpp is not supported
   - text: Fix color-bar gradient updating

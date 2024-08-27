@@ -4,7 +4,7 @@
 ► File ► Export Plot Image [F7]
 ```
 
-Saves the current beam view, including beam ellipse, color scale, and calculation results, into an image file. To toggle drawing of calculation results, use the `[View ► Plot Beam Info]` menu command. Use the Select button to specify a target file name and image format. PNG and JPG formats are supported.
+Saves the current beam view, including beam ellipse, color scale, and calculation results, into an image file. To toggle drawing of calculation results, use the `[View ► Plot Beam Info]` menu command. Use the Select button to specify a target file name and image format. PNG and JPG formats are supported. Note that JPEG images have lossy compression and are not recommended for scientific data.
 
 ![Screenshot](./img/export_plot.png)
 

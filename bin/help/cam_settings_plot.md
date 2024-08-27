@@ -42,21 +42,15 @@ E.g., for an 8-bit image where the brightest pixel has value 150:
 
 ### Rescale pixels <a id=rescale-pixels>&nbsp;</a>
 
-Multiply image width and height by some factor to display the beam plot and result values in physical units rather than in pixels.
-
-The scale factor depends on a value of the “Use … scale” options (see below).
+Multiply image width and height by some factor to display the [beam plot](./plot.md) and [result values](./results_table.md) in physical units rather than in pixels. The scale factor depends on a value of the “Use … scale” options (see below).
 
 ### Use hardware scale
 
-The app tries to extract a physical size of pixel from camera properties. 
-
-For [cameras](./hardware.md) supporting GenICam protocol, this is done by reading the `SensorPixelWidth` and `SensorPixelHeight` features. See [GenICam naming convention](https://www.emva.org/wp-content/uploads/GenICam_SFNC_v2_4.pdf) (PDF, online)
+The app tries to extract a physical size of pixel from camera properties. For [cameras](./hardware.md) supporting GenICam protocol, this is done by reading the `SensorPixelWidth` and `SensorPixelHeight` features. See [GenICam naming convention](https://www.emva.org/wp-content/uploads/GenICam_SFNC_v2_4.pdf) (PDF, online)
 
 ### Use custom scale
 
-When usage of the hardware pixel size is not possible or not desirable, then the scale factor can be set manually.
-
-In this case, one even can specify an arbitrary unit of measurement. This affects how calculation results are [displayed](./results_table.md).
+When usage of the hardware pixel size is not possible or not desirable, then the scale factor can be set manually. In this case, one even can specify an arbitrary unit of measurement. This affects how calculation results are [displayed](./results_table.md). The main application of this feature is to allow for direct beam angle measurement according to ISO 11670 Section 5.2. The beam position can be displayed in mrad or μrad.
 
 ## See also
 

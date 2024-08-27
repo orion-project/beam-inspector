@@ -16,6 +16,7 @@
     - [Color map](./color_map.md)
     - [Raw view](./raw_view.md)
     - [Live ROI](./roi_live.md)
+    - [Overlays](./overlays.md)
     - [Export raw image](./export_raw.md)
     - [Export plot image](./export_plot.md)
 - [Results table](./results_table.md)

@@ -33,5 +33,6 @@ Use the mouse wheel to zoom the view, drag with the left mouse button to pan the
 - [Color map](./color_map.md)
 - [ROI](./cam_settings_roi.md)
 - [Live ROI editing](./roi_live.md)
+- [Overlays](./overlays.md)
 
 &nbsp;

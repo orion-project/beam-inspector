@@ -1,5 +1,7 @@
 #include "CrosshairOverlay.h"
 
+#include "app/HelpSystem.h"
+
 #include "helpers/OriDialogs.h"
 
 #include "qcp/src/core.h"
@@ -28,21 +30,52 @@ CrosshairsOverlay::CrosshairsOverlay(QCustomPlot *parentPlot) : QCPAbstractItem(
 void CrosshairsOverlay::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
 {
     _scale = scale;
-    _maxX = scale.pixelToUnit(sensorW);
-    _maxY = scale.pixelToUnit(sensorH);
+    _maxPixelX = sensorW;
+    _maxPixelY = sensorH;
+    _maxUnitX = scale.pixelToUnit(sensorW);
+    _maxUnitY = scale.pixelToUnit(sensorH);
     updateCoords();
 }
 
 void CrosshairsOverlay::updateCoords()
 {
     for (auto& c : _items) {
+        // Before 0.0.14 coords were saved as pixels
+        if (c.x > 1) {
+            if (c.x > _maxPixelX)
+                c.x = _maxPixelX;
+            c.x /= _maxPixelX;
+        } else if (c.x < 0) {
+            c.x = 0;
+        }
+        if (c.y > 1) {
+            if (c.y > _maxPixelY)
+                c.y = _maxPixelY;
+            c.y /= _maxPixelY;
+        } else if (c.y < 0) {
+            c.y = 0;
+        }
+        c.pixelX = _maxPixelX * c.x;
+        c.pixelY = _maxPixelY * c.y;
         c.unitX = _scale.pixelToUnit(c.pixelX);
         c.unitY = _scale.pixelToUnit(c.pixelY);
     }
+    _hasCoords = true;
+}
+
+void CrosshairsOverlay::setItemCoords(Crosshair &c, double plotX, double plotY)
+{
+    c.unitX = parentPlot()->xAxis->pixelToCoord(plotX);
+    c.unitY = parentPlot()->yAxis->pixelToCoord(plotY);
+    c.pixelX = _scale.unitToPixel(c.unitX);
+    c.pixelY = _scale.unitToPixel(c.unitY);
+    c.x = c.pixelX / _maxPixelX;
+    c.y = c.pixelY / _maxPixelY;
 }
 
 void CrosshairsOverlay::draw(QCPPainter *painter)
 {
+    if (!_hasCoords) return;
     const double r = RADIUS;
     const double w = RADIUS + EXTENT;
     for (const auto& c : _items) {
@@ -86,10 +119,7 @@ void CrosshairsOverlay::mouseMove(QMouseEvent *e)
     auto& c = _items[_draggingIdx];
     const double x = parentPlot()->xAxis->coordToPixel(c.unitX);
     const double y = parentPlot()->yAxis->coordToPixel(c.unitY);
-    c.unitX = parentPlot()->xAxis->pixelToCoord(x+dx);
-    c.unitY = parentPlot()->yAxis->pixelToCoord(y+dy);
-    c.pixelX = _scale.unitToPixel(c.unitX);
-    c.pixelY = _scale.unitToPixel(c.unitY);
+    setItemCoords(c, x+dx, y+dy);
     parentPlot()->replot();
 }
 
@@ -154,9 +184,12 @@ void CrosshairsOverlay::changeItemLabel()
 {
     auto &c = _items[_selectedIdx];
     bool ok;
-    auto label = Ori::Dlg::inputText(qApp->tr("Crosshair label"), c.label, &ok);
-    if (ok) {
-        c.setLabel(label);
+    Ori::Dlg::InputTextOptions opts;
+    opts.label = qApp->tr("Crosshair label");
+    opts.value = c.label;
+    opts.onHelp = [](){ HelpSystem::topic("overlays"); };
+    if (Ori::Dlg::inputText(opts)) {
+        c.setLabel(opts.value);
         parentPlot()->replot();
     }
 }
@@ -179,10 +212,7 @@ void CrosshairsOverlay::addItem()
     Crosshair c;
     c.color = Qt::white;
     c.setLabel(QString::number(maxLabel+1));
-    c.unitX = parentPlot()->xAxis->pixelToCoord(_selectedPos.x());
-    c.unitY = parentPlot()->yAxis->pixelToCoord(_selectedPos.y());
-    c.pixelX = _scale.unitToPixel(c.unitX);
-    c.pixelY = _scale.unitToPixel(c.unitY);
+    setItemCoords(c, _selectedPos.x(), _selectedPos.y());
     _items << c;
     parentPlot()->replot();
 }
@@ -195,8 +225,8 @@ void CrosshairsOverlay::save(QSettings *s)
     for (int i = 0; i < _items.size(); i++) {
         s->beginGroup(QString::number(i));
         const auto& c = _items.at(i);
-        s->setValue("x", c.pixelX);
-        s->setValue("y", c.pixelY);
+        s->setValue("x", c.x);
+        s->setValue("y", c.y);
         s->setValue("label", c.label);
         s->setValue("color", c.color.name());
         s->endGroup();
@@ -212,8 +242,8 @@ void CrosshairsOverlay::load(QSettings *s)
     for (const auto& g : s->childGroups()) {
         s->beginGroup(g);
         Crosshair c;
-        c.pixelX = s->value("x").toInt();
-        c.pixelY = s->value("y").toInt();
+        c.x = s->value("x").toDouble();
+        c.y = s->value("y").toDouble();
         c.setLabel(s->value("label").toString());
         c.color = QColor(s->value("color").toString());
         _items << c;
@@ -233,8 +263,8 @@ QString CrosshairsOverlay::save(const QString& fileName)
     QJsonArray items;
     for (const auto &c : _items) {
         items << QJsonObject {
-            {"x", c.pixelX},
-            {"y", c.pixelY},
+            {"x", c.x},
+            {"y", c.y},
             {"label", c.label},
             {"color", c.color.name()},
         };
@@ -276,8 +306,8 @@ QString CrosshairsOverlay::load(const QString& fileName)
     for (auto it = items.begin(); it != items.end(); it++) {
         auto item = it->toObject();
         Crosshair c;
-        c.pixelX = item["x"].toInt();
-        c.pixelY = item["y"].toInt();
+        c.x = item["x"].toDouble();
+        c.y = item["y"].toDouble();
         c.setLabel(item["label"].toString());
         c.color = QColor(item["color"].toString());
         _items << c;

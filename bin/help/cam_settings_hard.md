@@ -18,6 +18,8 @@ After changing the option, re-select the camera in the [camera selector](./cam_s
 
 ### Resolution reduction
 
+Resolution reduction techniques can be used to reduce the CPU load the bandwidth requirements on the USB.
+
 **Binning** allows for reducing image size by averaging pixels over several rows or/and columns. See the [official documentation](https://www.1stvision.com/cameras/IDS/IDS-manuals/en/basics-binning.html) for details.
 
 Some cameras support only combined binning mode, they can't average only rows or only columns separately; both X and Y values must be set to the same value. See the specs of your camera for details.

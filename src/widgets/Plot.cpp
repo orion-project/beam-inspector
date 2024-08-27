@@ -98,7 +98,7 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
 
     _mruCrosshairs = new Ori::MruFileList(this);
     _mruCrosshairs->load("mruCrosshairs");
-    connect(_mruCrosshairs, &Ori::MruFileList::clicked, this, [this](const QString& fileName){ _crosshairs->load(fileName); });
+    connect(_mruCrosshairs, &Ori::MruFileList::clicked, this, qOverload<const QString&>(&Plot::loadCrosshairs));
 }
 
 Plot::~Plot()
@@ -384,13 +384,17 @@ void Plot::loadCrosshairs()
     QFileInfo fi(fileName);
     s.setValue("recentDir", fi.absoluteDir().absolutePath());
     fileName = fi.absoluteFilePath();
-    _mruCrosshairs->append(fileName);
+    loadCrosshairs(fileName);
+}
 
+void Plot::loadCrosshairs(const QString &fileName)
+{
     auto res = _crosshairs->load(fileName);
     if (!res.isEmpty())
         Ori::Dlg::error(res);
     else
         replot();
+    _mruCrosshairs->append(fileName);
 }
 
 void Plot::saveCrosshairs()
@@ -407,9 +411,10 @@ void Plot::saveCrosshairs()
     QFileInfo fi(fileName);
     s.setValue("recentDir", fi.absoluteDir().absolutePath());
     fileName = fi.absoluteFilePath();
-    _mruCrosshairs->append(fileName);
 
     auto res = _crosshairs->save(fileName);
     if (!res.isEmpty())
         Ori::Dlg::error(res);
+    else
+        _mruCrosshairs->append(fileName);
 }

@@ -16,7 +16,9 @@ Apply background offset correction according to ISO 11146-3. The standard propos
 
 ### Corner Fraction
 
-Background subtraction starts from calculation of the mean <i>E<sub>mean</sub></i> and standard deviation <i>E<sub>sdev</sub></i> of an unilluminated image. It can be calculated from previously stored dark map images. Alternatively, a part of the image itself can be used for that. The ISO suggests using image corners, considering them as “dark”. The size of these dark corners is given in percent of image size, and recommended range is 2…5%.
+Background subtraction starts from calculation of the mean <i>E<sub>mean</sub></i> and standard deviation <i>E<sub>sdev</sub></i> of an unilluminated image. It can be calculated from previously stored dark map images. Alternatively, a part of the image itself can be used for that. The ISO suggests using image corners, considering them as “dark”. The size of these dark corners is given in percent of image size, and recommended range is 2…5%. 
+
+*Illuminating the corners (i.e., if the beam is too large for the sensor) or uneven background level (e.g., tilted background) leads to unreliable measurements.*
 
 ### Noise Factor
 

@@ -300,7 +300,7 @@ void PlotWindow::createMenuBar()
     _actionCrosshairsEdit = A_(tr("Edit Crosshairs"), this, &PlotWindow::toggleCrosshairsEditing, ":/toolbar/crosshair_edit");
     _actionCrosshairsEdit->setCheckable(true);
     auto actnClearCrosshairs = A_(tr("Clear Crosshairs"), _plot, &Plot::clearCrosshairs, ":/toolbar/trash");
-    auto actnLoadCrosshairs = A_(tr("Load From File..."), _plot, &Plot::loadCrosshairs, ":/toolbar/open");
+    auto actnLoadCrosshairs = A_(tr("Load From File..."), _plot, qOverload<>(&Plot::loadCrosshairs), ":/toolbar/open");
     auto actnSaveCrosshairs = A_(tr("Save To File..."), _plot, &Plot::saveCrosshairs, ":/toolbar/save");
     auto menuOverlays = M_(tr("Overlays"), {
         _actionCrosshairsShow, 0, _actionCrosshairsEdit, actnClearCrosshairs,
