@@ -10,3 +10,4 @@ build
 calc/**/*.pgm
 CMakeLists.txt.user*
 CMakeLists.txt.autosave
+track_mem*.csv
