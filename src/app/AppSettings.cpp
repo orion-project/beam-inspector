@@ -71,6 +71,9 @@ void AppSettings::load()
 
     s.beginGroup("Plot");
     LOAD(colorMap, String, "CET-L08");
+
+    s.beginGroup("Update");
+    updateCheckInterval = UpdateCheckInterval(s.value("checkInterval", int(UpdateCheckInterval::Weekly)).toInt());
 }
 
 void AppSettings::save()
@@ -92,6 +95,9 @@ void AppSettings::save()
 
     s.beginGroup(GROUP_PLOT);
     SAVE(colorMap);
+
+    s.beginGroup("Update");
+    s.setValue("checkInterval", int(updateCheckInterval));
 }
 
 bool AppSettings::edit()
@@ -107,6 +113,8 @@ bool AppSettings::edit()
             .withHelpTopic("app_settings_ids"),
     #endif
         ConfigPage(cfgDbg, tr("Debug"), ":/toolbar/bug"),
+        ConfigPage(cfgOpts, tr("Options"), ":/toolbar/options")
+            .withHelpTopic("app_settings_opts"),
     };
     opts.onHelpRequested = [](const QString &topic){ HelpSystem::topic(topic); };
     opts.items = {
@@ -126,6 +134,11 @@ bool AppSettings::edit()
         new ConfigItemDir(cfgIds, tr("Peak comfortC directory (x64)"), &idsSdkDir),
     #endif
         new ConfigItemBool(cfgDbg, tr("Show log window (restart required)"), &useConsole),
+        (new ConfigItemDropDown(cfgOpts, tr("Automatically check for updates"), (int*)&updateCheckInterval))
+            ->withOption(int(UpdateCheckInterval::None), tr("None"))
+            ->withOption(int(UpdateCheckInterval::Daily), tr("Daily"))
+            ->withOption(int(UpdateCheckInterval::Weekly), tr("Weekly"))
+            ->withOption(int(UpdateCheckInterval::Monthly), tr("Monthly")),
     };
     if (ConfigDlg::edit(opts))
     {

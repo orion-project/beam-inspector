@@ -27,6 +27,7 @@
 
 - [Device Control](./app_settings_hard.md)
 - [IDS Camera](./app_settings_ids.md)
+- [Options](./app_settings_opts.md)
 
 **Camera Settings**
 

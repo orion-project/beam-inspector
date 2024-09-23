@@ -16,6 +16,8 @@ Restart the application to apply changes in this window. When the app starts, it
 
 ## See also
 
+- [App Preferences: Device Control](./app_settings_hard.md)
+- [App Preferences: Options](./app_settings_opts.md)
 - [Supported hardware](./hardware.md)
 - [Camera selector](./cam_selector.md)
 

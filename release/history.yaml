@@ -1,4 +1,9 @@
 history:
+- version: 0.0.15
+  date: 2024
+  changes:
+  - text: Automatically check for updates
+
 - version: 0.0.14
   date: 2024-08-22
   changes:

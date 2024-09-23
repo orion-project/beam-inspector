@@ -22,4 +22,9 @@ There are the [fields](./cam_control.md) affected by these options:
 
 ![Screenshot](./img/cam_control.png)
 
+## See also
+
+- [App Preferences: IDS Camera](./app_settings_ids.md)
+- [App Preferences: Options](./app_settings_opts.md)
+
 &nbsp;

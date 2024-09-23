@@ -172,6 +172,8 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
 
         if (!AppSettings::instance().isDevMode)
             openImage({});
+
+        HelpSystem::instance()->checkForUpdatesAuto();
     });
 }
 
@@ -314,6 +316,7 @@ void PlotWindow::createMenuBar()
     m->addAction(QIcon(":/ori_images/help"), tr("Help"), QKeySequence::HelpContents, help, &HelpSystem::showContent);
     m->addAction(QIcon(":/toolbar/home"), tr("Visit Homepage"), help, &HelpSystem::visitHomePage);
     m->addAction(QIcon(":/toolbar/bug"), tr("Send Bug Report"), help, &HelpSystem::sendBugReport);
+    m->addAction(tr("Check For Updates"), help, &HelpSystem::checkForUpdates);
     m->addSeparator();
     m->addAction(tr("About..."), help, &HelpSystem::showAbout);
 #undef M_

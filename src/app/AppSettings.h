@@ -5,6 +5,14 @@
 
 #include <QObject>
 
+enum class UpdateCheckInterval
+{
+    None,
+    Daily,
+    Weekly,
+    Monthly,
+};
+
 class IAppSettingsListener
 {
 public:
@@ -32,6 +40,7 @@ public:
     QString colorMap;
     bool useConsole = false;
     bool isDevMode = false;
+    UpdateCheckInterval updateCheckInterval = UpdateCheckInterval::Weekly;
 
     enum ConfigPages {
         cfgDev,
@@ -39,6 +48,7 @@ public:
     #ifdef WITH_IDS
         cfgIds,
     #endif
+        cfgOpts,
     };
 
     void load();

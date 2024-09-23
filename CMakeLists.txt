@@ -35,8 +35,8 @@ set(WITH_IDS ON)
 #    -msse4.2
 #)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets PrintSupport)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets PrintSupport)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets PrintSupport Network)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets PrintSupport Network)
 
 set(PROJECT_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/version.rc
@@ -97,6 +97,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     cgn_beam_calc
     orion
     Qt::Widgets
+    Qt::Network
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

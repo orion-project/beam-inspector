@@ -1,14 +1,29 @@
 #include "HelpSystem.h"
 
+#include "app/AppSettings.h"
 
+#include "core/OriVersion.h"
+#include "helpers/OriDialogs.h"
 #include "helpers/OriLayouts.h"
 #include "tools/OriHelpWindow.h"
+#include "tools/OriSettings.h"
 #include "widgets/OriLabels.h"
 
 #include <QApplication>
 #include <QDesktopServices>
+#include <QDateTime>
 #include <QDialog>
+#include <QFormLayout>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLabel>
+#include <QNetworkAccessManager>
+#include <QPushButton>
+#include <QRestAccessManager>
+#include <QRestReply>
+#include <QTextBrowser>
+#include <QTimer>
 #include <QUrl>
 
 using namespace Ori::Layouts;
@@ -57,6 +72,166 @@ void HelpSystem::visitHomePage()
 void HelpSystem::sendBugReport()
 {
     QDesktopServices::openUrl(QUrl(newIssueUrl()));
+}
+
+// https://docs.github.com/ru/rest/releases/releases?apiVersion=2022-11-28
+void HelpSystem::checkForUpdates()
+{
+    getReleases(false);
+}
+
+void HelpSystem::checkForUpdatesAuto()
+{
+    Ori::Settings s;
+    s.beginGroup("Update");
+    auto interval = UpdateCheckInterval(s.value("checkInterval", int(UpdateCheckInterval::Weekly)).toInt());
+    if (interval == UpdateCheckInterval::None)
+        return;
+    bool elapsed = false;
+    auto lastTime = QDateTime::fromString(s.value("lastCheckTime").toString(), Qt::ISODate);
+    if (!lastTime.isValid())
+        elapsed = true;
+    else {
+        auto now = QDateTime::currentDateTime().date();
+        auto prev = lastTime.date();
+        switch (interval) {
+        case UpdateCheckInterval::None:
+            break;
+        case UpdateCheckInterval::Daily:
+            elapsed = now.dayOfYear() != prev.dayOfYear() || now.year() != prev.year();
+            break;
+        case UpdateCheckInterval::Weekly:
+            elapsed = now.weekNumber() != prev.weekNumber() || now.year() != prev.year();
+            break;
+        case UpdateCheckInterval::Monthly:
+            elapsed = now.month() != prev.month() || now.year() != prev.year();
+            break;
+        }
+    }
+    if (elapsed) {
+        auto checkDelay = s.value("checkDelayMs", 300).toInt();
+        if (checkDelay <= 0)
+            checkDelay = 300;
+        QTimer::singleShot(checkDelay, this, [this]{ getReleases(true); });
+    }
+}
+
+namespace {
+struct Release {
+    Ori::Version ver;
+    QDate date;
+    QString descr;
+};
+}
+
+void HelpSystem::getReleases(bool silent)
+{
+    if (_updateChecker)
+    {
+        qDebug() << "Check is already in progress";
+        return;
+    }
+    if (!_updateChecker) {
+        _updateChecker = new QNetworkAccessManager(this);
+        _updateCheckerRest = new QRestAccessManager(_updateChecker, this);
+    }
+    QNetworkRequest request;
+    request.setRawHeader("Accept", "application/vnd.github+json");
+    request.setRawHeader("X-GitHub-Api-Version", "2022-11-28");
+    request.setHeader(QNetworkRequest::UserAgentHeader, "otion-project/beam-inspector-app");
+    request.setUrl(QUrl("https://api.github.com/repos/orion-project/beam-inspector/releases"));
+    _updateCheckerRest->get(request, this, [this, silent](QRestReply &reply){
+        if (!reply.isSuccess()) {
+            if (silent)
+                qWarning() << "HelpSystem::getReleases" << reply.errorString();
+            else
+                Ori::Dlg::error(reply.errorString());
+            finishUpdateCheck();
+            return;
+        }
+        QJsonParseError err;
+        auto doc = reply.readJson(&err);
+        if (!doc) {
+            if (silent)
+                qWarning() << "HelpSystem::getReleases" << err.errorString();
+            else
+                Ori::Dlg::error(err.errorString());
+            finishUpdateCheck();
+            return;
+        }
+        if (!doc->isArray()) {
+            if (silent)
+                qWarning() << "HelpSystem::getReleases" << "Unexpected data format, json array expected";
+            else
+                Ori::Dlg::error(tr("Server returned data in an unexpected format"));
+            finishUpdateCheck();
+            return;
+        }
+        auto arr = doc->array();
+        QList<Release> releases;
+        Ori::Version currentVersion(APP_VER_MAJOR, APP_VER_MINOR, APP_VER_PATCH);
+        for (auto it = arr.constBegin(); it != arr.constEnd(); it++) {
+            auto obj = it->toObject();
+            Ori::Version version(obj["name"].toString());
+            if (version > currentVersion)
+                releases << Release {
+                    .ver = version,
+                    .date = QDate::fromString(obj["published_at"].toString(), Qt::ISODate),
+                    .descr = obj["body"].toString(),
+                };
+        }
+        if (releases.empty()) {
+            Ori::Dlg::info(tr("You are using the most recent version"));
+            finishUpdateCheck();
+            return;
+        }
+        std::sort(releases.begin(), releases.end(), [](Release& a, Release& b){ return a.ver > b.ver; });
+
+        auto label = new QLabel(tr("A new version is available"));
+        label->setAlignment(Qt::AlignHCenter);
+
+        auto layout = new QFormLayout;
+        layout->addRow(tr("Current version:"), new QLabel("<b>" + currentVersion.str(3) + "</b>"));
+        layout->addRow(tr("New version:"), new QLabel("<b>" + releases.first().ver.str(3) + "</b>"));
+
+        QString report;
+        QTextStream stream(&report);
+        for (auto r = releases.constBegin(); r != releases.constEnd(); r++)
+            stream << "**" << r->ver.str(3) << "** (" << QLocale::system().toString(r->date, QLocale::ShortFormat) << ")\n\n" << r->descr << "\n\n";
+
+        auto button = new QPushButton("      " + tr("Open download page") + "      ");
+        connect(button, &QPushButton::clicked, this, []{
+            QDesktopServices::openUrl(QUrl("https://github.com/orion-project/beam-inspector/releases"));
+        });
+
+        auto browser = new QTextBrowser;
+        browser->setMarkdown(report);
+        auto w = new QDialog;
+        w->setAttribute(Qt::WA_DeleteOnClose);
+        LayoutV({
+            label,
+            layout,
+            new QLabel(tr("Changelog:")),
+            browser,
+            LayoutH({Stretch(), button, Stretch()}),
+        }).useFor(w);
+        w->resize(450, 400);
+        w->exec();
+
+        finishUpdateCheck();
+    });
+}
+
+void HelpSystem::finishUpdateCheck()
+{
+    Ori::Settings s;
+    s.beginGroup("Update");
+    s.setValue("lastCheckTime", QDateTime::currentDateTime().toString(Qt::ISODate));
+
+    _updateCheckerRest->deleteLater();
+    _updateChecker->deleteLater();
+    _updateCheckerRest = nullptr;
+    _updateChecker = nullptr;
 }
 
 void HelpSystem::showAbout()

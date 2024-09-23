@@ -5,7 +5,7 @@
 
 QT_BEGIN_NAMESPACE
 class QNetworkAccessManager;
-class QNetworkReply;
+class QRestAccessManager;
 QT_END_NAMESPACE
 
 class HelpSystem : public QObject
@@ -24,15 +24,18 @@ public slots:
     void showTopic(const QString& topic);
     void visitHomePage();
     void sendBugReport();
+    void checkForUpdates();
+    void checkForUpdatesAuto();
     void showAbout();
 
 private:
     HelpSystem();
 
     QNetworkAccessManager* _updateChecker = nullptr;
-    QNetworkReply* _updateReply = nullptr;
+    QRestAccessManager* _updateCheckerRest = nullptr;
 
-    void versionReceived(QByteArray versionData) const;
+    void getReleases(bool silent);
+    void finishUpdateCheck();
 };
 
 #endif // HELP_SYSTEM_H
