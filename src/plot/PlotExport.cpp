@@ -31,7 +31,7 @@ struct ExportImageProps
     int height = 0;
     int quality = -1;
     double scale = 1;
-    bool proportional = true;
+    //bool proportional = true;
 
 
     ExportImageProps()
@@ -43,7 +43,7 @@ struct ExportImageProps
         height = s.value("height").toInt();
         quality = s.value("quality", -1).toInt();
         scale = s.value("scale", 1).toDouble();
-        proportional = s.value("proportional", true).toBool();
+        //proportional = s.value("proportional", true).toBool();
     }
 
     void save()
@@ -55,7 +55,7 @@ struct ExportImageProps
         s.setValue("height", height);
         s.setValue("quality", quality);
         s.setValue("scale", scale);
-        s.setValue("proportional", proportional);
+        //s.setValue("proportional", proportional);
     }
 };
 
@@ -72,8 +72,10 @@ public:
             { tr("JPG Images (*.jpg *.jpeg)"), "jpg" }
         });
 
-        seWidth = Ori::Gui::spinBox(100, 10000, props.width > 0 ? props.width : plot->width());
-        seHeight = Ori::Gui::spinBox(100, 10000, props.height > 0 ? props.height : plot->height());
+        // seWidth = Ori::Gui::spinBox(100, 10000, props.width > 0 ? props.width : plot->width());
+        // seHeight = Ori::Gui::spinBox(100, 10000, props.height > 0 ? props.height : plot->height());
+        seWidth = Ori::Gui::spinBox(100, 10000, plot->width());
+        seHeight = Ori::Gui::spinBox(100, 10000, plot->height());
         seWidth->connect(seWidth, QOverload<int>::of(&QSpinBox::valueChanged), seWidth, [this](int w){ widthChanged(w); });
         seHeight->connect(seHeight, QOverload<int>::of(&QSpinBox::valueChanged), seHeight, [this](int h){ heightChanged(h); });
         aspect = seWidth->value() / double(seHeight->value());
@@ -82,8 +84,8 @@ public:
         sizeLayout->addRow(tr("Widht"), seWidth);
         sizeLayout->addRow(tr("Height"), seHeight);
 
-        cbProportional = new QCheckBox(tr("Proportional"));
-        cbProportional->setChecked(props.proportional);
+        // cbProportional = new QCheckBox(tr("Proportional"));
+        // cbProportional->setChecked(props.proportional);
 
         seQuality = Ori::Gui::spinBox(-1, 100, (props.quality >= -1 && props.quality <= 100) ? props.quality : -1);
 
@@ -95,8 +97,8 @@ public:
         scaleLayout->addRow(tr("Scale"), edScale);
         scaleLayout->addRow(tr("Quality"), seQuality);
 
-        auto butResetSize = new QPushButton("  " +  tr("Set size as on screen") + "  ");
-        butResetSize->connect(butResetSize, &QPushButton::clicked, butResetSize, [this]{ resetImageSize(); });
+        // auto butResetSize = new QPushButton("  " +  tr("Set size as on screen") + "  ");
+        // butResetSize->connect(butResetSize, &QPushButton::clicked, butResetSize, [this]{ resetImageSize(); });
 
         content = LayoutV({
             fileSelector,
@@ -107,11 +109,11 @@ public:
                     scaleLayout,
                 }),
                 SpaceV(),
-                LayoutH({
-                    cbProportional,
-                    Stretch(),
-                    butResetSize,
-                })
+                // LayoutH({
+                //     cbProportional,
+                //     Stretch(),
+                //     butResetSize,
+                // })
             }).makeGroupBox(tr("Image size")),
         }).setMargin(0).makeWidgetAuto();
     }
@@ -126,18 +128,18 @@ public:
     void widthChanged(int w) {
         if (skipSizeChange) return;
         skipSizeChange = true;
-        if (cbProportional->isChecked())
+        //if (cbProportional->isChecked())
             seHeight->setValue(w / aspect);
-        else aspect = w / seHeight->value();
+        //else aspect = w / seHeight->value();
         skipSizeChange = false;
     }
 
     void heightChanged(int h) {
         if (skipSizeChange) return;
         skipSizeChange = true;
-        if (cbProportional->isChecked())
+        //if (cbProportional->isChecked())
             seWidth->setValue(h * aspect);
-        else aspect = seWidth->value() / double(h);
+        //else aspect = seWidth->value() / double(h);
         skipSizeChange = false;
     }
 
@@ -149,6 +151,7 @@ public:
             .withTitle(tr("Export Image"))
             .withAcceptTitle(tr("Save"))
             .withOnHelp([]{ HelpSystem::topic("export_plot"); })
+            .windowModal()
             .exec();
     }
 
@@ -158,7 +161,7 @@ public:
         props.height = seHeight->value();
         props.quality = seQuality->value();
         props.scale = edScale->value();
-        props.proportional = cbProportional->isChecked();
+        //props.proportional = cbProportional->isChecked();
     }
 
     QCustomPlot *plot;
@@ -251,6 +254,7 @@ public:
             .withTitle(tr("Export Raw Image"))
             .withAcceptTitle(tr("Save"))
             .withOnHelp([]{ HelpSystem::topic("export_raw"); })
+            .windowModal()
             .exec();
     }
 

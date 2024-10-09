@@ -3,6 +3,7 @@ history:
   date: 2024
   changes:
   - text: Automatically check for updates
+  - text: Always export proportionally scaled image
 
 - version: 0.0.14
   date: 2024-08-22

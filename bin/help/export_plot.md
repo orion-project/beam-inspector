@@ -8,9 +8,7 @@ Saves the current beam view, including beam ellipse, color scale, and calculatio
 
 ![Screenshot](./img/export_plot.png)
 
-The dialog allows for specifying the exact **Width** and **Height** of the target image, the beam view will be re-plotted into that size without bitmap scaling artifacts.
-
-If the **Proportional** flag is checked, then when you change a width or height, the other side will be adjusted accordingly to receive the same relative change.
+The dialog allows for specifying the exact **Width** and **Height** of the target image, the beam view will be re-plotted into that size without bitmap scaling artifacts. When you change a width or height, the other side will be adjusted accordingly to receive the same relative change
 
 The **Scale** defines the plotting scale factor. For example, when you set `Width=600` and `Scale=1` you get an image of 600px width like if you have resized the window to that width.
 
