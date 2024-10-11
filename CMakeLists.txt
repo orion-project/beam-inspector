@@ -26,7 +26,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(WITH_IDS "Add support for cameras from IDS (SDK must be installed)" ON)
+option(CHECK_UPDATES_WITH_CURL "Use external curl program for updates checking" OFF)
 set(WITH_IDS ON)
+set(CHECK_UPDATES_WITH_CURL ON)
 
 #add_compile_options(
 #    -O3
@@ -35,8 +37,12 @@ set(WITH_IDS ON)
 #    -msse4.2
 #)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets PrintSupport Network)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets PrintSupport Network)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets PrintSupport)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets PrintSupport)
+if(NOT CHECK_UPDATES_WITH_CURL)
+    find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Network)
+    find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Network)
+endif()
 
 set(PROJECT_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/version.rc
@@ -97,8 +103,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     cgn_beam_calc
     orion
     Qt::Widgets
-    Qt::Network
 )
+if(NOT CHECK_UPDATES_WITH_CURL)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        Qt::Network
+    )
+endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER org.orion-project.beam-inspector
@@ -137,6 +147,9 @@ if(WITH_IDS)
     )
 endif()
 
+if(CHECK_UPDATES_WITH_CURL)
+    add_definitions(-DCHECK_UPDATES_WITH_CURL)
+endif()
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(${PROJECT_NAME})

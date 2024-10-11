@@ -18,13 +18,17 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLabel>
-#include <QNetworkAccessManager>
 #include <QPushButton>
-#include <QRestAccessManager>
-#include <QRestReply>
 #include <QTextBrowser>
 #include <QTimer>
 #include <QUrl>
+#ifdef CHECK_UPDATES_WITH_CURL
+#include <QProcess>
+#else
+#include <QNetworkAccessManager>
+#include <QRestAccessManager>
+#include <QRestReply>
+#endif
 
 using namespace Ori::Layouts;
 using Ori::Widgets::Label;
@@ -126,48 +130,90 @@ struct Release {
 
 void HelpSystem::getReleases(bool silent)
 {
+    #define LOG_ID "HelpSystem::getRelease:"
     if (_updateChecker)
     {
-        qDebug() << "Check is already in progress";
+        qDebug() << LOG_ID << "Already in progress";
         return;
     }
-    if (!_updateChecker) {
-        _updateChecker = new QNetworkAccessManager(this);
-        _updateCheckerRest = new QRestAccessManager(_updateChecker, this);
-    }
-    QNetworkRequest request;
-    request.setRawHeader("Accept", "application/vnd.github+json");
-    request.setRawHeader("X-GitHub-Api-Version", "2022-11-28");
-    request.setHeader(QNetworkRequest::UserAgentHeader, "otion-project/beam-inspector-app");
-    request.setUrl(QUrl("https://api.github.com/repos/orion-project/beam-inspector/releases"));
-    _updateCheckerRest->get(request, this, [this, silent](QRestReply &reply){
-        if (!reply.isSuccess()) {
-            if (silent)
-                qWarning() << "HelpSystem::getReleases" << reply.errorString();
-            else
-                Ori::Dlg::error(reply.errorString());
+#ifdef CHECK_UPDATES_WITH_CURL
+/*
+With QNetworkRequest it is unable to deal with such an error:
+
+curl: (35) schannel: next InitializeSecurityContext failed: Unknown error (0x80092012) -
+    The revocation function was unable to check revocation for the certificate.
+
+QNetworkRequest hungs for a long time and then gets failed with error RemoteHostClosedError
+With curl this can be ignored with --ssl-no-revoke (Disable cert revocation checks)
+
+curl -L --ssl-no-revoke \
+    -H "Accept: application/vnd.github+json" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    https://api.github.com/repos/orion-project/beam-inspector/releases
+*/
+    _updateChecker = new QProcess(this);
+    _updateChecker->start("curl", { "-L", "--ssl-no-revoke",
+        "-H", "Accept: application/vnd.github+json",
+        "-H", "User-Agent: orion-project/beam-inspector-app",
+        "-H", "X-GitHub-Api-Version: 2022-11-28",
+        "https://api.github.com/repos/orion-project/beam-inspector/releases"
+    });
+    qDebug() << LOG_ID << "Started";
+    connect(_updateChecker, &QProcess::finished, this, [this, silent](int exitCode, QProcess::ExitStatus exitStatus){
+        if (exitStatus != QProcess::NormalExit) {
+            qWarning() << LOG_ID << _updateChecker->errorString() << exitStatus;
+            if (!silent)
+                Ori::Dlg::error(_updateChecker->errorString());
+            finishUpdateCheck();
+            return;
+        }
+        if (exitCode != 0) {
+            qWarning() << LOG_ID << "exitCode" << exitCode << QString::fromLocal8Bit(_updateChecker->readAllStandardError());
+            if (!silent)
+                Ori::Dlg::error(tr("Update check finished with error (%1)").arg(exitCode));
             finishUpdateCheck();
             return;
         }
         QJsonParseError err;
-        auto doc = reply.readJson(&err);
-        if (!doc) {
-            if (silent)
-                qWarning() << "HelpSystem::getReleases" << err.errorString();
-            else
+        auto doc = QJsonDocument::fromJson(_updateChecker->readAllStandardOutput(), &err);
+#else
+    _updateChecker = new QNetworkAccessManager(this);
+    _updateCheckerRest = new QRestAccessManager(_updateChecker, this);
+    QNetworkRequest request;
+    request.setRawHeader("Accept", "application/vnd.github+json");
+    request.setRawHeader("X-GitHub-Api-Version", "2022-11-28");
+    request.setHeader(QNetworkRequest::UserAgentHeader, "orion-project/beam-inspector-app");
+    request.setUrl(QUrl("https://api.github.com/repos/orion-project/beam-inspector/releases"));
+    request.setTransferTimeout(5000);
+    qDebug() << LOG_ID << "Started";
+    _updateCheckerRest->get(request, this, [this, silent](QRestReply &reply){
+        if (!reply.isSuccess()) {
+            qWarning() << LOG_ID << reply.errorString() << reply.error();
+            if (!silent)
+                Ori::Dlg::error(reply.error() == QNetworkReply::OperationCanceledError ? QString("Operation timeout") : reply.errorString());
+            finishUpdateCheck();
+            return;
+        }
+        QJsonDocument doc;
+        QJsonParseError err;
+        if (auto d = reply.readJson(&err); d)
+            doc = *d;
+#endif
+        if (err.error != QJsonParseError::NoError) {
+            qWarning() << LOG_ID << err.errorString();
+            if (!silent)
                 Ori::Dlg::error(err.errorString());
             finishUpdateCheck();
             return;
         }
-        if (!doc->isArray()) {
-            if (silent)
-                qWarning() << "HelpSystem::getReleases" << "Unexpected data format, json array expected";
-            else
+        if (!doc.isArray()) {
+            qWarning() << LOG_ID << "Unexpected data format, json array expected";
+            if (!silent)
                 Ori::Dlg::error(tr("Server returned data in an unexpected format"));
             finishUpdateCheck();
             return;
         }
-        auto arr = doc->array();
+        auto arr = doc.array();
         QList<Release> releases;
         Ori::Version currentVersion(APP_VER_MAJOR, APP_VER_MINOR, APP_VER_PATCH);
         for (auto it = arr.constBegin(); it != arr.constEnd(); it++) {
@@ -181,11 +227,13 @@ void HelpSystem::getReleases(bool silent)
                 };
         }
         if (releases.empty()) {
+            qDebug() << LOG_ID << "No updates available";
             Ori::Dlg::info(tr("You are using the most recent version"));
             finishUpdateCheck();
             return;
         }
         std::sort(releases.begin(), releases.end(), [](Release& a, Release& b){ return a.ver > b.ver; });
+        qDebug() << LOG_ID << "Update available" << currentVersion.str(3) << "->" << releases.first().ver.str(3);
 
         auto label = new QLabel(tr("A new version is available"));
         label->setAlignment(Qt::AlignHCenter);
@@ -220,6 +268,7 @@ void HelpSystem::getReleases(bool silent)
 
         finishUpdateCheck();
     });
+    #undef LOG_ID
 }
 
 void HelpSystem::finishUpdateCheck()
@@ -228,10 +277,13 @@ void HelpSystem::finishUpdateCheck()
     s.beginGroup("Update");
     s.setValue("lastCheckTime", QDateTime::currentDateTime().toString(Qt::ISODate));
 
-    _updateCheckerRest->deleteLater();
     _updateChecker->deleteLater();
-    _updateCheckerRest = nullptr;
     _updateChecker = nullptr;
+
+#ifndef CHECK_UPDATES_WITH_CURL
+    _updateCheckerRest->deleteLater();
+    _updateCheckerRest = nullptr;
+#endif
 }
 
 void HelpSystem::showAbout()

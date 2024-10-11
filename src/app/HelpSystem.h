@@ -4,8 +4,12 @@
 #include <QObject>
 
 QT_BEGIN_NAMESPACE
+#ifdef CHECK_UPDATES_WITH_CURL
+class QProcess;
+#else
 class QNetworkAccessManager;
 class QRestAccessManager;
+#endif
 QT_END_NAMESPACE
 
 class HelpSystem : public QObject
@@ -31,8 +35,12 @@ public slots:
 private:
     HelpSystem();
 
+#ifdef CHECK_UPDATES_WITH_CURL
+    QProcess* _updateChecker = nullptr;
+#else
     QNetworkAccessManager* _updateChecker = nullptr;
     QRestAccessManager* _updateCheckerRest = nullptr;
+#endif
 
     void getReleases(bool silent);
     void finishUpdateCheck();
