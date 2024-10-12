@@ -3,10 +3,17 @@
 #include "app/HelpSystem.h"
 
 #include "dialogs/OriConfigDlg.h"
+#include "helpers/OriDialogs.h"
+#include "helpers/OriLayouts.h"
+#include "helpers/OriWidgets.h"
 #include "tools/OriSettings.h"
+#include "widgets/OriValueEdit.h"
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QLabel>
+#include <QRadioButton>
+#include <QSpinBox>
 
 using namespace Ori::Dlg;
 
@@ -165,4 +172,42 @@ PixelScale Camera::pixelScale() const
     if (_config.plot.customScale.on)
         return _config.plot.customScale;
     return sensorScale();
+}
+
+bool Camera::setupPowerMeter()
+{
+    auto cbEnable = new QCheckBox(qApp->tr("Show power"));
+    auto seFrames = Ori::Gui::spinBox(1, 10);
+    auto edPower = new Ori::Widgets::ValueEdit;
+
+    bool wasOn = _config.power.on;
+    cbEnable->setChecked(_config.power.on);
+    seFrames->setValue(_config.power.avgFrames);
+    edPower->setValue(_config.power.power);
+
+    auto w = Ori::Layouts::LayoutV({
+        cbEnable,
+        Ori::Layouts::SpaceV(1),
+        qApp->tr("Current brightness\naveraged over frames:"),
+        seFrames,
+        Ori::Layouts::SpaceV(1),
+        qApp->tr("Corresponds to power (W):"),
+        edPower,
+    }).setMargin(0).makeWidgetAuto();
+    bool ok = Ori::Dlg::Dialog(w)
+        .withHelpIcon(":/ori_images/help")
+        .withOnHelp([]{ HelpSystem::topic("power_setup"); })
+        .withContentToButtonsSpacingFactor(3)
+        .windowModal()
+        .exec();
+    if (ok) {
+        _config.power.on = cbEnable->isChecked();
+        _config.power.avgFrames = std::clamp(seFrames->value(), PowerMeter::minAvgFrames, PowerMeter::maxAvgFrames);
+        _config.power.power = qMax(edPower->value(), 0.0);
+        saveConfig();
+        togglePowerMeter();
+        if (resultRowsChanged && wasOn != _config.power.on)
+            resultRowsChanged();
+    }
+    return ok;
 }

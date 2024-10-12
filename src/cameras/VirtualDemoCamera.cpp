@@ -12,7 +12,7 @@
 #define CAMERA_HARD_FPS 30
 //#define LOG_FRAME_TIME
 
-enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME };
+enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME, ROW_POWER };
 
 struct RandomOffset
 {
@@ -80,11 +80,14 @@ public:
         plot->initGraph(c.w, c.h);
         graph = plot->rawGraph();
 
-        tableData = [this]{
-            return QMap<int, CamTableData>{
+        tableData = [cam, this]{
+            QMap<int, CamTableData> data = {
                 { ROW_RENDER_TIME, {avgAcqTime} },
                 { ROW_CALC_TIME, {avgCalcTime} },
             };
+            if (showPower)
+                data[ROW_POWER] = {r.p * powerScale, CamTableData::POWER};
+            return data;
         };
 
         configure();
@@ -166,6 +169,7 @@ VirtualDemoCamera::VirtualDemoCamera(PlotIntf *plot, TableIntf *table, QObject *
     loadConfig();
 
     _render.reset(new BeamRenderer(plot, table, this, this));
+    _render->togglePowerMeter();
 
     connect(parent, SIGNAL(camConfigChanged()), this, SLOT(camConfigChanged()));
 }
@@ -182,10 +186,22 @@ int VirtualDemoCamera::height() const
 
 QList<QPair<int, QString> > VirtualDemoCamera::dataRows() const
 {
-    return {
+    QList<QPair<int, QString>> rows =
+    {
         { ROW_RENDER_TIME, qApp->tr("Render time") },
         { ROW_CALC_TIME, qApp->tr("Calc time") },
     };
+    if (_config.power.on)
+        rows << qMakePair(ROW_POWER, qApp->tr("Power"));
+    return rows;
+}
+
+QList<QPair<int, QString>> VirtualDemoCamera::measurCols() const
+{
+    QList<QPair<int, QString>> cols;
+    if (_config.power.on)
+        cols << qMakePair(COL_POWER, qApp->tr("Power"));
+    return cols;
 }
 
 void VirtualDemoCamera::startCapture()
@@ -221,4 +237,9 @@ void VirtualDemoCamera::requestRawImg(QObject *sender)
 void VirtualDemoCamera::setRawView(bool on, bool reconfig)
 {
     _render->setRawView(on, reconfig);
+}
+
+void VirtualDemoCamera::togglePowerMeter()
+{
+    _render->togglePowerMeter();
 }

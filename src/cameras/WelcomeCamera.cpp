@@ -16,7 +16,7 @@ class WelcomeHardConfigPanel : public HardConfigPanel
 public:
     WelcomeHardConfigPanel(QWidget *parent) : HardConfigPanel(parent)
     {
-        qDebug() << "WelcomeHardConfigPanel created";
+        //qDebug() << "WelcomeHardConfigPanel created";
 
         auto label = new QLabel("WELCOME", this);
         label->setAlignment(Qt::AlignHCenter);
@@ -30,7 +30,7 @@ public:
 
     ~WelcomeHardConfigPanel()
     {
-        qDebug() << "WelcomeHardConfigPanel deleted";
+        //qDebug() << "WelcomeHardConfigPanel deleted";
     }
 };
 

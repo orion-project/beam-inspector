@@ -11,13 +11,13 @@
 
 #include <QSettings>
 
-#define LOG_ID "IdsComfortCamera:"
+#define LOG_ID "IdsCamera:"
 #define FRAME_TIMEOUT 5000
 //#define LOG_FRAME_TIME
 
 enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME,
     ROW_FRAME_ERR, ROW_FRAME_UNDERRUN, ROW_FRAME_DROPPED, ROW_FRAME_INCOMPLETE,
-    ROW_BRIGHTNESS };
+    ROW_BRIGHTNESS, ROW_POWER };
 
 static QString makeDisplayName(const peak_camera_descriptor &cam)
 {
@@ -63,7 +63,7 @@ public:
     PeakIntf(peak_camera_id id, PlotIntf *plot, TableIntf *table, IdsCamera *cam)
         : CameraWorker(plot, table, cam, cam, LOG_ID), id(id), cam(cam)
     {
-        tableData = [cam, this]{
+        tableData = [this]{
             QMap<int, CamTableData> data = {
                 { ROW_RENDER_TIME, {avgAcqTime} },
                 { ROW_CALC_TIME, {avgCalcTime} },
@@ -72,8 +72,10 @@ public:
                 { ROW_FRAME_UNDERRUN, {framesUnderrun, CamTableData::COUNT, framesUnderrun > 0} },
                 { ROW_FRAME_INCOMPLETE, {framesIncomplete, CamTableData::COUNT, framesIncomplete > 0} },
             };
-            if (cam->_cfg->showBrightness)
+            if (showBrightness)
                 data[ROW_BRIGHTNESS] = {brightness, CamTableData::VALUE3};
+            if (showPower)
+                data[ROW_POWER] = {r.p * powerScale, CamTableData::POWER};
             return data;
         };
     }
@@ -334,6 +336,7 @@ public:
 
         showBrightness = cam->_cfg->showBrightness;
         saveBrightness = cam->_cfg->saveBrightness;
+        togglePowerMeter();
 
         return {};
     }
@@ -502,7 +505,7 @@ void IdsCamera::unloadLib()
 }
 
 IdsCamera::IdsCamera(QVariant id, PlotIntf *plot, TableIntf *table, QObject *parent) :
-    Camera(plot, table, "IdsComfortCamera"), QThread(parent)
+    Camera(plot, table, "IdsCamera"), QThread(parent)
 {
     _cfg.reset(new IdsCameraConfig);
 
@@ -546,7 +549,9 @@ QList<QPair<int, QString>> IdsCamera::dataRows() const
         { ROW_FRAME_INCOMPLETE, qApp->tr("Incomplete") },
     };
     if (_cfg->showBrightness)
-        rows << QPair<int, QString>{ ROW_BRIGHTNESS, qApp->tr("Brightness") };
+        rows << qMakePair(ROW_BRIGHTNESS, qApp->tr("Brightness"));
+    if (_config.power.on)
+        rows << qMakePair(ROW_POWER, qApp->tr("Power"));
     return rows;
 }
 
@@ -554,7 +559,9 @@ QList<QPair<int, QString>> IdsCamera::measurCols() const
 {
     QList<QPair<int, QString>> cols;
     if (_cfg->saveBrightness)
-        cols << QPair<int, QString>{ COL_BRIGHTNESS, qApp->tr("Brightness") };
+        cols << qMakePair(COL_BRIGHTNESS, qApp->tr("Brightness"));
+    if (_config.power.on)
+        cols << qMakePair(COL_POWER, qApp->tr("Power"));
     return cols;
 }
 
@@ -652,6 +659,12 @@ HardConfigPanel* IdsCamera::hardConfgPanel(QWidget *parent)
         _configPanel = new IdsHardConfigPanel(_peak->hCam, requestBrightness, getCamProp, parent);
     }
     return _configPanel;
+}
+
+void IdsCamera::togglePowerMeter()
+{
+    if (_peak)
+        _peak->togglePowerMeter();
 }
 
 #endif // WITH_IDS

@@ -70,14 +70,25 @@ struct PlotOptions
     PixelScale customScale;
 };
 
+struct PowerMeter
+{
+    bool on = false;
+    int avgFrames = 4;
+    double power = 0.0;
+
+    static const int minAvgFrames = 1;
+    static const int maxAvgFrames = 10;
+};
+
 struct CameraConfig
 {
     PlotOptions plot;
     Background bgnd;
     RoiRect roi;
+    PowerMeter power;
 
     void load(QSettings *s);
-    void save(QSettings *s, bool min=false) const;
+    void save(QSettings *s, bool compact=false) const;
 };
 
 struct CameraStats
@@ -90,7 +101,7 @@ struct CameraStats
 struct CamTableData
 {
     QVariant value;
-    enum { NONE, MS, COUNT, VALUE3 } type = MS;
+    enum { NONE, MS, COUNT, POWER, VALUE3 } type = MS;
     bool warn = false;
 };
 

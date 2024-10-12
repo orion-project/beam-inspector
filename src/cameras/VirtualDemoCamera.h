@@ -21,6 +21,7 @@ public:
     int bpp() const override { return 8; }
     PixelScale sensorScale() const override { return { .on=true, .factor=2.5, .unit="um" }; }
     QList<QPair<int, QString>> dataRows() const override;
+    QList<QPair<int, QString>> measurCols() const override;
 
     void startCapture() override;
 
@@ -31,6 +32,9 @@ public:
     bool canSaveRawImg() const override { return true; }
     void requestRawImg(QObject *sender) override;
     void setRawView(bool on, bool reconfig) override;
+
+    bool isPowerMeter() const override { return true; }
+    void togglePowerMeter() override;
 
 signals:
     void ready();

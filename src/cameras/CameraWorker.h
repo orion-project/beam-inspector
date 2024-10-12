@@ -20,7 +20,7 @@
 #define MEASURE_BUF_SIZE 1000
 #define MEASURE_BUF_COUNT 2
 
-enum MeasureDataCol { COL_BRIGHTNESS, COL_DEBUG_1, COL_DEBUG_2 };
+enum MeasureDataCol { COL_BRIGHTNESS, COL_POWER, COL_DEBUG_1, COL_DEBUG_2 };
 
 class CameraWorker
 {
@@ -52,6 +52,7 @@ public:
     bool normalize;
     bool fullRange;
     bool reconfig = false;
+    double powerScale = 0;
 
     double *graph;
     QVector<double> subtracted;
@@ -72,13 +73,16 @@ public:
     double brightness = 0;
     bool showBrightness = false;
     bool saveBrightness = false;
+    bool showPower = false;
+    int calibratePowerFrames = 0;
+    double calibratePowerTotal = 0;
 
     QMap<QString, QVariant> stats;
     std::function<QMap<int, CamTableData>()> tableData;
 
-    QString logId;
+    const char *logId;
 
-    CameraWorker(PlotIntf *plot, TableIntf *table, Camera *cam, QThread *thread, const QString &logId)
+    CameraWorker(PlotIntf *plot, TableIntf *table, Camera *cam, QThread *thread, const char *logId)
         : plot(plot), table(table), camera(cam), thread(thread), logId(logId)
     {
         resultBuf1.resize(MEASURE_BUF_SIZE);
@@ -163,6 +167,20 @@ public:
         }
 
         saverMutex.lock();
+        if (calibratePowerFrames > 0) {
+            qDebug() << logId << "calibrate power"
+                 << "| step =" << calibratePowerFrames
+                 << "| digital_intensity =" << r.p;
+            calibratePowerTotal += r.p;
+            if (--calibratePowerFrames == 0) {
+                calibratePowerTotal /= double(camera->config().power.avgFrames);
+                powerScale = camera->config().power.power / calibratePowerTotal;
+                qDebug() << logId << "calibrate power"
+                    << "| digital_intensity_avg =" << calibratePowerTotal
+                    << "| power =" << camera->config().power.power
+                    << "| scale =" << powerScale;
+            }
+        }
         if (rawImgRequest) {
             auto e = new ImageEvent;
             e->time = 0;
@@ -194,6 +212,8 @@ public:
             results->phi = r.phi;
             if (saveBrightness)
                 results->cols[COL_BRIGHTNESS] = cgn_calc_brightness_1(&c);
+            if (showPower && calibratePowerFrames == 0)
+                results->cols[COL_POWER] = r.p * powerScale;
             if (++resultIdx == MEASURE_BUF_SIZE ||
                 (measureDuration > 0 && (time - measureStart >= measureDuration))) {
                 auto e = new MeasureEvent;
@@ -309,6 +329,16 @@ public:
             rawView = on;
             if (reconfig)
                 this->reconfig = true;
+        }
+        saverMutex.unlock();
+    }
+
+    void togglePowerMeter() {
+        saverMutex.lock();
+        showPower = camera->config().power.on;
+        if (showPower) {
+            calibratePowerTotal = 0;
+            calibratePowerFrames = std::clamp(camera->config().power.avgFrames, PowerMeter::minAvgFrames, PowerMeter::maxAvgFrames);
         }
         saverMutex.unlock();
     }

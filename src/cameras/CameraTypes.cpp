@@ -43,21 +43,25 @@ void CameraConfig::load(QSettings *s)
     LOAD(roi.top, Double, 0.25);
     LOAD(roi.right, Double, 0.75);
     LOAD(roi.bottom, Double, 0.75);
+
+    LOAD(power.on, Bool, false);
+    LOAD(power.avgFrames, Int, 4);
+    LOAD(power.power, Double, 0.0);
 }
 
-void CameraConfig::save(QSettings *s, bool min) const
+void CameraConfig::save(QSettings *s, bool compact) const
 {
     SAVE(plot.normalize);
     SAVE(plot.rescale);
     SAVE(plot.fullRange);
     SAVE(plot.customScale.on);
-    if (!min or plot.customScale.on) {
+    if (!compact or plot.customScale.on) {
         SAVE(plot.customScale.factor);
         SAVE(plot.customScale.unit);
     }
 
     SAVE(bgnd.on);
-    if (!min or bgnd.on) {
+    if (!compact or bgnd.on) {
         SAVE(bgnd.iters);
         SAVE(bgnd.precision);
         SAVE(bgnd.corner);
@@ -66,11 +70,17 @@ void CameraConfig::save(QSettings *s, bool min) const
     }
 
     SAVE(roi.on);
-    if (!min or roi.on) {
+    if (!compact or roi.on) {
         SAVE(roi.left);
         SAVE(roi.top);
         SAVE(roi.right);
         SAVE(roi.bottom);
+    }
+
+    SAVE(power.on);
+    if (!compact or power.on) {
+        SAVE(power.avgFrames);
+        SAVE(power.power);
     }
 }
 
