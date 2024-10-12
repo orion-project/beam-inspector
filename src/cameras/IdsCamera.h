@@ -44,6 +44,9 @@ public:
     void requestRawImg(QObject *sender) override;
     void setRawView(bool on, bool reconfig) override;
 
+    bool isPowerMeter() const override { return true; }
+    void togglePowerMeter() override;
+
     QString customId() const override { return _customId; }
 
     static QVector<CameraItem> getCameras();

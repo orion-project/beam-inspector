@@ -44,6 +44,10 @@ public:
     virtual void requestRawImg(QObject *sender) {}
     virtual void setRawView(bool on, bool reconfig) {}
 
+    virtual bool isPowerMeter() const { return false; }
+    virtual void togglePowerMeter() {}
+    bool setupPowerMeter();
+
     virtual QString customId() const { return {}; }
 
     /// Additional data rows to be show in the Result table
@@ -62,6 +66,8 @@ public:
 
     PixelScale pixelScale() const;
     QString resolutionStr() const;
+
+    std::function<void()> resultRowsChanged;
 
 protected:
     PlotIntf *_plot;

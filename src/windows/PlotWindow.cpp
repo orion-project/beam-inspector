@@ -289,12 +289,13 @@ void PlotWindow::createMenuBar()
     _actionEditRoi = A_(tr("Edit ROI"), this, [this]{ _plot->startEditRoi(); }, ":/toolbar/roi");
     _actionUseRoi = A_(tr("Use ROI"), this, &PlotWindow::toggleRoi, ":/toolbar/roi_rect");
     _actionUseRoi->setCheckable(true);
+    _actionSetupPowerMeter = A_(tr("Power Meter..."), this, [this]{ _camera->setupPowerMeter(); });
     _actionSetCamCustomName = A_(tr("Set Custom Name..."), this, &PlotWindow::setCamCustomName);
     _actionCamConfig = A_(tr("Settings..."), this, [this]{ PlotWindow::editCamConfig(-1); }, ":/toolbar/settings");
     menuBar()->addMenu(M_(tr("Camera"), {
         _actionMeasure, 0,
         _actionEditRoi, _actionUseRoi, 0,
-        _actionSetCamCustomName, _actionCamConfig,
+        _actionSetupPowerMeter, _actionSetCamCustomName, _actionCamConfig,
     }));
 
     _actionCrosshairsShow = A_(tr("Show Crosshairs"), this, &PlotWindow::toggleCrosshairsVisbility, ":/toolbar/crosshair");
@@ -525,6 +526,7 @@ void PlotWindow::showCamConfig(bool replot)
     _buttonMeasure->setVisible(_camera->canMeasure());
     _actionSaveRaw->setEnabled(_camera->canSaveRawImg() && _camera->isCapturing());
     _actionSetCamCustomName->setVisible(!_camera->customId().isEmpty());
+    _actionSetupPowerMeter->setVisible(_camera->isPowerMeter());
     showSelectedCamera();
 
     _statusBar->setText(STATUS_CAMERA, _camera->name(), _camera->descr());
@@ -588,6 +590,7 @@ void PlotWindow::updateControls()
     _actionMeasure->setIcon(QIcon(started ? ":/toolbar/stop" : ":/toolbar/start"));
     _actionMeasure->setDisabled(!opened);
     _camConfigPanel->setReadOnly(started || !opened);
+    _actionSetupPowerMeter->setDisabled(started || !opened);
 }
 
 void PlotWindow::toggleMeasure(bool force)
@@ -815,6 +818,7 @@ void PlotWindow::activateCamDemo()
     connect(cam, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualDemoCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &VirtualDemoCamera::finished, this, &PlotWindow::captureStopped);
+    cam->resultRowsChanged = [this]{ _tableIntf->setRows(_camera->dataRows()); };
     cam->setRawView(_actionRawView->isChecked(), false);
     _camera.reset((Camera*)cam);
     _tableIntf->setRows(_camera->dataRows());
@@ -854,6 +858,7 @@ void PlotWindow::activateCamIds()
         updateControls();
         Ori::Dlg::error(err);
     });
+    cam->resultRowsChanged = [this]{ _tableIntf->setRows(_camera->dataRows()); };
     cam->setRawView(_actionRawView->isChecked(), false);
     _camera.reset((Camera*)cam);
     _tableIntf->setRows(_camera->dataRows());

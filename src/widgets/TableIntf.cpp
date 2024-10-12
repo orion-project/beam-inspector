@@ -110,6 +110,9 @@ void TableIntf::showResult()
             case CamTableData::COUNT:
                 item->setText(QStringLiteral(" %1 ").arg(data.value.toInt()));
                 break;
+            case CamTableData::POWER:
+                item->setText(QStringLiteral(" %1 W ").arg(data.value.toDouble()));
+                break;
             case CamTableData::VALUE3:
             item->setText(QStringLiteral(" %1 ").arg(data.value.toDouble(), 0, 'f', 3));
                 break;
