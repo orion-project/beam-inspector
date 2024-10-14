@@ -144,11 +144,16 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
         << (new ConfigItemInt(pageMisc, tr("Frame count for averaging"), &autoExpFramesAvg))
             ->withMinMax(1, 100)
     ;
+    oldBpp = bpp;
+    oldBinning = binning;
+    oldDecimation = decimation;
+    hasPowerWarning = false;
 }
 
 void IdsCameraConfig::save(QSettings *s)
 {
-    s->setValue("hard.bpp", bpp12 ? 12 : bpp10 ? 10 : 8);
+    bpp = bpp12 ? 12 : bpp10 ? 10 : 8;
+    s->setValue("hard.bpp", bpp);
     s->setValue("hard.binning.x", binning.x);
     s->setValue("hard.binning.y", binning.y);
     s->setValue("hard.decimation.x", decimation.x);
@@ -156,6 +161,9 @@ void IdsCameraConfig::save(QSettings *s)
     s->setValue("showBrightness", showBrightness);
     s->setValue("saveBrightness", saveBrightness);
     s->setValue("autoExpFramesAvg", autoExpFramesAvg);
+    hasPowerWarning = oldBpp != bpp ||
+        oldBinning.x != binning.x || oldBinning.y != binning.y ||
+        oldDecimation.x != decimation.x || oldDecimation.y != decimation.y;
 }
 
 void IdsCameraConfig::load(QSettings *s)

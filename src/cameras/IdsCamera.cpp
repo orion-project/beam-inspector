@@ -636,6 +636,8 @@ void IdsCamera::initConfigMore(Ori::Dlg::ConfigDlgOpts &opts)
 void IdsCamera::saveConfigMore(QSettings *s)
 {
     _cfg->save(s);
+    if (_cfg->hasPowerWarning)
+        raisePowerWarning();
 }
 
 void IdsCamera::loadConfigMore(QSettings *s)

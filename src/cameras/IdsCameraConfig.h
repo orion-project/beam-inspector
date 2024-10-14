@@ -30,6 +30,7 @@ public:
     };
 
     int bpp = 0;
+    int oldBpp = 0;
     bool bpp8, bpp10, bpp12;
     bool intoRequested = false;
     QString infoModelName;
@@ -40,10 +41,12 @@ public:
     QString infoDeviceVer;
     QString infoFirmwareVer;
     FactorXY binning, decimation;
+    FactorXY oldBinning, oldDecimation;
     QSet<int> supportedBpp;
     bool showBrightness = false;
     bool saveBrightness = false;
     int autoExpFramesAvg = 4;
+    bool hasPowerWarning = false;
 
     void initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &opts, int maxPageId);
     void save(QSettings *s);

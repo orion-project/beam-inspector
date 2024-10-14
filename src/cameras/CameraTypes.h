@@ -32,6 +32,8 @@ struct RoiRect
     int height() const { return bottom - top; }
     bool isValid() const;
     bool isZero() const;
+    bool isEqual(const RoiRect &r) const {
+        return left == r.left && top == r.top && right == r.right && bottom == r.bottom; }
     void fix();
     QString sizeStr(int w, int h) const;
 };

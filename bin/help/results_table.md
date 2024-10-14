@@ -52,6 +52,10 @@ The number of frames for which a part of data has not been correctly transferred
 
 Beam spot [brightness](./brightness.md) doesn't have a big practical reason and is mostly intended for testing the [Autoexposure](./cam_control.md#autoexposure) feature, so the row is displayed only if enabled in the [camera settings](./cam_settings_opts.md).
 
+#### Power
+
+Estimated beam power calculated against a [reference digital power](./power_meter.md) value. When the [ROI](./cam_settings_roi.md) is changed or [camera parameters](./cam_control.md) adjusted, the reference value gets invalid, and the row is highlighted to show a warning. You can double-click the row to open a calibration window.
+
 ## See also
 
 - [Centroid evaluation](./cam_settings_centr.md)
