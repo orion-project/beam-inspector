@@ -228,7 +228,8 @@ curl -L --ssl-no-revoke \
         }
         if (releases.empty()) {
             qDebug() << LOG_ID << "No updates available";
-            Ori::Dlg::info(tr("You are using the most recent version"));
+            if (!silent)
+                Ori::Dlg::info(tr("You are using the most recent version"));
             finishUpdateCheck();
             return;
         }

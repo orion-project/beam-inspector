@@ -45,20 +45,20 @@ TableIntf::TableIntf(QTableWidget *table) : _table(table)
     else _warnColor = 0xffffdcbc;
 }
 
-void TableIntf::setRows(const QList<QPair<int, QString>>& rows)
+void TableIntf::setRows(const QList<QPair<ResultId, QString>>& rows)
 {
-    for (int row = _table->rowCount()-1; row >= _maxStdRow; row--)
+    for (RowIndex row = _table->rowCount()-1; row >= _maxStdRow; row--)
         _table->removeRow(row);
     _camRows.clear();
     _camData.clear();
-    int row = _maxStdRow;
+    RowIndex row = _maxStdRow;
     for (auto it = rows.constBegin(); it != rows.constEnd(); it++) {
         _camRows.insert(it->first, row);
         makeRow(row, it->second);
     }
 }
 
-QTableWidgetItem* TableIntf::makeRow(int &row, const QString& title)
+QTableWidgetItem* TableIntf::makeRow(RowIndex &row, const QString& title)
 {
     _table->setRowCount(row+1);
     auto it = new QTableWidgetItem(" " + title + " ");
@@ -82,7 +82,7 @@ void TableIntf::cleanResult()
     _camData.clear();
 }
 
-void TableIntf::setResult(const CgnBeamResult& r, const QMap<int, CamTableData> &data)
+void TableIntf::setResult(const CgnBeamResult& r, const QMap<ResultId, CamTableData> &data)
 {
     _res = r;
     _camData = data;
@@ -93,30 +93,52 @@ inline void setTextInvald(QTableWidgetItem *it)
     it->setText(QStringLiteral(" --- "));
 }
 
+static QString formatPower(double v, int f)
+{
+    switch (f)
+    {
+    case -3: return QStringLiteral(" %1 mW ").arg(v, 0, 'f', 3);
+    case -6: return QStringLiteral(" %1 uW ").arg(v, 0, 'f', 3);
+    case -9: return QStringLiteral(" %1 nW ").arg(v, 0, 'f', 3);
+    }
+    return QStringLiteral(" %1 W ").arg(v, 0, 'f', 3);
+}
+
 void TableIntf::showResult()
 {
     for (auto it = _camData.constBegin(); it != _camData.constEnd(); it++) {
-        int row = _camRows.value(it.key(), -1);
+        ResultId resultId = it.key();
+        RowIndex row = _camRows.value(resultId, -1);
         if (row < 0) return;
         auto item = _table->item(row, 1);
         const auto &data = it.value();
+        QString text;
         switch (data.type) {
-            case CamTableData::NONE:
-                item->setText(data.value.toString());
+            case CamTableData::TEXT:
+                text = data.value.toString();
                 break;
             case CamTableData::MS:
-                item->setText(QStringLiteral(" %1 ms ").arg(qRound(data.value.toDouble())));
+                text = QStringLiteral(" %1 ms ").arg(qRound(data.value.toDouble()));
                 break;
             case CamTableData::COUNT:
-                item->setText(QStringLiteral(" %1 ").arg(data.value.toInt()));
+                text = QStringLiteral(" %1 ").arg(data.value.toInt());
                 break;
-            case CamTableData::POWER:
-                item->setText(QStringLiteral(" %1 W ").arg(data.value.toDouble()));
+            case CamTableData::POWER: {
+                auto p = data.value.toList();
+                text = formatPower(p[0].toDouble(), p[1].toInt());
+                if (data.warn)
+                    item->setToolTip(qApp->tr("Recalibration required"));
+                else item->setToolTip({});
+                _powerResult = resultId;
                 break;
+            }
             case CamTableData::VALUE3:
-            item->setText(QStringLiteral(" %1 ").arg(data.value.toDouble(), 0, 'f', 3));
+                text = QStringLiteral(" %1 ").arg(data.value.toDouble(), 0, 'f', 3);
                 break;
         }
+        if (data.warn)
+            text += QStringLiteral(" (!)");
+        item->setText(text);
         item->setBackground(data.warn ? QColor(_warnColor) : Qt::transparent);
     }
 
@@ -143,4 +165,12 @@ void TableIntf::showResult()
 bool TableIntf::resultInvalid() const
 {
     return _res.nan;
+}
+
+bool TableIntf::isPowerRow(QTableWidgetItem *item)
+{
+    for (auto it = _camRows.cbegin(); it != _camRows.cend(); it++)
+        if (it.key() == _powerResult && it.value() == item->row())
+            return true;
+    return false;
 }

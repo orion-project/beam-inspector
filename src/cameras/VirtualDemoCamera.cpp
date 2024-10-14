@@ -80,13 +80,13 @@ public:
         plot->initGraph(c.w, c.h);
         graph = plot->rawGraph();
 
-        tableData = [cam, this]{
+        tableData = [this]{
             QMap<int, CamTableData> data = {
                 { ROW_RENDER_TIME, {avgAcqTime} },
                 { ROW_CALC_TIME, {avgCalcTime} },
             };
             if (showPower)
-                data[ROW_POWER] = {r.p * powerScale, CamTableData::POWER};
+                data[ROW_POWER] = {QVariantList{r.p * powerScale, powerDecimalFactor}, CamTableData::POWER, hasPowerWarning};
             return data;
         };
 
@@ -242,4 +242,9 @@ void VirtualDemoCamera::setRawView(bool on, bool reconfig)
 void VirtualDemoCamera::togglePowerMeter()
 {
     _render->togglePowerMeter();
+}
+
+void VirtualDemoCamera::raisePowerWarning()
+{
+    _render->hasPowerWarning = true;
 }

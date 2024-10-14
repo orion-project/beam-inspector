@@ -10,12 +10,14 @@
 #include "widgets/OriValueEdit.h"
 
 #include <QApplication>
+#include <QComboBox>
 #include <QCheckBox>
 #include <QLabel>
 #include <QRadioButton>
 #include <QSpinBox>
 
 using namespace Ori::Dlg;
+using namespace Ori::Layouts;
 
 Camera::Camera(PlotIntf *plot, TableIntf *table, const char* configGroup) :
     _plot(plot), _table(table), _configGroup(configGroup)
@@ -146,6 +148,7 @@ void Camera::setAperture(const RoiRect &a)
     if (_config.roi.on)
         _config.roi.fix();
     saveConfig();
+    raisePowerWarning();
 }
 
 void Camera::toggleAperture(bool on)
@@ -158,6 +161,7 @@ void Camera::toggleAperture(bool on)
         _config.roi.bottom = 0.75;
     }
     saveConfig();
+    raisePowerWarning();
 }
 
 bool Camera::isRoiValid() const
@@ -179,22 +183,28 @@ bool Camera::setupPowerMeter()
     auto cbEnable = new QCheckBox(qApp->tr("Show power"));
     auto seFrames = Ori::Gui::spinBox(1, 10);
     auto edPower = new Ori::Widgets::ValueEdit;
+    auto cbFactor = new QComboBox;
+    cbFactor->addItem(qApp->tr("W"));
+    cbFactor->addItem(qApp->tr("mW"));
+    cbFactor->addItem(qApp->tr("uW"));
+    cbFactor->addItem(qApp->tr("nW"));
 
     bool wasOn = _config.power.on;
     cbEnable->setChecked(_config.power.on);
     seFrames->setValue(_config.power.avgFrames);
     edPower->setValue(_config.power.power);
+    cbFactor->setCurrentIndex(_config.power.decimalFactor / -3);
 
-    auto w = Ori::Layouts::LayoutV({
+    auto w = LayoutV({
         cbEnable,
-        Ori::Layouts::SpaceV(1),
+        SpaceV(1),
         qApp->tr("Current brightness\naveraged over frames:"),
         seFrames,
-        Ori::Layouts::SpaceV(1),
-        qApp->tr("Corresponds to power (W):"),
-        edPower,
+        SpaceV(1),
+        qApp->tr("Corresponds to power:"),
+        LayoutH({edPower, cbFactor}),
     }).setMargin(0).makeWidgetAuto();
-    bool ok = Ori::Dlg::Dialog(w)
+    bool ok = Dialog(w)
         .withHelpIcon(":/ori_images/help")
         .withOnHelp([]{ HelpSystem::topic("power_setup"); })
         .withContentToButtonsSpacingFactor(3)
@@ -204,6 +214,7 @@ bool Camera::setupPowerMeter()
         _config.power.on = cbEnable->isChecked();
         _config.power.avgFrames = std::clamp(seFrames->value(), PowerMeter::minAvgFrames, PowerMeter::maxAvgFrames);
         _config.power.power = qMax(edPower->value(), 0.0);
+        _config.power.decimalFactor = cbFactor->currentIndex() * -3;
         saveConfig();
         togglePowerMeter();
         if (resultRowsChanged && wasOn != _config.power.on)

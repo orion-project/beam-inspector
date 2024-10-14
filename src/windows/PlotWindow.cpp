@@ -290,7 +290,7 @@ void PlotWindow::createMenuBar()
     _actionUseRoi = A_(tr("Use ROI"), this, &PlotWindow::toggleRoi, ":/toolbar/roi_rect");
     _actionUseRoi->setCheckable(true);
     _actionSetupPowerMeter = A_(tr("Power Meter..."), this, [this]{ _camera->setupPowerMeter(); });
-    _actionSetCamCustomName = A_(tr("Set Custom Name..."), this, &PlotWindow::setCamCustomName);
+    _actionSetCamCustomName = A_(tr("Custom Name..."), this, &PlotWindow::setCamCustomName);
     _actionCamConfig = A_(tr("Settings..."), this, [this]{ PlotWindow::editCamConfig(-1); }, ":/toolbar/settings");
     menuBar()->addMenu(M_(tr("Camera"), {
         _actionMeasure, 0,
@@ -425,6 +425,7 @@ void PlotWindow::createDockPanel()
 {
     _table = new DataTableWidget;
     _tableIntf = new TableIntf(_table);
+    connect(_table, &QTableWidget::itemDoubleClicked, this, &PlotWindow::resultsTableDoubleClicked);
 
     _resultsDock = new QDockWidget(tr("Results"));
     _resultsDock->setObjectName("DockResults");
@@ -1001,4 +1002,10 @@ void PlotWindow::devResizeDock(QDockWidget *dock)
     std::shared_ptr<QSpinBox> ed(Ori::Gui::spinBox(20, 1000, dock->width()));
     if (Ori::Dlg::showDialogWithPromptH("Width", ed.get()))
         dock->resize(ed->value(), dock->height());
+}
+
+void PlotWindow::resultsTableDoubleClicked(QTableWidgetItem *item)
+{
+    if (_actionSetupPowerMeter->isVisible() && _actionSetupPowerMeter->isEnabled() && _tableIntf->isPowerRow(item))
+        _actionSetupPowerMeter->trigger();
 }

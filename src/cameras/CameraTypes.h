@@ -75,6 +75,7 @@ struct PowerMeter
     bool on = false;
     int avgFrames = 4;
     double power = 0.0;
+    int decimalFactor = 0;
 
     static const int minAvgFrames = 1;
     static const int maxAvgFrames = 10;
@@ -101,7 +102,7 @@ struct CameraStats
 struct CamTableData
 {
     QVariant value;
-    enum { NONE, MS, COUNT, POWER, VALUE3 } type = MS;
+    enum { TEXT, MS, COUNT, POWER, VALUE3 } type = MS;
     bool warn = false;
 };
 

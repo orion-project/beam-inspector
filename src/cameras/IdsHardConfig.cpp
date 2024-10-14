@@ -6,6 +6,7 @@
 #include "cameras/CameraTypes.h"
 #include "cameras/IdsLib.h"
 
+#include "core/OriFloatingPoint.h"
 #include "helpers/OriLayouts.h"
 #include "helpers/OriDialogs.h"
 #include "tools/OriSettings.h"
@@ -85,7 +86,13 @@ using namespace Ori::Widgets;
             showExpFreq(value); \
     } \
     void set##Prop() { \
-        set##Prop##Raw(ed##Prop->value()); \
+        double oldValue = props[#Prop]; \
+        double newValue = ed##Prop->value(); \
+        if (Double(oldValue).almostEqual(Double(newValue))) \
+            return; \
+        set##Prop##Raw(newValue); \
+        if (ed##Prop != edFps) \
+            raisePowerWarning(); \
     } \
     bool set##Prop##Raw(double v) { \
         auto res = setProp(hCam, v); \
@@ -296,6 +303,7 @@ public:
             group->setDisabled(true);
         if (!autoExp->start())
             stopAutoExp();
+        raisePowerWarning();
     }
 
     void stopAutoExp()
@@ -532,6 +540,7 @@ public:
     bool closeRequested = false;
     std::function<void(QObject*)> requestBrightness;
     std::function<QVariant(IdsHardConfigPanel::CamProp)> getCamProp;
+    std::function<void()> raisePowerWarning;
     std::optional<AutoExp> autoExp;
 
 protected:
@@ -567,11 +576,13 @@ protected:
 IdsHardConfigPanel::IdsHardConfigPanel(peak_camera_handle hCam,
     std::function<void(QObject*)> requestBrightness,
     std::function<QVariant(CamProp)> getCamProp,
+    std::function<void()> raisePowerWarning,
     QWidget *parent) : HardConfigPanel(parent)
 {
     _impl = new IdsHardConfigPanelImpl(hCam);
     _impl->requestBrightness = requestBrightness;
     _impl->getCamProp = getCamProp;
+    _impl->raisePowerWarning = raisePowerWarning;
 
     auto scroll = new QScrollArea;
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);

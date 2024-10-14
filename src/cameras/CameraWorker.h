@@ -74,8 +74,10 @@ public:
     bool showBrightness = false;
     bool saveBrightness = false;
     bool showPower = false;
+    bool hasPowerWarning = false;
     int calibratePowerFrames = 0;
     double calibratePowerTotal = 0;
+    int powerDecimalFactor = 0;
 
     QMap<QString, QVariant> stats;
     std::function<QMap<int, CamTableData>()> tableData;
@@ -173,6 +175,7 @@ public:
                  << "| digital_intensity =" << r.p;
             calibratePowerTotal += r.p;
             if (--calibratePowerFrames == 0) {
+                hasPowerWarning = false;
                 calibratePowerTotal /= double(camera->config().power.avgFrames);
                 powerScale = camera->config().power.power / calibratePowerTotal;
                 qDebug() << logId << "calibrate power"
@@ -337,6 +340,7 @@ public:
         saverMutex.lock();
         showPower = camera->config().power.on;
         if (showPower) {
+            powerDecimalFactor = camera->config().power.decimalFactor;
             calibratePowerTotal = 0;
             calibratePowerFrames = std::clamp(camera->config().power.avgFrames, PowerMeter::minAvgFrames, PowerMeter::maxAvgFrames);
         }

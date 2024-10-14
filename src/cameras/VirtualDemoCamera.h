@@ -35,6 +35,7 @@ public:
 
     bool isPowerMeter() const override { return true; }
     void togglePowerMeter() override;
+    void raisePowerWarning() override;
 
 signals:
     void ready();
