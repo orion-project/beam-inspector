@@ -46,6 +46,7 @@ public:
 
     bool isPowerMeter() const override { return true; }
     void togglePowerMeter() override;
+    void raisePowerWarning() override;
 
     QString customId() const override { return _customId; }
 

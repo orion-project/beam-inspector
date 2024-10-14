@@ -46,6 +46,7 @@ public:
 
     virtual bool isPowerMeter() const { return false; }
     virtual void togglePowerMeter() {}
+    virtual void raisePowerWarning() {}
     bool setupPowerMeter();
 
     virtual QString customId() const { return {}; }

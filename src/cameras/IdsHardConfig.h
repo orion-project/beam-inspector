@@ -14,6 +14,7 @@ public:
     IdsHardConfigPanel(peak_camera_handle hCam,
         std::function<void(QObject*)> requestBrightness,
         std::function<QVariant(CamProp)> getCamProp,
+        std::function<void()> raisePowerWarning,
         QWidget *parent);
 
     void setReadOnly(bool on) override;

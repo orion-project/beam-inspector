@@ -47,6 +47,7 @@ void CameraConfig::load(QSettings *s)
     LOAD(power.on, Bool, false);
     LOAD(power.avgFrames, Int, 4);
     LOAD(power.power, Double, 0.0);
+    LOAD(power.decimalFactor, Int, 0);
 }
 
 void CameraConfig::save(QSettings *s, bool compact) const
@@ -81,6 +82,7 @@ void CameraConfig::save(QSettings *s, bool compact) const
     if (!compact or power.on) {
         SAVE(power.avgFrames);
         SAVE(power.power);
+        SAVE(power.decimalFactor);
     }
 }
 

@@ -75,7 +75,7 @@ public:
             if (showBrightness)
                 data[ROW_BRIGHTNESS] = {brightness, CamTableData::VALUE3};
             if (showPower)
-                data[ROW_POWER] = {r.p * powerScale, CamTableData::POWER};
+                data[ROW_POWER] = {QVariantList{r.p * powerScale, powerDecimalFactor}, CamTableData::POWER, hasPowerWarning};
             return data;
         };
     }
@@ -656,7 +656,8 @@ HardConfigPanel* IdsCamera::hardConfgPanel(QWidget *parent)
             }
             return {};
         };
-        _configPanel = new IdsHardConfigPanel(_peak->hCam, requestBrightness, getCamProp, parent);
+        auto raisePowerWarning = [this]{ this->raisePowerWarning(); };
+        _configPanel = new IdsHardConfigPanel(_peak->hCam, requestBrightness, getCamProp, raisePowerWarning, parent);
     }
     return _configPanel;
 }
@@ -665,6 +666,12 @@ void IdsCamera::togglePowerMeter()
 {
     if (_peak)
         _peak->togglePowerMeter();
+}
+
+void IdsCamera::raisePowerWarning()
+{
+    if (_peak)
+        _peak->hasPowerWarning = true;
 }
 
 #endif // WITH_IDS

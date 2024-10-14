@@ -6,6 +6,7 @@
 
 class QAction;
 class QTableWidget;
+class QTableWidgetItem;
 class QToolButton;
 
 class Camera;
@@ -102,6 +103,7 @@ private:
     void dataReady();
     void roiEdited();
     void statsReceived(const CameraStats &stats);
+    void resultsTableDoubleClicked(QTableWidgetItem *item);
 
     void fillCamSelector();
     void openImage(const QString& fileName);
