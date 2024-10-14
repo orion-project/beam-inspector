@@ -6,6 +6,7 @@ history:
   - text: Always export proportionally scaled image
   - text: Power meter feature
   - text: Show error when IDS SDK is not loaded
+  - text: Save partial results buffer when measurements stopped
 
 - version: 0.0.14
   date: 2024-08-22

@@ -219,19 +219,24 @@ public:
                 results->cols[COL_POWER] = r.p * powerScale;
             if (++resultIdx == MEASURE_BUF_SIZE ||
                 (measureDuration > 0 && (time - measureStart >= measureDuration))) {
-                auto e = new MeasureEvent;
-                e->num = resultBufIdx;
-                e->count = resultIdx;
-                e->results = resultBufs[resultBufIdx % MEASURE_BUF_COUNT];
-                e->stats = stats;
-                QCoreApplication::postEvent(saver, e);
-                results = resultBufs[++resultBufIdx % MEASURE_BUF_COUNT];
-                resultIdx = 0;
+                sendMeasure();
             } else {
                 results++;
             }
         }
         saverMutex.unlock();
+    }
+
+    inline void sendMeasure()
+    {
+        auto e = new MeasureEvent;
+        e->num = resultBufIdx;
+        e->count = resultIdx;
+        e->results = resultBufs[resultBufIdx % MEASURE_BUF_COUNT];
+        e->stats = stats;
+        QCoreApplication::postEvent(saver, e);
+        results = resultBufs[++resultBufIdx % MEASURE_BUF_COUNT];
+        resultIdx = 0;
     }
 
     inline bool showResults()
@@ -305,6 +310,8 @@ public:
     void stopMeasure()
     {
         saverMutex.lock();
+        if (resultIdx > 0)
+            sendMeasure();
         saver = nullptr;
         measureStart = -1;
         measureDuration = -1;

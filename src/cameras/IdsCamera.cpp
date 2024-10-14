@@ -613,7 +613,10 @@ void IdsCamera::saveHardConfig(QSettings *s)
     auto res = IDS.peak_ExposureTime_Get(_peak->hCam, &v);
     if (PEAK_ERROR(res))
         s->setValue("exposure", IDS.getPeakError(res));
-    else s->setValue("exposure", v);
+    else {
+        s->setValue("exposure", v);
+        s->setValue("exposure.unit", "us");
+    }
     res = IDS.peak_FrameRate_Get(_peak->hCam, &v);
     if (PEAK_ERROR(res))
         s->setValue("frameRate", IDS.getPeakError(res));

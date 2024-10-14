@@ -621,6 +621,8 @@ void PlotWindow::toggleMeasure(bool force)
         }
 
         cam->stopMeasure();
+        // Process the last MeasureEvent
+        qApp->processEvents();
         _saver.reset(nullptr);
         _measureProgress->setVisible(false);
         updateControls();
