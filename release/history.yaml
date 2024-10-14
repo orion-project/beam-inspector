@@ -4,6 +4,7 @@ history:
   changes:
   - text: Automatically check for updates
   - text: Always export proportionally scaled image
+  - text: Power meter feature
 
 - version: 0.0.14
   date: 2024-08-22

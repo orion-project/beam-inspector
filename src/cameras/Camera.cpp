@@ -128,6 +128,7 @@ bool Camera::editConfig(int page)
     initConfigMore(opts);
     if (ConfigDlg::edit(opts))
     {
+        RoiRect oldRoi = _config.roi;
         _config.plot.fullRange = scaleFullRange;
         _config.plot.customScale.on = useCustomScale;
         _config.bgnd.corner = cornerFraction / 100.0;
@@ -137,6 +138,8 @@ bool Camera::editConfig(int page)
         _config.roi.bottom = double(roiPixelBottom)/double(height());
         _config.roi.fix();
         saveConfig(true);
+        if (!oldRoi.isEqual(_config.roi))
+            raisePowerWarning();
         return true;
     }
     return false;
@@ -144,11 +147,13 @@ bool Camera::editConfig(int page)
 
 void Camera::setAperture(const RoiRect &a)
 {
+    RoiRect oldRoi = _config.roi;
     _config.roi = a;
     if (_config.roi.on)
         _config.roi.fix();
     saveConfig();
-    raisePowerWarning();
+    if (!oldRoi.isEqual(_config.roi))
+        raisePowerWarning();
 }
 
 void Camera::toggleAperture(bool on)
@@ -206,7 +211,7 @@ bool Camera::setupPowerMeter()
     }).setMargin(0).makeWidgetAuto();
     bool ok = Dialog(w)
         .withHelpIcon(":/ori_images/help")
-        .withOnHelp([]{ HelpSystem::topic("power_setup"); })
+        .withOnHelp([]{ HelpSystem::topic("power_meter"); })
         .withContentToButtonsSpacingFactor(3)
         .windowModal()
         .exec();
