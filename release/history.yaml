@@ -1,6 +1,6 @@
 history:
 - version: 0.0.15
-  date: 2024
+  date: 2024-10-15
   changes:
   - text: Automatically check for updates
   - text: Always export proportionally scaled image

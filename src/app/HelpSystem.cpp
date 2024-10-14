@@ -302,9 +302,19 @@ void HelpSystem::showAbout()
     p.setBrush(QPalette::Window, QBrush(bg));
     w->setPalette(p);
 
-    auto labelVersion = new QLabel(qApp->applicationVersion());
-    labelVersion->setStyleSheet("font-weight:bold;font-size:50pt;color:#333344;padding-left:-40px");
+    auto labelVersion = new Label(qApp->applicationVersion());
+    labelVersion->setStyleSheet("QLabel{font-weight:bold;font-size:50pt;color:#333344;padding-left:-40px}");
     labelVersion->setAlignment(Qt::AlignRight);
+    labelVersion->setCursor(Qt::PointingHandCursor);
+    labelVersion->setToolTip(tr("Check for updates"));
+    connect(labelVersion, &Label::clicked, this, [this]{ getReleases(false); });
+
+    auto labelDate = new Label(BUILD_DATE);
+    labelDate->setStyleSheet("QLabel{font-size:20pt;color:#333344}");
+    labelDate->setAlignment(Qt::AlignRight);
+    labelDate->setCursor(Qt::PointingHandCursor);
+    labelDate->setToolTip(tr("Check for updates"));
+    connect(labelDate, &Label::clicked, this, [this]{ getReleases(false); });
 
     auto labelGit = new Label;
     labelGit->setPixmap(QIcon(":/about/github").pixmap(60));
@@ -328,12 +338,14 @@ void HelpSystem::showAbout()
         Space(bg.height()),
         LayoutV({
             labelVersion,
+            labelDate,
             Stretch(),
             LayoutH({Stretch(), labelGit}).setMargin(0),
+            SpaceV(1),
             LayoutH({Stretch(), labelQt}).setMargin(0),
             Stretch(),
             LayoutH({Stretch(), labelSupport1}).setMargin(0),
-        }).setMargins(0, 0, 24, 16),
+        }).setSpacing(0).setMargins(0, 0, 24, 16),
     }).setMargin(0).useFor(w);
 
     w->exec();

@@ -21,6 +21,7 @@
 #include "tools/OriMruList.h"
 #include "tools/OriSettings.h"
 #include "widgets/OriFlatToolBar.h"
+#include "widgets/OriLabels.h"
 #include "widgets/OriMruMenu.h"
 #include "widgets/OriPopupMessage.h"
 #include "widgets/OriStatusBar.h"
@@ -397,7 +398,6 @@ void PlotWindow::createToolBar()
 void PlotWindow::createStatusBar()
 {
     _statusBar = new Ori::Widgets::StatusBar(STATUS_PANEL_COUNT);
-    _statusBar->addVersionLabel();
     _statusBar->setText(STATUS_SEPARATOR_1, "|");
     _statusBar->setText(STATUS_SEPARATOR_2, "|");
     _statusBar->setText(STATUS_SEPARATOR_3, "|");
@@ -415,6 +415,8 @@ void PlotWindow::createStatusBar()
     _statusBar->setHint(STATUS_BGND, tr("Background subtraction disabled.\n"
         "The measurement is not compliant with the ISO standard."));
     _statusBar->setDblClick(STATUS_BGND, [this]{ editCamConfig(Camera::cfgBgnd); });
+    auto verLabel = _statusBar->addVersionLabel();
+    connect(verLabel, &Ori::Widgets::Label::doubleClicked, this, []{ HelpSystem::instance()->showAbout(); });
 
     _measureProgress = new MeasureProgressBar;
     _measureProgress->setVisible(false);
