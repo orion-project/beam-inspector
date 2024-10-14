@@ -19,6 +19,7 @@ public:
     QList<QPair<int, QString>> dataRows() const override;
 
     QString fileName() const { return _fileName; }
+    bool isDemoMode() const { return _demoMode; }
 
     void startCapture() override;
 
@@ -28,6 +29,7 @@ private:
     QString _fileName;
     QImage _image;
     bool _rawView = false;
+    bool _demoMode = false;
 };
 
 #endif // STILL_IMAGE_CAMERA_H

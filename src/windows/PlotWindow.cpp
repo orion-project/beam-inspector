@@ -729,7 +729,8 @@ void PlotWindow::processImage()
     _plot->stopEditRoi(false);
     _plotIntf->cleanResult();
     _tableIntf->cleanResult();
-    _mru->append(cam->fileName());
+    if (!cam->isDemoMode())
+        _mru->append(cam->fileName());
     _camera->setRawView(_actionRawView->isChecked(), false);
     _camera->startCapture();
     // do showCamConfig() after capture(), when image is already loaded and its size gets known

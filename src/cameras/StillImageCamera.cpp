@@ -46,10 +46,13 @@ StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table, const QStri
     if (_fileName.isEmpty())
         _fileName = s.value("recentFile").toString();
 
-    if (_fileName.isEmpty() || !QFile::exists(fileName))
+    if (_fileName.isEmpty() || !QFile::exists(_fileName)) {
         _fileName = qApp->applicationDirPath() + "/beam.png";
+        _demoMode = true;
+    }
 
-    s.setValue("recentFile", _fileName);
+    if (!_demoMode)
+        s.setValue("recentFile", _fileName);
 }
 
 QString StillImageCamera::name() const
