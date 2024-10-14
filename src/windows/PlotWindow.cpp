@@ -337,15 +337,21 @@ void PlotWindow::fillCamSelector()
     Ori::Settings s;
     s.beginGroup(INI_GROUP_CAM_NAMES);
     _camCustomNames.clear();
-    for (const auto& cam : IdsCamera::getCameras()) {
-        auto name = cam.displayName;
-        auto customName = s.value(cam.customId).toString();
-        if (!customName.isEmpty()) {
-            _camCustomNames.insert(cam.customId, customName);
-            name = customName;
+    if (auto err = IdsCamera::libError(); !err.isEmpty()) {
+        _camSelectMenu->addAction(QIcon(":/toolbar/error"), tr("IDS Camera"), this, [err]{
+            Ori::Dlg::error(err);
+        });
+    } else {
+        for (const auto& cam : IdsCamera::getCameras()) {
+            auto name = cam.displayName;
+            auto customName = s.value(cam.customId).toString();
+            if (!customName.isEmpty()) {
+                _camCustomNames.insert(cam.customId, customName);
+                name = customName;
+            }
+            auto a = _camSelectMenu->addAction(QIcon(":/toolbar/camera"), name, this, &PlotWindow::activateCamIds);
+            a->setData(cam.cameraId);
         }
-        auto a = _camSelectMenu->addAction(QIcon(":/toolbar/camera"), name, this, &PlotWindow::activateCamIds);
-        a->setData(cam.cameraId);
     }
 #endif
 

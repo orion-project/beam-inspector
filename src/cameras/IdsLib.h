@@ -16,6 +16,8 @@ public:
     bool loaded();
     void unload();
 
+    QString libError;
+
     QString getPeakError(peak_status status);
 
     QString gfaGetStr(peak_camera_handle hCam, const char* prop);

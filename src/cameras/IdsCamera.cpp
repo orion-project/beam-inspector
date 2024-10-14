@@ -498,6 +498,11 @@ QVector<CameraItem> IdsCamera::getCameras()
     return result;
 }
 
+QString IdsCamera::libError()
+{
+    return IDS.loaded() ? QString() : IDS.libError;
+}
+
 void IdsCamera::unloadLib()
 {
     if (IDS.loaded())

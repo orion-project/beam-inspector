@@ -23,14 +23,14 @@ static QString getSysError(DWORD err)
     return QString::fromWCharArray(buf, size).trimmed();
 }
 
-template <typename T> bool getProc(const char *name, T *proc) {
+template <typename T> QString getProc(const char *name, T *proc) {
     *proc = (T)GetProcAddress(__hLib, name);
     if (*proc == NULL) {
         auto err = GetLastError();
         qWarning() << LOG_ID << "Failed to get proc" << name << getSysError(err);
-        return false;
+        return QString("Function '%1' not loaded: %2").arg(name, err);
     }
-    return true;
+    return {};
 }
 
 IdsLib& IdsLib::instance()
@@ -59,18 +59,25 @@ IdsLib::IdsLib()
         QString libPath = sdkPath + '/' + lib;
         if (!QFile::exists(libPath)) {
             qWarning() << LOG_ID << "Library not found" << libPath;
+            libError = "Library not found: " + libPath;
             __hLib = 0;
             return;
         }
         __hLib = LoadLibraryW(libPath.toStdWString().c_str());
         if (__hLib == 0) {
-            auto err = GetLastError();
-            qWarning() << LOG_ID << "Failed to load" << libPath << getSysError(err);
+            auto err = getSysError(GetLastError());
+            qWarning() << LOG_ID << "Failed to load" << libPath << err;
+            libError = QString("Unable to load library %1: %2").arg(libPath, err);
             return;
         }
     }
 
-    #define GET_PROC(name) if (!getProc(#name, &name)) { __hLib = 0; return; }
+    #define GET_PROC(name) \
+        if (auto err = getProc(#name, &name); !err.isEmpty()) { \
+            libError = err; \
+            __hLib = 0; \
+            return; \
+        }
     GET_PROC(peak_Library_Init);
     GET_PROC(peak_Library_Exit);
     GET_PROC(peak_Library_GetLastError);
@@ -135,7 +142,9 @@ IdsLib::IdsLib()
 
     auto res = IdsLib::peak_Library_Init();
     if (PEAK_ERROR(res)) {
-        qCritical() << LOG_ID << "Unable to init library" << getPeakError(res);
+        auto peakErr = getPeakError(res);
+        qCritical() << LOG_ID << "Unable to init library" << peakErr;
+        libError = "Unable to init library: " + peakErr;
         __hLib = 0;
         return;
     }

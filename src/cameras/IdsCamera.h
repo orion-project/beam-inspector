@@ -51,6 +51,7 @@ public:
     QString customId() const override { return _customId; }
 
     static QVector<CameraItem> getCameras();
+    static QString libError();
     static void unloadLib();
 
 signals:
