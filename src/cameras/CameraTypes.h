@@ -79,8 +79,8 @@ struct PowerMeter
     double power = 0.0;
     int decimalFactor = 0;
 
-    static const int minAvgFrames = 1;
-    static const int maxAvgFrames = 10;
+    static int minAvgFrames;
+    static int maxAvgFrames;
 };
 
 struct CameraConfig
@@ -114,6 +114,17 @@ public:
     BrightEvent() : QEvent(QEvent::User) {}
 
     double level;
+};
+
+struct RandomOffset
+{
+    RandomOffset() {}
+    RandomOffset(double start, double min, double max);
+
+    double rnd() const;
+    double next();
+
+    double v, dv, v_min, v_max, h, rnd_max;
 };
 
 #endif // CAMERA_TYPES_H

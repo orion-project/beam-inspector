@@ -2,8 +2,6 @@
 
 #include "cameras/CameraWorker.h"
 
-#include <QRandomGenerator>
-
 #define LOG_ID "VirtualDemoCamera:"
 #define CAMERA_WIDTH 2592
 #define CAMERA_HEIGHT 2048
@@ -13,30 +11,6 @@
 //#define LOG_FRAME_TIME
 
 enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME, ROW_POWER };
-
-struct RandomOffset
-{
-    inline double rnd() {
-        return QRandomGenerator::global()->generate() / rnd_max;
-    }
-
-    RandomOffset() {}
-
-    RandomOffset(double start, double min, double max) : v(start), v_min(min), v_max(max) {
-        dv = v_max - v_min;
-        h = dv / 4.0;
-        rnd_max = double(std::numeric_limits<quint32>::max());
-    }
-
-    double next() {
-        v = qAbs(v + rnd()*h - h*0.5);
-        if (v > dv)
-            v = dv - rnd()*h;
-        return v + v_min;
-    }
-
-    double v, dv, v_min, v_max, h, rnd_max;
-};
 
 class BeamRenderer : public CameraWorker
 {

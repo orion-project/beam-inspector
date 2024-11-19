@@ -47,7 +47,7 @@ private:
     QAction *_actionMeasure, *_actionOpenImg, *_actionCamConfig,
         *_actionBeamInfo, *_actionLoadColorMap, *_actionCleanColorMaps,
         *_actionEditRoi, *_actionUseRoi, *_actionZoomFull, *_actionZoomRoi,
-        *_actionCamWelcome, *_actionCamImage, *_actionCamDemo, *_actionRefreshCams,
+        *_actionCamWelcome, *_actionCamImage, *_actionCamDemoRender, *_actionCamDemoImage, *_actionRefreshCams,
         *_actionResultsPanel, *_actionHardConfig, *_actionSaveRaw, *_actionRawView,
         *_actionCrosshairsShow, *_actionCrosshairsEdit, *_actionSetCamCustomName,
         *_actionSetupPowerMeter;
@@ -79,7 +79,8 @@ private:
     // Action handlers
     void activateCamWelcome();
     void activateCamImage();
-    void activateCamDemo();
+    void activateCamDemoRender();
+    void activateCamDemoImage();
 #ifdef WITH_IDS
     void activateCamIds();
 #endif

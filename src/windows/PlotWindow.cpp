@@ -9,6 +9,7 @@
 #include "cameras/MeasureSaver.h"
 #include "cameras/StillImageCamera.h"
 #include "cameras/VirtualDemoCamera.h"
+#include "cameras/VirtualImageCamera.h"
 #include "cameras/WelcomeCamera.h"
 #include "helpers/OriDialogs.h"
 #include "plot/PlotExport.h"
@@ -234,7 +235,8 @@ void PlotWindow::createMenuBar()
     if (AppSettings::instance().isDevMode)
     {
         _actionCamWelcome = A_("Welcome", this, &PlotWindow::activateCamWelcome, ":/toolbar/camera");
-        _actionCamDemo = A_("Demo", this, &PlotWindow::activateCamDemo, ":/toolbar/camera");
+        _actionCamDemoRender = A_("Demo (render)", this, &PlotWindow::activateCamDemoRender, ":/toolbar/bug");
+        _actionCamDemoImage = A_("Demo (image)", this, &PlotWindow::activateCamDemoImage, ":/toolbar/bug");
     }
     _actionCamImage = A_("Image", this, &PlotWindow::activateCamImage, ":/toolbar/camera");
     _actionRefreshCams = A_("Refresh", this, &PlotWindow::fillCamSelector);
@@ -328,11 +330,17 @@ void PlotWindow::createMenuBar()
 void PlotWindow::fillCamSelector()
 {
     _camSelectMenu->clear();
-    if (AppSettings::instance().isDevMode)
+    if (AppSettings::instance().isDevMode) {
         _camSelectMenu->addAction(_actionCamWelcome);
+        _camSelectMenu->addSeparator();
+    }
+    if (AppSettings::instance().isDevMode) {
+        _camSelectMenu->addAction(_actionCamDemoRender);
+        _camSelectMenu->addAction(_actionCamDemoImage);
+        _camSelectMenu->addSeparator();
+    }
     _camSelectMenu->addAction(_actionCamImage);
-    if (AppSettings::instance().isDevMode)
-        _camSelectMenu->addAction(_actionCamDemo);
+    _camSelectMenu->addSeparator();
 
 #ifdef WITH_IDS
     Ori::Settings s;
@@ -354,9 +362,9 @@ void PlotWindow::fillCamSelector()
             a->setData(cam.cameraId);
         }
     }
+    _camSelectMenu->addSeparator();
 #endif
 
-    _camSelectMenu->addSeparator();
     _camSelectMenu->addAction(_actionRefreshCams);
 }
 
@@ -814,7 +822,7 @@ void PlotWindow::activateCamImage()
     else openImage(_prevImage);
 }
 
-void PlotWindow::activateCamDemo()
+void PlotWindow::activateCamDemoRender()
 {
     if (dynamic_cast<VirtualDemoCamera*>(_camera.get())) return;
 
@@ -830,6 +838,31 @@ void PlotWindow::activateCamDemo()
     connect(cam, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualDemoCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &VirtualDemoCamera::finished, this, &PlotWindow::captureStopped);
+    cam->resultRowsChanged = [this]{ _tableIntf->setRows(_camera->dataRows()); };
+    cam->setRawView(_actionRawView->isChecked(), false);
+    _camera.reset((Camera*)cam);
+    _tableIntf->setRows(_camera->dataRows());
+    updateHardConfgPanel();
+    showCamConfig(false);
+    _plot->zoomAuto(false);
+    _camera->startCapture();
+    updateControls();
+}
+
+void PlotWindow::activateCamDemoImage()
+{
+    auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get());
+    if (imgCam) _prevImage = imgCam->fileName();
+
+    stopCapture();
+
+    _plot->stopEditRoi(false);
+    _plotIntf->cleanResult();
+    _tableIntf->cleanResult();
+    auto cam = new VirtualImageCamera(_plotIntf, _tableIntf, this);
+    connect(cam, &VirtualImageCamera::ready, this, &PlotWindow::dataReady);
+    connect(cam, &VirtualImageCamera::stats, this, &PlotWindow::statsReceived);
+    connect(cam, &VirtualImageCamera::finished, this, &PlotWindow::captureStopped);
     cam->resultRowsChanged = [this]{ _tableIntf->setRows(_camera->dataRows()); };
     cam->setRawView(_actionRawView->isChecked(), false);
     _camera.reset((Camera*)cam);
