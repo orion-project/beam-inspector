@@ -2,6 +2,7 @@
 
 #include "core/OriFloatingPoint.h"
 
+#include <QRandomGenerator>
 #include <QSettings>
 
 QString formatSecs(int secs) {
@@ -14,6 +15,9 @@ QString formatSecs(int secs) {
     if (s > 0) strs << QStringLiteral("%1s").arg(s);
     return strs.join(' ');
 }
+
+int PowerMeter::minAvgFrames = 1;
+int PowerMeter::maxAvgFrames = 10;
 
 //------------------------------------------------------------------------------
 //                               CameraConfig
@@ -148,4 +152,28 @@ void RoiRect::fix()
         if (Double(bottom).is(1)) top = 0;
         else bottom = 1;
     }
+}
+
+//------------------------------------------------------------------------------
+//                               RandomOffset
+//------------------------------------------------------------------------------
+
+double RandomOffset::rnd() const
+{
+    return QRandomGenerator::global()->generate() / rnd_max;
+}
+
+RandomOffset::RandomOffset(double start, double min, double max) : v(start), v_min(min), v_max(max)
+{
+    dv = v_max - v_min;
+    h = dv / 4.0;
+    rnd_max = double(std::numeric_limits<quint32>::max());
+}
+
+double RandomOffset::next()
+{
+    v = qAbs(v + rnd()*h - h*0.5);
+    if (v > dv)
+        v = dv - rnd()*h;
+    return v + v_min;
 }

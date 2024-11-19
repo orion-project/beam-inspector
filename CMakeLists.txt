@@ -62,6 +62,7 @@ set(PROJECT_SOURCES
     src/cameras/MeasureSaver.h src/cameras/MeasureSaver.cpp
     src/cameras/StillImageCamera.h src/cameras/StillImageCamera.cpp
     src/cameras/VirtualDemoCamera.h src/cameras/VirtualDemoCamera.cpp
+    src/cameras/VirtualImageCamera.h src/cameras/VirtualImageCamera.cpp
     src/cameras/WelcomeCamera.h src/cameras/WelcomeCamera.cpp
     src/plot/BeamGraph.h src/plot/BeamGraph.cpp
     src/plot/CrosshairOverlay.h src/plot/CrosshairOverlay.cpp

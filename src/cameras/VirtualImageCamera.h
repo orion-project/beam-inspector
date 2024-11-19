@@ -1,24 +1,24 @@
-#ifndef VIRTUAL_DEMO_CAMERA_H
-#define VIRTUAL_DEMO_CAMERA_H
+#ifndef VIRTUAL_IMAGE_CAMERA_H
+#define VIRTUAL_IMAGE_CAMERA_H
 
 #include "cameras/Camera.h"
 
 #include <QSharedPointer>
 #include <QThread>
 
-class BeamRenderer;
+class ImageCameraWorker;
 
-class VirtualDemoCamera : public QThread, public Camera
+class VirtualImageCamera : public QThread, public Camera
 {
     Q_OBJECT
 
 public:
-    VirtualDemoCamera(PlotIntf *plot, TableIntf *table, QObject *parent);
+    VirtualImageCamera(PlotIntf *plot, TableIntf *table, QObject *parent);
 
-    QString name() const override { return "Demo (render)"; }
+    QString name() const override { return "Demo (image)"; }
     int width() const override;
     int height() const override;
-    int bpp() const override { return 8; }
+    int bpp() const override;
     PixelScale sensorScale() const override { return { .on=true, .factor=2.5, .unit="um" }; }
     QList<QPair<int, QString>> dataRows() const override;
     QList<QPair<int, QString>> measurCols() const override;
@@ -48,7 +48,8 @@ private slots:
     void camConfigChanged();
 
 private:
-    QSharedPointer<BeamRenderer> _render;
+    QSharedPointer<ImageCameraWorker> _render;
+
 };
 
-#endif // VIRTUAL_DEMO_CAMERA_H
+#endif // VIRTUAL_IMAGE_CAMERA_H
