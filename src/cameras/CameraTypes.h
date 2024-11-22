@@ -119,12 +119,19 @@ public:
 struct RandomOffset
 {
     RandomOffset() {}
+    RandomOffset(double min, double max);
     RandomOffset(double start, double min, double max);
 
     double rnd() const;
     double next();
+    double value() const { return c; }
 
-    double v, dv, v_min, v_max, h, rnd_max;
+    double c, v, dv, v_min, v_max, h, rnd_max;
+};
+
+struct CameraCommons
+{
+    static QString supportedImageFilters();
 };
 
 #endif // CAMERA_TYPES_H

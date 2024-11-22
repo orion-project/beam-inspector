@@ -27,7 +27,7 @@ StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table) : Camera(pl
     QString fileName = QFileDialog::getOpenFileName(qApp->activeWindow(),
                                 qApp->tr("Open Beam Image"),
                                 s.strValue("recentDir"),
-                                qApp->tr("Images (*.png *.pgm *.jpg);;All Files (*.*)"));
+                                CameraCommons::supportedImageFilters());
     if (!fileName.isEmpty()) {
         _fileName = fileName;
         s.setValue("recentDir", QFileInfo(fileName).dir().absolutePath());
