@@ -44,12 +44,21 @@ signals:
 protected:
     void run() override;
 
+    void initConfigMore(Ori::Dlg::ConfigDlgOpts &opts) override;
+    void saveConfigMore(QSettings *s) override;
+    void loadConfigMore(QSettings *s) override;
+
 private slots:
     void camConfigChanged();
 
 private:
     QSharedPointer<ImageCameraWorker> _render;
-
+    QString _fileName;
+    int _centerX = -1;
+    int _centerY = -1;
+    int _jitterAngle = 0;
+    int _jitterShift = 0;
+    friend class ImageCameraWorker;
 };
 
 #endif // VIRTUAL_IMAGE_CAMERA_H

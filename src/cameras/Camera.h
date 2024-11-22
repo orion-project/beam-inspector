@@ -1,7 +1,6 @@
 #ifndef CAMERA_BASE_H
 #define CAMERA_BASE_H
 
-#include <QPointer>
 #include <QString>
 
 #include "cameras/CameraTypes.h"
@@ -60,7 +59,7 @@ public:
     const CameraConfig& config() const { return _config; }
     enum ConfigPages { cfgPlot, cfgBgnd, cfgCentr, cfgRoi, cfgMax };
     bool editConfig(int page = -1);
-    
+
     void setAperture(const RoiRect&);
     void toggleAperture(bool on);
     bool isRoiValid() const;

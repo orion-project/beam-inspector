@@ -2,7 +2,11 @@
 
 #include "cameras/CameraWorker.h"
 
+#include "dialogs/OriConfigDlg.h"
 #include "helpers/OriDialogs.h"
+
+#include <QPainter>
+#include <QSettings>
 
 #define LOG_ID "VirtualImageCamera:"
 #define CAMERA_LOOP_TICK_MS 5
@@ -16,22 +20,17 @@ class ImageCameraWorker : public CameraWorker
 {
 public:
     VirtualImageCamera *cam;
-    QString fileName;
     QImage image;
 
-    QImage jitter_img;
-    int jitter_xc = 0;
-    int jitter_yc = 0;
-    double jitter_phi = 0;
-    RandomOffset xc_offset;
-    RandomOffset yc_offset;
-    RandomOffset phi_offset;
+    QImage jitterImg;
+    RandomOffset jitterX;
+    RandomOffset jitterY;
+    RandomOffset jitterA;
+    double centerX, centerY;
 
     ImageCameraWorker(PlotIntf *plot, TableIntf *table, VirtualImageCamera *cam, QThread *thread)
         : CameraWorker(plot, table, cam, cam, LOG_ID), cam(cam)
     {
-        fileName = qApp->applicationDirPath() + "/beam.png";
-
         tableData = [this]{
             QMap<int, CamTableData> data = {
                 { ROW_RENDER_TIME, {avgAcqTime} },
@@ -45,7 +44,7 @@ public:
 
     QString init()
     {
-        image = QImage(fileName);
+        image = QImage(cam->_fileName);
         if (image.isNull()) {
            return qApp->tr("Unable to to load image file");
         }
@@ -58,9 +57,16 @@ public:
         c.h = image.height();
         c.bpp = fmt == QImage::Format_Grayscale16 ? 16 : 8;
 
-        xc_offset = RandomOffset(jitter_xc, jitter_xc-20, jitter_xc+20);
-        yc_offset = RandomOffset(jitter_yc, jitter_yc-20, jitter_yc+20);
-        phi_offset = RandomOffset(jitter_phi, jitter_phi-12, jitter_phi+12);
+        jitterX = RandomOffset(-cam->_jitterShift, cam->_jitterShift);
+        jitterY = RandomOffset(-cam->_jitterShift, cam->_jitterShift);
+        jitterA = RandomOffset(-cam->_jitterAngle, cam->_jitterAngle);
+        jitterImg = QImage(image.size(), image.format());
+        jitterImg.fill(0);
+
+        centerX = cam->_centerX;
+        centerY = cam->_centerY;
+        if (centerX < 0 or centerX > c.w) centerX = c.w/2.0;
+        if (centerY < 0 or centerY > c.h) centerY = c.h/2.0;
 
         plot->initGraph(c.w, c.h);
         graph = plot->rawGraph();
@@ -89,24 +95,17 @@ public:
     }
 
     void makeJitterImg() {
-        QTransform m;
-        m.translate(c.w/2.0, c.h/2.0);
-        m.rotate(jitter_phi);
-        jitter_img = image.transformed(m);
-        jitter_img = jitter_img.copy(
-            jitter_img.width()/2 - c.w/2 + jitter_xc,
-            jitter_img.height()/2 - c.h/2 + jitter_yc,
-            c.w, c.h);
-        jitter_img = jitter_img.convertToFormat(image.format());
-        // qDebug() << "Jitter:" << image.width() << image.height() << image.format() << image.sizeInBytes() << "->"
-        //          << jitter_img.width() << jitter_img.height() << jitter_img.format() << jitter_img.sizeInBytes();
+        QPainter p(&jitterImg);
+        p.translate(centerX, centerY);
+        p.rotate(jitterA.value());
+        p.drawImage(QPoint(-centerX + jitterX.value(), -centerY + jitterY.value()), image);
 
-        jitter_xc = xc_offset.next();
-        jitter_yc = yc_offset.next();
-        jitter_phi = phi_offset.next();
+        jitterX.next();
+        jitterY.next();
+        jitterA.next();
 
         // declare explicitly as const to avoid deep copy
-        const uchar* buf = jitter_img.bits();
+        const uchar* buf = jitterImg.bits();
         c.buf = (uint8_t*)buf;
     }
 
@@ -260,4 +259,45 @@ void VirtualImageCamera::raisePowerWarning()
 {
     if (_render)
         _render->hasPowerWarning = true;
+}
+
+void VirtualImageCamera::saveConfigMore(QSettings *s)
+{
+    s->setValue("sourceImg", _fileName);
+    s->setValue("jitter.center.x", _centerX);
+    s->setValue("jitter.center.y", _centerY);
+    s->setValue("jitter.angle", _jitterAngle);
+    s->setValue("jitter.shift", _jitterShift);
+}
+
+void VirtualImageCamera::loadConfigMore(QSettings *s)
+{
+    _fileName = s->value("sourceImg").toString();
+    if (_fileName.isEmpty())
+        _fileName = qApp->applicationDirPath() + "/beam.png";
+    _centerX = s->value("jitter.center.x", -1).toInt();
+    _centerY = s->value("jitter.center.y", -1).toInt();
+    _jitterAngle = s->value("jitter.angle", 15).toInt();
+    _jitterShift = s->value("jitter.shift", 15).toInt();
+}
+
+void VirtualImageCamera::initConfigMore(Ori::Dlg::ConfigDlgOpts &opts)
+{
+    int pageImg = cfgMax + 1;
+    opts.pages << Ori::Dlg::ConfigPage(pageImg, tr("Image"), ":/toolbar/raw_view");
+    opts.items
+        << new Ori::Dlg::ConfigItemEmpty(pageImg, tr("Reselect camera to apply paramaters"))
+        << (new Ori::Dlg::ConfigItemFile(pageImg, tr("Source image"), &_fileName))
+            ->withFilter(CameraCommons::supportedImageFilters())
+        << (new Ori::Dlg::ConfigItemInt(pageImg, tr("Position jitter (px)"), &_jitterShift))
+               ->withMinMax(-500, 500)
+        << (new Ori::Dlg::ConfigItemInt(pageImg, tr("Angle jitter (deg)"), &_jitterAngle))
+           ->withMinMax(-15, 15)
+        << (new Ori::Dlg::ConfigItemInt(pageImg, tr("Rotation center X (px)"), &_centerX))
+               ->withMinMax(-1, 10000)
+               ->withHint(tr("Set to -1 to use image center"))
+        << (new Ori::Dlg::ConfigItemInt(pageImg, tr("Rotation center Y (px)"), &_centerY))
+               ->withMinMax(-1, 10000)
+               ->withHint(tr("Set to -1 to use image center"))
+    ;
 }

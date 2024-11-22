@@ -2,6 +2,7 @@
 
 #include "core/OriFloatingPoint.h"
 
+#include <QApplication>
 #include <QRandomGenerator>
 #include <QSettings>
 
@@ -163,8 +164,14 @@ double RandomOffset::rnd() const
     return QRandomGenerator::global()->generate() / rnd_max;
 }
 
-RandomOffset::RandomOffset(double start, double min, double max) : v(start), v_min(min), v_max(max)
+RandomOffset::RandomOffset(double min, double max) : RandomOffset((min + max)/2.0, min, max)
 {
+}
+
+RandomOffset::RandomOffset(double start, double min, double max) : c(start), v(start), v_min(min), v_max(max)
+{
+    if (min > max)
+        std::swap(min, max);
     dv = v_max - v_min;
     h = dv / 4.0;
     rnd_max = double(std::numeric_limits<quint32>::max());
@@ -175,5 +182,15 @@ double RandomOffset::next()
     v = qAbs(v + rnd()*h - h*0.5);
     if (v > dv)
         v = dv - rnd()*h;
-    return v + v_min;
+    c = v + v_min;
+    return c;
+}
+
+//------------------------------------------------------------------------------
+//                               CameraCommons
+//------------------------------------------------------------------------------
+
+QString CameraCommons::supportedImageFilters()
+{
+    return qApp->tr("Images (*.png *.pgm *.jpg);;All Files (*.*)");
 }

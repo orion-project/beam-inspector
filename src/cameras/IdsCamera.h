@@ -4,7 +4,6 @@
 
 #include "cameras/Camera.h"
 
-#include <QPointer>
 #include <QSharedPointer>
 #include <QThread>
 
