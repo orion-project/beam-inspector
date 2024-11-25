@@ -25,6 +25,8 @@ public:
     void setEditing(bool on) { _editing = on; }
     bool isEditing() const { return _editing; }
 
+    RoiRects rois() const;
+
     void clear();
     bool isEmpty() const { return _items.isEmpty(); }
 
@@ -55,6 +57,8 @@ private:
     PixelScale _scale;
     QMenu *_menuForEmpty = nullptr;
     QMenu *_menuForItem = nullptr;
+    double _roiW = 0.1;
+    double _unitRoiW, _unitRoiH;
 
     void updateCoords();
     void setItemCoords(Crosshair &c, double plotX, double plotY);

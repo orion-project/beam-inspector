@@ -60,6 +60,8 @@ void CrosshairsOverlay::updateCoords()
         c.unitX = _scale.pixelToUnit(c.pixelX);
         c.unitY = _scale.pixelToUnit(c.pixelY);
     }
+    _unitRoiW = _scale.pixelToUnit(_maxPixelX * _roiW);
+    _unitRoiH = _scale.pixelToUnit(_maxPixelY * _roiW);
     _hasCoords = true;
 }
 
@@ -80,7 +82,7 @@ void CrosshairsOverlay::draw(QCPPainter *painter)
     const double w = RADIUS + EXTENT;
     for (const auto& c : _items) {
         painter->setBrush(Qt::NoBrush);
-        painter->setPen(c.color);
+        painter->setPen(QPen(c.color, 0, Qt::SolidLine));
         const double x = parentPlot()->xAxis->coordToPixel(c.unitX);
         const double y = parentPlot()->yAxis->coordToPixel(c.unitY);
         painter->drawEllipse(QPointF(x, y), r, r);
@@ -88,6 +90,14 @@ void CrosshairsOverlay::draw(QCPPainter *painter)
         painter->drawLine(QLineF(x-w, y, x+w, y));
         painter->setBrush(c.color);
         painter->drawStaticText(x+TEXT_POS, y-c.text.size().height()/2, c.text);
+        painter->setPen(QPen(c.color, 0, Qt::DashLine));
+        painter->setBrush(Qt::NoBrush);
+
+        const double roiX1 = parentPlot()->xAxis->coordToPixel(c.unitX - _unitRoiW/2);
+        const double roiY1 = parentPlot()->yAxis->coordToPixel(c.unitY - _unitRoiH/2);
+        const double roiX2 = parentPlot()->xAxis->coordToPixel(c.unitX + _unitRoiW/2);
+        const double roiY2 = parentPlot()->yAxis->coordToPixel(c.unitY + _unitRoiH/2);
+        painter->drawRect(roiX1, roiY1, roiX2-roiX1, roiY2-roiY1);
     }
 }
 
@@ -314,4 +324,19 @@ QString CrosshairsOverlay::load(const QString& fileName)
     }
     updateCoords();
     return {};
+}
+
+RoiRects CrosshairsOverlay::rois() const
+{
+    RoiRects rects;
+    for (const auto& it : _items) {
+        RoiRect r;
+        r.on = true;
+        r.left = it.x - _roiW/2.0;
+        r.right = it.x + _roiW/2.0;
+        r.top = it.y - _roiW/2.0;
+        r.bottom = it.y + _roiW/2.0;
+        rects << r;
+    }
+    return rects;
 }

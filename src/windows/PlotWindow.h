@@ -50,7 +50,7 @@ private:
         *_actionCamWelcome, *_actionCamImage, *_actionCamDemoRender, *_actionCamDemoImage, *_actionRefreshCams,
         *_actionResultsPanel, *_actionHardConfig, *_actionSaveRaw, *_actionRawView,
         *_actionCrosshairsShow, *_actionCrosshairsEdit, *_actionSetCamCustomName,
-        *_actionSetupPowerMeter;
+        *_actionSetupPowerMeter, *_actionUseMultiRoi;
     QAction *_buttonMeasure, *_buttonOpenImg;
     QActionGroup *_colorMapActions;
     QTableWidget *_table;
@@ -98,6 +98,7 @@ private:
     void toggleRawView();
     void toggleResultsPanel();
     void toggleRoi();
+    void toggleMultiRoi();
 
     void captureStopped();
     void configChanged();

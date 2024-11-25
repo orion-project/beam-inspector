@@ -74,7 +74,7 @@ typedef struct {
     double mask_diam;
 
     // Pixel values with background subtracted.
-    // Only pixes inside aperture bonds have valid values.
+    // When subtract_bkgnd_v=1, only pixes inside aperture bonds have valid values.
     double *subtracted;
 
     // The latest calculation aperture inside that the beam diameter has been calculated with required precision.
@@ -90,8 +90,11 @@ typedef struct {
     // Min and max pixel values after backgdound subtracted.
     double min, max;
 
-    // Number of pixels about the noise threshol/
+    // Number of pixels about the noise threshold
     int count;
+
+    // Version on the subtract_bkgnd function
+    int subtract_bkgnd_v;
 } CgnBeamBkgnd;
 
 typedef struct {
@@ -111,14 +114,15 @@ typedef struct {
 
 void cgn_calc_beam_naive(const CgnBeamCalc *c, CgnBeamResult *r);
 void cgn_calc_beam_bkgnd(const CgnBeamCalc *c, CgnBeamBkgnd *b, CgnBeamResult *r);
-void cgn_copy_to_f64(const CgnBeamCalc *c, double *tgt, double *max);
+void cgn_copy_to_f64(const CgnBeamCalc *c, double *dst, double *max);
 void cgn_normalize_f64(double *buf, int sz, double min, double max);
-void cgn_copy_normalized_f64(double *src, double *tgt, int sz, double min, double max);
+void cgn_copy_normalized_f64(double *src, double *dst, int sz, double min, double max);
 double cgn_calc_brightness(const CgnBeamCalc *c);
 double cgn_calc_brightness_1(const CgnBeamCalc *c);
 double cgn_calc_brightness_2(const CgnBeamCalc *c, int xc, int yc);
 void cgn_convert_10g40_to_u16(uint8_t *dst, uint8_t *src, int sz);
 void cgn_convert_12g24_to_u16(uint8_t *dst, uint8_t *src, int sz);
+void cgn_ext_copy_to_f64(const CgnBeamCalc *c, CgnBeamBkgnd *b, double *dst, int normalize, int full_z, double *min_z, double *max_z);
 
 #ifdef __cplusplus
 }

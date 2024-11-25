@@ -4,7 +4,6 @@
 #include "widgets/TableIntf.h"
 
 #include "beam_calc.h"
-#include "beam_render.h"
 
 #include "tools/OriSettings.h"
 #include "helpers/OriDialogs.h"
@@ -82,12 +81,21 @@ int StillImageCamera::bpp() const
     return _image.depth();
 }
 
-QList<QPair<int, QString>> StillImageCamera::dataRows() const
+TableRowsSpec StillImageCamera::tableRows() const
 {
-    return {
-        { ROW_LOAD_TIME, qApp->tr("Load time") },
-        { ROW_CALC_TIME, qApp->tr("Calc time") },
-    };
+    auto rows = Camera::tableRows();
+    if (_config.roiMode == ROI_NONE || _config.roiMode == ROI_SINGLE) {
+        rows.results << qApp->tr("Centroid");
+    } else {
+        for (int i = 0; i < _config.rois.size(); i++) {
+            if (_config.rois.at(i).on)
+                rows.results << qApp->tr("Result #%1").arg(i+1);
+        }
+    }
+    rows.aux
+        << qMakePair(ROW_LOAD_TIME, qApp->tr("Load time"))
+        << qMakePair(ROW_CALC_TIME, qApp->tr("Calc time"));
+    return rows;
 }
 
 void StillImageCamera::startCapture()
@@ -117,13 +125,26 @@ void StillImageCamera::startCapture()
     c.bpp = fmt == QImage::Format_Grayscale16 ? 16 : 8;
     c.buf = (uint8_t*)buf;
 
-    int sz = c.w*c.h;
-
     _plot->initGraph(c.w, c.h);
     double *graph = _plot->rawGraph();
 
     CgnBeamResult r;
     memset(&r, 0, sizeof(CgnBeamResult));
+    QList<CgnBeamResult> results;
+
+    if (_rawView)
+    {
+        cgn_copy_to_f64(&c, graph, nullptr);
+        _plot->invalidateGraph();
+        r.nan = true;
+        _plot->setResult(r, 0, (1 << c.bpp) - 1);
+        results << r;
+        _table->setResult(results, {
+            { ROW_LOAD_TIME, {loadTime} },
+            { ROW_CALC_TIME, {0} },
+        });
+        return;
+    }
 
     CgnBeamBkgnd g;
     memset(&g, 0, sizeof(CgnBeamBkgnd));
@@ -132,93 +153,61 @@ void StillImageCamera::startCapture()
     g.corner_fraction = _config.bgnd.corner;
     g.nT = _config.bgnd.noise;
     g.mask_diam = _config.bgnd.mask;
-    if (_config.roi.on && _config.roi.isValid()) {
-        g.ax1 = qRound(_config.roi.left * double(c.w));
-        g.ay1 = qRound(_config.roi.top * double(c.h));
-        g.ax2 = qRound(_config.roi.right * double(c.w));
-        g.ay2 = qRound(_config.roi.bottom * double(c.h));
+
+    auto setRoi = [&c, &g, &r](const RoiRect &roi){
+        if (roi.on && roi.isValid()) {
+            g.ax1 = qRound(roi.left * double(c.w));
+            g.ay1 = qRound(roi.top * double(c.h));
+            g.ax2 = qRound(roi.right * double(c.w));
+            g.ay2 = qRound(roi.bottom * double(c.h));
+        } else {
+            g.ax1 = 0;
+            g.ay1 = 0;
+            g.ax2 = c.w;
+            g.ay2 = c.h;
+        }
         r.x1 = g.ax1;
         r.y1 = g.ay1;
         r.x2 = g.ax2;
         r.y2 = g.ay2;
-    } else {
-        g.ax2 = c.w;
-        g.ay2 = c.h;
-        r.x2 = c.w;
-        r.y2 = c.h;
-    }
+    };
+
+    bool subtract = _config.bgnd.on;
     QVector<double> subtracted;
-    if (!_rawView && _config.bgnd.on) {
-        subtracted = QVector<double>(sz);
+    if (subtract) {
+        subtracted = QVector<double>(c.w*c.h);
         g.subtracted = subtracted.data();
     }
 
     timer.restart();
-    if (!_rawView)
+    if (_config.roiMode == ROI_NONE || _config.roiMode == ROI_SINGLE)
     {
-        if (_config.bgnd.on) {
+        setRoi(_config.roi);
+        cgn_calc_beam_bkgnd(&c, &g, &r);
+        results << r;
+    }
+    else
+    {
+        if (subtract) {
+            g.min = 1e10;
+            g.max = -1e10;
+            g.subtract_bkgnd_v = 1;
+            cgn_copy_to_f64(&c, g.subtracted, nullptr);
+        }
+        for (const auto &roi : _config.rois) {
+            setRoi(roi);
             cgn_calc_beam_bkgnd(&c, &g, &r);
-        } else {
-            cgn_calc_beam_naive(&c, &r);
+            results << r;
         }
     }
     auto calcTime = timer.elapsed();
 
-    timer.restart();
-    const double rangeTop = (1 << c.bpp) - 1;
-
-    if (_rawView)
-    {
-        cgn_copy_to_f64(&c, graph, &g.max);
-        _plot->invalidateGraph();
-        r.nan = true;
-        _plot->setResult(r, 0, rangeTop);
-        _table->setResult(r, {
-            { ROW_LOAD_TIME, {loadTime} },
-            { ROW_CALC_TIME, {calcTime} },
-        });
-        return;
-    }
-
-    if (_config.bgnd.on) {
-        if (_config.plot.normalize) {
-            cgn_copy_normalized_f64(g.subtracted, graph, sz, g.min,
-                _config.plot.fullRange ? rangeTop-g.min : g.max);
-        } else {
-            memcpy(graph, g.subtracted, sizeof(double)*sz);
-        }
-    } else {
-        if (_config.plot.normalize) {
-            if (c.bpp > 8) {
-                auto buf = (const uint16_t*)c.buf;
-                cgn_render_beam_to_doubles_norm_16(buf, sz, graph,
-                    _config.plot.fullRange ? rangeTop : cgn_find_max_16(buf, c.w*c.h));
-            } else {
-                cgn_render_beam_to_doubles_norm_8(c.buf, sz, graph,
-                    _config.plot.fullRange ? rangeTop : cgn_find_max_8(c.buf, c.w*c.h));
-            }
-        } else {
-            cgn_copy_to_f64(&c, graph, &g.max);
-        }
-    }
-    auto copyTime = timer.elapsed();
-
-    qDebug() << "loadTime:" << loadTime << "| calcTime" << calcTime << "| copyTime" << copyTime
-        << "| iters" << g.iters << "| min" << g.min << "| max" << g.max
-        << "| mean" << g.mean << "| sdev" << g.sdev << "| count" << g.count
-        << "| ax1" << g.ax1 << "| ay1" << g.ay1 << "| ax2" << g.ax2 << "| ay2" << g.ay2
-        << "| xx" << r.xx << "| yy" << r.yy << "| xy" << r.xy << "| p" << r.p;
-
+    double minZ, maxZ;
+    cgn_ext_copy_to_f64(&c, &g, graph, _config.plot.normalize, _config.plot.fullRange, &minZ, &maxZ);
     _plot->invalidateGraph();
-    if (_config.plot.normalize)
-        _plot->setResult(r, 0, 1);
-    else {
-        if (_config.plot.fullRange)
-            _plot->setResult(r, 0, rangeTop);
-        else
-            _plot->setResult(r, g.min, g.max);
-    }
-    _table->setResult(r, {
+    _plot->setResult(r, minZ, maxZ);
+
+    _table->setResult(results, {
         { ROW_LOAD_TIME, {loadTime} },
         { ROW_CALC_TIME, {calcTime} },
     });

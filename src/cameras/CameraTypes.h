@@ -38,6 +38,8 @@ struct RoiRect
     QString sizeStr(int w, int h) const;
 };
 
+using RoiRects = QList<RoiRect>;
+
 struct PixelScale
 {
     bool on = false;
@@ -83,11 +85,15 @@ struct PowerMeter
     static int maxAvgFrames;
 };
 
+enum RoiMode { ROI_NONE, ROI_SINGLE, ROI_MULTI };
+
 struct CameraConfig
 {
     PlotOptions plot;
     Background bgnd;
     RoiRect roi;
+    RoiRects rois;
+    RoiMode roiMode = ROI_NONE;
     PowerMeter power;
 
     void load(QSettings *s);
@@ -132,6 +138,12 @@ struct RandomOffset
 struct CameraCommons
 {
     static QString supportedImageFilters();
+};
+
+struct TableRowsSpec
+{
+    QStringList results;
+    QList<QPair<int, QString>> aux;
 };
 
 #endif // CAMERA_TYPES_H

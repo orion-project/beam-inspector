@@ -292,12 +292,14 @@ void PlotWindow::createMenuBar()
     _actionEditRoi = A_(tr("Edit ROI"), this, [this]{ _plot->startEditRoi(); }, ":/toolbar/roi");
     _actionUseRoi = A_(tr("Use ROI"), this, &PlotWindow::toggleRoi, ":/toolbar/roi_rect");
     _actionUseRoi->setCheckable(true);
+    _actionUseMultiRoi = A_(tr("Use Multi-ROI"), this, &PlotWindow::toggleMultiRoi);
+    _actionUseMultiRoi->setCheckable(true);
     _actionSetupPowerMeter = A_(tr("Power Meter..."), this, [this]{ _camera->setupPowerMeter(); });
     _actionSetCamCustomName = A_(tr("Custom Name..."), this, &PlotWindow::setCamCustomName);
     _actionCamConfig = A_(tr("Settings..."), this, [this]{ PlotWindow::editCamConfig(-1); }, ":/toolbar/settings");
     menuBar()->addMenu(M_(tr("Camera"), {
         _actionMeasure, 0,
-        _actionEditRoi, _actionUseRoi, 0,
+        _actionEditRoi, _actionUseRoi, _actionUseMultiRoi, 0,
         _actionSetupPowerMeter, _actionSetCamCustomName, _actionCamConfig,
     }));
 
@@ -544,13 +546,15 @@ void PlotWindow::showCamConfig(bool replot)
     _actionSaveRaw->setEnabled(_camera->canSaveRawImg() && _camera->isCapturing());
     _actionSetCamCustomName->setVisible(!_camera->customId().isEmpty());
     _actionSetupPowerMeter->setVisible(_camera->isPowerMeter());
+    _actionEditRoi->setEnabled(_camera->config().roiMode != ROI_MULTI);
     showSelectedCamera();
 
     _statusBar->setText(STATUS_CAMERA, _camera->name(), _camera->descr());
     _statusBar->setText(STATUS_RESOLUTION, _camera->resolutionStr());
 
     const auto &c = _camera->config();
-    _actionUseRoi->setChecked(c.roi.on);
+    _actionUseRoi->setChecked(c.roiMode == ROI_SINGLE);
+    _actionUseMultiRoi->setChecked(c.roiMode == ROI_MULTI);
     _actionZoomRoi->setVisible(c.roi.on);
     _statusBar->setVisible(STATUS_ROI_ICON, c.roi.on);
     _statusBar->setVisible(STATUS_ROI, c.roi.on);
@@ -571,6 +575,7 @@ void PlotWindow::showCamConfig(bool replot)
     if (c.roi.isZero())
         _plot->setRoi({false, 0, 0, 1, 1});
     else _plot->setRoi(c.roi);
+    _tableIntf->setRows(_camera->tableRows());
     _tableIntf->setScale(s);
     _plotIntf->setScale(s);
     if (replot) _plot->replot();
@@ -716,7 +721,6 @@ void PlotWindow::openImageDlg()
     }
     stopCapture();
     _camera.reset((Camera*)cam);
-    _tableIntf->setRows(_camera->dataRows());
     processImage();
 }
 
@@ -725,7 +729,6 @@ void PlotWindow::openImage(const QString& fileName)
     if (_camera)
         stopCapture();
     _camera.reset((Camera*)new StillImageCamera(_plotIntf, _tableIntf, fileName));
-    _tableIntf->setRows(_camera->dataRows());
     processImage();
 }
 
@@ -792,6 +795,21 @@ void PlotWindow::toggleRoi()
     if (!on && _plot->isRoiEditing())
         _plot->stopEditRoi(false);
     _camera->toggleAperture(on);
+    _camera->setRoiMode(on ? ROI_SINGLE : ROI_NONE);
+    configChanged();
+}
+
+void PlotWindow::toggleMultiRoi()
+{
+    bool on = _actionUseMultiRoi->isChecked();
+    if (_plot->isRoiEditing())
+        _plot->stopEditRoi(false);
+    if (on) {
+        // TODO: this should not be called on toggle
+        _camera->setRois(_plot->rois());
+    }
+    _camera->toggleAperture(false);
+    _camera->setRoiMode(on ? ROI_MULTI : ROI_NONE);
     configChanged();
 }
 

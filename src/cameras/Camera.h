@@ -52,6 +52,7 @@ public:
 
     /// Additional data rows to be show in the Result table
     virtual QList<QPair<int, QString>> dataRows() const { return {}; }
+    virtual TableRowsSpec tableRows() const;
 
     /// Additional data cols to be saved in measurement file
     virtual QList<QPair<int, QString>> measurCols() const { return {}; }
@@ -62,6 +63,8 @@ public:
 
     void setAperture(const RoiRect&);
     void toggleAperture(bool on);
+    void setRoiMode(RoiMode mode);
+    void setRois(const QList<RoiRect>&);
     bool isRoiValid() const;
 
     PixelScale pixelScale() const;

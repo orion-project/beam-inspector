@@ -51,6 +51,7 @@ public:
     void stopEditRoi(bool apply);
     bool isRoiEditing() const;
     RoiRect roi() const;
+    RoiRects rois() const;
 
     bool isCrosshairsVisible() const;
     bool isCrosshairsEditing() const;
