@@ -278,6 +278,11 @@ RoiRect Plot::roi() const
     return _roi->roi();
 }
 
+RoiRects Plot::rois() const
+{
+    return _crosshairs->rois();
+}
+
 void Plot::setRawView(bool on, bool replot)
 {
     _rawView = on;

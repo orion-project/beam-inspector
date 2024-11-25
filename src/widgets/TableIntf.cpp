@@ -58,6 +58,49 @@ void TableIntf::setRows(const QList<QPair<ResultId, QString>>& rows)
     }
 }
 
+void TableIntf::setRows(const TableRowsSpec &rows)
+{
+    if (rows.results.isEmpty())
+        return;
+    _table->setRowCount(0);
+    _resRows.clear();
+    _camRows.clear();
+    int row = 0;
+    for (const auto &title : rows.results) {
+        makeHeader(row, title);
+        ResultRows it;
+        it.xc = makeRow(row, qApp->tr("Center X"));
+        it.yc = makeRow(row, qApp->tr("Center Y"));
+        it.dx = makeRow(row, qApp->tr("Width X"));
+        it.dy = makeRow(row, qApp->tr("Width Y"));
+        it.phi = makeRow(row, qApp->tr("Azimuth"));
+        it.eps = makeRow(row, qApp->tr("Ellipticity"));
+        _resRows << it;
+    }
+    if (!rows.aux.isEmpty()) {
+        makeHeader(row, qApp->tr("Camera"));
+        for (auto it = rows.aux.constBegin(); it != rows.aux.constEnd(); it++) {
+            _camRows.insert(it->first, row);
+            makeRow(row, it->second);
+        }
+    }
+}
+
+QTableWidgetItem* TableIntf::makeHeader(RowIndex &row, const QString& title)
+{
+    _table->setRowCount(row+1);
+    auto it = new QTableWidgetItem(title);
+    auto f = it->font();
+    f.setBold(true);
+    it->setFont(f);
+    it->setTextAlignment(Qt::AlignCenter);
+    it->setBackground(_table->palette().brush(QPalette::Button));
+    _table->setItem(row, 0, it);
+    _table->setSpan(row, 0, 1, 2);
+    row++;
+    return it;
+}
+
 QTableWidgetItem* TableIntf::makeRow(RowIndex &row, const QString& title)
 {
     _table->setRowCount(row+1);
@@ -72,19 +115,27 @@ QTableWidgetItem* TableIntf::makeRow(RowIndex &row, const QString& title)
     it = new QTableWidgetItem(" --- ");
     f.setBold(false);
     it->setFont(f);
-    _table->setItem(row++, 1, it);
+    _table->setItem(row, 1, it);
+    row++;
     return it;
 };
 
 void TableIntf::cleanResult()
 {
     memset(&_res, 0, sizeof(CgnBeamResult));
+    _resData.clear();
     _camData.clear();
 }
 
 void TableIntf::setResult(const CgnBeamResult& r, const QMap<ResultId, CamTableData> &data)
 {
     _res = r;
+    _camData = data;
+}
+
+void TableIntf::setResult(const QList<CgnBeamResult>& r, const QMap<ResultId, CamTableData>& data)
+{
+    _resData = r;
     _camData = data;
 }
 
@@ -142,24 +193,63 @@ void TableIntf::showResult()
         item->setBackground(data.warn ? QColor(_warnColor) : Qt::transparent);
     }
 
-    if (_res.nan)
+    if (!_resData.isEmpty())
     {
-        setTextInvald(_itXc);
-        setTextInvald(_itYc);
-        setTextInvald(_itDx);
-        setTextInvald(_itDy);
-        setTextInvald(_itPhi);
-        setTextInvald(_itEps);
-        return;
-    }
+        for (int i = 0; i < _resData.size(); i++) {
+            if (i >= _resRows.size()) {
+                break;
+            }
+            const auto& res = _resData.at(i);
+            const auto& row = _resRows.at(i);
+            if (res.nan) {
+                setTextInvald(row.xc);
+                setTextInvald(row.yc);
+                setTextInvald(row.dx);
+                setTextInvald(row.dy);
+                setTextInvald(row.phi);
+                setTextInvald(row.eps);
+                continue;
+            }
 
-    double eps = qMin(_res.dx, _res.dy) / qMax(_res.dx, _res.dy);
-    _itXc->setText(_scale.formatWithMargins(_res.xc));
-    _itYc->setText(_scale.formatWithMargins(_res.yc));
-    _itDx->setText(_scale.formatWithMargins(_res.dx));
-    _itDy->setText(_scale.formatWithMargins(_res.dy));
-    _itPhi->setText(QStringLiteral(" %1° ").arg(_res.phi, 0, 'f', 1));
-    _itEps->setText(QStringLiteral(" %1 ").arg(eps, 0, 'f', 3));
+            double eps = qMin(res.dx, res.dy) / qMax(res.dx, res.dy);
+            row.xc->setText(_scale.formatWithMargins(res.xc));
+            row.yc->setText(_scale.formatWithMargins(res.yc));
+            row.dx->setText(_scale.formatWithMargins(res.dx));
+            row.dy->setText(_scale.formatWithMargins(res.dy));
+            row.phi->setText(QStringLiteral(" %1° ").arg(res.phi, 0, 'f', 1));
+            row.eps->setText(QStringLiteral(" %1 ").arg(eps, 0, 'f', 3));
+        }
+        for (int i = _resData.size(); i < _resRows.size(); i++) {
+            const auto &row = _resRows.at(i);
+            setTextInvald(row.xc);
+            setTextInvald(row.yc);
+            setTextInvald(row.dx);
+            setTextInvald(row.dy);
+            setTextInvald(row.phi);
+            setTextInvald(row.eps);
+        }
+    }
+    else
+    {
+        if (_res.nan)
+        {
+            setTextInvald(_itXc);
+            setTextInvald(_itYc);
+            setTextInvald(_itDx);
+            setTextInvald(_itDy);
+            setTextInvald(_itPhi);
+            setTextInvald(_itEps);
+            return;
+        }
+
+        double eps = qMin(_res.dx, _res.dy) / qMax(_res.dx, _res.dy);
+        _itXc->setText(_scale.formatWithMargins(_res.xc));
+        _itYc->setText(_scale.formatWithMargins(_res.yc));
+        _itDx->setText(_scale.formatWithMargins(_res.dx));
+        _itDy->setText(_scale.formatWithMargins(_res.dy));
+        _itPhi->setText(QStringLiteral(" %1° ").arg(_res.phi, 0, 'f', 1));
+        _itEps->setText(QStringLiteral(" %1 ").arg(eps, 0, 'f', 3));
+    }
 }
 
 bool TableIntf::resultInvalid() const

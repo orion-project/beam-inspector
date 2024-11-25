@@ -18,14 +18,20 @@ public:
     TableIntf(QTableWidget *table);
 
     void setRows(const QList<QPair<ResultId, QString>>& rows);
+    void setRows(const TableRowsSpec &rows);
     void setScale(const PixelScale& scale) { _scale = scale; }
     void setResult(const CgnBeamResult& r, const QMap<ResultId, CamTableData>& data);
+    void setResult(const QList<CgnBeamResult>& r, const QMap<ResultId, CamTableData>& data);
     void cleanResult();
     void showResult();
     bool resultInvalid() const;
     bool isPowerRow(QTableWidgetItem *item);
 
 private:
+    struct ResultRows
+    {
+        QTableWidgetItem *xc, *yc, *dx, *dy, *phi, *eps;
+    };
     QTableWidget *_table;
     QTableWidgetItem *_itXc, *_itYc, *_itDx, *_itDy, *_itPhi, *_itEps;
     ResultId _powerResult = -1;
@@ -35,7 +41,10 @@ private:
     PixelScale _scale;
     CgnBeamResult _res;
     int _warnColor;
+    QList<ResultRows> _resRows;
+    QList<CgnBeamResult> _resData;
 
+    QTableWidgetItem* makeHeader(RowIndex &row, const QString& title);
     QTableWidgetItem* makeRow(RowIndex &row, const QString& title);
 };
 

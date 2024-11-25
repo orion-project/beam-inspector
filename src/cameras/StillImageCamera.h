@@ -16,7 +16,7 @@ public:
     int width() const override;
     int height() const override;
     int bpp() const override;
-    QList<QPair<int, QString>> dataRows() const override;
+    TableRowsSpec tableRows() const override;
 
     QString fileName() const { return _fileName; }
     bool isDemoMode() const { return _demoMode; }

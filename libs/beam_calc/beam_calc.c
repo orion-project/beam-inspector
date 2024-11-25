@@ -12,7 +12,7 @@
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #define max(a,b) ((a) > (b) ? (a) : (b))
 
-#define cgn_calc_beam                                              \
+#define _cgn_calc_beam                                             \
     double p = 0;                                                  \
     double xc = 0;                                                 \
     double yc = 0;                                                 \
@@ -52,15 +52,15 @@
     r->p = p;
 
 void cgn_calc_beam_u8(const uint8_t *buf, const CgnBeamCalc *c, CgnBeamResult *r) {
-    cgn_calc_beam
+    _cgn_calc_beam
 }
 
 void cgn_calc_beam_u16(const uint16_t *buf, const CgnBeamCalc *c, CgnBeamResult *r) {
-    cgn_calc_beam
+    _cgn_calc_beam
 }
 
 void cgn_calc_beam_f64(const double *buf, const CgnBeamCalc *c, CgnBeamResult *r) {
-    cgn_calc_beam
+    _cgn_calc_beam
 }
 
 void cgn_calc_beam_naive(const CgnBeamCalc *c, CgnBeamResult *r) {
@@ -71,7 +71,7 @@ void cgn_calc_beam_naive(const CgnBeamCalc *c, CgnBeamResult *r) {
     }
 }
 
-#define cgn_subtract_bkgnd                             \
+#define _cgn_subtract_bkgnd_v0                          \
     const int w = c->w;                                 \
     const int h = c->h;                                 \
     const int x1 = b->ax1, x2 = b->ax2;                 \
@@ -146,15 +146,91 @@ void cgn_calc_beam_naive(const CgnBeamCalc *c, CgnBeamResult *r) {
         }                                               \
     }                                                   \
 
+// unlinke v0, v1
+// - doesn't use tmp buf when calc corners mean and sdev
+// - doesn't fill target buf outside of aperture
+//   (it should be filled manually before the call)
+// - doesn't reset min and max before finding them
+//   (reset them manually and after several calls with
+//   different rois then will contain the global min and max)
+//
+#define _cgn_subtract_bkgnd_v1                          \
+    const int w = c->w;                                 \
+    const int h = c->h;                                 \
+    const int x1 = b->ax1, x2 = b->ax2;                 \
+    const int y1 = b->ay1, y2 = b->ay2;                 \
+    const int dw = (x2 - x1) * b->corner_fraction;      \
+    const int dh = (y2 - y1) * b->corner_fraction;      \
+    const int bx1 = x1 + dw, bx2 = x2 - dw;             \
+    const int by1 = y1 + dh, by2 = y2 - dh;             \
+                                                        \
+    double m = 0;                                       \
+    for (int i = y1; i < y2; i++) {                     \
+        if (i < by1 || i >= by2) {                      \
+            const int offset = i*w;                     \
+            for (int j = x1; j < x2; j++) {             \
+                if (j < bx1 || j >= bx2) {              \
+                    m += buf[offset + j];               \
+                }                                       \
+            }                                           \
+        }                                               \
+    }                                                   \
+    m /= (double)(dw*dh*4);                             \
+                                                        \
+    double s = 0;                                       \
+    for (int i = y1; i < y2; i++) {                     \
+        if (i < by1 || i >= by2) {                      \
+            const int offset = i*w;                     \
+            for (int j = x1; j < x2; j++) {             \
+                if (j < bx1 || j >= bx2) {              \
+                    s += sqr(buf[offset + j] - m);      \
+                }                                       \
+            }                                           \
+        }                                               \
+    }                                                   \
+    s = sqrt(s / (double)(dw*dh*4));                    \
+                                                        \
+    b->mean = m;                                        \
+    b->sdev = s;                                        \
+                                                        \
+    const double th = m + b->nT * s;                    \
+    b->count = 0;                                       \
+    double *t = b->subtracted;                          \
+    for (int i = y1; i < y2; i++) {                     \
+        const int offset = i*w;                         \
+        for (int j = x1; j < x2; j++) {                 \
+            const int k = offset + j;                   \
+            if (buf[k] > th) {                          \
+                b->count++;                             \
+                t[k] = buf[k] - m;                      \
+            } else t[k] = 0;                            \
+            if (t[k] > b->max) b->max = t[k];           \
+            else if (t[k] < b->min) b->min = t[k];      \
+        }                                               \
+    }                                                   \
+
 void cgn_subtract_bkgnd_u8(const uint8_t *buf, const CgnBeamCalc *c, CgnBeamBkgnd *b) {
-    cgn_subtract_bkgnd
+    if (b->subtract_bkgnd_v == 1) {
+      _cgn_subtract_bkgnd_v1
+    } else {
+      _cgn_subtract_bkgnd_v0
+    }
 }
 
 void cgn_subtract_bkgnd_u16(const uint16_t *buf, const CgnBeamCalc *c, CgnBeamBkgnd *b) {
-    cgn_subtract_bkgnd
+    if (b->subtract_bkgnd_v == 1) {
+      _cgn_subtract_bkgnd_v1
+    } else {
+      _cgn_subtract_bkgnd_v0
+    }
 }
 
 void cgn_calc_beam_bkgnd(const CgnBeamCalc *c, CgnBeamBkgnd *b, CgnBeamResult *r) {
+    if (!b->subtracted) {
+        cgn_calc_beam_naive(c, r);
+        return;
+    }
+
     if (c->bpp > 8) {
         cgn_subtract_bkgnd_u16((const uint16_t*)(c->buf), c, b);
     } else {
@@ -191,7 +267,12 @@ void cgn_calc_beam_bkgnd(const CgnBeamCalc *c, CgnBeamBkgnd *b, CgnBeamResult *r
     }
 }
 
-#define cgn_copy_to                             \
+#define _cgn_copy_to                            \
+    for (int i = 0; i < sz; i++) {              \
+        tgt[i] = buf[i];                        \
+    }
+
+#define _cgn_copy_to_and_find_max               \
     *max = 0;                                   \
     for (int i = 0; i < sz; i++) {              \
         tgt[i] = buf[i];                        \
@@ -199,18 +280,26 @@ void cgn_calc_beam_bkgnd(const CgnBeamCalc *c, CgnBeamBkgnd *b, CgnBeamResult *r
     }
 
 void cgn_copy_u8_to_f64(const uint8_t *buf, int sz, double *tgt, double *max) {
-    cgn_copy_to
+    if (max) {
+        _cgn_copy_to_and_find_max
+    } else {
+        _cgn_copy_to
+    }
 }
 
 void cgn_copy_u16_to_f64(const uint16_t *buf, int sz, double *tgt, double *max) {
-    cgn_copy_to
+    if (max) {
+        _cgn_copy_to_and_find_max
+    } else {
+        _cgn_copy_to
+    }
 }
 
-void cgn_copy_to_f64(const CgnBeamCalc *c, double *tgt, double *max) {
+void cgn_copy_to_f64(const CgnBeamCalc *c, double *dst, double *max) {
     if (c->bpp > 8) {
-        cgn_copy_u16_to_f64((const uint16_t*)(c->buf), c->w*c->h, tgt, max);
+        cgn_copy_u16_to_f64((const uint16_t*)(c->buf), c->w*c->h, dst, max);
     } else {
-        cgn_copy_u8_to_f64((const uint8_t*)(c->buf), c->w*c->h, tgt, max);
+        cgn_copy_u8_to_f64((const uint8_t*)(c->buf), c->w*c->h, dst, max);
     }
 }
 
@@ -220,9 +309,9 @@ void cgn_normalize_f64(double *buf, int sz, double min, double max) {
     }
 }
 
-void cgn_copy_normalized_f64(double *src, double *tgt, int sz, double min, double max) {
+void cgn_copy_normalized_f64(double *src, double *dst, int sz, double min, double max) {
     for (int i = 0; i < sz; i++) {
-        tgt[i] = (src[i] - min) / max;
+        dst[i] = (src[i] - min) / max;
     }
 }
 
@@ -362,6 +451,66 @@ void cgn_convert_12g24_to_u16(uint8_t *dst, uint8_t *src, int sz) {
     }
 }
 
+#define _cgn_find_max                   \
+    for (int i = 0; i < sz; i++)        \
+        if (buf[i] > max) max = buf[i]; \
+    return max;
+
+double cgn_find_max_u8(const uint8_t *buf, int sz) {
+    uint8_t max = 0;
+    _cgn_find_max
+}
+
+double cgn_find_max_u16(const uint16_t *buf, int sz) {
+    uint16_t max = 0;
+    _cgn_find_max
+}
+
+#define _cgn_copy_to_f64_norm       \
+    for (int i = 0; i < sz; i++) {  \
+        dst[i] = buf[i] / max;        \
+    }
+
+void cgn_copy_u8_to_f64_norm(const uint8_t *buf, int sz, double *dst, double max) {
+    _cgn_copy_to_f64_norm
+}
+
+void cgn_copy_u16_to_f64_norm(const uint16_t *buf, int sz, double *dst, double max) {
+    _cgn_copy_to_f64_norm
+}
+
+void cgn_ext_copy_to_f64(const CgnBeamCalc *c, CgnBeamBkgnd *b, double *dst, int normalize, int full_z, double *min_z, double *max_z)
+{
+    const int sz = c->w * c->h;
+    const double top_z = (1 << c->bpp) - 1;
+    if (b->subtracted) {
+        if (normalize) {
+            *min_z = 0;
+            *max_z = 1;
+            cgn_copy_normalized_f64(b->subtracted, dst, sz, b->min, full_z ? (top_z - b->min) : b->max);
+        } else {
+            *min_z = full_z ? 0 : b->min;
+            *max_z = full_z ? top_z : b->max;
+            memcpy_s(dst, sizeof(double)*sz, b->subtracted, sizeof(double)*sz);
+        }
+    } else {
+        if (normalize) {
+            *min_z = 0;
+            *max_z = 1;
+            if (c->bpp > 8) {
+                const uint16_t* buf = (const uint16_t*)c->buf;
+                cgn_copy_u16_to_f64_norm(buf, sz, dst, full_z ? top_z : cgn_find_max_u16(buf, sz));
+            } else {
+                const uint8_t* buf = c->buf;
+                cgn_copy_u8_to_f64_norm(buf, sz, dst, full_z ? top_z : cgn_find_max_u8(buf, sz));
+            }
+        } else {
+            *min_z = 0;
+            *max_z = top_z;
+            cgn_copy_to_f64(c, dst, full_z ? NULL : max_z);
+        }
+    }
+}
 
 #ifdef USE_BLAS
 

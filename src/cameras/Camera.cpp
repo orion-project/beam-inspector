@@ -156,6 +156,15 @@ void Camera::setAperture(const RoiRect &a)
         raisePowerWarning();
 }
 
+void Camera::setRoiMode(RoiMode mode)
+{
+    if (_config.roiMode != mode) {
+        _config.roiMode = mode;
+        saveConfig();
+        raisePowerWarning();
+    }
+}
+
 void Camera::toggleAperture(bool on)
 {
     _config.roi.on = on;
@@ -165,6 +174,13 @@ void Camera::toggleAperture(bool on)
         _config.roi.right = 0.75;
         _config.roi.bottom = 0.75;
     }
+    saveConfig();
+    raisePowerWarning();
+}
+
+void Camera::setRois(const QList<RoiRect>& rois)
+{
+    _config.rois = rois;
     saveConfig();
     raisePowerWarning();
 }
@@ -226,4 +242,10 @@ bool Camera::setupPowerMeter()
             resultRowsChanged();
     }
     return ok;
+}
+
+TableRowsSpec Camera::tableRows() const
+{
+    TableRowsSpec rows;
+    return rows;
 }
