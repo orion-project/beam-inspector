@@ -6,11 +6,12 @@
 #include "cameras/CameraTypes.h"
 
 class BeamColorMapData;
+class BeamAxes;
 class BeamEllipse;
 class BeamInfoText;
+class QCustomPlot;
 class QCPColorMap;
 class QCPColorScale;
-class QCPItemStraightLine;
 
 /**
  * Provides access to graph data for camera threads
@@ -20,31 +21,31 @@ class QCPItemStraightLine;
 class PlotIntf
 {
 public:
-    PlotIntf(
-        QCPColorMap *colorMap, QCPColorScale *colorScale,
-        BeamEllipse *beamShape, BeamInfoText *beamInfo,
-        QCPItemStraightLine *lineX, QCPItemStraightLine *lineY);
+    PlotIntf(QCustomPlot *plot, QCPColorMap *colorMap, QCPColorScale *colorScale, BeamInfoText *beamInfo);
 
     void setScale(const PixelScale& scale) { _scale = scale; }
     void setResult(const CgnBeamResult& r, double min, double max);
+    void setResult(const QList<CgnBeamResult>& r, double min, double max);
     void showResult();
     void cleanResult();
+    void setRawView(bool on);
 
     void initGraph(int w, int h);
     double* rawGraph() const;
     void invalidateGraph() const;
 
 private:
+    QCustomPlot *_plot;
     int _w = 0, _h = 0;
     double _min, _max;
     PixelScale _scale;
-    CgnBeamResult _res;
+    QList<CgnBeamResult> _results;
     BeamInfoText *_beamInfo;
     QCPColorMap *_colorMap;
     QCPColorScale *_colorScale;
     BeamColorMapData *_beamData;
-    BeamEllipse *_beamShape;
-    QCPItemStraightLine *_lineX, *_lineY;
+    QList<BeamEllipse*> _beamShapes;
+    QList<BeamAxes*> _beamAxes;
 };
 
 #endif // PLOT_INTF_H

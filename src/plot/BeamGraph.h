@@ -1,9 +1,10 @@
 #ifndef BEAM_GRAPH_H
 #define BEAM_GRAPH_H
 
-#include "qcp/src/item.h"
-#include "qcp/src/plottables/plottable-colormap.h"
 #include "qcp/src/colorgradient.h"
+#include "qcp/src/item.h"
+#include "qcp/src/items/item-straightline.h"
+#include "qcp/src/plottables/plottable-colormap.h"
 
 //------------------------------------------------------------------------------
 
@@ -46,6 +47,23 @@ public:
 
     QPen pen;
     double xc, yc, dx, dy, phi;
+
+    double selectTest(const QPointF&, bool, QVariant*) const override { return 0; }
+
+protected:
+    void draw(QCPPainter *painter) override;
+};
+
+//------------------------------------------------------------------------------
+
+class BeamAxes : public QCPItemStraightLine
+{
+public:
+    explicit BeamAxes(QCustomPlot *parentPlot);
+
+    QPen penX, penY;
+    double xc, yc, dx, dy, phi;
+    bool infinite = false;
 
     double selectTest(const QPointF&, bool, QVariant*) const override { return 0; }
 

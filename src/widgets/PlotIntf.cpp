@@ -2,11 +2,8 @@
 
 #include "plot/BeamGraph.h"
 
-#include "qcp/src/items/item-straightline.h"
-
-PlotIntf::PlotIntf(QCPColorMap *colorMap, QCPColorScale *colorScale, BeamEllipse *beamShape,
-    BeamInfoText *beamInfo, QCPItemStraightLine *lineX, QCPItemStraightLine *lineY)
-    : _colorMap(colorMap), _colorScale(colorScale), _beamShape(beamShape), _beamInfo(beamInfo), _lineX(lineX), _lineY(lineY)
+PlotIntf::PlotIntf(QCustomPlot *plot, QCPColorMap *colorMap, QCPColorScale *colorScale, BeamInfoText *beamInfo)
+    : _plot(plot), _colorMap(colorMap), _colorScale(colorScale), _beamInfo(beamInfo)
 {
 }
 
@@ -35,7 +32,7 @@ void PlotIntf::invalidateGraph() const
 
 void PlotIntf::cleanResult()
 {
-    memset(&_res, 0, sizeof(CgnBeamResult));
+    _results.clear(); 
     memset(_beamData->rawData(), 0, sizeof(double)*_w*_h);
     _min = 0;
     _max = 0;
@@ -43,42 +40,72 @@ void PlotIntf::cleanResult()
 
 void PlotIntf::setResult(const CgnBeamResult& r, double min, double max)
 {
-    _res = r;
+    _results = {r};
     _min = min;
     _max = max;
 }
 
+void PlotIntf::setResult(const QList<CgnBeamResult>& r, double min, double max)
+{
+    _results = r;
+    _min = min;
+    _max = max;
+}
+
+template <class T> void trimList(QList<T>& list, int n)
+{
+    while (list.size() > n)
+        delete list.takeLast();
+    list.resize(n);
+}
+
 void PlotIntf::showResult()
 {
-    const double phi = qDegreesToRadians(_res.phi);
-    const double cos_phi = cos(phi);
-    const double sin_phi = sin(phi);
-    const double xc = _scale.pixelToUnit(_res.xc);
-    const double yc = _scale.pixelToUnit(_res.yc);
-    const double dx = _scale.pixelToUnit(_res.dx);
-    const double dy = _scale.pixelToUnit(_res.dy);
+    const int resultCount = _results.size();
+    for (int i = 0; i < resultCount; i++) {
+        const CgnBeamResult& r = _results.at(i);
 
-    _lineX->point1->setCoords(xc, yc);
-    _lineX->point2->setCoords(xc + dx*cos_phi, yc + dx*sin_phi);
+        const double xc = _scale.pixelToUnit(r.xc);
+        const double yc = _scale.pixelToUnit(r.yc);
+        const double dx = _scale.pixelToUnit(r.dx);
+        const double dy = _scale.pixelToUnit(r.dy);
 
-    _lineY->point1->setCoords(xc, yc);
-    _lineY->point2->setCoords(xc + dy*sin_phi, yc - dy*cos_phi);
+        if (i >= _beamShapes.size()) {
+            _beamShapes.append(new BeamEllipse(_plot));
+        }
+        auto beam = _beamShapes.at(i);
+        beam->xc = xc;
+        beam->yc = yc;
+        beam->dx = dx;
+        beam->dy = dy;
+        beam->phi = r.phi;
 
-    _beamShape->xc = xc;
-    _beamShape->yc = yc;
-    _beamShape->dx = dx;
-    _beamShape->dy = dy;
-    _beamShape->phi = _res.phi;
+        if (i >= _beamAxes.size()) {
+            _beamAxes.append(new BeamAxes(_plot));
+        }
+        auto axes = _beamAxes.at(i);
+        axes->xc = xc;
+        axes->yc = yc;
+        axes->dx = dx;
+        axes->dy = dy;
+        axes->phi = r.phi;
+        axes->infinite = resultCount == 1;
+    }
+    if (_beamShapes.size() > resultCount) {
+        trimList(_beamShapes, resultCount);
+        trimList(_beamAxes, resultCount);
+    }
 
-    if (_beamInfo->visible() && !_res.nan)
+    if (_beamInfo->visible() && resultCount == 1 && !_results.at(0).nan)
     {
-        double eps = qMin(_res.dx, _res.dy) / qMax(_res.dx, _res.dy);
+        const CgnBeamResult& r = _results.at(0);
+        double eps = qMin(r.dx, r.dy) / qMax(r.dx, r.dy);
         _beamInfo->setText(QStringLiteral("Xc = %1\nYc = %2\nDx = %3\nDy = %4\nφ = %5°\nε = %6")
-            .arg(_scale.format(_res.xc),
-                 _scale.format(_res.yc),
-                 _scale.format(_res.dx),
-                 _scale.format(_res.dy))
-            .arg(_res.phi, 0, 'f', 1)
+            .arg(_scale.format(r.xc),
+                 _scale.format(r.yc),
+                 _scale.format(r.dx),
+                 _scale.format(r.dy))
+            .arg(r.phi, 0, 'f', 1)
             .arg(eps, 0, 'f', 3));
     }
     else _beamInfo->setText({});
@@ -86,4 +113,16 @@ void PlotIntf::showResult()
     _colorScale->setDataRange(QCPRange(_min, _max));
     if (_w > 0) _beamData->setKeyRange(QCPRange(0, _scale.pixelToUnit(_w)));
     if (_h > 0) _beamData->setValueRange(QCPRange(0, _scale.pixelToUnit(_h)));
+}
+
+template <class T> void toggleVisiblity(QList<T>& list, bool on)
+{
+    for (auto &item : list)
+        item->setVisible(on);
+}
+
+void PlotIntf::setRawView(bool on)
+{
+    toggleVisiblity(_beamShapes, !on);
+    toggleVisiblity(_beamAxes, !on);
 }

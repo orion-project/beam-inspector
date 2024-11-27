@@ -6,12 +6,10 @@
 #include <QWidget>
 
 class QCustomPlot;
-class QCPItemStraightLine;
 
 class CrosshairsOverlay;
 class BeamColorMap;
 class BeamColorScale;
-class BeamEllipse;
 class BeamInfoText;
 class PlotIntf;
 class RoiRectGraph;
@@ -80,9 +78,7 @@ private:
     PlotIntf *_plotIntf;
     BeamColorMap *_colorMap;
     BeamColorScale *_colorScale;
-    QCPItemStraightLine *_lineX, *_lineY;
     BeamInfoText *_beamInfo;
-    BeamEllipse *_beamShape;
     RoiRectGraph *_roi;
     CrosshairsOverlay *_crosshairs;
     Ori::MruFileList *_mruCrosshairs;

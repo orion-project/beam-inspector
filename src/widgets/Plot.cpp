@@ -13,7 +13,6 @@
 
 #include "qcp/src/core.h"
 #include "qcp/src/layoutelements/layoutelement-axisrect.h"
-#include "qcp/src/items/item-straightline.h"
 
 #define APERTURE_ZOOM_MARGIN 0.01
 
@@ -71,14 +70,6 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _plot->axisRect()->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
     _colorScale->setMarginGroup(QCP::msBottom|QCP::msTop, marginGroup);
 
-    _beamShape = new BeamEllipse(_plot);
-    _beamShape->pen = QPen(Qt::white);
-
-    _lineX = new QCPItemStraightLine(_plot);
-    _lineY = new QCPItemStraightLine(_plot);
-    _lineX->setPen(QPen(Qt::yellow));
-    _lineY->setPen(QPen(Qt::white));
-
     _beamInfo = new BeamInfoText(_plot);
 
     _roi = new RoiRectGraph(_plot);
@@ -94,7 +85,7 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
 
     _crosshairs = new CrosshairsOverlay(_plot);
 
-    _plotIntf = new PlotIntf(_colorMap, _colorScale, _beamShape, _beamInfo, _lineX, _lineY);
+    _plotIntf = new PlotIntf(_plot, _colorMap, _colorScale, _beamInfo);
 
     _mruCrosshairs = new Ori::MruFileList(this);
     _mruCrosshairs->load("mruCrosshairs");
@@ -287,10 +278,8 @@ void Plot::setRawView(bool on, bool replot)
 {
     _rawView = on;
     setBeamInfoVisible(_showBeamInfo, false);
+    _plotIntf->setRawView(on);
     _roi->setIsVisible(!_rawView);
-    _lineX->setVisible(!_rawView);
-    _lineY->setVisible(!_rawView);
-    _beamShape->setVisible(!_rawView);
     if (replot) _plot->replot();
 }
 

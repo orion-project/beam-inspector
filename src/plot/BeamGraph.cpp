@@ -70,6 +70,7 @@ void BeamColorScale::setGradient(const QCPColorGradient &gradient)
 
 BeamEllipse::BeamEllipse(QCustomPlot *parentPlot) : QCPAbstractItem(parentPlot)
 {
+    pen.setColor(Qt::white);
 }
 
 void BeamEllipse::draw(QCPPainter *painter)
@@ -85,6 +86,49 @@ void BeamEllipse::draw(QCPPainter *painter)
     painter->setPen(pen);
     painter->drawEllipse(QPointF(), rx, ry);
     painter->setTransform(t);
+}
+
+//------------------------------------------------------------------------------
+//                                BeamAxes
+//------------------------------------------------------------------------------
+
+BeamAxes::BeamAxes(QCustomPlot *parentPlot) : QCPItemStraightLine(parentPlot)
+{
+    penX.setColor(Qt::yellow);
+    penY.setColor(Qt::white);
+}
+
+void BeamAxes::draw(QCPPainter *painter)
+{
+    if (!qIsFinite(xc) || !qIsFinite(yc) || !qIsFinite(dx) || !qIsFinite(dy)) return;
+    const double x = parentPlot()->xAxis->coordToPixel(xc);
+    const double y = parentPlot()->yAxis->coordToPixel(yc);
+    const double dx = parentPlot()->xAxis->coordToPixel(xc + this->dx) - x;
+    const double dy = parentPlot()->yAxis->coordToPixel(yc + this->dy) - y;
+    if (infinite) {
+        const double rad_phi = qDegreesToRadians(phi);
+        const double cos_phi = cos(rad_phi);
+        const double sin_phi = sin(rad_phi);
+        auto lineX = getRectClippedStraightLine({x, y}, {dx*cos_phi, dx*sin_phi}, clipRect());
+        if (!lineX.isNull()) {
+            painter->setPen(penX);
+            painter->drawLine(lineX);
+        }
+        auto lineY = getRectClippedStraightLine({x, y}, {dy*sin_phi, -dy*cos_phi}, clipRect());
+        if (!lineY.isNull()) {
+            painter->setPen(penY);
+            painter->drawLine(lineY);
+        }
+    } else {
+        auto t = painter->transform();
+        painter->translate(x, y);
+        painter->rotate(phi);
+        painter->setPen(penX);
+        painter->drawLine(QPointF(-dx, 0), QPointF(dx, 0));
+        painter->setPen(penY);
+        painter->drawLine(QPointF(0, -dy), QPointF(0, dy));
+        painter->setTransform(t);
+    }
 }
 
 //------------------------------------------------------------------------------
