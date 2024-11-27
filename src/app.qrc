@@ -20,7 +20,8 @@
         <file alias="options">../img/toolbar/options.svg</file>
         <file alias="raw_view">../img/toolbar/raw_view.svg</file>
         <file alias="roi">../img/toolbar/aper.svg</file>
-        <file alias="roi_rect">../img/toolbar/aper_rect.svg</file>
+        <file alias="roi_edit">../img/toolbar/aper_rotate.svg</file>
+        <file alias="roi_multi">../img/toolbar/aper_multi_1.svg</file>
         <file alias="roi_warn">../img/toolbar/aper_warn.svg</file>
         <file alias="save">../img/toolbar/save.svg</file>
         <file alias="save_img">../img/toolbar/save_img.svg</file>

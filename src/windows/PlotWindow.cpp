@@ -289,17 +289,17 @@ void PlotWindow::createMenuBar()
     menuBar()->addMenu(menuView);
 
     _actionMeasure = A_(tr("Start Measurements"), this, &PlotWindow::toggleMeasure, ":/toolbar/start", Qt::Key_F9);
-    _actionEditRoi = A_(tr("Edit ROI"), this, [this]{ _plot->startEditRoi(); }, ":/toolbar/roi");
-    _actionUseRoi = A_(tr("Use ROI"), this, &PlotWindow::toggleRoi, ":/toolbar/roi_rect");
+    _actionEditRoi = A_(tr("Edit ROI"), this, [this]{ _plot->startEditRoi(); }, ":/toolbar/roi_edit");
+    _actionUseRoi = A_(tr("Use ROI"), this, &PlotWindow::toggleRoi, ":/toolbar/roi");
     _actionUseRoi->setCheckable(true);
-    _actionUseMultiRoi = A_(tr("Use Multi-ROI"), this, &PlotWindow::toggleMultiRoi);
+    _actionUseMultiRoi = A_(tr("Use Multi-ROI"), this, &PlotWindow::toggleMultiRoi, ":/toolbar/roi_multi");
     _actionUseMultiRoi->setCheckable(true);
     _actionSetupPowerMeter = A_(tr("Power Meter..."), this, [this]{ _camera->setupPowerMeter(); });
     _actionSetCamCustomName = A_(tr("Custom Name..."), this, &PlotWindow::setCamCustomName);
     _actionCamConfig = A_(tr("Settings..."), this, [this]{ PlotWindow::editCamConfig(-1); }, ":/toolbar/settings");
     menuBar()->addMenu(M_(tr("Camera"), {
         _actionMeasure, 0,
-        _actionEditRoi, _actionUseRoi, _actionUseMultiRoi, 0,
+        _actionUseRoi, _actionUseMultiRoi, _actionEditRoi, 0,
         _actionSetupPowerMeter, _actionSetCamCustomName, _actionCamConfig,
     }));
 
@@ -392,8 +392,9 @@ void PlotWindow::createToolBar()
     tb->addAction(_actionResultsPanel);
     tb->addAction(_actionHardConfig);
     tb->addSeparator();
-    tb->addAction(_actionEditRoi);
     tb->addAction(_actionUseRoi);
+    tb->addAction(_actionUseMultiRoi);
+    tb->addAction(_actionEditRoi);
     tb->addSeparator();
     _buttonMeasure = tb->addWidget(Ori::Gui::textToolButton(_actionMeasure));
     _buttonOpenImg = tb->addWidget(Ori::Gui::textToolButton(_actionOpenImg));
@@ -546,7 +547,7 @@ void PlotWindow::showCamConfig(bool replot)
     _actionSaveRaw->setEnabled(_camera->canSaveRawImg() && _camera->isCapturing());
     _actionSetCamCustomName->setVisible(!_camera->customId().isEmpty());
     _actionSetupPowerMeter->setVisible(_camera->isPowerMeter());
-    _actionEditRoi->setEnabled(_camera->config().roiMode != ROI_MULTI);
+    _actionEditRoi->setVisible(_camera->config().roiMode != ROI_NONE);
     showSelectedCamera();
 
     _statusBar->setText(STATUS_CAMERA, _camera->name(), _camera->descr());
