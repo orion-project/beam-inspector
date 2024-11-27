@@ -205,7 +205,7 @@ void StillImageCamera::startCapture()
     double minZ, maxZ;
     cgn_ext_copy_to_f64(&c, &g, graph, _config.plot.normalize, _config.plot.fullRange, &minZ, &maxZ);
     _plot->invalidateGraph();
-    _plot->setResult(r, minZ, maxZ);
+    _plot->setResult(results, minZ, maxZ);
 
     _table->setResult(results, {
         { ROW_LOAD_TIME, {loadTime} },
