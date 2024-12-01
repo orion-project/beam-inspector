@@ -51,20 +51,23 @@ public:
     bool subtract;
     bool normalize;
     bool fullRange;
+    bool multiRoi;
     bool reconfig = false;
     double powerScale = 0;
-
+    RoiRect roi;
+    QList<RoiRect> rois;
     double *graph;
     QVector<double> subtracted;
+    QList<CgnBeamResult> results;
 
     MeasureSaver *saver = nullptr;
     QMutex saverMutex;
-    QVector<Measurement> resultBuf1;
-    QVector<Measurement> resultBuf2;
-    Measurement *resultBufs[MEASURE_BUF_COUNT];
-    Measurement *results;
-    int resultIdx = 0;
-    int resultBufIdx = 0;
+    QVector<Measurement> measurBuf1;
+    QVector<Measurement> measurBuf2;
+    Measurement *measurBufs[MEASURE_BUF_COUNT];
+    Measurement *measurs;
+    int measurIdx = 0;
+    int measurBufIdx = 0;
     qint64 measureStart = -1;
     qint64 measureDuration = -1;
     qint64 saveImgInterval = 0;
@@ -78,6 +81,7 @@ public:
     int calibratePowerFrames = 0;
     double calibratePowerTotal = 0;
     int powerDecimalFactor = 0;
+    double power = 0;
 
     QMap<QString, QVariant> stats;
     std::function<QMap<int, CamTableData>()> tableData;
@@ -87,11 +91,11 @@ public:
     CameraWorker(PlotIntf *plot, TableIntf *table, Camera *cam, QThread *thread, const char *logId)
         : plot(plot), table(table), camera(cam), thread(thread), logId(logId)
     {
-        resultBuf1.resize(MEASURE_BUF_SIZE);
-        resultBuf2.resize(MEASURE_BUF_SIZE);
-        resultBufs[0] = resultBuf1.data();
-        resultBufs[1] = resultBuf2.data();
-        results = resultBufs[0];
+        measurBuf1.resize(MEASURE_BUF_SIZE);
+        measurBuf2.resize(MEASURE_BUF_SIZE);
+        measurBufs[0] = measurBuf1.data();
+        measurBufs[1] = measurBuf2.data();
+        measurs = measurBufs[0];
     }
 
     void configure()
@@ -107,21 +111,6 @@ public:
         g.corner_fraction = cfg.bgnd.corner;
         g.nT = cfg.bgnd.noise;
         g.mask_diam = cfg.bgnd.mask;
-        if (cfg.roi.on && cfg.roi.isValid()) {
-            g.ax1 = qRound(cfg.roi.left * double(c.w));
-            g.ay1 = qRound(cfg.roi.top * double(c.h));
-            g.ax2 = qRound(cfg.roi.right * double(c.w));
-            g.ay2 = qRound(cfg.roi.bottom * double(c.h));
-            r.x1 = g.ax1;
-            r.y1 = g.ay1;
-            r.x2 = g.ax2;
-            r.y2 = g.ay2;
-        } else {
-            g.ax2 = c.w;
-            g.ay2 = c.h;
-            r.x2 = c.w;
-            r.y2 = c.h;
-        }
         subtract = cfg.bgnd.on;
         if (subtract) {
             subtracted = QVector<double>(c.w*c.h);
@@ -129,6 +118,30 @@ public:
         }
         normalize = cfg.plot.normalize;
         fullRange = cfg.plot.fullRange;
+        multiRoi = cfg.roiMode == ROI_MULTI;
+        roi = cfg.roi;
+        rois = cfg.rois;
+        results.resize(multiRoi ? rois.size() : 1);
+        g.subtract_bkgnd_v = multiRoi ? 1 : 0;
+    }
+
+    void setRoi(const RoiRect &roi)
+    {
+        if (roi.on && roi.isValid()) {
+            g.ax1 = qRound(roi.left * double(c.w));
+            g.ay1 = qRound(roi.top * double(c.h));
+            g.ax2 = qRound(roi.right * double(c.w));
+            g.ay2 = qRound(roi.bottom * double(c.h));
+        } else {
+            g.ax1 = 0;
+            g.ay1 = 0;
+            g.ax2 = c.w;
+            g.ay2 = c.h;
+        }
+        r.x1 = g.ax1;
+        r.y1 = g.ay1;
+        r.x2 = g.ax2;
+        r.y2 = g.ay2;
     }
 
     void reconfigure()
@@ -161,19 +174,41 @@ public:
     inline void calcResult()
     {
         if (!rawView) {
-            if (subtract) {
-                cgn_calc_beam_bkgnd(&c, &g, &r);
+            if (multiRoi) {
+                if (subtract) {
+                    g.min = 1e10;
+                    g.max = -1e10;
+                    cgn_copy_to_f64(&c, g.subtracted, nullptr);
+                }
+                for (int i = 0; i < rois.size(); i++) {
+                    setRoi(rois.at(i));
+                    cgn_calc_beam_bkgnd(&c, &g, &r);
+                    results[i] = r;
+                }
             } else {
-                cgn_calc_beam_naive(&c, &r);
+                setRoi(roi);
+                cgn_calc_beam_bkgnd(&c, &g, &r);
+                results[0] = r;
             }
         }
 
         saverMutex.lock();
         if (calibratePowerFrames > 0) {
+            if (multiRoi) {
+                power = 0;
+                if (results.size() > 0) {
+                    for (const auto& r : results) {
+                        power += r.p;
+                    }
+                    power /= double(results.size());
+                }
+            } else {
+                power = r.p;
+            }
             qDebug() << logId << "calibrate power"
                  << "| step =" << calibratePowerFrames
-                 << "| digital_intensity =" << r.p;
-            calibratePowerTotal += r.p;
+                 << "| digital_intensity =" << power;
+            calibratePowerTotal += power;
             if (--calibratePowerFrames == 0) {
                 hasPowerWarning = false;
                 calibratePowerTotal /= double(camera->config().power.avgFrames);
@@ -206,22 +241,22 @@ public:
                 e->buf = QByteArray((const char*)c.buf, c.w*c.h*(c.bpp > 8 ? 2 : 1));
                 QCoreApplication::postEvent(saver, e);
             }
-            results->time = time;
-            results->nan = r.nan;
-            results->dx = r.dx;
-            results->dy = r.dy;
-            results->xc = r.xc;
-            results->yc = r.yc;
-            results->phi = r.phi;
+            measurs->time = time;
+            measurs->nan = r.nan;
+            measurs->dx = r.dx;
+            measurs->dy = r.dy;
+            measurs->xc = r.xc;
+            measurs->yc = r.yc;
+            measurs->phi = r.phi;
             if (saveBrightness)
-                results->cols[COL_BRIGHTNESS] = cgn_calc_brightness_1(&c);
+                measurs->cols[COL_BRIGHTNESS] = cgn_calc_brightness_1(&c);
             if (showPower && calibratePowerFrames == 0)
-                results->cols[COL_POWER] = r.p * powerScale;
-            if (++resultIdx == MEASURE_BUF_SIZE ||
+                measurs->cols[COL_POWER] = power * powerScale;
+            if (++measurIdx == MEASURE_BUF_SIZE ||
                 (measureDuration > 0 && (time - measureStart >= measureDuration))) {
                 sendMeasure();
             } else {
-                results++;
+                measurs++;
             }
         }
         saverMutex.unlock();
@@ -230,13 +265,13 @@ public:
     inline void sendMeasure()
     {
         auto e = new MeasureEvent;
-        e->num = resultBufIdx;
-        e->count = resultIdx;
-        e->results = resultBufs[resultBufIdx % MEASURE_BUF_COUNT];
+        e->num = measurBufIdx;
+        e->count = measurIdx;
+        e->results = measurBufs[measurBufIdx % MEASURE_BUF_COUNT];
         e->stats = stats;
         QCoreApplication::postEvent(saver, e);
-        results = resultBufs[++resultBufIdx % MEASURE_BUF_COUNT];
-        resultIdx = 0;
+        measurs = measurBufs[++measurBufIdx % MEASURE_BUF_COUNT];
+        measurIdx = 0;
     }
 
     inline bool showResults()
@@ -253,52 +288,26 @@ public:
         {
             cgn_copy_to_f64(&c, graph, &g.max);
             plot->invalidateGraph();
-            r.nan = true;
-            plot->setResult(r, 0, rangeTop);
-            table->setResult(r, tableData());
+            plot->setResult({}, 0, rangeTop);
+            table->setResult({}, tableData());
             return true;
         }
 
-        if (subtract)
-        {
-            if (normalize) {
-                cgn_copy_normalized_f64(g.subtracted, graph, c.w*c.h, g.min,
-                    fullRange ? rangeTop-g.min : g.max);
-            } else
-                memcpy(graph, g.subtracted, sizeof(double)*c.w*c.h);
-        }
-        else
-        {
-            if (normalize) {
-                if (c.bpp > 8) {
-                    auto buf = (const uint16_t*)c.buf;
-                    cgn_render_beam_to_doubles_norm_16(buf, c.w*c.h, graph,
-                        fullRange ? rangeTop : cgn_find_max_16(buf, c.w*c.h));
-                } else {
-                    cgn_render_beam_to_doubles_norm_8(c.buf, c.w*c.h, graph,
-                        fullRange ? rangeTop : cgn_find_max_8(c.buf, c.w*c.h));
-                }
-            } else
-                cgn_copy_to_f64(&c, graph, &g.max);
-        }
+        double minZ, maxZ;
+        cgn_ext_copy_to_f64(&c, &g, graph, normalize, fullRange, &minZ, &maxZ);
         plot->invalidateGraph();
-        if (normalize)
-            plot->setResult(r, 0, 1);
-        else {
-            if (fullRange)
-                plot->setResult(r, 0, rangeTop);
-            else plot->setResult(r, g.min, g.max);
-        }
-        table->setResult(r, tableData());
+        plot->setResult(results, minZ, maxZ);
+        
+        table->setResult(results, tableData());
         return true;
     }
 
     void startMeasure(MeasureSaver *s)
     {
         saverMutex.lock();
-        resultIdx = 0;
-        resultBufIdx = 0;
-        results = resultBufs[0];
+        measurIdx = 0;
+        measurBufIdx = 0;
+        measurs = measurBufs[0];
         measureStart = timer.elapsed();
         measureDuration = s->config().durationInf ? -1 : s->config().durationSecs() * 1000;
         saveImgInterval = s->config().saveImg ? s->config().imgIntervalSecs() * 1000 : 0;
@@ -310,7 +319,7 @@ public:
     void stopMeasure()
     {
         saverMutex.lock();
-        if (resultIdx > 0)
+        if (measurIdx > 0)
             sendMeasure();
         saver = nullptr;
         measureStart = -1;

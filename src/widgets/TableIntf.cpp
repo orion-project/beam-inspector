@@ -17,45 +17,9 @@ TableIntf::TableIntf(QTableWidget *table) : _table(table)
     h->setSectionResizeMode(1, QHeaderView::Stretch);
     h->setHighlightSections(false);
 
-    int row = _maxStdRow;
-    auto makeHeader = [this, &row](const QString& title) {
-        _table->setRowCount(row+1);
-        auto it = new QTableWidgetItem(title);
-        auto f = it->font();
-        f.setBold(true);
-        it->setFont(f);
-        it->setTextAlignment(Qt::AlignCenter);
-        _table->setItem(row, 0, it);
-        _table->setSpan(row, 0, 1, 2);
-        row++;
-    };
-
-    makeHeader(qApp->tr(" Centroid "));
-    _itXc = makeRow(row, qApp->tr("Center X"));
-    _itYc = makeRow(row, qApp->tr("Center Y"));
-    _itDx = makeRow(row, qApp->tr("Width X"));
-    _itDy = makeRow(row, qApp->tr("Width Y"));
-    _itPhi = makeRow(row, qApp->tr("Azimuth"));
-    _itEps = makeRow(row, qApp->tr("Ellipticity"));
-    makeHeader(qApp->tr(" Camera "));
-    _maxStdRow = row;
-
     if (qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark)
         _warnColor = 0xFFFF8C00;
     else _warnColor = 0xffffdcbc;
-}
-
-void TableIntf::setRows(const QList<QPair<ResultId, QString>>& rows)
-{
-    for (RowIndex row = _table->rowCount()-1; row >= _maxStdRow; row--)
-        _table->removeRow(row);
-    _camRows.clear();
-    _camData.clear();
-    RowIndex row = _maxStdRow;
-    for (auto it = rows.constBegin(); it != rows.constEnd(); it++) {
-        _camRows.insert(it->first, row);
-        makeRow(row, it->second);
-    }
 }
 
 void TableIntf::setRows(const TableRowsSpec &rows)
@@ -122,15 +86,8 @@ QTableWidgetItem* TableIntf::makeRow(RowIndex &row, const QString& title)
 
 void TableIntf::cleanResult()
 {
-    memset(&_res, 0, sizeof(CgnBeamResult));
     _resData.clear();
     _camData.clear();
-}
-
-void TableIntf::setResult(const CgnBeamResult& r, const QMap<ResultId, CamTableData> &data)
-{
-    _res = r;
-    _camData = data;
 }
 
 void TableIntf::setResult(const QList<CgnBeamResult>& r, const QMap<ResultId, CamTableData>& data)
@@ -193,68 +150,44 @@ void TableIntf::showResult()
         item->setBackground(data.warn ? QColor(_warnColor) : Qt::transparent);
     }
 
-    if (!_resData.isEmpty())
-    {
-        for (int i = 0; i < _resData.size(); i++) {
-            if (i >= _resRows.size()) {
-                break;
-            }
-            const auto& res = _resData.at(i);
-            const auto& row = _resRows.at(i);
-            if (res.nan) {
-                setTextInvald(row.xc);
-                setTextInvald(row.yc);
-                setTextInvald(row.dx);
-                setTextInvald(row.dy);
-                setTextInvald(row.phi);
-                setTextInvald(row.eps);
-                continue;
-            }
-
-            double eps = qMin(res.dx, res.dy) / qMax(res.dx, res.dy);
-            row.xc->setText(_scale.formatWithMargins(res.xc));
-            row.yc->setText(_scale.formatWithMargins(res.yc));
-            row.dx->setText(_scale.formatWithMargins(res.dx));
-            row.dy->setText(_scale.formatWithMargins(res.dy));
-            row.phi->setText(QStringLiteral(" %1° ").arg(res.phi, 0, 'f', 1));
-            row.eps->setText(QStringLiteral(" %1 ").arg(eps, 0, 'f', 3));
+    for (int i = 0; i < _resData.size(); i++) {
+        if (i >= _resRows.size()) {
+            break;
         }
-        for (int i = _resData.size(); i < _resRows.size(); i++) {
-            const auto &row = _resRows.at(i);
+        const auto& res = _resData.at(i);
+        const auto& row = _resRows.at(i);
+        if (res.nan) {
             setTextInvald(row.xc);
             setTextInvald(row.yc);
             setTextInvald(row.dx);
             setTextInvald(row.dy);
             setTextInvald(row.phi);
             setTextInvald(row.eps);
-        }
-    }
-    else
-    {
-        if (_res.nan)
-        {
-            setTextInvald(_itXc);
-            setTextInvald(_itYc);
-            setTextInvald(_itDx);
-            setTextInvald(_itDy);
-            setTextInvald(_itPhi);
-            setTextInvald(_itEps);
-            return;
+            continue;
         }
 
-        double eps = qMin(_res.dx, _res.dy) / qMax(_res.dx, _res.dy);
-        _itXc->setText(_scale.formatWithMargins(_res.xc));
-        _itYc->setText(_scale.formatWithMargins(_res.yc));
-        _itDx->setText(_scale.formatWithMargins(_res.dx));
-        _itDy->setText(_scale.formatWithMargins(_res.dy));
-        _itPhi->setText(QStringLiteral(" %1° ").arg(_res.phi, 0, 'f', 1));
-        _itEps->setText(QStringLiteral(" %1 ").arg(eps, 0, 'f', 3));
+        double eps = qMin(res.dx, res.dy) / qMax(res.dx, res.dy);
+        row.xc->setText(_scale.formatWithMargins(res.xc));
+        row.yc->setText(_scale.formatWithMargins(res.yc));
+        row.dx->setText(_scale.formatWithMargins(res.dx));
+        row.dy->setText(_scale.formatWithMargins(res.dy));
+        row.phi->setText(QStringLiteral(" %1° ").arg(res.phi, 0, 'f', 1));
+        row.eps->setText(QStringLiteral(" %1 ").arg(eps, 0, 'f', 3));
+    }
+    for (int i = _resData.size(); i < _resRows.size(); i++) {
+        const auto &row = _resRows.at(i);
+        setTextInvald(row.xc);
+        setTextInvald(row.yc);
+        setTextInvald(row.dx);
+        setTextInvald(row.dy);
+        setTextInvald(row.phi);
+        setTextInvald(row.eps);
     }
 }
 
 bool TableIntf::resultInvalid() const
 {
-    return _res.nan;
+    return _resData.isEmpty();
 }
 
 bool TableIntf::isPowerRow(QTableWidgetItem *item)

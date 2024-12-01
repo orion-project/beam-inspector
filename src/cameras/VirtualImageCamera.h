@@ -20,7 +20,7 @@ public:
     int height() const override;
     int bpp() const override;
     PixelScale sensorScale() const override { return { .on=true, .factor=2.5, .unit="um" }; }
-    QList<QPair<int, QString>> dataRows() const override;
+    TableRowsSpec tableRows() const override;
     QList<QPair<int, QString>> measurCols() const override;
 
     void startCapture() override;

@@ -50,8 +50,7 @@ public:
 
     virtual QString customId() const { return {}; }
 
-    /// Additional data rows to be show in the Result table
-    virtual QList<QPair<int, QString>> dataRows() const { return {}; }
+    /// Data rows to be show in the Result table
     virtual TableRowsSpec tableRows() const;
 
     /// Additional data cols to be saved in measurement file
@@ -69,8 +68,6 @@ public:
 
     PixelScale pixelScale() const;
     QString resolutionStr() const;
-
-    std::function<void()> resultRowsChanged;
 
 protected:
     PlotIntf *_plot;

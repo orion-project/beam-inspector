@@ -24,7 +24,6 @@ public:
     PlotIntf(QCustomPlot *plot, QCPColorMap *colorMap, QCPColorScale *colorScale, BeamInfoText *beamInfo);
 
     void setScale(const PixelScale& scale) { _scale = scale; }
-    void setResult(const CgnBeamResult& r, double min, double max);
     void setResult(const QList<CgnBeamResult>& r, double min, double max);
     void showResult();
     void cleanResult();

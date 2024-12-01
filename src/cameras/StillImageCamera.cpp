@@ -84,14 +84,6 @@ int StillImageCamera::bpp() const
 TableRowsSpec StillImageCamera::tableRows() const
 {
     auto rows = Camera::tableRows();
-    if (_config.roiMode == ROI_NONE || _config.roiMode == ROI_SINGLE) {
-        rows.results << qApp->tr("Centroid");
-    } else {
-        for (int i = 0; i < _config.rois.size(); i++) {
-            if (_config.rois.at(i).on)
-                rows.results << qApp->tr("Result #%1").arg(i+1);
-        }
-    }
     rows.aux
         << qMakePair(ROW_LOAD_TIME, qApp->tr("Load time"))
         << qMakePair(ROW_CALC_TIME, qApp->tr("Calc time"));
@@ -136,10 +128,8 @@ void StillImageCamera::startCapture()
     {
         cgn_copy_to_f64(&c, graph, nullptr);
         _plot->invalidateGraph();
-        r.nan = true;
-        _plot->setResult(r, 0, (1 << c.bpp) - 1);
-        results << r;
-        _table->setResult(results, {
+        _plot->setResult({}, 0, (1 << c.bpp) - 1);
+        _table->setResult({}, {
             { ROW_LOAD_TIME, {loadTime} },
             { ROW_CALC_TIME, {0} },
         });
@@ -180,13 +170,7 @@ void StillImageCamera::startCapture()
     }
 
     timer.restart();
-    if (_config.roiMode == ROI_NONE || _config.roiMode == ROI_SINGLE)
-    {
-        setRoi(_config.roi);
-        cgn_calc_beam_bkgnd(&c, &g, &r);
-        results << r;
-    }
-    else
+    if (_config.roiMode == ROI_MULTI)
     {
         if (subtract) {
             g.min = 1e10;
@@ -199,6 +183,12 @@ void StillImageCamera::startCapture()
             cgn_calc_beam_bkgnd(&c, &g, &r);
             results << r;
         }
+    }
+    else
+    {
+        setRoi(_config.roi);
+        cgn_calc_beam_bkgnd(&c, &g, &r);
+        results << r;
     }
     auto calcTime = timer.elapsed();
 

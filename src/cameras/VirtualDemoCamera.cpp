@@ -158,15 +158,14 @@ int VirtualDemoCamera::height() const
     return CAMERA_HEIGHT;
 }
 
-QList<QPair<int, QString> > VirtualDemoCamera::dataRows() const
+TableRowsSpec VirtualDemoCamera::tableRows() const
 {
-    QList<QPair<int, QString>> rows =
-    {
-        { ROW_RENDER_TIME, qApp->tr("Render time") },
-        { ROW_CALC_TIME, qApp->tr("Calc time") },
-    };
+    auto rows = Camera::tableRows();
+    rows.aux
+        << qMakePair(ROW_RENDER_TIME, qApp->tr("Render time"))
+        << qMakePair(ROW_CALC_TIME, qApp->tr("Calc time"));
     if (_config.power.on)
-        rows << qMakePair(ROW_POWER, qApp->tr("Power"));
+        rows.aux << qMakePair(ROW_POWER, qApp->tr("Power"));
     return rows;
 }
 

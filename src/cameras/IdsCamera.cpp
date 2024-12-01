@@ -542,21 +542,20 @@ PixelScale IdsCamera::sensorScale() const
     return _pixelScale;
 }
 
-QList<QPair<int, QString>> IdsCamera::dataRows() const
+TableRowsSpec IdsCamera::tableRows() const
 {
-    QList<QPair<int, QString>> rows =
-    {
-        { ROW_RENDER_TIME,      qApp->tr("Acq. time") },
-        { ROW_CALC_TIME,        qApp->tr("Calc time") },
-        { ROW_FRAME_ERR,        qApp->tr("Errors") },
-        { ROW_FRAME_DROPPED,    qApp->tr("Dropped") },
-        { ROW_FRAME_UNDERRUN,   qApp->tr("Underrun") },
-        { ROW_FRAME_INCOMPLETE, qApp->tr("Incomplete") },
-    };
+    auto rows = Camera::tableRows();
+    rows.aux
+        << qMakePair(ROW_RENDER_TIME, qApp->tr("Acq. time"))
+        << qMakePair(ROW_CALC_TIME, qApp->tr("Calc time"))
+        << qMakePair(ROW_FRAME_ERR, qApp->tr("Errors"))
+        << qMakePair(ROW_FRAME_DROPPED, qApp->tr("Dropped"))
+        << qMakePair(ROW_FRAME_UNDERRUN, qApp->tr("Underrun"))
+        << qMakePair(ROW_FRAME_INCOMPLETE, qApp->tr("Incomplete"));
     if (_cfg->showBrightness)
-        rows << qMakePair(ROW_BRIGHTNESS, qApp->tr("Brightness"));
+        rows.aux << qMakePair(ROW_BRIGHTNESS, qApp->tr("Brightness"));
     if (_config.power.on)
-        rows << qMakePair(ROW_POWER, qApp->tr("Power"));
+        rows.aux << qMakePair(ROW_POWER, qApp->tr("Power"));
     return rows;
 }
 

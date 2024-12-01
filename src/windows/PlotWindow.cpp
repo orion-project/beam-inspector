@@ -289,12 +289,12 @@ void PlotWindow::createMenuBar()
     menuBar()->addMenu(menuView);
 
     _actionMeasure = A_(tr("Start Measurements"), this, &PlotWindow::toggleMeasure, ":/toolbar/start", Qt::Key_F9);
-    _actionEditRoi = A_(tr("Edit ROI"), this, [this]{ _plot->startEditRoi(); }, ":/toolbar/roi_edit");
+    _actionEditRoi = A_(tr("Edit ROI"), this, &PlotWindow::editRoi, ":/toolbar/roi_edit");
     _actionUseRoi = A_(tr("Use ROI"), this, &PlotWindow::toggleRoi, ":/toolbar/roi");
     _actionUseRoi->setCheckable(true);
     _actionUseMultiRoi = A_(tr("Use Multi-ROI"), this, &PlotWindow::toggleMultiRoi, ":/toolbar/roi_multi");
     _actionUseMultiRoi->setCheckable(true);
-    _actionSetupPowerMeter = A_(tr("Power Meter..."), this, [this]{ _camera->setupPowerMeter(); });
+    _actionSetupPowerMeter = A_(tr("Power Meter..."), this, &PlotWindow::setupPowerMeter);
     _actionSetCamCustomName = A_(tr("Custom Name..."), this, &PlotWindow::setCamCustomName);
     _actionCamConfig = A_(tr("Settings..."), this, [this]{ PlotWindow::editCamConfig(-1); }, ":/toolbar/settings");
     menuBar()->addMenu(M_(tr("Camera"), {
@@ -774,6 +774,20 @@ void PlotWindow::editCamConfig(int pageId)
     }
 }
 
+void PlotWindow::editRoi()
+{
+    if (_camera->config().roiMode == ROI_MULTI)
+        return;
+    if (_camera->config().roiMode == ROI_SINGLE)
+        _plot->startEditRoi();
+}
+
+void PlotWindow::setupPowerMeter()
+{
+    if (_camera->setupPowerMeter())
+        configChanged();
+}
+
 void PlotWindow::configChanged()
 {
     if (dynamic_cast<StillImageCamera*>(_camera.get())) {
@@ -822,7 +836,6 @@ void PlotWindow::activateCamWelcome()
     if (imgCam) _prevImage = imgCam->fileName();
 
     _camera.reset((Camera*)new WelcomeCamera(_plotIntf, _tableIntf));
-    _tableIntf->setRows(_camera->dataRows());
     showCamConfig(false);
     updateHardConfgPanel();
     showFps(0, 0);
@@ -834,8 +847,6 @@ void PlotWindow::activateCamWelcome()
 
 void PlotWindow::activateCamImage()
 {
-    stopCapture();
-
     if (_prevImage.isEmpty())
         openImageDlg();
     else openImage(_prevImage);
@@ -843,8 +854,6 @@ void PlotWindow::activateCamImage()
 
 void PlotWindow::activateCamDemoRender()
 {
-    if (dynamic_cast<VirtualDemoCamera*>(_camera.get())) return;
-
     auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get());
     if (imgCam) _prevImage = imgCam->fileName();
 
@@ -857,10 +866,8 @@ void PlotWindow::activateCamDemoRender()
     connect(cam, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualDemoCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &VirtualDemoCamera::finished, this, &PlotWindow::captureStopped);
-    cam->resultRowsChanged = [this]{ _tableIntf->setRows(_camera->dataRows()); };
     cam->setRawView(_actionRawView->isChecked(), false);
     _camera.reset((Camera*)cam);
-    _tableIntf->setRows(_camera->dataRows());
     updateHardConfgPanel();
     showCamConfig(false);
     _plot->zoomAuto(false);
@@ -882,10 +889,8 @@ void PlotWindow::activateCamDemoImage()
     connect(cam, &VirtualImageCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualImageCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &VirtualImageCamera::finished, this, &PlotWindow::captureStopped);
-    cam->resultRowsChanged = [this]{ _tableIntf->setRows(_camera->dataRows()); };
     cam->setRawView(_actionRawView->isChecked(), false);
     _camera.reset((Camera*)cam);
-    _tableIntf->setRows(_camera->dataRows());
     updateHardConfgPanel();
     showCamConfig(false);
     _plot->zoomAuto(false);
@@ -922,10 +927,8 @@ void PlotWindow::activateCamIds()
         updateControls();
         Ori::Dlg::error(err);
     });
-    cam->resultRowsChanged = [this]{ _tableIntf->setRows(_camera->dataRows()); };
     cam->setRawView(_actionRawView->isChecked(), false);
     _camera.reset((Camera*)cam);
-    _tableIntf->setRows(_camera->dataRows());
     updateHardConfgPanel();
     showCamConfig(false);
     _plot->zoomAuto(false);

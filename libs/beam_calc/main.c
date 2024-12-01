@@ -150,11 +150,11 @@ int main() {
         c.w = w;
         c.h = h;
 
-        c.bits = 8;
+        c.bpp = 8;
         c.buf = buf8+offset8;
         MEASURE("naive_8", cgn_calc_beam_naive(&c, &r));
 
-        c.bits = 16;
+        c.bpp = 16;
         c.buf = buf16+offset16;
         MEASURE("naive_16", cgn_calc_beam_naive(&c, &r));
 
@@ -174,12 +174,12 @@ int main() {
         printf("\nmax_iter=%d, precision=%.3f, corner_fraction=%.3f, nT=%.1f, mask_diam=%.1f\n",
             b.max_iter, b.precision, b.corner_fraction, b.nT, b.mask_diam);
 
-        c.bits = 8;
+        c.bpp = 8;
         c.buf = buf8+offset8;
         MEASURE("bkgnd_8", cgn_calc_beam_bkgnd(&c, &b, &r));
         printf("mean=%.2f, sdev=%.2f, min=%.2f, max=%.2f, iters=%d\n", b.mean, b.sdev, b.min, b.max, b.iters);
 
-        c.bits = 16;
+        c.bpp = 16;
         c.buf = buf16+offset16;
         MEASURE("bkgnd_16", cgn_calc_beam_bkgnd(&c, &b, &r));
         printf("mean=%.2f, sdev=%.2f, min=%.2f, max=%.2f, iters=%d\n", b.mean, b.sdev, b.min, b.max, b.iters);

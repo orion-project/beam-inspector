@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/libs/**",
+                "C:/Qt/6.8.0/mingw_64/include/**",
+                "${env:IDS_PEAK_COMFORT_SDK_PATH}/api/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "_UNICODE",
+                "UNICODE",
+                "WITH_IDS"
+            ],
+            "compilerPath": "C:\\Qt\\Tools\\mingw1310_64\\bin\\gcc.exe",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "windows-gcc-x64"
+        }
+    ],
+    "version": 4
+}
