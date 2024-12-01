@@ -210,7 +210,6 @@ bool Camera::setupPowerMeter()
     cbFactor->addItem(qApp->tr("uW"));
     cbFactor->addItem(qApp->tr("nW"));
 
-    bool wasOn = _config.power.on;
     cbEnable->setChecked(_config.power.on);
     seFrames->setValue(_config.power.avgFrames);
     edPower->setValue(_config.power.power);
@@ -238,8 +237,6 @@ bool Camera::setupPowerMeter()
         _config.power.decimalFactor = cbFactor->currentIndex() * -3;
         saveConfig();
         togglePowerMeter();
-        if (resultRowsChanged && wasOn != _config.power.on)
-            resultRowsChanged();
     }
     return ok;
 }
@@ -247,5 +244,13 @@ bool Camera::setupPowerMeter()
 TableRowsSpec Camera::tableRows() const
 {
     TableRowsSpec rows;
+    if (_config.roiMode == ROI_NONE || _config.roiMode == ROI_SINGLE) {
+        rows.results << qApp->tr("Centroid");
+    } else {
+        for (int i = 0; i < _config.rois.size(); i++) {
+            if (_config.rois.at(i).on)
+                rows.results << qApp->tr("Result #%1").arg(i+1);
+        }
+    }
     return rows;
 }

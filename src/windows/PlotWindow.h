@@ -87,10 +87,12 @@ private:
     void devResizeWindow();
     void devResizeDock(QDockWidget*);
     void editCamConfig(int pageId = -1);
+    void editRoi();
     void newWindow();
     void openImageDlg();
     void selectColorMapFile();
     void setCamCustomName();
+    void setupPowerMeter();
     void toggleCrosshairsEditing();
     void toggleCrosshairsVisbility();
     void toggleHardConfig();

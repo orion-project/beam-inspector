@@ -38,13 +38,6 @@ void PlotIntf::cleanResult()
     _max = 0;
 }
 
-void PlotIntf::setResult(const CgnBeamResult& r, double min, double max)
-{
-    _results = {r};
-    _min = min;
-    _max = max;
-}
-
 void PlotIntf::setResult(const QList<CgnBeamResult>& r, double min, double max)
 {
     _results = r;
