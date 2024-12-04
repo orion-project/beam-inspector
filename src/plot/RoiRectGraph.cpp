@@ -85,7 +85,7 @@ void RoiRectGraph::setImageSize(int sensorW, int sensorH, const PixelScale &scal
 
 void RoiRectGraph::updateVisibility()
 {
-    setVisible(_editing || (_roi.on && _isVisible));
+    setVisible(_editing || _isVisible);
 }
 
 void RoiRectGraph::updateCoords()
@@ -116,7 +116,6 @@ void RoiRectGraph::stopEdit(bool apply)
         _roi.top = _scale.unitToPixel(_y1) / _maxPixelY;
         _roi.right = _scale.unitToPixel(_x2) / _maxPixelX;
         _roi.bottom = _scale.unitToPixel(_y2) / _maxPixelY;
-        _roi.on = true;
         if (onEdited)
             onEdited();
     } else {

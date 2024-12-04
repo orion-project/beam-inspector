@@ -22,7 +22,6 @@ struct CameraItem
 
 struct RoiRect
 {
-    bool on = false;
     double left = 0;
     double top = 0;
     double right = 0;

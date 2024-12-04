@@ -78,6 +78,8 @@ bool Camera::editConfig(int page)
     int roiPixelRight = qRound(double(width()) * _config.roi.right);
     int roiPixelTop = qRound(double(height()) * _config.roi.top);
     int roiPixelBottom = qRound(double(height()) * _config.roi.bottom);
+    bool roiOn = _config.roiMode == ROI_SINGLE;
+    bool oldRoiOn = roiOn;
     opts.items = {
         new ConfigItemBool(cfgPlot, qApp->tr("Normalize data"), &_config.plot.normalize),
         new ConfigItemSpace(cfgPlot, 12),
@@ -111,7 +113,7 @@ bool Camera::editConfig(int page)
             ->withMinMax(0, 50),
         new ConfigItemReal(cfgCentr, qApp->tr("Precision"), &_config.bgnd.precision),
 
-        (new ConfigItemBool(cfgRoi, qApp->tr("Use region"), &_config.roi.on))
+        (new ConfigItemBool(cfgRoi, qApp->tr("Use region"), &roiOn))
             ->withHint(qApp->tr(
                 "These are raw pixels values. "
                 "Use the menu command <b>Camera ► Edit ROI</b> "
@@ -137,6 +139,9 @@ bool Camera::editConfig(int page)
         _config.roi.top = double(roiPixelTop)/double(height());
         _config.roi.bottom = double(roiPixelBottom)/double(height());
         _config.roi.fix();
+        if (oldRoiOn != roiOn) {
+            _config.roiMode = roiOn ? ROI_SINGLE : ROI_NONE;
+        }
         saveConfig(true);
         if (!oldRoi.isEqual(_config.roi))
             raisePowerWarning();
@@ -145,14 +150,32 @@ bool Camera::editConfig(int page)
     return false;
 }
 
-void Camera::setAperture(const RoiRect &a)
+void Camera::setRoi(const RoiRect &roi)
 {
-    RoiRect oldRoi = _config.roi;
-    _config.roi = a;
-    if (_config.roi.on)
-        _config.roi.fix();
+    bool powerWarning = !roi.isEqual(_config.roi);
+    _config.roi = roi;
+    _config.roi.fix();
     saveConfig();
-    if (!oldRoi.isEqual(_config.roi))
+    if (powerWarning)
+        raisePowerWarning();
+}
+
+void Camera::setRois(const QList<RoiRect>& rois)
+{
+    bool powerWarning = false;
+    if (_config.rois.size() != rois.size())
+        powerWarning = true;
+    else {
+        for (int i = 0; i < rois.size(); i++)
+            if (!_config.rois.at(i).isEqual(rois.at(i))) {
+                powerWarning = true;
+                break;
+            }
+    }
+    _config.rois = rois;
+    for (auto roi : _config.rois) roi.fix();
+    saveConfig();
+    if (powerWarning)
         raisePowerWarning();
 }
 
@@ -163,26 +186,6 @@ void Camera::setRoiMode(RoiMode mode)
         saveConfig();
         raisePowerWarning();
     }
-}
-
-void Camera::toggleAperture(bool on)
-{
-    _config.roi.on = on;
-    if (on && _config.roi.isZero()) {
-        _config.roi.left = 0.25;
-        _config.roi.top = 0.25;
-        _config.roi.right = 0.75;
-        _config.roi.bottom = 0.75;
-    }
-    saveConfig();
-    raisePowerWarning();
-}
-
-void Camera::setRois(const QList<RoiRect>& rois)
-{
-    _config.rois = rois;
-    saveConfig();
-    raisePowerWarning();
 }
 
 bool Camera::isRoiValid() const
@@ -248,8 +251,7 @@ TableRowsSpec Camera::tableRows() const
         rows.results << qApp->tr("Centroid");
     } else {
         for (int i = 0; i < _config.rois.size(); i++) {
-            if (_config.rois.at(i).on)
-                rows.results << qApp->tr("Result #%1").arg(i+1);
+            rows.results << qApp->tr("Result #%1").arg(i+1);
         }
     }
     return rows;

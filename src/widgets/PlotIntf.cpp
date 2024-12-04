@@ -2,6 +2,8 @@
 
 #include "plot/BeamGraph.h"
 
+#include "qcp/src/core.h"
+
 PlotIntf::PlotIntf(QCustomPlot *plot, QCPColorMap *colorMap, QCPColorScale *colorScale, BeamInfoText *beamInfo)
     : _plot(plot), _colorMap(colorMap), _colorScale(colorScale), _beamInfo(beamInfo)
 {
@@ -32,7 +34,7 @@ void PlotIntf::invalidateGraph() const
 
 void PlotIntf::cleanResult()
 {
-    _results.clear(); 
+    _results.clear();
     memset(_beamData->rawData(), 0, sizeof(double)*_w*_h);
     _min = 0;
     _max = 0;
@@ -45,10 +47,10 @@ void PlotIntf::setResult(const QList<CgnBeamResult>& r, double min, double max)
     _max = max;
 }
 
-template <class T> void trimList(QList<T>& list, int n)
+template <class T> void trimList(QCustomPlot *plot, QList<T>& list, int n)
 {
     while (list.size() > n)
-        delete list.takeLast();
+        plot->removeItem(list.takeLast());
     list.resize(n);
 }
 
@@ -85,8 +87,8 @@ void PlotIntf::showResult()
         axes->infinite = resultCount == 1;
     }
     if (_beamShapes.size() > resultCount) {
-        trimList(_beamShapes, resultCount);
-        trimList(_beamAxes, resultCount);
+        trimList(_plot, _beamShapes, resultCount);
+        trimList(_plot, _beamAxes, resultCount);
     }
 
     if (_beamInfo->visible() && resultCount == 1 && !_results.at(0).nan)

@@ -331,7 +331,6 @@ RoiRects CrosshairsOverlay::rois() const
     RoiRects rects;
     for (const auto& it : _items) {
         RoiRect r;
-        r.on = true;
         r.left = it.x - _roiW/2.0;
         r.right = it.x + _roiW/2.0;
         r.top = it.y - _roiW/2.0;
