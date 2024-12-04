@@ -2,6 +2,8 @@
 
 #include "cameras/CameraWorker.h"
 
+#include "beam_render.h"
+
 #define LOG_ID "VirtualDemoCamera:"
 #define CAMERA_WIDTH 2592
 #define CAMERA_HEIGHT 2048

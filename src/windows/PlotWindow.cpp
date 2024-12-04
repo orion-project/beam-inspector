@@ -556,10 +556,12 @@ void PlotWindow::showCamConfig(bool replot)
     const auto &c = _camera->config();
     _actionUseRoi->setChecked(c.roiMode == ROI_SINGLE);
     _actionUseMultiRoi->setChecked(c.roiMode == ROI_MULTI);
-    _actionZoomRoi->setVisible(c.roi.on);
-    _statusBar->setVisible(STATUS_ROI_ICON, c.roi.on);
-    _statusBar->setVisible(STATUS_ROI, c.roi.on);
-    if (c.roi.on) {
+    // TODO: adapt for ROI_MULTI
+    _actionZoomRoi->setVisible(c.roiMode == ROI_SINGLE);
+    _statusBar->setVisible(STATUS_ROI_ICON, c.roiMode != ROI_NONE);
+    _statusBar->setVisible(STATUS_ROI, c.roiMode != ROI_NONE);
+    // TODO: adapt for ROI_MULTI
+    if (c.roiMode == ROI_SINGLE) {
         bool valid = _camera->isRoiValid();
         QString hint = valid ? tr("Region of interest") : tr("Region is not valid");
         QString icon = valid ? ":/toolbar/roi" : ":/toolbar/roi_warn";
@@ -574,8 +576,10 @@ void PlotWindow::showCamConfig(bool replot)
     auto s = _camera->pixelScale();
     _plot->setImageSize(_camera->width(), _camera->height(), s);
     if (c.roi.isZero())
-        _plot->setRoi({false, 0, 0, 1, 1});
+        _plot->setRoi({0, 0, 1, 1});
     else _plot->setRoi(c.roi);
+    // We don't have _plot->setRois() because they always must be in sync with crosshairs
+    _plot->setRoiMode(c.roiMode);
     _tableIntf->setRows(_camera->tableRows());
     _tableIntf->setScale(s);
     _plotIntf->setScale(s);
@@ -800,7 +804,7 @@ void PlotWindow::configChanged()
 
 void PlotWindow::roiEdited()
 {
-    _camera->setAperture(_plot->roi());
+    _camera->setRoi(_plot->roi());
     configChanged();
 }
 
@@ -809,7 +813,6 @@ void PlotWindow::toggleRoi()
     bool on = _actionUseRoi->isChecked();
     if (!on && _plot->isRoiEditing())
         _plot->stopEditRoi(false);
-    _camera->toggleAperture(on);
     _camera->setRoiMode(on ? ROI_SINGLE : ROI_NONE);
     configChanged();
 }
@@ -823,7 +826,6 @@ void PlotWindow::toggleMultiRoi()
         // TODO: this should not be called on toggle
         _camera->setRois(_plot->rois());
     }
-    _camera->toggleAperture(false);
     _camera->setRoiMode(on ? ROI_MULTI : ROI_NONE);
     configChanged();
 }

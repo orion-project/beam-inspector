@@ -259,9 +259,15 @@ bool Plot::isRoiEditing() const
 
 void Plot::setRoi(const RoiRect& a)
 {
-    if (_autoZoom == ZOOM_APERTURE && !a.on)
+    if (_autoZoom == ZOOM_APERTURE && _roiMode != ROI_SINGLE)
         _autoZoom = ZOOM_FULL;
     _roi->setRoi(a);
+}
+
+void Plot::setRoiMode(RoiMode roiMode)
+{
+    _roiMode = roiMode;
+    updateRoiVisibility();
 }
 
 RoiRect Plot::roi() const
@@ -279,8 +285,13 @@ void Plot::setRawView(bool on, bool replot)
     _rawView = on;
     setBeamInfoVisible(_showBeamInfo, false);
     _plotIntf->setRawView(on);
-    _roi->setIsVisible(!_rawView);
+    updateRoiVisibility();
     if (replot) _plot->replot();
+}
+
+void Plot::updateRoiVisibility()
+{
+    _roi->setIsVisible(!_rawView && _roiMode == ROI_SINGLE);
 }
 
 void Plot::showContextMenu(const QPoint& pos)

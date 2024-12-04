@@ -43,7 +43,6 @@ void CameraConfig::load(QSettings *s)
     LOAD(bgnd.noise, Double, 3);
     LOAD(bgnd.mask, Double, 3);
 
-    LOAD(roi.on, Bool, false);
     LOAD(roi.left, Double, 0.25);
     LOAD(roi.top, Double, 0.25);
     LOAD(roi.right, Double, 0.75);
@@ -54,7 +53,6 @@ void CameraConfig::load(QSettings *s)
     for (int i = 0; i < roiCount; i++) {
         s->setArrayIndex(i);
         RoiRect r;
-        r.on = s->value("on", true).toBool();
         r.left = s->value("left", 0.25).toDouble();
         r.top = s->value("top", 0.25).toDouble();
         r.right = s->value("right", 0.75).toDouble();
@@ -89,27 +87,25 @@ void CameraConfig::save(QSettings *s, bool compact) const
         SAVE(bgnd.mask);
     }
 
-    SAVE(roi.on);
-    if (!compact or roi.on) {
+    SAVE(roiMode);
+    if (!compact or roiMode == ROI_SINGLE) {
         SAVE(roi.left);
         SAVE(roi.top);
         SAVE(roi.right);
         SAVE(roi.bottom);
     }
-    SAVE(roiMode);
-    s->beginWriteArray("rois", rois.size());
-    for (int i = 0; i < rois.size(); i++) {
-        const auto& roi = rois.at(i);
-        s->setArrayIndex(i);
-        s->setValue("on", roi.on);
-        if (!compact or roi.on) {
+    if (!compact or roiMode == ROI_MULTI) {
+        s->beginWriteArray("rois", rois.size());
+        for (int i = 0; i < rois.size(); i++) {
+            const auto& roi = rois.at(i);
+            s->setArrayIndex(i);
             s->setValue("left", roi.left);
             s->setValue("top", roi.top);
             s->setValue("right", roi.right);
             s->setValue("bottom", roi.bottom);
         }
+        s->endArray();
     }
-    s->endArray();
 
     SAVE(power.on);
     if (!compact or power.on) {

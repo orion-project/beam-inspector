@@ -36,6 +36,7 @@ public:
     void setBeamInfoVisible(bool on, bool replot);
     void setImageSize(int sensorW, int sensorH, const PixelScale &scale);
     void setRoi(const RoiRect &a);
+    void setRoiMode(RoiMode roiMode);
     void setRawView(bool on, bool replot);
     void selectBackColor();
 
@@ -80,6 +81,7 @@ private:
     BeamColorScale *_colorScale;
     BeamInfoText *_beamInfo;
     RoiRectGraph *_roi;
+    RoiMode _roiMode = ROI_NONE;
     CrosshairsOverlay *_crosshairs;
     Ori::MruFileList *_mruCrosshairs;
     int _imageW, _imageH;
@@ -92,6 +94,7 @@ private:
     void zoomToBounds(double x1, double y1, double x2, double y2, bool replot);
     void axisRangeChanged();
     void showContextMenu(const QPoint& pos);
+    void updateRoiVisibility();
 };
 
 #endif // PLOT_WIDGET_H

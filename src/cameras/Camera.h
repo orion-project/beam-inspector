@@ -60,10 +60,9 @@ public:
     enum ConfigPages { cfgPlot, cfgBgnd, cfgCentr, cfgRoi, cfgMax };
     bool editConfig(int page = -1);
 
-    void setAperture(const RoiRect&);
-    void toggleAperture(bool on);
-    void setRoiMode(RoiMode mode);
+    void setRoi(const RoiRect&);
     void setRois(const QList<RoiRect>&);
+    void setRoiMode(RoiMode mode);
     bool isRoiValid() const;
 
     PixelScale pixelScale() const;

@@ -144,8 +144,10 @@ void StillImageCamera::startCapture()
     g.nT = _config.bgnd.noise;
     g.mask_diam = _config.bgnd.mask;
 
-    auto setRoi = [&c, &g, &r](const RoiRect &roi){
-        if (roi.on && roi.isValid()) {
+    auto roiMode = _config.roiMode;
+
+    auto setRoi = [&c, &g, &r, roiMode](const RoiRect &roi){
+        if (roiMode != ROI_NONE && roi.isValid()) {
             g.ax1 = qRound(roi.left * double(c.w));
             g.ay1 = qRound(roi.top * double(c.h));
             g.ax2 = qRound(roi.right * double(c.w));

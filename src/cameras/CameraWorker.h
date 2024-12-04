@@ -8,7 +8,6 @@
 #include "widgets/TableIntf.h"
 
 #include "beam_calc.h"
-#include "beam_render.h"
 
 #include <QApplication>
 #include <QDebug>
@@ -51,6 +50,7 @@ public:
     bool subtract;
     bool normalize;
     bool fullRange;
+    bool useRoi;
     bool multiRoi;
     bool reconfig = false;
     double powerScale = 0;
@@ -119,6 +119,7 @@ public:
         normalize = cfg.plot.normalize;
         fullRange = cfg.plot.fullRange;
         multiRoi = cfg.roiMode == ROI_MULTI;
+        useRoi = cfg.roiMode != ROI_NONE;
         roi = cfg.roi;
         rois = cfg.rois;
         results.resize(multiRoi ? rois.size() : 1);
@@ -127,7 +128,7 @@ public:
 
     void setRoi(const RoiRect &roi)
     {
-        if (roi.on && roi.isValid()) {
+        if (useRoi && roi.isValid()) {
             g.ax1 = qRound(roi.left * double(c.w));
             g.ay1 = qRound(roi.top * double(c.h));
             g.ax2 = qRound(roi.right * double(c.w));
@@ -297,7 +298,7 @@ public:
         cgn_ext_copy_to_f64(&c, &g, graph, normalize, fullRange, &minZ, &maxZ);
         plot->invalidateGraph();
         plot->setResult(results, minZ, maxZ);
-        
+
         table->setResult(results, tableData());
         return true;
     }
