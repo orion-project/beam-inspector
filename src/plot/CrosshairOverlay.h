@@ -11,6 +11,8 @@ struct Crosshair
     QString label;
     QColor color;
     QStaticText text;
+    double roiSize;
+    double deltaMin, deltaMax;
 
     void setLabel(const QString &s);
 };
@@ -23,7 +25,9 @@ public:
     void setEditing(bool on) { _editing = on; }
     bool isEditing() const { return _editing; }
 
+    QList<RoiRect> rois() const;
     QList<QPointF> positions() const;
+    QList<GoodnessLimits> goodnessLimits(int expectedSize) const;
 
     void clear();
     bool isEmpty() const { return _items.isEmpty(); }

@@ -152,4 +152,10 @@ struct TableRowsSpec
     QList<QPair<int, QString>> aux;
 };
 
+struct GoodnessLimits
+{
+    double deltaMin;
+    double deltaMax;
+};
+
 #endif // CAMERA_TYPES_H
