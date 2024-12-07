@@ -40,6 +40,8 @@ public:
     QString colorMap;
     bool useConsole = false;
     bool isDevMode = false;
+    bool showGoodnessTextOnPlot = false;
+    bool showGoodnessRelative = false;
     UpdateCheckInterval updateCheckInterval = UpdateCheckInterval::Weekly;
 
     enum ConfigPages {

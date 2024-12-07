@@ -1,11 +1,12 @@
 #include "PlotIntf.h"
 
 #include "plot/BeamGraph.h"
+#include "plot/RoiRectGraph.h"
 
 #include "qcp/src/core.h"
 
-PlotIntf::PlotIntf(QCustomPlot *plot, QCPColorMap *colorMap, QCPColorScale *colorScale, BeamInfoText *beamInfo)
-    : _plot(plot), _colorMap(colorMap), _colorScale(colorScale), _beamInfo(beamInfo)
+PlotIntf::PlotIntf(QCustomPlot *plot, QCPColorMap *colorMap, QCPColorScale *colorScale, BeamInfoText *beamInfo, RoiRectsGraph *rois)
+    : _plot(plot), _colorMap(colorMap), _colorScale(colorScale), _beamInfo(beamInfo), _rois(rois)
 {
 }
 
@@ -85,6 +86,10 @@ void PlotIntf::showResult()
         axes->dy = dy;
         axes->phi = r.phi;
         axes->infinite = resultCount == 1;
+
+        // Ad-hoc solution for adjusting of multi-pass cells
+        // Each roi can draw some indicator of "goodness"
+        _rois->drawGoodness(i, xc, yc);
     }
     if (_beamShapes.size() > resultCount) {
         trimList(_plot, _beamShapes, resultCount);

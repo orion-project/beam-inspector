@@ -1,5 +1,7 @@
 #include "RoiRectGraph.h"
 
+#include "app/AppSettings.h"
+
 #include "qcp/src/core.h"
 #include "qcp/src/painter.h"
 #include "qcp/src/layoutelements/layoutelement-axisrect.h"
@@ -352,18 +354,28 @@ void RoiRectGraph::adjustEditorPosition()
 
 RoiRectsGraph::RoiRectsGraph(QCustomPlot *parentPlot) : BeamPlotItem(parentPlot)
 {
-    _pen = QPen(Qt::yellow, 0, Qt::DashLine);
+    _pen = QPen(Qt::yellow, 0, Qt::SolidLine);
+    _penBad = QPen(Qt::red, 0, Qt::SolidLine);
+    _penGood = QPen(Qt::green, 0, Qt::SolidLine);
+    _brush = QBrush(Qt::yellow);
+    _brushBad = QBrush(Qt::red);
+    _brushGood = QBrush(Qt::green);
 }
 
 void RoiRectsGraph::setRois(const QList<RoiRect> &rois)
 {
     _rois = rois;
     updateCoords();
+
+    _showGoodnessTextOnPlot = AppSettings::instance().showGoodnessTextOnPlot;
+    _showGoodnessRelative = AppSettings::instance().showGoodnessRelative;
 }
 
 void RoiRectsGraph::updateCoords()
 {
     _unitRois.clear();
+    _goodness.clear();
+    _goodnessLimits.clear();
     for (const auto &r : _rois) {
         RoiRect roi;
         roi.left = _scale.pixelToUnit(_maxPixelX * r.left);
@@ -371,18 +383,82 @@ void RoiRectsGraph::updateCoords()
         roi.right = _scale.pixelToUnit(_maxPixelX * r.right);
         roi.bottom = _scale.pixelToUnit(_maxPixelY * r.bottom);
         _unitRois << roi;
+
+        _goodnessLimits << qMakePair(
+            _scale.pixelToUnit(_maxPixelX * 0.005),
+            _scale.pixelToUnit(_maxPixelX * 0.05)
+        );
+        _goodness << GoodnessData();
     }
 }
 
 void RoiRectsGraph::draw(QCPPainter *painter)
 {
-    painter->setPen(_pen);
-    painter->setBrush(Qt::NoBrush);
-    for (const auto& r : _unitRois) {
-        const double x1 = parentPlot()->xAxis->coordToPixel(r.left);
-        const double y1 = parentPlot()->yAxis->coordToPixel(r.top);
-        const double x2 = parentPlot()->xAxis->coordToPixel(r.right);
-        const double y2 = parentPlot()->yAxis->coordToPixel(r.bottom);
-        painter->drawRect(x1, y1, x2-x1, y2-y1);
+    for (int i = 0; i < _unitRois.size(); i++) {
+        const auto& r = _unitRois.at(i);
+        const auto& g = _goodness.at(i);
+
+        if (!g.good)
+            painter->setPen(_pen);
+        else if (*g.good)
+            painter->setPen(_penGood);
+        else
+            painter->setPen(_penBad);
+
+        const double x1 = qRound(parentPlot()->xAxis->coordToPixel(r.left));
+        const double y1 = qRound(parentPlot()->yAxis->coordToPixel(r.top));
+        const double x2 = qRound(parentPlot()->xAxis->coordToPixel(r.right));
+        const double y2 = qRound(parentPlot()->yAxis->coordToPixel(r.bottom));
+        const double w = x2 - x1;
+        const double h = y2 - y1;
+        painter->drawRect(x1, y1, w, h);
+
+        const double gh = qRound(h * g.goodness);
+        const double gw = qRound(w * 0.1);
+        painter->fillRect(x2, y2-gh, gw, gh+1, !g.good ? _brush : *g.good ? _brushGood : _brushBad);
+
+        if (_showGoodnessTextOnPlot) {
+            const auto &limits = _goodnessLimits.at(i);
+            const auto &roi = _rois.at(i);
+            painter->drawText(QRect(x2 + gw + 2, y1, 1, h), Qt::TextDontClip,
+                QString(
+                    "goodness: %1\n"
+                    "distance: %2\n"
+                    "dist_min: %3\n"
+                    "dist_max: %4\n"
+                    "roi: %5×%6"
+                )
+                .arg(g.goodness, 0, 'g', 4)
+                .arg(_showGoodnessRelative ? g.distance/_maxPixelX : g.distance, 0, 'g', 4)
+                .arg(_showGoodnessRelative ? limits.first/_maxPixelX : limits.first, 0, 'g', 4)
+                .arg(_showGoodnessRelative ? limits.second/_maxPixelX : limits.second, 0, 'g', 4)
+                .arg(_showGoodnessRelative ? (roi.right - roi.left) : (r.right - r.left), 0, 'g', 4)
+                .arg(_showGoodnessRelative ? (roi.bottom - roi.top) : (r.bottom - r.top), 0, 'g', 4)
+            );
+        }
     }
+}
+
+void RoiRectsGraph::drawGoodness(int index, double beamXc, double beamYc)
+{
+    // This is visible on ROI_MULTI mode, and all list sizes should must match
+    if (!visible()) return;
+
+    const auto &roi = _unitRois.at(index);
+    const double roiXc = (roi.left + roi.right) / 2.0;
+    const double roiYc = (roi.top + roi.bottom) / 2.0;
+    const double dist = qHypot(beamXc - roiXc, beamYc - roiYc);
+    const auto &limits = _goodnessLimits.at(index);
+    GoodnessData g;
+    g.distance = dist;
+    if (dist < limits.first) {
+        g.good = true;
+        g.goodness = 1;
+    } else if (dist >= limits.second) {
+        g.good = false;
+        g.goodness = 0;
+    } else {
+        g.goodness = 1.0 - (dist - limits.first) / (limits.second - limits.first);
+    }
+    _goodness[index] = g;
 }

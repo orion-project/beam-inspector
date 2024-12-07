@@ -9,6 +9,7 @@ class BeamColorMapData;
 class BeamAxes;
 class BeamEllipse;
 class BeamInfoText;
+class RoiRectsGraph;
 class QCustomPlot;
 class QCPColorMap;
 class QCPColorScale;
@@ -21,7 +22,7 @@ class QCPColorScale;
 class PlotIntf
 {
 public:
-    PlotIntf(QCustomPlot *plot, QCPColorMap *colorMap, QCPColorScale *colorScale, BeamInfoText *beamInfo);
+    PlotIntf(QCustomPlot *plot, QCPColorMap *colorMap, QCPColorScale *colorScale, BeamInfoText *beamInfo, RoiRectsGraph *rois);
 
     void setScale(const PixelScale& scale) { _scale = scale; }
     void setResult(const QList<CgnBeamResult>& r, double min, double max);
@@ -45,6 +46,7 @@ private:
     BeamColorMapData *_beamData;
     QList<BeamEllipse*> _beamShapes;
     QList<BeamAxes*> _beamAxes;
+    RoiRectsGraph *_rois;
 };
 
 #endif // PLOT_INTF_H
