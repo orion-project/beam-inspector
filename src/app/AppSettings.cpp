@@ -55,7 +55,11 @@ AppSettings::AppSettings() : QObject()
 void AppSettings::load()
 {
     Ori::Settings s;
+
+    s.beginGroup("Debug");
     LOAD(useConsole, Bool, false);
+    LOAD(showGoodnessTextOnPlot, Bool, false);
+    LOAD(showGoodnessRelative, Bool, false);
 
 #ifdef WITH_IDS
     s.beginGroup("IdsCamera");
@@ -79,7 +83,11 @@ void AppSettings::load()
 void AppSettings::save()
 {
     Ori::Settings s;
+
+    s.beginGroup("Debug");
     SAVE(useConsole);
+    SAVE(showGoodnessTextOnPlot);
+    SAVE(showGoodnessRelative);
 
 #ifdef WITH_IDS
     s.beginGroup("IdsCamera");
@@ -129,11 +137,19 @@ bool AppSettings::edit()
         (new ConfigItemInt(cfgDev, tr("Big change by arrow keys, %"), &propChangeArrowBig))
             ->withMinMax(1, 1000)
             ->withHint(tr("Hold Control key for big change")),
+
     #ifdef WITH_IDS
         new ConfigItemBool(cfgIds, tr("Enable"), &idsEnabled),
         new ConfigItemDir(cfgIds, tr("Peak comfortC directory (x64)"), &idsSdkDir),
     #endif
+
         new ConfigItemBool(cfgDbg, tr("Show log window (restart required)"), &useConsole),
+        new ConfigItemSpace(cfgDbg, 12),
+        (new ConfigItemSection(cfgDbg, tr("Multi-pass cell alignment")))
+            ->withHint(tr("Toggle multi-roi mode to apply")),
+        new ConfigItemBool(cfgDbg, tr("Show goodness values on plot"), &showGoodnessTextOnPlot),
+        new ConfigItemBool(cfgDbg, tr("Show goodness values in relative units"), &showGoodnessRelative),
+
         (new ConfigItemDropDown(cfgOpts, tr("Automatically check for updates"), (int*)&updateCheckInterval))
             ->withOption(int(UpdateCheckInterval::None), tr("None"))
             ->withOption(int(UpdateCheckInterval::Daily), tr("Daily"))

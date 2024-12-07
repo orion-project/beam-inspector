@@ -91,7 +91,7 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _crosshairs->onEdited = [this]{ emit crosshairsEdited(); };
     _relativeItems << _crosshairs;
 
-    _plotIntf = new PlotIntf(_plot, _colorMap, _colorScale, _beamInfo);
+    _plotIntf = new PlotIntf(_plot, _colorMap, _colorScale, _beamInfo, _rois);
 
     _mruCrosshairs = new Ori::MruFileList(this);
     _mruCrosshairs->load("mruCrosshairs");

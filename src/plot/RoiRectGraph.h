@@ -67,15 +67,30 @@ public:
 
     void setRois(const QList<RoiRect> &rois);
 
+    // Beam center coords must be passed in sensor units
+    void drawGoodness(int index, double beamXc, double beamYc);
+
 protected:
     void draw(QCPPainter *painter) override;
 
     void updateCoords() override;
 
 private:
-    QPen _pen;
+    struct GoodnessData
+    {
+        std::optional<bool> good;
+        double goodness;
+        double distance;
+    };
+
+    QPen _pen, _penBad, _penGood;
+    QBrush _brush, _brushBad, _brushGood;
     QList<RoiRect> _rois;
     QList<RoiRect> _unitRois;
+    QList<QPair<double, double>> _goodnessLimits;
+    QList<GoodnessData> _goodness;
+    bool _showGoodnessTextOnPlot = false;
+    bool _showGoodnessRelative = false;
 };
 
 #endif // ROI_RECT_GRAPH_H
