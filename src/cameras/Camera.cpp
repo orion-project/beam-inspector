@@ -193,6 +193,20 @@ void Camera::setRois(const QList<QPointF>& points)
     setRois(rois);
 }
 
+void Camera::setRoisSize(const FrameSize& sz)
+{
+    _config.mroiSize = sz;
+
+    QList<QPointF> points;
+    for (const auto &roi : _config.rois) {
+        points << QPointF(
+            (roi.left + roi.right) / 2.0,
+            (roi.top + roi.bottom) / 2.0
+        );
+    }
+    setRois(points);
+}
+
 void Camera::setRoiMode(RoiMode mode)
 {
     if (_config.roiMode != mode) {
@@ -269,4 +283,35 @@ TableRowsSpec Camera::tableRows() const
         }
     }
     return rows;
+}
+
+bool Camera::editRoisSize()
+{
+    auto scale = pixelScale();
+    double imgW = scale.pixelToUnit(width());
+    double imgH = scale.pixelToUnit(height());
+    auto edW = Ori::Gui::spinBox(10, imgW, qRound(imgW * _config.mroiSize.w));
+    auto edH = Ori::Gui::spinBox(10, imgH, qRound(imgH * _config.mroiSize.h));
+    edW->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    edH->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    QString suffix = scale.on ? scale.unit : QStringLiteral("px");
+    auto w = LayoutV({
+        qApp->tr("Several ROIs are building around\n"
+            "crosshairs, they have the same size:"),
+        SpaceV(),
+        qApp->tr("Width"), LayoutH({ edW, suffix }),
+        SpaceV(),
+        qApp->tr("Height"), LayoutH({ edH, suffix }),
+    }).setMargin(0).makeWidgetAuto();
+    bool ok = Dialog(w)
+        .withContentToButtonsSpacingFactor(3)
+        .windowModal()
+        .exec();
+    if (ok) {
+        setRoisSize({
+            double(edW->value()) / imgW,
+            double(edH->value()) / imgH
+        });
+    }
+    return ok;
 }

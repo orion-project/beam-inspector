@@ -63,8 +63,10 @@ public:
     void setRoi(const RoiRect&);
     void setRois(const QList<RoiRect>&);
     void setRois(const QList<QPointF>&);
+    void setRoisSize(const FrameSize&);
     void setRoiMode(RoiMode mode);
     bool isRoiValid() const;
+    bool editRoisSize();
 
     PixelScale pixelScale() const;
     QString resolutionStr() const;

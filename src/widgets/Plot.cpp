@@ -379,6 +379,7 @@ void Plot::clearCrosshairs()
     if (Ori::Dlg::yes(tr("Remove all crosshairs?"))) {
         _crosshairs->clear();
         replot();
+        emit crosshairsEdited();
     }
 }
 
@@ -407,6 +408,7 @@ void Plot::loadCrosshairs(const QString &fileName)
     else
         replot();
     _mruCrosshairs->append(fileName);
+    emit crosshairsEdited();
 }
 
 void Plot::saveCrosshairs()
