@@ -47,6 +47,7 @@ void CameraConfig::load(QSettings *s)
     LOAD(roi.top, Double, 0.25);
     LOAD(roi.right, Double, 0.75);
     LOAD(roi.bottom, Double, 0.75);
+    roi.fix();
     roiMode = RoiMode(s->value("roiMode", ROI_NONE).toInt());
     rois.clear();
     int roiCount = s->beginReadArray("rois");
@@ -57,9 +58,12 @@ void CameraConfig::load(QSettings *s)
         r.top = s->value("top", 0.25).toDouble();
         r.right = s->value("right", 0.75).toDouble();
         r.bottom = s->value("bottom", 0.75).toDouble();
+        r.fix();
         rois << r;
     }
     s->endArray();
+    LOAD(mroiSize.w, Double, 0.1);
+    LOAD(mroiSize.h, Double, 0.1);
 
     LOAD(power.on, Bool, false);
     LOAD(power.avgFrames, Int, 4);
@@ -106,6 +110,8 @@ void CameraConfig::save(QSettings *s, bool compact) const
         }
         s->endArray();
     }
+    SAVE(mroiSize.w);
+    SAVE(mroiSize.h);
 
     SAVE(power.on);
     if (!compact or power.on) {

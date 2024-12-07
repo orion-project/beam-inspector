@@ -49,7 +49,7 @@ private:
 //                               RoiRectGraph
 //------------------------------------------------------------------------------
 
-RoiRectGraph::RoiRectGraph(QCustomPlot *parentPlot) : QCPAbstractItem(parentPlot)
+RoiRectGraph::RoiRectGraph(QCustomPlot *parentPlot) : BeamPlotItem(parentPlot)
 {
     _pen = QPen(Qt::yellow, 0, Qt::DashLine);
     _editPen = QPen(Qt::yellow, 3, Qt::SolidLine);
@@ -71,16 +71,6 @@ void RoiRectGraph::setIsVisible(bool on)
 {
     _isVisible = on;
     updateVisibility();
-}
-
-void RoiRectGraph::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
-{
-    _scale = scale;
-    _maxPixelX = sensorW;
-    _maxPixelY = sensorH;
-    _maxUnitX = scale.pixelToUnit(sensorW);
-    _maxUnitY = scale.pixelToUnit(sensorH);
-    updateCoords();
 }
 
 void RoiRectGraph::updateVisibility()
@@ -354,4 +344,45 @@ void RoiRectGraph::adjustEditorPosition()
 {
     if (_editor)
         _editor->move(parentPlot()->width() - _editor->width() - 15, 15);
+}
+
+//------------------------------------------------------------------------------
+//                               RoiRectsGraph
+//------------------------------------------------------------------------------
+
+RoiRectsGraph::RoiRectsGraph(QCustomPlot *parentPlot) : BeamPlotItem(parentPlot)
+{
+    _pen = QPen(Qt::yellow, 0, Qt::DashLine);
+}
+
+void RoiRectsGraph::setRois(const QList<RoiRect> &rois)
+{
+    _rois = rois;
+    updateCoords();
+}
+
+void RoiRectsGraph::updateCoords()
+{
+    _unitRois.clear();
+    for (const auto &r : _rois) {
+        RoiRect roi;
+        roi.left = _scale.pixelToUnit(_maxPixelX * r.left);
+        roi.top = _scale.pixelToUnit(_maxPixelY * r.top);
+        roi.right = _scale.pixelToUnit(_maxPixelX * r.right);
+        roi.bottom = _scale.pixelToUnit(_maxPixelY * r.bottom);
+        _unitRois << roi;
+    }
+}
+
+void RoiRectsGraph::draw(QCPPainter *painter)
+{
+    painter->setPen(_pen);
+    painter->setBrush(Qt::NoBrush);
+    for (const auto& r : _unitRois) {
+        const double x1 = parentPlot()->xAxis->coordToPixel(r.left);
+        const double y1 = parentPlot()->yAxis->coordToPixel(r.top);
+        const double x2 = parentPlot()->xAxis->coordToPixel(r.right);
+        const double y2 = parentPlot()->yAxis->coordToPixel(r.bottom);
+        painter->drawRect(x1, y1, x2-x1, y2-y1);
+    }
 }

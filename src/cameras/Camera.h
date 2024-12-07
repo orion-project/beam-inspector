@@ -62,6 +62,7 @@ public:
 
     void setRoi(const RoiRect&);
     void setRois(const QList<RoiRect>&);
+    void setRois(const QList<QPointF>&);
     void setRoiMode(RoiMode mode);
     bool isRoiValid() const;
 

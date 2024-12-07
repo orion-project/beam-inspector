@@ -11,8 +11,10 @@ class CrosshairsOverlay;
 class BeamColorMap;
 class BeamColorScale;
 class BeamInfoText;
+class BeamPlotItem;
 class PlotIntf;
 class RoiRectGraph;
+class RoiRectsGraph;
 
 namespace Ori {
 class MruFileList;
@@ -36,6 +38,7 @@ public:
     void setBeamInfoVisible(bool on, bool replot);
     void setImageSize(int sensorW, int sensorH, const PixelScale &scale);
     void setRoi(const RoiRect &a);
+    void setRois(const QList<RoiRect> &a);
     void setRoiMode(RoiMode roiMode);
     void setRawView(bool on, bool replot);
     void selectBackColor();
@@ -50,7 +53,6 @@ public:
     void stopEditRoi(bool apply);
     bool isRoiEditing() const;
     RoiRect roi() const;
-    RoiRects rois() const;
 
     bool isCrosshairsVisible() const;
     bool isCrosshairsEditing() const;
@@ -61,6 +63,7 @@ public:
     void loadCrosshairs(const QString &fileName);
     void saveCrosshairs();
     Ori::MruFileList *mruCrosshairs() { return _mruCrosshairs; }
+    QList<QPointF> crosshairs() const;
 
     void adjustWidgetSize();
 
@@ -69,6 +72,7 @@ public:
 
 signals:
     void roiEdited();
+    void crosshairsEdited();
 
 protected:
     void resizeEvent(QResizeEvent*) override;
@@ -81,9 +85,11 @@ private:
     BeamColorScale *_colorScale;
     BeamInfoText *_beamInfo;
     RoiRectGraph *_roi;
+    RoiRectsGraph *_rois;
     RoiMode _roiMode = ROI_NONE;
     CrosshairsOverlay *_crosshairs;
     Ori::MruFileList *_mruCrosshairs;
+    QList<BeamPlotItem*> _relativeItems;
     int _imageW, _imageH;
     enum AutoZoomMode { ZOOM_NONE, ZOOM_FULL, ZOOM_APERTURE };
     AutoZoomMode _autoZoom = ZOOM_FULL;

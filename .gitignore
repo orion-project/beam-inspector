@@ -14,5 +14,5 @@ build
 calc/**/*.pgm
 calc/.vscode
 CMakeLists.txt.user*
-CMakeLists.txt.autosave
+*.autosave
 track_mem*.csv

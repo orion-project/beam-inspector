@@ -468,6 +468,7 @@ void PlotWindow::createPlot()
     _plot = new Plot;
     _plotIntf = _plot->plotIntf();
     connect(_plot, &Plot::roiEdited, this, &PlotWindow::roiEdited);
+    connect(_plot, &Plot::crosshairsEdited, this, &PlotWindow::crosshairsEdited);
 }
 
 void PlotWindow::closeEvent(QCloseEvent* ce)
@@ -575,10 +576,8 @@ void PlotWindow::showCamConfig(bool replot)
 
     auto s = _camera->pixelScale();
     _plot->setImageSize(_camera->width(), _camera->height(), s);
-    if (c.roi.isZero())
-        _plot->setRoi({0, 0, 1, 1});
-    else _plot->setRoi(c.roi);
-    // We don't have _plot->setRois() because they always must be in sync with crosshairs
+    _plot->setRoi(c.roi);
+    _plot->setRois(c.rois);
     _plot->setRoiMode(c.roiMode);
     _tableIntf->setRows(_camera->tableRows());
     _tableIntf->setScale(s);
@@ -808,6 +807,12 @@ void PlotWindow::roiEdited()
     configChanged();
 }
 
+void PlotWindow::crosshairsEdited()
+{
+    _camera->setRois(_plot->crosshairs());
+    configChanged();
+}
+
 void PlotWindow::toggleRoi()
 {
     bool on = _actionUseRoi->isChecked();
@@ -823,8 +828,17 @@ void PlotWindow::toggleMultiRoi()
     if (_plot->isRoiEditing())
         _plot->stopEditRoi(false);
     if (on) {
-        // TODO: this should not be called on toggle
-        _camera->setRois(_plot->rois());
+        if (_camera->config().rois.empty()) {
+            auto points = _plot->crosshairs();
+            if (points.empty()) {
+                Ori::Gui::PopupMessage::hint(tr(
+                    "Multiple ROIs are building around crosshairs.\n"
+                    "Currently there are no crosshairs defined.\n"
+                    "Use the command 'Overlays -> Edit Crosshairs' to add them."), 0);
+            } else {
+                _camera->setRois(points);
+            }
+        }
     }
     _camera->setRoiMode(on ? ROI_MULTI : ROI_NONE);
     configChanged();

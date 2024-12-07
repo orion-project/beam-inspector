@@ -86,6 +86,12 @@ struct PowerMeter
 
 enum RoiMode { ROI_NONE, ROI_SINGLE, ROI_MULTI };
 
+struct FrameSize
+{
+    double w;
+    double h;
+};
+
 struct CameraConfig
 {
     PlotOptions plot;
@@ -93,6 +99,7 @@ struct CameraConfig
     RoiRect roi;
     RoiRects rois;
     RoiMode roiMode = ROI_NONE;
+    FrameSize mroiSize = { 0.1, 0.1 };
     PowerMeter power;
 
     void load(QSettings *s);

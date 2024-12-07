@@ -106,6 +106,7 @@ private:
     void configChanged();
     void dataReady();
     void roiEdited();
+    void crosshairsEdited();
     void statsReceived(const CameraStats &stats);
     void resultsTableDoubleClicked(QTableWidgetItem *item);
 
