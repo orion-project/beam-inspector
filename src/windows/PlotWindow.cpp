@@ -548,7 +548,7 @@ void PlotWindow::showCamConfig(bool replot)
     _actionSaveRaw->setEnabled(_camera->canSaveRawImg() && _camera->isCapturing());
     _actionSetCamCustomName->setVisible(!_camera->customId().isEmpty());
     _actionSetupPowerMeter->setVisible(_camera->isPowerMeter());
-    _actionEditRoi->setVisible(_camera->config().roiMode != ROI_NONE);
+    _actionEditRoi->setVisible(_camera->config().roiMode == ROI_SINGLE);
     showSelectedCamera();
 
     _statusBar->setText(STATUS_CAMERA, _camera->name(), _camera->descr());
@@ -801,6 +801,9 @@ void PlotWindow::editRoiCfg()
 
 void PlotWindow::editRoisSize()
 {
+    // For now, roi sizes are taken from crosshairs
+    return;
+
     if (_camera->editRoisSize())
         configChanged();
 }
@@ -829,7 +832,8 @@ void PlotWindow::roiEdited()
 
 void PlotWindow::crosshairsEdited()
 {
-    _camera->setRois(_plot->crosshairs());
+    //_camera->setRois(_plot->crosshairs());
+    _camera->setRois(_plot->rois());
     configChanged();
 }
 
@@ -849,14 +853,15 @@ void PlotWindow::toggleMultiRoi()
         _plot->stopEditRoi(false);
     if (on) {
         if (_camera->config().rois.empty()) {
-            auto points = _plot->crosshairs();
-            if (points.empty()) {
+            //auto items = _plot->crosshairs();
+            auto items = _plot->rois();
+            if (items.empty()) {
                 Ori::Gui::PopupMessage::hint(tr(
                     "Multiple ROIs are building around crosshairs.\n"
                     "Currently there are no crosshairs defined.\n"
                     "Use the command 'Overlays -> Edit Crosshairs' to add them."), 0);
             } else {
-                _camera->setRois(points);
+                _camera->setRois(items);
             }
         }
     }

@@ -272,7 +272,7 @@ void Plot::setRoi(const RoiRect& r)
 
 void Plot::setRois(const QList<RoiRect> &r)
 {
-    _rois->setRois(r);
+    _rois->setRois(r, _crosshairs->goodnessLimits(r.size()));
 }
 
 void Plot::setRoiMode(RoiMode roiMode)
@@ -436,4 +436,9 @@ void Plot::saveCrosshairs()
 QList<QPointF> Plot::crosshairs() const
 {
     return _crosshairs->positions();
+}
+
+QList<RoiRect> Plot::rois() const
+{
+    return _crosshairs->rois();
 }

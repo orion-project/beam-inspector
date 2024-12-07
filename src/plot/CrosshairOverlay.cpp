@@ -12,6 +12,9 @@
 #define RADIUS 5
 #define EXTENT 5
 #define TEXT_POS 15
+#define DEF_ROI_SIZE 0.1
+#define DEF_DELTA_MIN 0.005
+#define DEF_DELTA_MAX 0.05
 
 void Crosshair::setLabel(const QString &s)
 {
@@ -209,6 +212,9 @@ void CrosshairsOverlay::addItem()
     Crosshair c;
     c.color = Qt::white;
     c.setLabel(QString::number(maxLabel+1));
+    c.roiSize = DEF_ROI_SIZE;
+    c.deltaMin = DEF_DELTA_MIN;
+    c.deltaMax = DEF_DELTA_MAX;
     setItemCoords(c, _selectedPos.x(), _selectedPos.y());
     _items << c;
     parentPlot()->replot();
@@ -228,6 +234,9 @@ void CrosshairsOverlay::save(QSettings *s)
         s->setValue("y", c.y);
         s->setValue("label", c.label);
         s->setValue("color", c.color.name());
+        s->setValue("roiSize", c.roiSize);
+        s->setValue("deltaMin", c.deltaMin);
+        s->setValue("deltaMax", c.deltaMax);
         s->endGroup();
     }
     s->endGroup();
@@ -245,6 +254,9 @@ void CrosshairsOverlay::load(QSettings *s)
         c.y = s->value("y").toDouble();
         c.setLabel(s->value("label").toString());
         c.color = QColor(s->value("color").toString());
+        c.roiSize = s->value("roiSize").toDouble();
+        c.deltaMin = s->value("deltaMin").toDouble();
+        c.deltaMax = s->value("deltaMax").toDouble();
         _items << c;
         s->endGroup();
     }
@@ -266,6 +278,9 @@ QString CrosshairsOverlay::save(const QString& fileName)
             {"y", c.y},
             {"label", c.label},
             {"color", c.color.name()},
+            {"roi_size", c.roiSize},
+            {"delta_min", c.deltaMin},
+            {"delta_max", c.deltaMax}
         };
     }
     QJsonObject root;
@@ -309,10 +324,28 @@ QString CrosshairsOverlay::load(const QString& fileName)
         c.y = item["y"].toDouble();
         c.setLabel(item["label"].toString());
         c.color = QColor(item["color"].toString());
+        c.roiSize = item["roi_size"].toDouble();
+        c.deltaMin = item["delta_min"].toDouble();
+        c.deltaMax = item["delta_max"].toDouble();
         _items << c;
     }
     updateCoords();
     return {};
+}
+
+QList<RoiRect> CrosshairsOverlay::rois() const
+{
+    QList<RoiRect> res;
+    for (const auto& it : _items) {
+        double sz = (it.roiSize > 0 ? it.roiSize : DEF_ROI_SIZE) / 2.0;
+        RoiRect r;
+        r.left = it.x - sz;
+        r.top = it.y - sz;
+        r.right = it.x + sz;
+        r.bottom = it.y + sz;
+        res << r;
+    }
+    return res;
 }
 
 QList<QPointF> CrosshairsOverlay::positions() const
@@ -320,5 +353,25 @@ QList<QPointF> CrosshairsOverlay::positions() const
     QList<QPointF> res;
     for (const auto& it : _items)
         res << QPointF(it.x, it.y);
+    return res;
+}
+
+QList<GoodnessLimits> CrosshairsOverlay::goodnessLimits(int expectedSize) const
+{
+    QList<GoodnessLimits> res;
+    for (const auto& it : _items) {
+        GoodnessLimits lim;
+        lim.deltaMin = it.deltaMin > 0 ? it.deltaMin : DEF_DELTA_MIN;
+        lim.deltaMax = it.deltaMax > 0 ? it.deltaMax : DEF_DELTA_MAX;
+        if (lim.deltaMin > lim.deltaMax)
+            std::swap(lim.deltaMin, lim.deltaMax);
+        res << lim;
+    }
+    for (int i = res.size(); i < expectedSize; i++) {
+        GoodnessLimits lim;
+        lim.deltaMin = DEF_DELTA_MIN;
+        lim.deltaMax = DEF_DELTA_MAX;
+        res << lim;
+    }
     return res;
 }

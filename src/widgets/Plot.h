@@ -53,6 +53,7 @@ public:
     void stopEditRoi(bool apply);
     bool isRoiEditing() const;
     RoiRect roi() const;
+    QList<RoiRect> rois() const;
 
     bool isCrosshairsVisible() const;
     bool isCrosshairsEditing() const;

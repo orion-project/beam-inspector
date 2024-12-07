@@ -2,6 +2,7 @@
 #define ROI_RECT_GRAPH_H
 
 #include "BeamPlotItem.h"
+#include "cameras/CameraTypes.h"
 
 class QSpinBox;
 
@@ -65,7 +66,7 @@ class RoiRectsGraph : public BeamPlotItem
 public:
     explicit RoiRectsGraph(QCustomPlot *parentPlot);
 
-    void setRois(const QList<RoiRect> &rois);
+    void setRois(const QList<RoiRect> &rois, const QList<GoodnessLimits> &goodnessLimits);
 
     // Beam center coords must be passed in sensor units
     void drawGoodness(int index, double beamXc, double beamYc);
@@ -85,9 +86,10 @@ private:
 
     QPen _pen, _penBad, _penGood;
     QBrush _brush, _brushBad, _brushGood;
-    QList<RoiRect> _rois;
+    QList<RoiRect> _relRois;
     QList<RoiRect> _unitRois;
-    QList<QPair<double, double>> _goodnessLimits;
+    QList<GoodnessLimits> _relGoodnessLimits;
+    QList<GoodnessLimits> _unitGoodnessLimits;
     QList<GoodnessData> _goodness;
     bool _showGoodnessTextOnPlot = false;
     bool _showGoodnessRelative = false;
