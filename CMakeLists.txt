@@ -70,6 +70,7 @@ set(PROJECT_SOURCES
     src/cameras/VirtualImageCamera.h src/cameras/VirtualImageCamera.cpp
     src/cameras/WelcomeCamera.h src/cameras/WelcomeCamera.cpp
     src/plot/BeamGraph.h src/plot/BeamGraph.cpp
+    src/plot/BeamPlotItem.h src/plot/BeamPlotItem.cpp
     src/plot/CrosshairOverlay.h src/plot/CrosshairOverlay.cpp
     src/plot/PlotExport.h src/plot/PlotExport.cpp
     src/plot/RoiRectGraph.h src/plot/RoiRectGraph.cpp

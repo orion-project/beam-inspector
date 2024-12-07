@@ -179,6 +179,20 @@ void Camera::setRois(const QList<RoiRect>& rois)
         raisePowerWarning();
 }
 
+void Camera::setRois(const QList<QPointF>& points)
+{
+    QList<RoiRect> rois;
+    for (const auto &p : points) {
+        RoiRect roi;
+        roi.left = p.x() - _config.mroiSize.w / 2.0;
+        roi.top = p.y() - _config.mroiSize.h / 2.0;
+        roi.right = p.x() + _config.mroiSize.w / 2.0;
+        roi.bottom = p.y() + _config.mroiSize.h / 2.0;
+        rois << roi;
+    }
+    setRois(rois);
+}
+
 void Camera::setRoiMode(RoiMode mode)
 {
     if (_config.roiMode != mode) {

@@ -74,6 +74,10 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
 
     _roi = new RoiRectGraph(_plot);
     _roi->onEdited = [this]{ emit roiEdited(); };
+    _relativeItems << _roi;
+
+    _rois = new RoiRectsGraph(_plot);
+    _relativeItems << _rois;
 
     setThemeColors(SYSTEM, false);
 
@@ -84,6 +88,8 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     setCursor(Qt::ArrowCursor);
 
     _crosshairs = new CrosshairsOverlay(_plot);
+    _crosshairs->onEdited = [this]{ emit crosshairsEdited(); };
+    _relativeItems << _crosshairs;
 
     _plotIntf = new PlotIntf(_plot, _colorMap, _colorScale, _beamInfo);
 
@@ -101,8 +107,8 @@ void Plot::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
 {
     _imageW = scale.pixelToUnit(sensorW);
     _imageH = scale.pixelToUnit(sensorH);
-    _roi->setImageSize(sensorW, sensorH, scale);
-    _crosshairs->setImageSize(sensorW, sensorH, scale);
+    for (const auto &it : _relativeItems)
+        it->setImageSize(sensorW, sensorH, scale);
 }
 
 void Plot::adjustWidgetSize()
@@ -257,11 +263,16 @@ bool Plot::isRoiEditing() const
     return _roi->isEditing();
 }
 
-void Plot::setRoi(const RoiRect& a)
+void Plot::setRoi(const RoiRect& r)
 {
     if (_autoZoom == ZOOM_APERTURE && _roiMode != ROI_SINGLE)
         _autoZoom = ZOOM_FULL;
-    _roi->setRoi(a);
+    _roi->setRoi(r);
+}
+
+void Plot::setRois(const QList<RoiRect> &r)
+{
+    _rois->setRois(r);
 }
 
 void Plot::setRoiMode(RoiMode roiMode)
@@ -273,11 +284,6 @@ void Plot::setRoiMode(RoiMode roiMode)
 RoiRect Plot::roi() const
 {
     return _roi->roi();
-}
-
-RoiRects Plot::rois() const
-{
-    return _crosshairs->rois();
 }
 
 void Plot::setRawView(bool on, bool replot)
@@ -292,6 +298,7 @@ void Plot::setRawView(bool on, bool replot)
 void Plot::updateRoiVisibility()
 {
     _roi->setIsVisible(!_rawView && _roiMode == ROI_SINGLE);
+    _rois->setVisible(!_rawView && _roiMode == ROI_MULTI);
 }
 
 void Plot::showContextMenu(const QPoint& pos)
@@ -422,4 +429,9 @@ void Plot::saveCrosshairs()
         Ori::Dlg::error(res);
     else
         _mruCrosshairs->append(fileName);
+}
+
+QList<QPointF> Plot::crosshairs() const
+{
+    return _crosshairs->positions();
 }

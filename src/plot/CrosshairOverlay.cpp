@@ -20,21 +20,11 @@ void Crosshair::setLabel(const QString &s)
     text.prepare();
 }
 
-CrosshairsOverlay::CrosshairsOverlay(QCustomPlot *parentPlot) : QCPAbstractItem(parentPlot)
+CrosshairsOverlay::CrosshairsOverlay(QCustomPlot *parentPlot) : BeamPlotItem(parentPlot)
 {
     connect(parentPlot, &QCustomPlot::mouseMove, this, &CrosshairsOverlay::mouseMove);
     connect(parentPlot, &QCustomPlot::mousePress, this, &CrosshairsOverlay::mousePress);
     connect(parentPlot, &QCustomPlot::mouseRelease, this, &CrosshairsOverlay::mouseRelease);
-}
-
-void CrosshairsOverlay::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
-{
-    _scale = scale;
-    _maxPixelX = sensorW;
-    _maxPixelY = sensorH;
-    _maxUnitX = scale.pixelToUnit(sensorW);
-    _maxUnitY = scale.pixelToUnit(sensorH);
-    updateCoords();
 }
 
 void CrosshairsOverlay::updateCoords()
@@ -60,8 +50,6 @@ void CrosshairsOverlay::updateCoords()
         c.unitX = _scale.pixelToUnit(c.pixelX);
         c.unitY = _scale.pixelToUnit(c.pixelY);
     }
-    _unitRoiW = _scale.pixelToUnit(_maxPixelX * _roiW);
-    _unitRoiH = _scale.pixelToUnit(_maxPixelY * _roiW);
     _hasCoords = true;
 }
 
@@ -92,12 +80,6 @@ void CrosshairsOverlay::draw(QCPPainter *painter)
         painter->drawStaticText(x+TEXT_POS, y-c.text.size().height()/2, c.text);
         painter->setPen(QPen(c.color, 0, Qt::DashLine));
         painter->setBrush(Qt::NoBrush);
-
-        const double roiX1 = parentPlot()->xAxis->coordToPixel(c.unitX - _unitRoiW/2);
-        const double roiY1 = parentPlot()->yAxis->coordToPixel(c.unitY - _unitRoiH/2);
-        const double roiX2 = parentPlot()->xAxis->coordToPixel(c.unitX + _unitRoiW/2);
-        const double roiY2 = parentPlot()->yAxis->coordToPixel(c.unitY + _unitRoiH/2);
-        painter->drawRect(roiX1, roiY1, roiX2-roiX1, roiY2-roiY1);
     }
 }
 
@@ -114,6 +96,9 @@ void CrosshairsOverlay::mousePress(QMouseEvent *e)
 
 void CrosshairsOverlay::mouseRelease(QMouseEvent *e)
 {
+    if (_draggingIdx >= 0)
+         if (onEdited)
+            onEdited();
     _draggingIdx = -1;
 }
 
@@ -208,6 +193,8 @@ void CrosshairsOverlay::removeItem()
 {
     _items.removeAt(_selectedIdx);
     parentPlot()->replot();
+    if (onEdited)
+        onEdited();
 }
 
 void CrosshairsOverlay::addItem()
@@ -225,6 +212,8 @@ void CrosshairsOverlay::addItem()
     setItemCoords(c, _selectedPos.x(), _selectedPos.y());
     _items << c;
     parentPlot()->replot();
+    if (onEdited)
+        onEdited();
 }
 
 void CrosshairsOverlay::save(QSettings *s)
@@ -326,16 +315,10 @@ QString CrosshairsOverlay::load(const QString& fileName)
     return {};
 }
 
-RoiRects CrosshairsOverlay::rois() const
+QList<QPointF> CrosshairsOverlay::positions() const
 {
-    RoiRects rects;
-    for (const auto& it : _items) {
-        RoiRect r;
-        r.left = it.x - _roiW/2.0;
-        r.right = it.x + _roiW/2.0;
-        r.top = it.y - _roiW/2.0;
-        r.bottom = it.y + _roiW/2.0;
-        rects << r;
-    }
-    return rects;
+    QList<QPointF> res;
+    for (const auto& it : _items)
+        res << QPointF(it.x, it.y);
+    return res;
 }
