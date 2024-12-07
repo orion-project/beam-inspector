@@ -417,8 +417,8 @@ void PlotWindow::createStatusBar()
     _statusBar->setMargin(STATUS_SEPARATOR_3, 0, 0);
     _statusBar->setMargin(STATUS_ROI_ICON, 6, 0);
     _statusBar->setMargin(STATUS_ROI, 0, 6);
-    _statusBar->setDblClick(STATUS_ROI, [this]{ editCamConfig(Camera::cfgRoi); });
-    _statusBar->setDblClick(STATUS_ROI_ICON, [this]{ editCamConfig(Camera::cfgRoi); });
+    _statusBar->setDblClick(STATUS_ROI, [this]{ editRoiCfg(); });
+    _statusBar->setDblClick(STATUS_ROI_ICON, [this]{ editRoiCfg(); });
     _statusBar->setIcon(STATUS_NO_DATA, ":/toolbar/error");
     _statusBar->setHint(STATUS_NO_DATA, tr("No data to process.\n"
         "All pixels in the region are below noise threshold"));
@@ -560,9 +560,12 @@ void PlotWindow::showCamConfig(bool replot)
     // TODO: adapt for ROI_MULTI
     _actionZoomRoi->setVisible(c.roiMode == ROI_SINGLE);
     _statusBar->setVisible(STATUS_ROI_ICON, c.roiMode != ROI_NONE);
-    _statusBar->setVisible(STATUS_ROI, c.roiMode != ROI_NONE);
-    // TODO: adapt for ROI_MULTI
+    _statusBar->setVisible(STATUS_ROI, c.roiMode == ROI_SINGLE);
     if (c.roiMode == ROI_SINGLE) {
+        // TODO: remove old logic
+        // this is from the old version where rois where stored in pixels
+        // in relative coordibates rois can't be invalid
+        // if we do roi.fix() before setting them to camera config
         bool valid = _camera->isRoiValid();
         QString hint = valid ? tr("Region of interest") : tr("Region is not valid");
         QString icon = valid ? ":/toolbar/roi" : ":/toolbar/roi_warn";
@@ -570,6 +573,9 @@ void PlotWindow::showCamConfig(bool replot)
         _statusBar->setHint(STATUS_ROI_ICON, hint);
         _statusBar->setText(STATUS_ROI, c.roi.sizeStr(_camera->width(), _camera->height()));
         _statusBar->setHint(STATUS_ROI, hint);
+    } else if (c.roiMode == ROI_MULTI) {
+        _statusBar->setIcon(STATUS_ROI_ICON, ":/toolbar/roi_multi");
+        _statusBar->setHint(STATUS_ROI_ICON, tr("Several ROIs are used"));
     }
 
     _statusBar->setVisible(STATUS_BGND, !c.bgnd.on);
@@ -780,9 +786,23 @@ void PlotWindow::editCamConfig(int pageId)
 void PlotWindow::editRoi()
 {
     if (_camera->config().roiMode == ROI_MULTI)
-        return;
+        editRoisSize();
     if (_camera->config().roiMode == ROI_SINGLE)
         _plot->startEditRoi();
+}
+
+void PlotWindow::editRoiCfg()
+{
+    if (_camera->config().roiMode == ROI_MULTI)
+        editRoisSize();
+    if (_camera->config().roiMode == ROI_SINGLE)
+        editCamConfig(Camera::cfgRoi);
+}
+
+void PlotWindow::editRoisSize()
+{
+    if (_camera->editRoisSize())
+        configChanged();
 }
 
 void PlotWindow::setupPowerMeter()

@@ -88,6 +88,8 @@ private:
     void devResizeDock(QDockWidget*);
     void editCamConfig(int pageId = -1);
     void editRoi();
+    void editRoiCfg();
+    void editRoisSize();
     void newWindow();
     void openImageDlg();
     void selectColorMapFile();
