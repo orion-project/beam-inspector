@@ -1,4 +1,9 @@
 history:
+- version: 0.0.16
+  date: 2024-12-08
+  changes:
+  - text: Muiti-ROI
+
 - version: 0.0.15
   date: 2024-10-15
   changes:
