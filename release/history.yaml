@@ -1,4 +1,9 @@
 history:
+- version: 0.0.17
+  date: 2024-12-23
+  chahges:
+  - text: Moving average and SDEV for table results
+
 - version: 0.0.16
   date: 2024-12-08
   changes:

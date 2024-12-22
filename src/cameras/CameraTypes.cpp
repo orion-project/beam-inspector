@@ -69,6 +69,9 @@ void CameraConfig::load(QSettings *s)
     LOAD(power.avgFrames, Int, 4);
     LOAD(power.power, Double, 0.0);
     LOAD(power.decimalFactor, Int, 0);
+
+    LOAD(mavg.on, Bool, false);
+    LOAD(mavg.frames, Int, 5);
 }
 
 void CameraConfig::save(QSettings *s, bool compact) const
@@ -118,6 +121,11 @@ void CameraConfig::save(QSettings *s, bool compact) const
         SAVE(power.avgFrames);
         SAVE(power.power);
         SAVE(power.decimalFactor);
+    }
+
+    SAVE(mavg.on);
+    if (!compact or mavg.on) {
+        SAVE(mavg.frames);
     }
 }
 

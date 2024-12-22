@@ -129,7 +129,7 @@ void StillImageCamera::startCapture()
         cgn_copy_to_f64(&c, graph, nullptr);
         _plot->invalidateGraph();
         _plot->setResult({}, 0, (1 << c.bpp) - 1);
-        _table->setResult({}, {
+        _table->setResult({}, {}, {
             { ROW_LOAD_TIME, {loadTime} },
             { ROW_CALC_TIME, {0} },
         });
@@ -199,7 +199,7 @@ void StillImageCamera::startCapture()
     _plot->invalidateGraph();
     _plot->setResult(results, minZ, maxZ);
 
-    _table->setResult(results, {
+    _table->setResult(results, {}, {
         { ROW_LOAD_TIME, {loadTime} },
         { ROW_CALC_TIME, {calcTime} },
     });

@@ -364,10 +364,15 @@ RoiRectsGraph::RoiRectsGraph(QCustomPlot *parentPlot) : BeamPlotItem(parentPlot)
 
 void RoiRectsGraph::setRois(const QList<RoiRect> &rois, const QList<GoodnessLimits> &goodnessLimits)
 {
-    Q_ASSERT(rois.size() == goodnessLimits.size());
-
     _relRois = rois;
-    _relGoodnessLimits = goodnessLimits;
+
+    _relGoodnessLimits.clear();
+    for (int i = 0; i < _relRois.size(); i++) {
+        if (i < goodnessLimits.size())
+            _relGoodnessLimits << goodnessLimits.at(i);
+        else _relGoodnessLimits << GoodnessLimits();
+    }
+
     updateCoords();
 
     _showGoodnessTextOnPlot = AppSettings::instance().showGoodnessTextOnPlot;

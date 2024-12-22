@@ -54,19 +54,26 @@ bool Camera::editConfig(int page)
     opts.pageIconSize = 32;
     opts.pages = {
         ConfigPage(cfgPlot, qApp->tr("Plot"), ":/toolbar/zoom_sensor")
-            .withHelpTopic("cam_settings_plot"),
-        ConfigPage(cfgBgnd, qApp->tr("Background"), ":/toolbar/beam")
+            .withHelpTopic("cam_settings_plot")
+    };
+    if (canMavg()) {
+        opts.pages << ConfigPage(cfgTable, qApp->tr("Table"), ":/toolbar/table")
             .withSpacing(12)
-            .withHelpTopic("cam_settings_bgnd"),
-        ConfigPage(cfgCentr, qApp->tr("Centroid"), ":/toolbar/centroid")
+            .withHelpTopic("cam_settings_table");
+    }
+    opts.pages
+        << ConfigPage(cfgBgnd, qApp->tr("Background"), ":/toolbar/beam")
+            .withSpacing(12)
+            .withHelpTopic("cam_settings_bgnd")
+        << ConfigPage(cfgCentr, qApp->tr("Centroid"), ":/toolbar/centroid")
             .withSpacing(12)
             .withLongTitle(qApp->tr("Centroid Calculation"))
-            .withHelpTopic("cam_settings_centr"),
-        ConfigPage(cfgRoi, qApp->tr("ROI"), ":/toolbar/roi")
+            .withHelpTopic("cam_settings_centr")
+        << ConfigPage(cfgRoi, qApp->tr("ROI"), ":/toolbar/roi")
             .withSpacing(12)
             .withLongTitle(qApp->tr("Region of Interest"))
-            .withHelpTopic("cam_settings_roi"),
-    };
+            .withHelpTopic("cam_settings_roi")
+    ;
     opts.onHelpRequested = [](const QString &topic){ HelpSystem::topic(topic); };
     auto hardScale = sensorScale();
     bool useSensorScale = !_config.plot.customScale.on;
@@ -99,34 +106,42 @@ bool Camera::editConfig(int page)
             ->withRadioGroup("pixel_scale"),
         new ConfigItemReal(cfgPlot, qApp->tr("1px equals to"), &_config.plot.customScale.factor),
         (new ConfigItemStr(cfgPlot, qApp->tr("of units"), &_config.plot.customScale.unit))
-            ->withAlignment(Qt::AlignRight),
+            ->withAlignment(Qt::AlignRight)
+    };
+    if (canMavg()) {
+        opts.items
+            << new ConfigItemBool(cfgTable, qApp->tr("Show moving average"), &_config.mavg.on)
+            << (new ConfigItemInt(cfgTable, qApp->tr("Over number of frames"), &_config.mavg.frames))
+                ->withMinMax(2, 100)
+        ;
+    }
+    opts.items
+        << new ConfigItemBool(cfgBgnd, qApp->tr("Subtract background"), &_config.bgnd.on)
+        << (new ConfigItemReal(cfgBgnd, qApp->tr("Corner Fraction %"), &cornerFraction))
+            ->withHint(qApp->tr("ISO 11146 recommends 2-5%"), false)
+        << (new ConfigItemReal(cfgBgnd, qApp->tr("Noise Factor"), &_config.bgnd.noise))
+            ->withHint(qApp->tr("ISO 11146 recommends 2-4"), false)
 
-        new ConfigItemBool(cfgBgnd, qApp->tr("Subtract background"), &_config.bgnd.on),
-        (new ConfigItemReal(cfgBgnd, qApp->tr("Corner Fraction %"), &cornerFraction))
-            ->withHint(qApp->tr("ISO 11146 recommends 2-5%"), false),
-        (new ConfigItemReal(cfgBgnd, qApp->tr("Noise Factor"), &_config.bgnd.noise))
-            ->withHint(qApp->tr("ISO 11146 recommends 2-4"), false),
+        << (new ConfigItemReal(cfgCentr, qApp->tr("Mask Diameter"), &_config.bgnd.mask))
+            ->withHint(qApp->tr("ISO 11146 recommends 3"), false)
+        << (new ConfigItemInt(cfgCentr, qApp->tr("Max Iterations"), &_config.bgnd.iters))
+            ->withMinMax(0, 50)
+        << new ConfigItemReal(cfgCentr, qApp->tr("Precision"), &_config.bgnd.precision)
 
-        (new ConfigItemReal(cfgCentr, qApp->tr("Mask Diameter"), &_config.bgnd.mask))
-            ->withHint(qApp->tr("ISO 11146 recommends 3"), false),
-        (new ConfigItemInt(cfgCentr, qApp->tr("Max Iterations"), &_config.bgnd.iters))
-            ->withMinMax(0, 50),
-        new ConfigItemReal(cfgCentr, qApp->tr("Precision"), &_config.bgnd.precision),
-
-        (new ConfigItemBool(cfgRoi, qApp->tr("Use region"), &roiOn))
+        << (new ConfigItemBool(cfgRoi, qApp->tr("Use region"), &roiOn))
             ->withHint(qApp->tr(
                 "These are raw pixels values. "
                 "Use the menu command <b>Camera ► Edit ROI</b> "
-                "to change region interactively in scaled units"), true),
-        (new ConfigItemInt(cfgRoi, qApp->tr("Left"), &roiPixelLeft))
-            ->withMinMax(0, width()),
-        (new ConfigItemInt(cfgRoi, qApp->tr("Top"), &roiPixelTop))
-            ->withMinMax(0, height()),
-        (new ConfigItemInt(cfgRoi, qApp->tr("Right"), &roiPixelRight))
-            ->withMinMax(0, width()),
-        (new ConfigItemInt(cfgRoi, qApp->tr("Bottom"), &roiPixelBottom))
+                "to change region interactively in scaled units"), true)
+        << (new ConfigItemInt(cfgRoi, qApp->tr("Left"), &roiPixelLeft))
+            ->withMinMax(0, width())
+        << (new ConfigItemInt(cfgRoi, qApp->tr("Top"), &roiPixelTop))
             ->withMinMax(0, height())
-    };
+        << (new ConfigItemInt(cfgRoi, qApp->tr("Right"), &roiPixelRight))
+            ->withMinMax(0, width())
+        << (new ConfigItemInt(cfgRoi, qApp->tr("Bottom"), &roiPixelBottom))
+            ->withMinMax(0, height())
+    ;
     initConfigMore(opts);
     if (ConfigDlg::edit(opts))
     {
@@ -275,6 +290,7 @@ bool Camera::setupPowerMeter()
 TableRowsSpec Camera::tableRows() const
 {
     TableRowsSpec rows;
+    rows.showSdev = _config.mavg.on;
     if (_config.roiMode == ROI_NONE || _config.roiMode == ROI_SINGLE) {
         rows.results << qApp->tr("Centroid");
     } else {

@@ -12,12 +12,14 @@
 #include <QApplication>
 #include <QDebug>
 #include <QMutex>
+#include <QQueue>
 #include <QThread>
 
 #define PLOT_FRAME_DELAY_MS 200
 #define STAT_DELAY_MS 1000
 #define MEASURE_BUF_SIZE 1000
 #define MEASURE_BUF_COUNT 2
+#define SQR(x) ((x)*(x))
 
 enum MeasureDataCol { COL_BRIGHTNESS, COL_POWER, COL_DEBUG_1, COL_DEBUG_2 };
 
@@ -59,6 +61,8 @@ public:
     double *graph;
     QVector<double> subtracted;
     QList<CgnBeamResult> results;
+    QList<QQueue<CgnBeamResult>> mavgs;
+    QList<CgnBeamResult> sdevs;
 
     MeasureSaver *saver = nullptr;
     QMutex saverMutex;
@@ -82,6 +86,9 @@ public:
     double calibratePowerTotal = 0;
     int powerDecimalFactor = 0;
     double power = 0;
+    double powerSdev = 0;
+    bool doMavg = false;
+    int mavgFrames = 0;
 
     QMap<QString, QVariant> stats;
     std::function<QMap<int, CamTableData>()> tableData;
@@ -124,6 +131,16 @@ public:
         rois = cfg.rois;
         results.resize(multiRoi ? rois.size() : 1);
         g.subtract_bkgnd_v = multiRoi ? 1 : 0;
+
+        doMavg = cfg.mavg.on;
+        mavgFrames = cfg.mavg.frames;
+        if (doMavg) {
+            mavgs.resize(multiRoi ? rois.size() : 1);
+            sdevs.resize(multiRoi ? rois.size() : 1);
+        } else {
+            mavgs.clear();
+            sdevs.clear();
+        }
     }
 
     void setRoi(const RoiRect &roi)
@@ -172,8 +189,67 @@ public:
         avgCalcTime = avgCalcTime*0.9 + (timer.elapsed() - tm)*0.1;
     }
 
+    inline void calcMavg(int roiIndex)
+    {
+        CgnBeamResult avg;
+        memset(&avg, 0, sizeof(avg));
+        QQueue<CgnBeamResult> &q = mavgs[roiIndex];
+        q.enqueue(r);
+        if (q.size() > mavgFrames) {
+            const CgnBeamResult first = q.dequeue();
+            const CgnBeamResult &last = r;
+            const CgnBeamResult &prev = results.at(roiIndex);
+            const double c = q.size();
+            avg.xc = prev.xc + (last.xc - first.xc) / c;
+            avg.yc = prev.yc + (last.yc - first.yc) / c;
+            avg.dx = prev.dx + (last.dx - first.dx) / c;
+            avg.dy = prev.dy + (last.dy - first.dy) / c;
+            avg.phi = prev.phi + (last.phi - first.phi) / c;
+            avg.p = prev.p + (last.p - first.p) / c;
+        } else {
+            for (const auto &r : q) {
+                avg.xc += r.xc;
+                avg.yc += r.yc;
+                avg.dx += r.dx;
+                avg.dy += r.dy;
+                avg.phi += r.phi;
+                avg.p += r.p;
+            }
+            const double c = q.size();
+            avg.xc /= c;
+            avg.yc /= c;
+            avg.dx /= c;
+            avg.dy /= c;
+            avg.phi /= c;
+            avg.p /= c;
+        }
+        results[roiIndex] = avg;
+
+        CgnBeamResult sdev;
+        memset(&sdev, 0, sizeof(sdev));
+        for (const auto &r : q) {
+            sdev.xc += SQR(r.xc - avg.xc);
+            sdev.yc += SQR(r.yc - avg.yc);
+            sdev.dx += SQR(r.dx - avg.dx);
+            sdev.dy += SQR(r.dy - avg.dy);
+            sdev.phi += SQR(r.phi - avg.phi);
+            sdev.p += SQR(r.p - avg.p);
+        }
+        const double c = q.size();
+        sdev.xc = qSqrt(sdev.xc / c);
+        sdev.yc = qSqrt(sdev.yc / c);
+        sdev.dx = qSqrt(sdev.dx / c);
+        sdev.dy = qSqrt(sdev.dy / c);
+        sdev.phi = qSqrt(sdev.phi / c);
+        sdev.p = qSqrt(sdev.p / c);
+        sdevs[roiIndex] = sdev;
+    }
+
     inline void calcResult()
     {
+        power = 0;
+        powerSdev = 0;
+
         if (!rawView) {
             if (multiRoi) {
                 if (subtract) {
@@ -184,28 +260,40 @@ public:
                 for (int i = 0; i < rois.size(); i++) {
                     setRoi(rois.at(i));
                     cgn_calc_beam_bkgnd(&c, &g, &r);
-                    results[i] = r;
+                    if (doMavg) {
+                        calcMavg(i);
+                    } else {
+                        results[i] = r;
+                    }
+                    if (showPower) {
+                        power += results.at(i).p;
+                        if (doMavg)
+                            powerSdev += sdevs.at(i).p;
+                    }
+                }
+                if (showPower) {
+                    power /= double(rois.size());
+                    if (doMavg)
+                        powerSdev /= double(rois.size());
                 }
             } else {
                 setRoi(roi);
                 cgn_calc_beam_bkgnd(&c, &g, &r);
-                results[0] = r;
+                if (doMavg) {
+                    calcMavg(0);
+                } else {
+                    results[0] = r;
+                }
+                if (showPower) {
+                    power = results.at(0).p;
+                    if (doMavg)
+                        powerSdev = sdevs.at(0).p;
+                }
             }
         }
 
         saverMutex.lock();
         if (calibratePowerFrames > 0) {
-            if (multiRoi) {
-                power = 0;
-                if (results.size() > 0) {
-                    for (const auto& r : results) {
-                        power += r.p;
-                    }
-                    power /= double(results.size());
-                }
-            } else {
-                power = r.p;
-            }
             qDebug() << logId << "calibrate power"
                  << "| step =" << calibratePowerFrames
                  << "| digital_intensity =" << power;
@@ -290,7 +378,7 @@ public:
             cgn_copy_to_f64(&c, graph, &g.max);
             plot->invalidateGraph();
             plot->setResult({}, 0, rangeTop);
-            table->setResult({}, tableData());
+            table->setResult({}, {}, tableData());
             return true;
         }
 
@@ -299,7 +387,7 @@ public:
         plot->invalidateGraph();
         plot->setResult(results, minZ, maxZ);
 
-        table->setResult(results, tableData());
+        table->setResult(results, sdevs, tableData());
         return true;
     }
 

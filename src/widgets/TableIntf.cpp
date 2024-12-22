@@ -7,15 +7,9 @@
 
 TableIntf::TableIntf(QTableWidget *table) : _table(table)
 {
-    _table->setColumnCount(2);
-    _table->setHorizontalHeaderLabels({ qApp->tr("Name"), qApp->tr("Value") });
     _table->verticalHeader()->setVisible(false);
     _table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     _table->setSelectionBehavior(QAbstractItemView::SelectRows);
-    auto h = _table->horizontalHeader();
-    h->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    h->setSectionResizeMode(1, QHeaderView::Stretch);
-    h->setHighlightSections(false);
 
     if (qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark)
         _warnColor = 0xFFFF8C00;
@@ -24,8 +18,19 @@ TableIntf::TableIntf(QTableWidget *table) : _table(table)
 
 void TableIntf::setRows(const TableRowsSpec &rows)
 {
-    if (rows.results.isEmpty())
-        return;
+    _showSdev = rows.showSdev;
+    if (_showSdev) {
+        _table->setColumnCount(3);
+        _table->setHorizontalHeaderLabels({ qApp->tr("Name"), qApp->tr("AVG"), qApp->tr("SDEV") });
+    } else {
+        _table->setColumnCount(2);
+        _table->setHorizontalHeaderLabels({ qApp->tr("Name"), qApp->tr("Value") });
+    }
+    auto h = _table->horizontalHeader();
+    h->setSectionResizeMode(QHeaderView::Stretch);
+    h->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    h->setHighlightSections(false);
+
     _table->setRowCount(0);
     _resRows.clear();
     _camRows.clear();
@@ -60,12 +65,12 @@ QTableWidgetItem* TableIntf::makeHeader(RowIndex &row, const QString& title)
     it->setTextAlignment(Qt::AlignCenter);
     it->setBackground(_table->palette().brush(QPalette::Button));
     _table->setItem(row, 0, it);
-    _table->setSpan(row, 0, 1, 2);
+    _table->setSpan(row, 0, 1, _table->columnCount());
     row++;
     return it;
 }
 
-QTableWidgetItem* TableIntf::makeRow(RowIndex &row, const QString& title)
+TableIntf::ResultRow TableIntf::makeRow(RowIndex &row, const QString& title)
 {
     _table->setRowCount(row+1);
     auto it = new QTableWidgetItem(" " + title + " ");
@@ -76,29 +81,41 @@ QTableWidgetItem* TableIntf::makeRow(RowIndex &row, const QString& title)
     it->setBackground(_table->palette().brush(QPalette::Button));
     _table->setItem(row, 0, it);
 
-    it = new QTableWidgetItem(" --- ");
+    auto itVal = new QTableWidgetItem(" --- ");
     f.setBold(false);
-    it->setFont(f);
-    _table->setItem(row, 1, it);
+    itVal->setFont(f);
+    _table->setItem(row, 1, itVal);
+
+    QTableWidgetItem *itSdev = nullptr;
+    if (_showSdev) {
+        itSdev = new QTableWidgetItem(" --- ");
+        itSdev->setFont(f);
+        _table->setItem(row, 2, itSdev);
+    }
+
     row++;
-    return it;
+    return { itVal, itSdev };
 };
 
 void TableIntf::cleanResult()
 {
     _resData.clear();
+    _resSdev.clear();
     _camData.clear();
 }
 
-void TableIntf::setResult(const QList<CgnBeamResult>& r, const QMap<ResultId, CamTableData>& data)
+void TableIntf::setResult(const QList<CgnBeamResult>& val, const QList<CgnBeamResult>& sdev, const QMap<ResultId, CamTableData>& data)
 {
-    _resData = r;
+    _resData = val;
+    _resSdev = sdev;
     _camData = data;
 }
 
-inline void setTextInvald(QTableWidgetItem *it)
+void TableIntf::setTextInvald(const TableIntf::ResultRow &row)
 {
-    it->setText(QStringLiteral(" --- "));
+    row.val->setText(QStringLiteral(" --- "));
+    if (row.sdev)
+        row.sdev->setText(QStringLiteral(" --- "));
 }
 
 static QString formatPower(double v, int f)
@@ -118,9 +135,12 @@ void TableIntf::showResult()
         ResultId resultId = it.key();
         RowIndex row = _camRows.value(resultId, -1);
         if (row < 0) return;
+        for (int col = 0; col < _table->columnCount(); col++)
+            _table->item(row, col)->setToolTip({});
         auto item = _table->item(row, 1);
         const auto &data = it.value();
-        QString text;
+        QString text, text1, tooltip;
+        bool isPower = false;
         switch (data.type) {
             case CamTableData::TEXT:
                 text = data.value.toString();
@@ -132,11 +152,16 @@ void TableIntf::showResult()
                 text = QStringLiteral(" %1 ").arg(data.value.toInt());
                 break;
             case CamTableData::POWER: {
+                isPower = true;
                 auto p = data.value.toList();
-                text = formatPower(p[0].toDouble(), p[1].toInt());
+                auto val = p[0].toDouble();
+                auto sdev = p[1].toDouble();
+                auto scale = p[2].toInt();
+                text = formatPower(val, scale);
+                if (_showSdev)
+                    text1 = formatPower(sdev, scale);
                 if (data.warn)
-                    item->setToolTip(qApp->tr("Recalibration required"));
-                else item->setToolTip({});
+                    tooltip = qApp->tr("Recalibration required");
                 _powerResult = resultId;
                 break;
             }
@@ -148,6 +173,16 @@ void TableIntf::showResult()
             text += QStringLiteral(" (!)");
         item->setText(text);
         item->setBackground(data.warn ? QColor(_warnColor) : Qt::transparent);
+        if (isPower && _showSdev) {
+            if (data.warn)
+                text1 += QStringLiteral(" (!)");
+            auto item = _table->item(row, 2);
+            item->setText(text1);
+            item->setBackground(data.warn ? QColor(_warnColor) : Qt::transparent);
+        }
+        if (!tooltip.isEmpty())
+            for (int col = 0; col < _table->columnCount(); col++)
+                _table->item(row, col)->setToolTip(tooltip);
     }
 
     for (int i = 0; i < _resData.size(); i++) {
@@ -167,12 +202,23 @@ void TableIntf::showResult()
         }
 
         double eps = qMin(res.dx, res.dy) / qMax(res.dx, res.dy);
-        row.xc->setText(_scale.formatWithMargins(res.xc));
-        row.yc->setText(_scale.formatWithMargins(res.yc));
-        row.dx->setText(_scale.formatWithMargins(res.dx));
-        row.dy->setText(_scale.formatWithMargins(res.dy));
-        row.phi->setText(QStringLiteral(" %1° ").arg(res.phi, 0, 'f', 1));
-        row.eps->setText(QStringLiteral(" %1 ").arg(eps, 0, 'f', 3));
+        row.xc.val->setText(_scale.formatWithMargins(res.xc));
+        row.yc.val->setText(_scale.formatWithMargins(res.yc));
+        row.dx.val->setText(_scale.formatWithMargins(res.dx));
+        row.dy.val->setText(_scale.formatWithMargins(res.dy));
+        row.phi.val->setText(QStringLiteral(" %1° ").arg(res.phi, 0, 'f', 1));
+        row.eps.val->setText(QStringLiteral(" %1 ").arg(eps, 0, 'f', 3));
+
+        if (_showSdev && i <= _resSdev.size() - 1) {
+            const auto &res = _resSdev.at(i);
+            double eps = qMin(res.dx, res.dy) / qMax(res.dx, res.dy);
+            row.xc.sdev->setText(_scale.formatWithMargins(res.xc));
+            row.yc.sdev->setText(_scale.formatWithMargins(res.yc));
+            row.dx.sdev->setText(_scale.formatWithMargins(res.dx));
+            row.dy.sdev->setText(_scale.formatWithMargins(res.dy));
+            row.phi.sdev->setText(QStringLiteral(" %1° ").arg(res.phi, 0, 'f', 1));
+            row.eps.sdev->setText(QStringLiteral(" %1 ").arg(eps, 0, 'f', 3));
+        }
     }
     for (int i = _resData.size(); i < _resRows.size(); i++) {
         const auto &row = _resRows.at(i);

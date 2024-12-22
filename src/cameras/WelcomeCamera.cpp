@@ -61,7 +61,7 @@ void WelcomeCamera::startCapture()
     r.dy = b.dy;
     r.phi = b.phi;
 
-    _table->setResult({r}, {});
+    _table->setResult({r}, {}, {});
     _plot->initGraph(b.w, b.h);
     _plot->setResult({r}, 0, b.p);
     cgn_render_beam_to_doubles(&b, _plot->rawGraph());

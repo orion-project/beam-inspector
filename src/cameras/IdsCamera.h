@@ -47,6 +47,8 @@ public:
     void togglePowerMeter() override;
     void raisePowerWarning() override;
 
+    bool canMavg() const override { return true; }
+
     QString customId() const override { return _customId; }
 
     static QVector<CameraItem> getCameras();

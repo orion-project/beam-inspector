@@ -92,6 +92,12 @@ struct FrameSize
     double h;
 };
 
+struct Averaging
+{
+    bool on = false;
+    int frames = 5;
+};
+
 struct CameraConfig
 {
     PlotOptions plot;
@@ -101,6 +107,7 @@ struct CameraConfig
     RoiMode roiMode = ROI_NONE;
     FrameSize mroiSize = { 0.1, 0.1 };
     PowerMeter power;
+    Averaging mavg;
 
     void load(QSettings *s);
     void save(QSettings *s, bool compact=false) const;
@@ -148,14 +155,15 @@ struct CameraCommons
 
 struct TableRowsSpec
 {
+    bool showSdev = false;
     QStringList results;
     QList<QPair<int, QString>> aux;
 };
 
 struct GoodnessLimits
 {
-    double deltaMin;
-    double deltaMax;
+    double deltaMin = 0.005;
+    double deltaMax = 0.05;
 };
 
 #endif // CAMERA_TYPES_H

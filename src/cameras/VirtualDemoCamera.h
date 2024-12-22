@@ -37,6 +37,8 @@ public:
     void togglePowerMeter() override;
     void raisePowerWarning() override;
 
+    bool canMavg() const override { return true; }
+
 signals:
     void ready();
     void stats(const CameraStats &stats);

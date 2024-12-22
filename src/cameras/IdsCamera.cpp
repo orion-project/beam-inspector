@@ -75,7 +75,15 @@ public:
             if (showBrightness)
                 data[ROW_BRIGHTNESS] = {brightness, CamTableData::VALUE3};
             if (showPower)
-                data[ROW_POWER] = {QVariantList{r.p * powerScale, powerDecimalFactor}, CamTableData::POWER, hasPowerWarning};
+                data[ROW_POWER] = {
+                    QVariantList{
+                        power * powerScale,
+                        powerSdev * powerScale,
+                        powerDecimalFactor,
+                    },
+                    CamTableData::POWER,
+                    hasPowerWarning
+                };
             return data;
         };
     }
