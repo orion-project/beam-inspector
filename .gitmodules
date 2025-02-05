@@ -1,6 +1,3 @@
 [submodule "libs/orion"]
 	path = libs/orion
 	url = https://github.com/orion-project/orion-qt
-[submodule "libs/qcustomplot/qcp"]
-	path = libs/qcustomplot/qcp
-	url = https://gitlab.com/ecme2/QCustomPlot.git
