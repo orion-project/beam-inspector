@@ -11,7 +11,7 @@
 #include "widgets/OriPopupMessage.h"
 #include "widgets/OriValueEdit.h"
 
-#include "qcp/src/core.h"
+#include "qcustomplot/src/core.h"
 
 #include <QCheckBox>
 #include <QFormLayout>

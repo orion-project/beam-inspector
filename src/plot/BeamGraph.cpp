@@ -1,7 +1,7 @@
 #include "BeamGraph.h"
 
-#include "qcp/src/core.h"
-#include "qcp/src/painter.h"
+#include "qcustomplot/src/core.h"
+#include "qcustomplot/src/painter.h"
 
 //------------------------------------------------------------------------------
 //                               BeamColorMapData
@@ -47,7 +47,7 @@ BeamColorScale::BeamColorScale(QCustomPlot *parentPlot) : QCPColorScale(parentPl
 
 void BeamColorScale::setFrameColor(const QColor& c)
 {
-    for (auto a : mAxisRect->axes())
+    foreach (auto a, mAxisRect->axes())
         a->setBasePen(QPen(c, 0, Qt::SolidLine));
 }
 

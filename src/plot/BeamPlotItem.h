@@ -1,7 +1,7 @@
 #ifndef BEAM_PLOT_ITEM_H
 #define BEAM_PLOT_ITEM_H
 
-#include "qcp/src/item.h"
+#include "qcustomplot/src/item.h"
 
 #include "cameras/CameraTypes.h"
 

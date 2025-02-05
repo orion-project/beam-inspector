@@ -3,7 +3,7 @@
 #include "plot/BeamGraph.h"
 #include "plot/RoiRectGraph.h"
 
-#include "qcp/src/core.h"
+#include "qcustomplot/src/core.h"
 
 PlotIntf::PlotIntf(QCustomPlot *plot, QCPColorMap *colorMap, QCPColorScale *colorScale, BeamInfoText *beamInfo, RoiRectsGraph *rois)
     : _plot(plot), _colorMap(colorMap), _colorScale(colorScale), _beamInfo(beamInfo), _rois(rois)
