@@ -130,9 +130,15 @@ struct CamTableData
 class BrightEvent : public QEvent
 {
 public:
-    BrightEvent() : QEvent(QEvent::User) {}
+    BrightEvent() : QEvent(QEvent::Type(QEvent::registerEventType())) {}
 
     double level;
+};
+
+class UpdateSettingsEvent : public QEvent
+{
+public:
+    UpdateSettingsEvent() : QEvent(QEvent::Type(QEvent::registerEventType())) {}
 };
 
 struct RandomOffset
@@ -165,5 +171,8 @@ struct GoodnessLimits
     double deltaMin = 0.005;
     double deltaMax = 0.05;
 };
+
+using AnyRecord = QMap<QString, QVariant>;
+using AnyRecords = QList<AnyRecord>;
 
 #endif // CAMERA_TYPES_H

@@ -668,13 +668,32 @@ HardConfigPanel* IdsCamera::hardConfgPanel(QWidget *parent)
         auto requestBrightness = [this](QObject *s){ _peak->requestBrightness(s); };
         auto getCamProp = [this](IdsHardConfigPanel::CamProp prop) -> QVariant {
             switch (prop) {
+            case IdsHardConfigPanel::AUTOEXP_LEVEL:
+                return _cfg->autoExpLevel;
             case IdsHardConfigPanel::AUTOEXP_FRAMES_AVG:
                 return _cfg->autoExpFramesAvg;
+            case IdsHardConfigPanel::EXP_PRESETS:
+                return QVariant::fromValue(&_cfg->expPresets);
             }
             return {};
         };
+        auto setCamProp = [this](IdsHardConfigPanel::CamProp prop, QVariant value) {
+            switch (prop) {
+            case IdsHardConfigPanel::AUTOEXP_LEVEL:
+                _cfg->autoExpLevel = value.toInt();
+                saveConfig(true);
+                break;
+            case IdsHardConfigPanel::AUTOEXP_FRAMES_AVG:
+                // this is not changed from hard config panel
+                break;
+            case IdsHardConfigPanel::EXP_PRESETS:
+                // Presets already updated in the panel via pointer
+                saveConfig(true);
+                break;
+            }
+        };
         auto raisePowerWarning = [this]{ this->raisePowerWarning(); };
-        _configPanel = new IdsHardConfigPanel(_peak->hCam, requestBrightness, getCamProp, raisePowerWarning, parent);
+        _configPanel = new IdsHardConfigPanel(_peak->hCam, requestBrightness, getCamProp, setCamProp, raisePowerWarning, parent);
     }
     return _configPanel;
 }

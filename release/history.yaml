@@ -1,4 +1,9 @@
 history:
+- version: 0.0.18
+  date: ?
+  chahges:
+  - text: Can save exposure presets
+
 - version: 0.0.17
   date: 2024-12-23
   chahges:

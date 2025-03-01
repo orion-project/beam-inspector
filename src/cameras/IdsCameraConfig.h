@@ -2,6 +2,8 @@
 #define IDS_CAMERA_CONFIG_H
 #ifdef WITH_IDS
 
+#include "CameraTypes.h"
+
 #include <ids_peak_comfort_c/ids_peak_comfort_c.h>
 
 #include <QApplication>
@@ -45,8 +47,10 @@ public:
     QSet<int> supportedBpp;
     bool showBrightness = false;
     bool saveBrightness = false;
+    int autoExpLevel = 80;
     int autoExpFramesAvg = 4;
     bool hasPowerWarning = false;
+    AnyRecords expPresets;
 
     void initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &opts, int maxPageId);
     void save(QSettings *s);
