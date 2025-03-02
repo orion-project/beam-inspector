@@ -55,6 +55,8 @@ public:
     void initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &opts, int maxPageId);
     void save(QSettings *s);
     void load(QSettings *s);
+    void saveExpPresets(QJsonObject &root);
+    void loadExpPresets(QJsonObject &root);
 };
 
 #endif // WITH_IDS

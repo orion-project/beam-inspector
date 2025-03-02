@@ -43,6 +43,8 @@ public:
     bool showGoodnessTextOnPlot = false;
     bool showGoodnessRelative = false;
     UpdateCheckInterval updateCheckInterval = UpdateCheckInterval::Weekly;
+    bool roundHardConfigFps = true;
+    bool roundHardConfigExp = true;
 
     enum ConfigPages {
         cfgDev,

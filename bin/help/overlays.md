@@ -57,7 +57,11 @@ Example:
 
 Edits to the file will only take effect after reloading the crosshairs via the `[Overlays ► Load From File…]` menu command.
 
+Interactive edits to the crosshairs done in the edit mode are not saved into the file automatically until it is reexported via the `[Overlays ► Save To File…]` menu command.
+
 Crosshair locations are stored in relative coordinates. This allows for using the same crosshair set with different camera resolutions and makes them resilient to changing camera [binning or decimation](./cam_settings_hard.md#resolution-reduction).
+
+If the camera has [exposure presets](./exp_presets.md) set up, they are also saved into the crosshairs JSON file.
 
 ## See also
 

@@ -103,6 +103,12 @@ Plot::~Plot()
     delete _plotIntf;
 }
 
+void Plot::augmentCrosshairLoadSave(std::function<void(QJsonObject&)> load, std::function<void(QJsonObject&)> save)
+{
+    _crosshairs->loadMore = load;
+    _crosshairs->saveMore = save;
+}
+
 void Plot::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
 {
     _imageW = scale.pixelToUnit(sensorW);
@@ -408,7 +414,7 @@ void Plot::loadCrosshairs(const QString &fileName)
     else
         replot();
     _mruCrosshairs->append(fileName);
-    emit crosshairsEdited();
+    emit crosshairsLoaded();
 }
 
 void Plot::saveCrosshairs()

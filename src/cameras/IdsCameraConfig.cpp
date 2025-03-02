@@ -8,6 +8,8 @@
 #include "helpers/OriLayouts.h"
 
 #include <QComboBox>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QSettings>
 
 using namespace Ori::Dlg;
@@ -202,6 +204,31 @@ void IdsCameraConfig::load(QSettings *s)
     }
     s->endArray();
     expPresets = presets;
+}
+
+void IdsCameraConfig::saveExpPresets(QJsonObject &root)
+{
+    QJsonArray items;
+    for (auto const &preset : expPresets) {
+        QJsonObject item;
+        for (auto it = preset.constBegin(); it != preset.constEnd(); it++)
+            item[it.key()] = QJsonValue::fromVariant(it.value());
+        items << item;
+    }
+    root["exposure_presets"] = items;
+}
+
+void IdsCameraConfig::loadExpPresets(QJsonObject &root)
+{
+    expPresets.clear();
+    auto items = root["exposure_presets"].toArray();
+    for (auto it = items.begin(); it != items.end(); it++) {
+        auto item = it->toObject();
+        AnyRecord preset;
+        for (const auto &key : item.keys())
+            preset[key] = item[key].toVariant();
+        expPresets << preset;
+    }
 }
 
 #endif // WITH_IDS

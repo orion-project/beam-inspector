@@ -25,8 +25,37 @@
 
 #define LOG_ID "IdsHardConfig:"
 
+// Exposure preset field names
+#define PKEY_NAME "name"
+#define PKEY_EXP "exposure"
+#define PKEY_AEXP "auto_exposure"
+#define PKEY_FPS "frame_rate"
+#define PKEY_AGAIN "analog_gain"
+#define PKEY_DGAIN "digital_gain"
+
 using namespace Ori::Layouts;
 using namespace Ori::Widgets;
+
+bool theSame(const AnyRecord &p1, const AnyRecord &p2)
+{
+    for (auto it = p1.constBegin(); it != p1.constEnd(); it++) {
+        if (it.key() == QStringLiteral("name"))
+            continue;
+        bool ok;
+        auto v1 = it.value().toDouble(&ok);
+        if (!ok)
+            return false;
+        auto v2 = p2.value(it.key()).toDouble(&ok);
+        if (!ok)
+            return false;
+        // Humans should see the same text, if they don't then values are different
+        if (QString::number(v1) != QString::number(v2)) {
+            //qDebug() << "not same numbers" << v1 << v2 << QString::number(v1) << QString::number(v2);
+            return false;
+        }
+    }
+    return true;
+}
 
 #define PROP_CONTROL(Prop, title) { \
     auto label = new QLabel; \
@@ -70,6 +99,16 @@ using namespace Ori::Widgets;
             props[#Prop] = 0; \
             return; \
         } \
+        if (ed##Prop == edFps && roundFps) { \
+            /* Sometimes camera returns not exactly the same that was set
+             * e.g. 14.9988 instead of 15, or 9.9984 instead of 10
+             * We are not interested in such small differences
+            */ \
+            value = qRound(value * 100.0) / 100.0; \
+        } else if (ed##Prop == edExp && roundExp) { \
+            value = qRound(value / 10.0) * 10; \
+        } \
+        /*qDebug() << "showProp" << #Prop << value;*/ \
         edit->setValue(value); \
         edit->setDisabled(false); \
         props[#Prop] = value; \
@@ -77,29 +116,52 @@ using namespace Ori::Widgets;
         if (PEAK_ERROR(res)) \
             label->setText(IDS.getPeakError(res)); \
         else { \
-            label->setText(QString("<b>Min = %1, Max = %2</b>").arg(min, 0, 'f', 2).arg(max, 0, 'f', 2)); \
+            if (ed##Prop == edFps && roundFps) { \
+                min = qRound(min * 100.0) / 100.0; \
+                max = qRound(max * 100.0) / 100.0; \
+                label->setText(QString("<b>Min = %1, Max = %2</b>").arg(min, 0, 'f', 2).arg(max, 0, 'f', 2)); \
+            } else if (ed##Prop == edExp && roundExp) { \
+                min = qRound(min / 10.0) * 10; \
+                max = qRound(max / 10.0) * 10; \
+                label->setText(QString("<b>Min = %1, Max = %2</b>").arg(min, 0, 'f', 0).arg(max, 0, 'f', 0)); \
+            } else { \
+                label->setText(QString("<b>Min = %1, Max = %2</b>").arg(min, 0, 'f', 2).arg(max, 0, 'f', 2)); \
+            }\
             props[#Prop "Min"] = min; \
             props[#Prop "Max"] = max; \
             props[#Prop "Step"] = step; \
         }\
         if (ed##Prop == edExp) \
             showExpFreq(value); \
+        if (!bulkSetProps) \
+            highightPreset();\
+    } \
+    double get##Prop##Raw() const { \
+        double value = 0; \
+        auto res = getProp(hCam, &value); \
+        if (PEAK_ERROR(res)) \
+            qWarning() << LOG_ID << "getPropRaw" << #Prop << IDS.getPeakError(res); \
+        return value; \
     } \
     void set##Prop() { \
         double oldValue = props[#Prop]; \
         double newValue = ed##Prop->value(); \
         if (Double(oldValue).almostEqual(Double(newValue))) \
             return; \
-        set##Prop##Raw(newValue); \
+        set##Prop##Raw(newValue, true); \
         if (ed##Prop != edFps) \
             raisePowerWarning(); \
     } \
-    bool set##Prop##Raw(double v) { \
+    bool set##Prop##Raw(double v, bool showErr) { \
         auto res = setProp(hCam, v); \
         if (PEAK_ERROR(res)) { \
-            Ori::Dlg::error(IDS.getPeakError(res)); \
+            if (showErr) \
+                Ori::Dlg::error(IDS.getPeakError(res)); \
+            else \
+                qWarning() << LOG_ID << "setPropRaw" << #Prop << IDS.getPeakError(res); \
             return false; \
         } \
+        /*qDebug() << "setPropRaw" << #Prop << v;*/ \
         if (ed##Prop == edFps || ed##Prop == edExp) { \
             showExp(); \
             showFps(); \
@@ -123,10 +185,8 @@ using namespace Ori::Widgets;
             double min = props[#Prop "Min"]; \
             if (val <= min) return; \
             newVal = val / change; \
-            qDebug() << #Prop << "min=" << min << "step=" << step << "val=" << val; \
             if (val - newVal < step) newVal = val - step; \
             newVal = qMax(min, newVal); \
-            qDebug() << #Prop << "set=" << newVal; \
         } \
         auto res = setProp(hCam, newVal); \
         if (PEAK_ERROR(res)) \
@@ -230,11 +290,6 @@ public:
         PROP_CONTROL(AnalogGain, tr("Analog gain"))
         PROP_CONTROL(DigitalGain, tr("Digital gain"))
 
-        CHECK_PROP_STATUS(Exp, IDS.peak_ExposureTime_GetAccessStatus)
-        CHECK_PROP_STATUS(Fps, IDS.peak_FrameRate_GetAccessStatus)
-        CHECK_PROP_STATUS(AnalogGain, getAnalogGainAccessStatus)
-        CHECK_PROP_STATUS(DigitalGain, getDigitlGainAccessStatus)
-
         vertMirror = new QCheckBox(tr("Mirror vertically"));
         if (IDS.peak_Mirror_UpDown_GetAccessStatus(hCam) == PEAK_ACCESS_READWRITE) {
             vertMirror->setChecked(IDS.peak_Mirror_UpDown_IsEnabled(hCam));
@@ -266,6 +321,22 @@ public:
     PROP(Fps, IDS.peak_FrameRate_Set, IDS.peak_FrameRate_Get, IDS.peak_FrameRate_GetRange)
     PROP(AnalogGain, ::setAnalogGain, getAnalogGain, getAnalogGainRange)
     PROP(DigitalGain, ::setDigitalGain, getDigitalGain, getDigitalGainRange)
+
+    void showInitialValues()
+    {
+        bulkSetProps = true;
+
+        CHECK_PROP_STATUS(Exp, IDS.peak_ExposureTime_GetAccessStatus)
+        CHECK_PROP_STATUS(Fps, IDS.peak_FrameRate_GetAccessStatus)
+        CHECK_PROP_STATUS(AnalogGain, getAnalogGainAccessStatus)
+        CHECK_PROP_STATUS(DigitalGain, getDigitlGainAccessStatus)
+
+        auto level = getCamProp(IdsHardConfigPanel::AUTOEXP_LEVEL).toInt();
+        if (level == 0) level = 80;
+        edAutoExp->setValue(level);
+
+        bulkSetProps = false;
+    }
 
     void showExpFreq(double exp)
     {
@@ -487,7 +558,7 @@ public:
         }
     };
 
-    void applySettings()
+    void applySettings(bool onChange)
     {
         auto &s = AppSettings::instance();
         propChangeWheelSm = 1 + double(s.propChangeWheelSm) / 100.0;
@@ -495,16 +566,20 @@ public:
         propChangeArrowSm = 1 + double(s.propChangeArrowSm) / 100.0;
         propChangeArrowBig = 1 + double(s.propChangeArrowBig) / 100.0;
 
-        auto level = getCamProp(IdsHardConfigPanel::AUTOEXP_LEVEL).toInt();
-        if (level == 0) level = 80;
-        edAutoExp->setValue(level);
-
-        makePresetButtons();
+        if (roundFps != s.roundHardConfigFps) {
+            roundFps = s.roundHardConfigFps;
+            if (onChange) showFps();
+        }
+        if (roundExp != s.roundHardConfigExp) {
+           roundExp = s.roundHardConfigExp;
+            if (onChange) showExp();
+        }
     }
 
+    // IAppSettingsListener
     void settingsChanged() override
     {
-        applySettings();
+        applySettings(true);
     }
 
     void toggleVertMirror(bool on)
@@ -526,14 +601,12 @@ public:
             Ori::Dlg::error(IDS.getPeakError(res));
     }
 
-    #define PKEY_NAME "name"
-    #define PKEY_EXP "exposure"
-    #define PKEY_AEXP "auto_exposure"
-    #define PKEY_FPS "frame_rate"
-    #define PKEY_AGAIN "analog_gain"
-    #define PKEY_DGAIN "digital_gain"
+    inline AnyRecords* getPresets()
+    {
+        return getCamProp(IdsHardConfigPanel::EXP_PRESETS).value<AnyRecords*>();
+    }
 
-    AnyRecord makePreset()
+    inline AnyRecord makePreset()
     {
         return {
             { PKEY_EXP, props["Exp"] },
@@ -552,7 +625,7 @@ public:
         opts.onHelp = []{ HelpSystem::topic("exp_presets"); };
         if (Ori::Dlg::inputText(opts)) {
             preset[PKEY_NAME] = opts.value;
-            auto presets = getCamProp(IdsHardConfigPanel::EXP_PRESETS).value<AnyRecords*>();
+            auto presets = getPresets();
             presets->append(preset);
             setCamProp(IdsHardConfigPanel::EXP_PRESETS, {});
             QApplication::postEvent(this, new UpdateSettingsEvent());
@@ -576,9 +649,28 @@ public:
         return r;
     }
 
+    void highightPreset()
+    {
+        if (!getCamProp)
+            return;
+        for (auto b : presetButtons)
+            b->setChecked(false);
+        auto props = makePreset();
+        auto presets = getPresets();
+        for (int i = 0; i < presets->size(); i++) {
+            auto const &preset = presets->at(i);
+            if (theSame(props, preset)) {
+                if (i < presetButtons.size()) {
+                    presetButtons.at(i)->setChecked(true);
+                    return;
+                }
+            }
+        }
+    }
+
     void makePresetButtons()
     {
-        auto presets = getCamProp(IdsHardConfigPanel::EXP_PRESETS).value<AnyRecords*>();
+        auto presets = getPresets();
         QMap<QString, QPushButton*> buttons;
         for (auto b : presetButtons) {
             groupPresets->layout()->removeWidget(b);
@@ -591,6 +683,7 @@ public:
             QList<QAction*> actions;
 
             auto b = new QPushButton(preset["name"].toString());
+            b->setCheckable(true);
             b->setContextMenuPolicy(Qt::ActionsContextMenu);
             connect(b, &QPushButton::clicked, this, &IdsHardConfigPanelImpl::applyPreset);
             groupPresets->layout()->addWidget(b);
@@ -625,6 +718,12 @@ public:
         groupPresets->layout()->addWidget(b);
         presetButtons << b;
         adjustSize();
+        highightPreset();
+    }
+
+    void remakePresetButtons()
+    {
+        QApplication::postEvent(this, new UpdateSettingsEvent());
     }
 
     void applyPreset()
@@ -661,7 +760,7 @@ public:
 
         PresetsHandler(IdsHardConfigPanelImpl *parent, int index) : parent(parent), index(index)
         {
-            presets = parent->getCamProp(IdsHardConfigPanel::EXP_PRESETS).value<AnyRecords*>();
+            presets = parent->getPresets();
             if (index < 0 || index >= presets->size()) {
                 qWarning() << "Preset index out of range:" << index << "| Presets count:" << presets->size();
                 return;
@@ -672,25 +771,45 @@ public:
         void apply()
         {
             if (!preset) return;
-            double v;
             bool ok;
-            v = (*preset)[PKEY_DGAIN].toDouble(&ok);
-            if (ok)
-                parent->setDigitalGainRaw(v);
-            v = (*preset)[PKEY_AGAIN].toDouble(&ok);
-            if (ok)
-                parent->setAnalogGainRaw(v);
-            v = (*preset)[PKEY_EXP].toDouble(&ok);
-            if (ok)
-                parent->setExpRaw(v);
-            v = (*preset)[PKEY_FPS].toDouble(&ok);
-            if (ok)
-                parent->setFpsRaw(v);
-            v = (*preset)[PKEY_AEXP].toInt(&ok);
-            if (ok) {
+            parent->bulkSetProps = true;
+            QStringList failed;
+            if (auto v = (*preset)[PKEY_DGAIN].toDouble(&ok); ok) {
+                if (!parent->setDigitalGainRaw(v, false)) {
+                    failed << PKEY_DGAIN;
+                    qDebug() << LOG_ID << "Preset not fully applied:" << PKEY_DGAIN
+                        << "| preset =" << v << "| camera =" << parent->getDigitalGainRaw();
+                }
+            }
+            if (auto v = (*preset)[PKEY_AGAIN].toDouble(&ok); ok) {
+                if (!parent->setAnalogGainRaw(v, false)) {
+                    failed << PKEY_AGAIN;
+                    qDebug() << LOG_ID << "Preset not fully applied:" << PKEY_AGAIN
+                        << "| preset =" << v << "| camera =" << parent->getAnalogGainRaw();
+                }
+            }
+            if (auto v = (*preset)[PKEY_EXP].toDouble(&ok); ok) {
+                if (!parent->setExpRaw(v, false)) {
+                    failed << PKEY_EXP;
+                    qDebug() << LOG_ID << "Preset not fully applied:" << PKEY_EXP
+                        << "| preset =" << v << "| camera =" << parent->getExpRaw();
+                }
+            }
+            if (auto v = (*preset)[PKEY_FPS].toDouble(&ok); ok) {
+                if (!parent->setFpsRaw(v, false)) {
+                    failed << PKEY_FPS;
+                    qDebug() << LOG_ID << "Preset not fully applied:" << PKEY_FPS
+                        << "| preset =" << v << "| camera =" << parent->getFpsRaw();
+                }
+            }
+            if (auto v = (*preset)[PKEY_AEXP].toInt(&ok); ok) {
                 parent->edAutoExp->setValue(v);
                 parent->setCamProp(IdsHardConfigPanel::AUTOEXP_LEVEL, v);
             }
+            parent->bulkSetProps = false;
+            parent->highightPreset();
+            if (!failed.empty())
+                Ori::Dlg::warning(tr("Preset are not fully applied. Failed to set some properties: %1").arg(failed.join(", ")));
         }
 
         void info()
@@ -722,6 +841,7 @@ public:
             if (Ori::Dlg::yes(confirm)) {
                 (*presets)[index] = newPreset;
                 parent->setCamProp(IdsHardConfigPanel::EXP_PRESETS, {});
+                parent->highightPreset();
             }
         }
 
@@ -731,7 +851,7 @@ public:
             if (Ori::Dlg::yes(tr("The preset will be removed:<br><br><b>%1</b>").arg((*preset)[PKEY_NAME].toString()))) {
                 presets->removeAt(index);
                 parent->setCamProp(IdsHardConfigPanel::EXP_PRESETS, {});
-                QApplication::postEvent(parent, new UpdateSettingsEvent());
+                parent->remakePresetButtons();
             }
         }
     };
@@ -750,6 +870,9 @@ public:
     double propChangeArrowSm, propChangeArrowBig;
     bool watingBrightness = false;
     bool closeRequested = false;
+    bool bulkSetProps = false;
+    bool roundFps = true;
+    bool roundExp = true;
     std::function<void(QObject*)> requestBrightness;
     std::function<QVariant(IdsHardConfigPanel::CamProp)> getCamProp;
     std::function<void(IdsHardConfigPanel::CamProp, QVariant)> setCamProp;
@@ -780,6 +903,7 @@ protected:
         }
         if (dynamic_cast<UpdateSettingsEvent*>(event)) {
             makePresetButtons();
+            return true;
         }
         return QWidget::event(event);
     }
@@ -801,7 +925,10 @@ IdsHardConfigPanel::IdsHardConfigPanel(peak_camera_handle hCam,
     _impl->getCamProp = getCamProp;
     _impl->setCamProp = setCamProp;
     _impl->raisePowerWarning = raisePowerWarning;
-    _impl->applySettings();
+    _impl->applySettings(false);
+    _impl->makePresetButtons();
+    _impl->showInitialValues();
+    _impl->highightPreset();
 
     auto scroll = new QScrollArea;
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -820,4 +947,12 @@ void IdsHardConfigPanel::setReadOnly(bool on)
         group->setDisabled(on);
 }
 
+bool IdsHardConfigPanel::event(QEvent *event)
+{
+    if (dynamic_cast<UpdateSettingsEvent*>(event)) {
+        _impl->makePresetButtons();
+        return true;
+    }
+    return QWidget::event(event);
+}
 #endif // WITH_IDS

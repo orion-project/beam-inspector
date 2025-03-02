@@ -21,6 +21,7 @@
     - [Export plot image](./export_plot.md)
 - [Results table](./results_table.md)
 - [Control panel](./cam_control.md)
+    - [Exposure presets](./exp_presets.md)
 - [Status bar](./status_bar.md)
 
 **Application Settings**

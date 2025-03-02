@@ -78,6 +78,10 @@ void AppSettings::load()
 
     s.beginGroup("Update");
     updateCheckInterval = UpdateCheckInterval(s.value("checkInterval", int(UpdateCheckInterval::Weekly)).toInt());
+
+    s.beginGroup("Tweaks");
+    LOAD(roundHardConfigFps, Bool, true);
+    LOAD(roundHardConfigExp, Bool, true);
 }
 
 void AppSettings::save()
@@ -106,6 +110,10 @@ void AppSettings::save()
 
     s.beginGroup("Update");
     s.setValue("checkInterval", int(updateCheckInterval));
+
+    s.beginGroup("Tweaks");
+    SAVE(roundHardConfigFps);
+    SAVE(roundHardConfigExp);
 }
 
 bool AppSettings::edit()
@@ -155,6 +163,11 @@ bool AppSettings::edit()
             ->withOption(int(UpdateCheckInterval::Daily), tr("Daily"))
             ->withOption(int(UpdateCheckInterval::Weekly), tr("Weekly"))
             ->withOption(int(UpdateCheckInterval::Monthly), tr("Monthly")),
+
+        new ConfigItemSpace(cfgOpts, 12),
+        new ConfigItemSection(cfgOpts, tr("Tweaks")),
+        new ConfigItemBool(cfgOpts, tr("Camera control: Round frame rate"), &roundHardConfigFps),
+        new ConfigItemBool(cfgOpts, tr("Camera control: Round exposure"), &roundHardConfigExp),
     };
     if (ConfigDlg::edit(opts))
     {

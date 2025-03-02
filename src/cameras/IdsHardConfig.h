@@ -20,6 +20,9 @@ public:
 
     void setReadOnly(bool on) override;
 
+protected:
+    bool event(QEvent *event) override;
+
 private:
     class IdsHardConfigPanelImpl *_impl;
 };

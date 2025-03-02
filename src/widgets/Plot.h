@@ -65,6 +65,7 @@ public:
     void saveCrosshairs();
     Ori::MruFileList *mruCrosshairs() { return _mruCrosshairs; }
     QList<QPointF> crosshairs() const;
+    void augmentCrosshairLoadSave(std::function<void(QJsonObject&)> load, std::function<void(QJsonObject&)> save);
 
     void adjustWidgetSize();
 
@@ -74,6 +75,7 @@ public:
 signals:
     void roiEdited();
     void crosshairsEdited();
+    void crosshairsLoaded();
 
 protected:
     void resizeEvent(QResizeEvent*) override;

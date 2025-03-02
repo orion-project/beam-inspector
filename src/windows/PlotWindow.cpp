@@ -4,6 +4,7 @@
 #include "app/HelpSystem.h"
 #ifdef WITH_IDS
     #include "cameras/IdsCamera.h"
+    #include "cameras/IdsCameraConfig.h"
 #endif
 #include "cameras/HardConfigPanel.h"
 #include "cameras/MeasureSaver.h"
@@ -469,6 +470,11 @@ void PlotWindow::createPlot()
     _plotIntf = _plot->plotIntf();
     connect(_plot, &Plot::roiEdited, this, &PlotWindow::roiEdited);
     connect(_plot, &Plot::crosshairsEdited, this, &PlotWindow::crosshairsEdited);
+    connect(_plot, &Plot::crosshairsLoaded, this, &PlotWindow::crosshairsLoaded);
+    _plot->augmentCrosshairLoadSave(
+        [this](QJsonObject &root){ loadCrosshairsMore(root); },
+        [this](QJsonObject &root){ saveCrosshairsMore(root); }
+    );
 }
 
 void PlotWindow::closeEvent(QCloseEvent* ce)
@@ -832,9 +838,23 @@ void PlotWindow::roiEdited()
 
 void PlotWindow::crosshairsEdited()
 {
-    //_camera->setRois(_plot->crosshairs());
     _camera->setRois(_plot->rois());
     configChanged();
+}
+
+void PlotWindow::crosshairsLoaded()
+{
+    _camera->setRois(_plot->rois());
+    configChanged();
+#ifdef WITH_IDS
+    if (auto cam = dynamic_cast<IdsCamera*>(_camera.get()); cam) {
+        cam->saveConfig(true);
+        if (_camConfigPanel) {
+            qDebug() << "Try update hard config panel";
+            QApplication::postEvent(_camConfigPanel, new UpdateSettingsEvent());
+        }
+    }
+#endif
 }
 
 void PlotWindow::toggleRoi()
@@ -1115,4 +1135,20 @@ void PlotWindow::resultsTableDoubleClicked(QTableWidgetItem *item)
 {
     if (_actionSetupPowerMeter->isVisible() && _actionSetupPowerMeter->isEnabled() && _tableIntf->isPowerRow(item))
         _actionSetupPowerMeter->trigger();
+}
+
+void PlotWindow::saveCrosshairsMore(QJsonObject &root)
+{
+#ifdef WITH_IDS
+    if (auto cam = dynamic_cast<IdsCamera*>(_camera.get()); cam)
+        cam->idsConfig()->saveExpPresets(root);
+#endif
+}
+
+void PlotWindow::loadCrosshairsMore(QJsonObject &root)
+{
+#ifdef WITH_IDS
+    if (auto cam = dynamic_cast<IdsCamera*>(_camera.get()); cam)
+        cam->idsConfig()->loadExpPresets(root);
+#endif
 }

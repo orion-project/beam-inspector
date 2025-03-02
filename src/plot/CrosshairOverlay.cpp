@@ -283,9 +283,11 @@ QString CrosshairsOverlay::save(const QString& fileName)
             {"delta_max", c.deltaMax}
         };
     }
-    QJsonObject root;
+    QJsonObject root = loadedData;
     root["crosshairs"] = items;
-    QJsonDocument doc(root);
+
+    if (saveMore)
+        saveMore(root);
 
     QFile file(fileName);
     if (!file.open(QFile::WriteOnly | QFile::Text)) {
@@ -293,7 +295,7 @@ QString CrosshairsOverlay::save(const QString& fileName)
         return file.errorString();
     }
     QTextStream stream(&file);
-    stream << doc.toJson();
+    stream << QJsonDocument(root).toJson();
     file.close();
     return {};
 }
@@ -315,6 +317,9 @@ QString CrosshairsOverlay::load(const QString& fileName)
         return error.errorString();
     QJsonObject root = doc.object();
 
+    if (loadMore)
+        loadMore(root);
+
     _items.clear();
     auto items = root["crosshairs"].toArray();
     for (auto it = items.begin(); it != items.end(); it++) {
@@ -330,6 +335,17 @@ QString CrosshairsOverlay::load(const QString& fileName)
         _items << c;
     }
     updateCoords();
+    // Crosshair file can contain additional data specific for a camera type
+    // e.g. exposition presets for IDS cameras.
+    // This data should not be lost if we load crosshairs file and resave it
+    // having an active camera that does not support this type of additional data
+    // Example case:
+    // - Open some reference image
+    // - Load crosshairs file that have exposition presets
+    // - Adjust crosshair positions according to reference image
+    // - Save crosshar file
+    // - Exposition presets must be preserved!
+    loadedData = root;
     return {};
 }
 
