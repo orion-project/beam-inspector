@@ -8,6 +8,8 @@
 #include "helpers/OriLayouts.h"
 
 #include <QComboBox>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QSettings>
 
 using namespace Ori::Dlg;
@@ -160,10 +162,21 @@ void IdsCameraConfig::save(QSettings *s)
     s->setValue("hard.decimation.y", decimation.y);
     s->setValue("showBrightness", showBrightness);
     s->setValue("saveBrightness", saveBrightness);
+    s->setValue("autoExpLevel", autoExpLevel);
     s->setValue("autoExpFramesAvg", autoExpFramesAvg);
+
     hasPowerWarning = oldBpp != bpp ||
         oldBinning.x != binning.x || oldBinning.y != binning.y ||
         oldDecimation.x != decimation.x || oldDecimation.y != decimation.y;
+
+    s->beginWriteArray("exp_presets", expPresets.size());
+    for (int i = 0; i < expPresets.size(); i++) {
+        s->setArrayIndex(i);
+        const auto &preset = expPresets.at(i);
+        for (auto it = preset.constBegin(); it != preset.constEnd(); it++)
+            s->setValue(it.key(), it.value());
+    }
+    s->endArray();
 }
 
 void IdsCameraConfig::load(QSettings *s)
@@ -177,7 +190,45 @@ void IdsCameraConfig::load(QSettings *s)
         decimation.reset();
     showBrightness = s->value("showBrightness", false).toBool();
     saveBrightness = s->value("saveBrightness", false).toBool();
+    autoExpLevel = s->value("autoExpLevel").toInt();
     autoExpFramesAvg = s->value("autoExpFramesAvg", 4).toInt();
+
+    AnyRecords presets;
+    int size = s->beginReadArray("exp_presets");
+    for (int i = 0; i < size; i++) {
+        s->setArrayIndex(i);
+        AnyRecord preset;
+        for (const auto &key : s->allKeys())
+            preset[key] = s->value(key);
+        presets << preset;
+    }
+    s->endArray();
+    expPresets = presets;
+}
+
+void IdsCameraConfig::saveExpPresets(QJsonObject &root)
+{
+    QJsonArray items;
+    for (auto const &preset : expPresets) {
+        QJsonObject item;
+        for (auto it = preset.constBegin(); it != preset.constEnd(); it++)
+            item[it.key()] = QJsonValue::fromVariant(it.value());
+        items << item;
+    }
+    root["exposure_presets"] = items;
+}
+
+void IdsCameraConfig::loadExpPresets(QJsonObject &root)
+{
+    expPresets.clear();
+    auto items = root["exposure_presets"].toArray();
+    for (auto it = items.begin(); it != items.end(); it++) {
+        auto item = it->toObject();
+        AnyRecord preset;
+        for (const auto &key : item.keys())
+            preset[key] = item[key].toVariant();
+        expPresets << preset;
+    }
 }
 
 #endif // WITH_IDS

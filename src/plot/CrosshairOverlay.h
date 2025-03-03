@@ -40,6 +40,8 @@ public:
     QString load(const QString& fileName);
 
     std::function<void()> onEdited;
+    std::function<void(QJsonObject&)> loadMore;
+    std::function<void(QJsonObject&)> saveMore;
 
 protected:
     void draw(QCPPainter *painter) override;
@@ -56,6 +58,7 @@ private:
     QPoint _selectedPos;
     QMenu *_menuForEmpty = nullptr;
     QMenu *_menuForItem = nullptr;
+    QJsonObject loadedData;
 
     void setItemCoords(Crosshair &c, double plotX, double plotY);
     void mouseMove(QMouseEvent*);

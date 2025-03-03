@@ -55,6 +55,8 @@ public:
     static QString libError();
     static void unloadLib();
 
+    IdsCameraConfig* idsConfig() { return _cfg.data(); }
+
 signals:
     void ready();
     void stats(const CameraStats& stats);

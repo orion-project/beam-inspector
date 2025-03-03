@@ -22,6 +22,10 @@ See details about properties in the official documentation:
 - [Frame rate](https://www.1stvision.com/cameras/IDS/IDS-manuals/en/acquisition-frame-rate.html)
 - [Gain](https://www.1stvision.com/cameras/IDS/IDS-manuals/en/gain-selector.html)
 
+### Exposure presets
+
+It's possible to save a set of exposure settings for a given camera as a [preset](./exp_presets.md). Presets are listed as buttons at the top of the control panel and can be managed via the context menu.
+
 ### Autoexposure
 
 Not every camera model supports the auto exposure feature. So the application implements a simple software algorithm for finding an exposure value giving desired beam spot [brightness](./brightness.md).

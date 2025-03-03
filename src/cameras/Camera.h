@@ -73,6 +73,9 @@ public:
     PixelScale pixelScale() const;
     QString resolutionStr() const;
 
+    void loadConfig();
+    void saveConfig(bool saveMore = false);
+
 protected:
     PlotIntf *_plot;
     TableIntf *_table;
@@ -84,9 +87,6 @@ protected:
     virtual void initConfigMore(Ori::Dlg::ConfigDlgOpts &opts) {}
     virtual void loadConfigMore(QSettings*) {}
     virtual void saveConfigMore(QSettings*) {}
-
-    void loadConfig();
-    void saveConfig(bool saveMore = false);
 };
 
 #endif // CAMERA_BASE_H
