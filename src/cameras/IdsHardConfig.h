@@ -9,7 +9,7 @@
 class IdsHardConfigPanel : public HardConfigPanel
 {
 public:
-    enum CamProp { AUTOEXP_LEVEL, AUTOEXP_FRAMES_AVG, EXP_PRESETS };
+    enum CamProp { AUTOEXP_LEVEL, AUTOEXP_FRAMES_AVG, EXP_PRESETS, FPS_LOCK };
 
     IdsHardConfigPanel(peak_camera_handle hCam,
         std::function<void(QObject*)> requestBrightness,

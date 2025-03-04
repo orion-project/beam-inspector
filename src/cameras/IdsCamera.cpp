@@ -674,6 +674,8 @@ HardConfigPanel* IdsCamera::hardConfgPanel(QWidget *parent)
                 return _cfg->autoExpFramesAvg;
             case IdsHardConfigPanel::EXP_PRESETS:
                 return QVariant::fromValue(&_cfg->expPresets);
+            case IdsHardConfigPanel::FPS_LOCK:
+                return _cfg->fpsLock;
             }
             return {};
         };
@@ -688,6 +690,10 @@ HardConfigPanel* IdsCamera::hardConfgPanel(QWidget *parent)
                 break;
             case IdsHardConfigPanel::EXP_PRESETS:
                 // Presets already updated in the panel via pointer
+                saveConfig(true);
+                break;
+            case IdsHardConfigPanel::FPS_LOCK:
+                _cfg->fpsLock = value.toDouble();
                 saveConfig(true);
                 break;
             }

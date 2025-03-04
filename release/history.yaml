@@ -2,7 +2,8 @@ history:
 - version: 0.0.18
   date: ?
   chahges:
-  - text: Can save exposure presets
+  - text: Exposure presets
+  - test: Frame rate locking
 
 - version: 0.0.17
   date: 2024-12-23

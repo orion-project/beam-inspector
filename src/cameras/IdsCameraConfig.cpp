@@ -164,6 +164,7 @@ void IdsCameraConfig::save(QSettings *s)
     s->setValue("saveBrightness", saveBrightness);
     s->setValue("autoExpLevel", autoExpLevel);
     s->setValue("autoExpFramesAvg", autoExpFramesAvg);
+    s->setValue("fpsLock", fpsLock);
 
     hasPowerWarning = oldBpp != bpp ||
         oldBinning.x != binning.x || oldBinning.y != binning.y ||
@@ -192,6 +193,7 @@ void IdsCameraConfig::load(QSettings *s)
     saveBrightness = s->value("saveBrightness", false).toBool();
     autoExpLevel = s->value("autoExpLevel").toInt();
     autoExpFramesAvg = s->value("autoExpFramesAvg", 4).toInt();
+    fpsLock = s->value("fpsLock", 0).toDouble();
 
     AnyRecords presets;
     int size = s->beginReadArray("exp_presets");

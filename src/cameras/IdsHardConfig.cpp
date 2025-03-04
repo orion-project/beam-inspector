@@ -63,6 +63,7 @@ bool theSame(const AnyRecord &p1, const AnyRecord &p2)
     label->setForegroundRole(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Mid); \
     auto edit = new CamPropEdit; \
     edit->scrolled = [this](bool wheel, bool inc, bool big){ set##Prop##Fast(wheel, inc, big); }; \
+    edit->connect(edit, &ValueEdit::focused, edit, [this](bool focus){ if (!focus) show##Prop(); }); \
     edit->connect(edit, &ValueEdit::keyPressed, edit, [this](int key){ \
         if (key == Qt::Key_Return || key == Qt::Key_Enter) set##Prop(); }); \
     auto btn = new QPushButton(tr("Set")); \
@@ -162,9 +163,20 @@ bool theSame(const AnyRecord &p1, const AnyRecord &p2)
             return false; \
         } \
         /*qDebug() << "setPropRaw" << #Prop << v;*/ \
-        if (ed##Prop == edFps || ed##Prop == edExp) { \
+        if (ed##Prop == edFps) { \
             showExp(); \
             showFps(); \
+            if (fpsLock > 0) { \
+                fpsLock = v; \
+                showFpsLock(); \
+            } \
+        } else if (ed##Prop == edExp) { \
+            showExp(); \
+            showFps(); \
+            if (fpsLock > 0) { \
+                showFpsLock(); \
+                setFpsRaw(fpsLock, false); \
+            } \
         } else show##Prop(); \
         return true; \
     } \
@@ -191,9 +203,20 @@ bool theSame(const AnyRecord &p1, const AnyRecord &p2)
         auto res = setProp(hCam, newVal); \
         if (PEAK_ERROR(res)) \
             Ori::Dlg::error(IDS.getPeakError(res)); \
-        if (ed##Prop == edFps || ed##Prop == edExp) { \
+        if (ed##Prop == edFps) { \
             showExp(); \
             showFps(); \
+            if (fpsLock > 0) { \
+                fpsLock = newVal; \
+                showFpsLock(); \
+            } \
+        } else if (ed##Prop == edExp) { \
+            showExp(); \
+            showFps(); \
+            if (fpsLock > 0) { \
+                showFpsLock(); \
+                setFpsRaw(fpsLock, false); \
+            } \
         } else show##Prop(); \
     }
 
@@ -287,6 +310,12 @@ public:
         }
 
         PROP_CONTROL(Fps, tr("Frame rate"));
+
+        butFpsLock = new QPushButton(tr("Lock frame rate"));
+        butFpsLock->setCheckable(true);
+        connect(butFpsLock, &QPushButton::clicked, this, &IdsHardConfigPanelImpl::toggleFpsLock);
+        groupFps->layout()->addWidget(butFpsLock);
+
         PROP_CONTROL(AnalogGain, tr("Analog gain"))
         PROP_CONTROL(DigitalGain, tr("Digital gain"))
 
@@ -335,6 +364,9 @@ public:
         if (level == 0) level = 80;
         edAutoExp->setValue(level);
 
+        fpsLock = getCamProp(IdsHardConfigPanel::FPS_LOCK).toDouble();
+        showFpsLock();
+
         bulkSetProps = false;
     }
 
@@ -365,7 +397,14 @@ public:
         autoExp->targetLevel = level / 100.0;
         autoExp->subStepMax = qMax(1, getCamProp(IdsHardConfigPanel::AUTOEXP_FRAMES_AVG).toInt());
         autoExp->getLevel = [this]{ watingBrightness = true; requestBrightness(this); };
-        autoExp->showExpFps = [this](double exp, double fps){ edExp->setValue(exp); edFps->setValue(fps); };
+        autoExp->showExpFps = [this](double exp, double fps){
+            props["Exp"] = exp;
+            props["Fps"] = fps;
+            edExp->setValue(exp);
+            edFps->setValue(fps);
+            if (fpsLock > 0)
+                showFpsLock();
+        };
         autoExp->finished = [this]{ stopAutoExp(); };
 
         for (auto group : groups)
@@ -712,7 +751,7 @@ public:
             for (auto a : actions) a->setData(i);
             b->addActions(actions);
         }
-        auto b = new QPushButton(tr("Add new preset..."));
+        auto b = new QPushButton(tr(" Add new preset..."));
         b->setIcon(QIcon(":/toolbar/plus"));
         connect(b, &QPushButton::clicked, this, &IdsHardConfigPanelImpl::saveNewPreset);
         groupPresets->layout()->addWidget(b);
@@ -856,6 +895,25 @@ public:
         }
     };
 
+    void showFpsLock()
+    {
+        bool locked = fpsLock > 0;
+        bool lockOk = (int)qRound(fpsLock * 100) == (int)qRound(props["Fps"] * 100);
+        butFpsLock->setChecked(locked);
+        butFpsLock->setText(locked ? tr(" Target: %1 FPS").arg(fpsLock) : tr(" Lock frame rate"));
+        butFpsLock->setIcon(QIcon(!locked ? ":/toolbar/lock_on" : (lockOk ? ":/toolbar/ok" : ":/toolbar/exclame")));
+        if (locked && !lockOk)
+            butFpsLock->setToolTip(tr("Target value is out of available range"));
+        else butFpsLock->setToolTip({});
+    }
+
+    void toggleFpsLock(bool checked)
+    {
+        fpsLock = checked ? props["Fps"] : 0;
+        setCamProp(IdsHardConfigPanel::FPS_LOCK, fpsLock);
+        showFpsLock();
+    }
+
     peak_camera_handle hCam;
     QList<QGroupBox*> groups;
     CamPropEdit *edAutoExp;
@@ -873,6 +931,8 @@ public:
     bool bulkSetProps = false;
     bool roundFps = true;
     bool roundExp = true;
+    double fpsLock = 0;
+    QPushButton *butFpsLock;
     std::function<void(QObject*)> requestBrightness;
     std::function<QVariant(IdsHardConfigPanel::CamProp)> getCamProp;
     std::function<void(IdsHardConfigPanel::CamProp, QVariant)> setCamProp;

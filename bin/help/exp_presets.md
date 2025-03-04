@@ -2,7 +2,7 @@
 
 It's possible to save a set of exposure settings for a given camera as a preset. Presets are listed as buttons at the top of the control panel. Autoexposure level is saved into a preset too, even though it's not a camera setting and doesn't affect the exposure directly.
 
-![Screenshot](./img/cam_control.png)
+![Exposure presets](./img/cam_control_exp_presets.png)
 
 Click a button to apply the preset. If currently selected settings, even being changed manually, match a preset, the button is highlighted to show that the preset is active. There are some issues with how IDS cameras apply settings; see [Camera control tweaks](./app_settings_opts.md#tweaks) for details.
 

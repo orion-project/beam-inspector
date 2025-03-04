@@ -24,9 +24,13 @@ See details about properties in the official documentation:
 
 ### Exposure presets
 
+![Exposure presets](./img/cam_control_exp_presets.png)
+
 It's possible to save a set of exposure settings for a given camera as a [preset](./exp_presets.md). Presets are listed as buttons at the top of the control panel and can be managed via the context menu.
 
 ### Autoexposure
+
+![Autoexposure](./img/cam_control_autoexp.png)
 
 Not every camera model supports the auto exposure feature. So the application implements a simple software algorithm for finding an exposure value giving desired beam spot [brightness](./brightness.md).
 
@@ -37,6 +41,16 @@ In practice, the calculated brightness slightly differs from frame to frame. Her
 ![Brightness](./img/brightness_1.png)
 
 To deal with the issue, the algorithm takes several frames for each exposure value and averages brightness over them. The number of frames for averaging can be set in the [Camera settings](./cam_settings_opts.md#autoexposure) dialog.
+
+### Frame rate locking
+
+![FPS lock](./img/cam_control_fps_lock.png)
+
+When changing the exposure either manually or during autoexposure, the frame rate can change as well and can go to very small values, when the exposure gets too long. Then, when the exposure is changed back to short values, the frame rate remains low, and it's required to change it back to high values manually, which is inconvenient.
+
+The “Lock frame rate” button allows remembering the current frame rate and using it as some target value. When the exposure changes, the application always tries to set this target frame rate for the camera. This way, the frame rate is always kept at the desired value when it's allowed by the camera hardware. If it's not, the warning icon is displayed on the button.
+
+![FPS lock warning](./img/cam_control_fps_lock_warn.png)
 
 ## See also
 
