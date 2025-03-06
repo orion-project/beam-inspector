@@ -1152,3 +1152,11 @@ void PlotWindow::loadCrosshairsMore(QJsonObject &root)
         cam->idsConfig()->loadExpPresets(root);
 #endif
 }
+
+void PlotWindow::settingsChanged()
+{
+#ifdef WITH_IDS
+    if (auto cam = dynamic_cast<IdsCamera*>(_camera.get()); cam)
+        cam->requestExpWarning();
+#endif
+}

@@ -338,7 +338,7 @@ double cgn_calc_brightness_u8(const uint8_t *buf, int w, int h) {
 
 double cgn_calc_brightness_u16(const uint16_t *buf, int w, int h, int bpp) {
     _cgn_calc_brightness
-    return b_img / ((1 << bpp) - 1);
+    return b_img / (double)((1 << bpp) - 1);
 }
 
 double cgn_calc_brightness(const CgnBeamCalc *c) {
@@ -380,7 +380,7 @@ double cgn_calc_brightness_1_u8(const uint8_t *buf, int w, int h) {
 
 double cgn_calc_brightness_1_u16(const uint16_t *buf, int w, int h, int bpp) {
     _cgn_calc_brightness_1
-    return b_img / ((1 << bpp) - 1);
+    return b_img / (double)((1 << bpp) - 1);
 }
 
 double cgn_calc_brightness_1(const CgnBeamCalc *c) {
@@ -410,7 +410,7 @@ double cgn_calc_brightness_2_u8(const uint8_t *buf, int w, int h, int xc, int yc
 
 double cgn_calc_brightness_2_u16(const uint16_t *buf, int w, int h, int xc, int yc, int bpp) {
     _cgn_calc_brightness_2
-    return b_img / ((1 << bpp) - 1);
+    return b_img / (double)((1 << bpp) - 1);
 }
 
 double cgn_calc_brightness_2(const CgnBeamCalc *c, int xc, int yc) {
@@ -509,6 +509,36 @@ void cgn_ext_copy_to_f64(const CgnBeamCalc *c, CgnBeamBkgnd *b, double *dst, int
             *max_z = top_z;
             cgn_copy_to_f64(c, dst, full_z ? NULL : max_z);
         }
+    }
+}
+
+#define _cgn_calc_overexposure                   \
+    int cnt = 0;                                 \
+    for (int i = 0; i < h; i += 2)               \
+        for (int j = 0; j < w; j += 2) {         \
+            if (buf[i*w + j] >= top)             \
+                cnt++;                           \
+        }                                        \
+    double p = (double)cnt * 4.0 / (double)(w*h);
+
+double cgn_calc_overexposure_u8(const uint8_t *buf, int w, int h, double th) {
+    uint8_t top = 255.0 * th;
+    _cgn_calc_overexposure
+    return p;
+}
+
+double cgn_calc_overexposure_u16(const uint16_t *buf, int w, int h, int bpp, double th) {
+    uint16_t top = (double)((1 << bpp) - 1) * th;
+    _cgn_calc_overexposure
+    return p;
+}
+
+double cgn_calc_overexposure(const CgnBeamCalc *c, double th)
+{
+    if (c->bpp > 8) {
+        return cgn_calc_overexposure_u16((const uint16_t*)(c->buf), c->w, c->h, c->bpp, th);
+    } else {
+        return cgn_calc_overexposure_u8((const uint8_t*)(c->buf), c->w, c->h, th);
     }
 }
 

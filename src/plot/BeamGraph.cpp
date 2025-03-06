@@ -147,6 +147,35 @@ void BeamInfoText::draw(QCPPainter *painter)
 }
 
 //------------------------------------------------------------------------------
+//                             OverexposureWarning
+//------------------------------------------------------------------------------
+
+OverexposureWarning::OverexposureWarning(QCustomPlot *parentPlot) : QCPAbstractItem(parentPlot)
+{
+    opts.setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+
+    font = parentPlot->font();
+    font.setPixelSize(24);
+    font.setLetterSpacing(QFont::AbsoluteSpacing, 2);
+
+    brush = QBrush(Qt::red);
+    pen = QPen(Qt::white, 2);
+}
+
+void OverexposureWarning::draw(QCPPainter *painter)
+{
+    auto r = parentPlot()->axisRect()->rect();
+    const int boxW = 250;
+    const int boxH = 48;
+    auto box = QRect(r.right()-boxW-15, r.bottom()-boxH-15, boxW, boxH);
+    painter->setPen(pen);
+    painter->setBrush(brush);
+    painter->setFont(font);
+    painter->drawRoundedRect(box, boxH/4, boxH/4);
+    painter->drawText(box.adjusted(2, -2, 2, -2), QStringLiteral("OVEREXPOSED"), opts);
+}
+
+//------------------------------------------------------------------------------
 //                             PredefinedGradient
 //------------------------------------------------------------------------------
 

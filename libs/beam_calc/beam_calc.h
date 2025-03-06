@@ -123,6 +123,7 @@ double cgn_calc_brightness_2(const CgnBeamCalc *c, int xc, int yc);
 void cgn_convert_10g40_to_u16(uint8_t *dst, uint8_t *src, int sz);
 void cgn_convert_12g24_to_u16(uint8_t *dst, uint8_t *src, int sz);
 void cgn_ext_copy_to_f64(const CgnBeamCalc *c, CgnBeamBkgnd *b, double *dst, int normalize, int full_z, double *min_z, double *max_z);
+double cgn_calc_overexposure(const CgnBeamCalc *c, double th);
 
 #ifdef __cplusplus
 }

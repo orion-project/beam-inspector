@@ -151,7 +151,7 @@ bool theSame(const AnyRecord &p1, const AnyRecord &p2)
             return; \
         set##Prop##Raw(newValue, true); \
         if (ed##Prop != edFps) \
-            raisePowerWarning(); \
+            exposureChanged(); \
     } \
     bool set##Prop##Raw(double v, bool showErr) { \
         auto res = setProp(hCam, v); \
@@ -218,6 +218,8 @@ bool theSame(const AnyRecord &p1, const AnyRecord &p2)
                 setFpsRaw(fpsLock, false); \
             } \
         } else show##Prop(); \
+        if (ed##Prop != edFps) \
+            exposureChanged(); \
     }
 
 namespace {
@@ -411,7 +413,6 @@ public:
             group->setDisabled(true);
         if (!autoExp->start())
             stopAutoExp();
-        raisePowerWarning();
     }
 
     void stopAutoExp()
@@ -425,6 +426,7 @@ public:
         }
         showExp();
         showFps();
+        exposureChanged();
     }
 
     void copyAutoExpLog()
@@ -847,6 +849,7 @@ public:
             }
             parent->bulkSetProps = false;
             parent->highightPreset();
+            parent->exposureChanged();
             if (!failed.empty())
                 Ori::Dlg::warning(tr("Preset are not fully applied. Failed to set some properties: %1").arg(failed.join(", ")));
         }
@@ -936,7 +939,7 @@ public:
     std::function<void(QObject*)> requestBrightness;
     std::function<QVariant(IdsHardConfigPanel::CamProp)> getCamProp;
     std::function<void(IdsHardConfigPanel::CamProp, QVariant)> setCamProp;
-    std::function<void()> raisePowerWarning;
+    std::function<void()> exposureChanged;
     std::optional<AutoExp> autoExp;
 
 protected:
@@ -974,17 +977,17 @@ protected:
 //-----------------------------------------------------------------------------
 
 IdsHardConfigPanel::IdsHardConfigPanel(peak_camera_handle hCam,
-    std::function<void(QObject*)> requestBrightness,
     std::function<QVariant(CamProp)> getCamProp,
     std::function<void(CamProp, QVariant)> setCamProp,
-    std::function<void()> raisePowerWarning,
+    std::function<void(QObject*)> requestBrightness,
+    std::function<void()> exposureChanged,
     QWidget *parent) : HardConfigPanel(parent)
 {
     _impl = new IdsHardConfigPanelImpl(hCam);
-    _impl->requestBrightness = requestBrightness;
     _impl->getCamProp = getCamProp;
     _impl->setCamProp = setCamProp;
-    _impl->raisePowerWarning = raisePowerWarning;
+    _impl->exposureChanged = exposureChanged;
+    _impl->requestBrightness = requestBrightness;
     _impl->applySettings(false);
     _impl->makePresetButtons();
     _impl->showInitialValues();

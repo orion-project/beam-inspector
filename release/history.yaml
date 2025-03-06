@@ -1,9 +1,10 @@
 history:
 - version: 0.0.18
-  date: ?
+  date: 2024-03-06
   chahges:
   - text: Exposure presets
-  - test: Frame rate locking
+  - text: Frame rate locking
+  - text: Overexposure warning
 
 - version: 0.0.17
   date: 2024-12-23

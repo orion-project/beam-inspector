@@ -532,6 +532,8 @@ IdsCamera::IdsCamera(QVariant id, PlotIntf *plot, TableIntf *table, QObject *par
     }
     _peak.reset(peak);
 
+    requestExpWarning();
+
     connect(parent, SIGNAL(camConfigChanged()), this, SLOT(camConfigChanged()));
 }
 
@@ -665,7 +667,6 @@ HardConfigPanel* IdsCamera::hardConfgPanel(QWidget *parent)
     if (!_peak)
         return nullptr;
     if (!_configPanel) {
-        auto requestBrightness = [this](QObject *s){ _peak->requestBrightness(s); };
         auto getCamProp = [this](IdsHardConfigPanel::CamProp prop) -> QVariant {
             switch (prop) {
             case IdsHardConfigPanel::AUTOEXP_LEVEL:
@@ -698,8 +699,13 @@ HardConfigPanel* IdsCamera::hardConfgPanel(QWidget *parent)
                 break;
             }
         };
-        auto raisePowerWarning = [this]{ this->raisePowerWarning(); };
-        _configPanel = new IdsHardConfigPanel(_peak->hCam, requestBrightness, getCamProp, setCamProp, raisePowerWarning, parent);
+        auto requestBrightness = [this](QObject *s){ _peak->requestBrightness(s); };
+        auto exposureChanged = [this]{
+            raisePowerWarning();
+            requestExpWarning();
+        };
+        _configPanel = new IdsHardConfigPanel(_peak->hCam,
+            getCamProp, setCamProp, requestBrightness, exposureChanged, parent);
     }
     return _configPanel;
 }
@@ -714,6 +720,12 @@ void IdsCamera::raisePowerWarning()
 {
     if (_peak)
         _peak->hasPowerWarning = true;
+}
+
+void IdsCamera::requestExpWarning()
+{
+    if (_peak)
+        _peak->requestExpWarning(_plot->eventsTarget());
 }
 
 #endif // WITH_IDS

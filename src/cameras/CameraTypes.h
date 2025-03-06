@@ -135,6 +135,14 @@ public:
     double level;
 };
 
+class ExpWarningEvent : public QEvent
+{
+public:
+    ExpWarningEvent() : QEvent(QEvent::Type(QEvent::registerEventType())) {}
+
+    double overexposed;
+};
+
 class UpdateSettingsEvent : public QEvent
 {
 public:

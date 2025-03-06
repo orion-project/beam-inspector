@@ -90,6 +90,25 @@ protected:
 
 //------------------------------------------------------------------------------
 
+class OverexposureWarning : public QCPAbstractItem
+{
+public:
+    explicit OverexposureWarning(QCustomPlot *parentPlot);
+
+    double selectTest(const QPointF&, bool, QVariant*) const override { return 0; }
+
+protected:
+    void draw(QCPPainter *painter) override;
+
+private:
+    QTextOption opts;
+    QFont font;
+    QBrush brush;
+    QPen pen;
+};
+
+//------------------------------------------------------------------------------
+
 class PrecalculatedGradient : public QCPColorGradient
 {
 public:
