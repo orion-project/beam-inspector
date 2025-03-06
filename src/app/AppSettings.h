@@ -45,6 +45,7 @@ public:
     UpdateCheckInterval updateCheckInterval = UpdateCheckInterval::Weekly;
     bool roundHardConfigFps = true;
     bool roundHardConfigExp = true;
+    double overexposedPixelsPercent = 0.1;
 
     enum ConfigPages {
         cfgDev,

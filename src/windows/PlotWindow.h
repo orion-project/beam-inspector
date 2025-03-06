@@ -1,6 +1,8 @@
 #ifndef PLOT_WINDOW_H
 #define PLOT_WINDOW_H
 
+#include "app/AppSettings.h"
+
 #include <QMainWindow>
 #include <QPointer>
 
@@ -24,13 +26,16 @@ namespace Widgets {
 class StatusBar;
 }}
 
-class PlotWindow : public QMainWindow
+class PlotWindow : public QMainWindow, public IAppSettingsListener
 {
     Q_OBJECT
 
 public:
     PlotWindow(QWidget *parent = nullptr);
     ~PlotWindow();
+
+    // IAppSettingsListener
+    void settingsChanged() override;
 
 signals:
     void camConfigChanged();

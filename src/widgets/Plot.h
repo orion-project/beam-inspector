@@ -12,6 +12,7 @@ class BeamColorMap;
 class BeamColorScale;
 class BeamInfoText;
 class BeamPlotItem;
+class OverexposureWarning;
 class PlotIntf;
 class RoiRectGraph;
 class RoiRectsGraph;
@@ -80,6 +81,7 @@ signals:
 protected:
     void resizeEvent(QResizeEvent*) override;
     void keyPressEvent(QKeyEvent*) override;
+    bool event(QEvent *event) override;
 
 private:
     QCustomPlot *_plot;
@@ -87,6 +89,7 @@ private:
     BeamColorMap *_colorMap;
     BeamColorScale *_colorScale;
     BeamInfoText *_beamInfo;
+    OverexposureWarning *_overexpWarn;
     RoiRectGraph *_roi;
     RoiRectsGraph *_rois;
     RoiMode _roiMode = ROI_NONE;

@@ -1,5 +1,6 @@
 #include "Plot.h"
 
+#include "app/AppSettings.h"
 #include "plot/BeamGraph.h"
 #include "plot/CrosshairOverlay.h"
 #include "plot/PlotExport.h"
@@ -72,6 +73,9 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
 
     _beamInfo = new BeamInfoText(_plot);
 
+    _overexpWarn = new OverexposureWarning(_plot);
+    _overexpWarn->setVisible(false);
+
     _roi = new RoiRectGraph(_plot);
     _roi->onEdited = [this]{ emit roiEdited(); };
     _relativeItems << _roi;
@@ -91,7 +95,7 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _crosshairs->onEdited = [this]{ emit crosshairsEdited(); };
     _relativeItems << _crosshairs;
 
-    _plotIntf = new PlotIntf(_plot, _colorMap, _colorScale, _beamInfo, _rois);
+    _plotIntf = new PlotIntf(this, _plot, _colorMap, _colorScale, _beamInfo, _rois);
 
     _mruCrosshairs = new Ori::MruFileList(this);
     _mruCrosshairs->load("mruCrosshairs");
@@ -143,6 +147,19 @@ void Plot::keyPressEvent(QKeyEvent *e)
         _roi->stopEdit(true);
         break;
     }
+}
+
+bool Plot::event(QEvent *event)
+{
+    if (auto e = dynamic_cast<ExpWarningEvent*>(event); e) {
+        bool warn = e->overexposed > AppSettings::instance().overexposedPixelsPercent / 100.0;
+        if (_overexpWarn->visible() != warn) {
+            _overexpWarn->setVisible(warn);
+        }
+        //qDebug() << "Overexposed" << e->overexposed << warn;
+        return true;
+    }
+    return QWidget::event(event);
 }
 
 void Plot::zoomToBounds(double x1, double y1, double x2, double y2, bool replot)

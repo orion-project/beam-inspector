@@ -22,19 +22,21 @@ class QCPColorScale;
 class PlotIntf
 {
 public:
-    PlotIntf(QCustomPlot *plot, QCPColorMap *colorMap, QCPColorScale *colorScale, BeamInfoText *beamInfo, RoiRectsGraph *rois);
+    PlotIntf(QObject *eventsTarget, QCustomPlot *plot, QCPColorMap *colorMap, QCPColorScale *colorScale, BeamInfoText *beamInfo, RoiRectsGraph *rois);
 
     void setScale(const PixelScale& scale) { _scale = scale; }
     void setResult(const QList<CgnBeamResult>& r, double min, double max);
     void showResult();
     void cleanResult();
     void setRawView(bool on);
+    QObject* eventsTarget() { return _eventsTarget; }
 
     void initGraph(int w, int h);
     double* rawGraph() const;
     void invalidateGraph() const;
 
 private:
+    QObject *_eventsTarget;
     QCustomPlot *_plot;
     int _w = 0, _h = 0;
     double _min, _max;

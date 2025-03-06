@@ -47,6 +47,8 @@ public:
     void togglePowerMeter() override;
     void raisePowerWarning() override;
 
+    void requestExpWarning();
+
     bool canMavg() const override { return true; }
 
     QString customId() const override { return _customId; }

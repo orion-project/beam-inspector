@@ -73,7 +73,7 @@ void AppSettings::load()
     LOAD(propChangeArrowSm, Int, 20);
     LOAD(propChangeArrowBig, Int, 100);
 
-    s.beginGroup("Plot");
+    s.beginGroup(GROUP_PLOT);
     LOAD(colorMap, String, "CET-L08");
 
     s.beginGroup("Update");
@@ -82,6 +82,7 @@ void AppSettings::load()
     s.beginGroup("Tweaks");
     LOAD(roundHardConfigFps, Bool, true);
     LOAD(roundHardConfigExp, Bool, true);
+    LOAD(overexposedPixelsPercent, Double, 0.1);
 }
 
 void AppSettings::save()
@@ -114,6 +115,7 @@ void AppSettings::save()
     s.beginGroup("Tweaks");
     SAVE(roundHardConfigFps);
     SAVE(roundHardConfigExp);
+    SAVE(overexposedPixelsPercent);
 }
 
 bool AppSettings::edit()
@@ -163,6 +165,10 @@ bool AppSettings::edit()
             ->withOption(int(UpdateCheckInterval::Daily), tr("Daily"))
             ->withOption(int(UpdateCheckInterval::Weekly), tr("Weekly"))
             ->withOption(int(UpdateCheckInterval::Monthly), tr("Monthly")),
+
+        new ConfigItemSpace(cfgOpts, 12),
+        new ConfigItemSection(cfgOpts, tr("Overexposure")),
+        new ConfigItemReal(cfgOpts, tr("Show warning when number\nof hot pixels is more than (%)"), &overexposedPixelsPercent),
 
         new ConfigItemSpace(cfgOpts, 12),
         new ConfigItemSection(cfgOpts, tr("Tweaks")),
