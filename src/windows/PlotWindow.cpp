@@ -14,6 +14,7 @@
 #include "cameras/WelcomeCamera.h"
 #include "helpers/OriDialogs.h"
 #include "plot/PlotExport.h"
+#include "widgets/DataTable.h"
 #include "widgets/Plot.h"
 #include "widgets/PlotIntf.h"
 #include "widgets/TableIntf.h"
@@ -437,13 +438,9 @@ void PlotWindow::createStatusBar()
     setStatusBar(_statusBar);
 }
 
-class DataTableWidget : public QTableWidget {
-    QSize sizeHint() const override { return {200, 100}; }
-};
-
 void PlotWindow::createDockPanel()
 {
-    _table = new DataTableWidget;
+    _table = new DataTable;
     _tableIntf = new TableIntf(_table);
     connect(_table, &QTableWidget::itemDoubleClicked, this, &PlotWindow::resultsTableDoubleClicked);
 

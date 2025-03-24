@@ -1,4 +1,9 @@
 history:
+- version: 0.0.19
+  date: ?
+  chahges:
+  - text: Context menu for results table
+
 - version: 0.0.18
   date: 2024-03-06
   chahges:

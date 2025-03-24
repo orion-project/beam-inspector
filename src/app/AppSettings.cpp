@@ -83,6 +83,10 @@ void AppSettings::load()
     LOAD(roundHardConfigFps, Bool, true);
     LOAD(roundHardConfigExp, Bool, true);
     LOAD(overexposedPixelsPercent, Double, 0.1);
+
+    s.beginGroup("Table");
+    LOAD(copyResultsSeparator, Char, ',');
+    LOAD(copyResultsJustified, Bool, true);
 }
 
 void AppSettings::save()
@@ -116,6 +120,20 @@ void AppSettings::save()
     SAVE(roundHardConfigFps);
     SAVE(roundHardConfigExp);
     SAVE(overexposedPixelsPercent);
+
+    s.beginGroup("Table");
+    SAVE(copyResultsSeparator);
+    SAVE(copyResultsJustified);
+}
+
+QMap<QChar, QString> AppSettings::resultsSeparators() const
+{
+    return {
+        { ' ', tr("Space") },
+        { '\t', tr("Tab") },
+        { ',', tr(",") },
+        { ';', tr(";") }
+    };
 }
 
 bool AppSettings::edit()
@@ -124,6 +142,8 @@ bool AppSettings::edit()
     opts.objectName = "AppSettingsDlg";
     opts.pageIconSize = 32;
     opts.pages = {
+        ConfigPage(cfgTable, tr("Table"), ":/toolbar/table")
+            .withHelpTopic("app_settings_table"),
         ConfigPage(cfgDev, tr("Device Control"), ":/toolbar/hardware")
             .withHelpTopic("app_settings_hard"),
     #ifdef WITH_IDS
@@ -135,7 +155,13 @@ bool AppSettings::edit()
             .withHelpTopic("app_settings_opts"),
     };
     opts.onHelpRequested = [](const QString &topic){ HelpSystem::topic(topic); };
+    auto seps = resultsSeparators();
+    int sepIdx = seps.keys().indexOf(copyResultsSeparator);
     opts.items = {
+        new ConfigItemSection(cfgTable, tr("Copy results")),
+        new ConfigItemRadio(cfgTable, tr("Value separator"), seps.values(), &sepIdx),
+        new ConfigItemBool(cfgTable, tr("Justify values in columns"), &copyResultsJustified),
+
         new ConfigItemSection(cfgDev, tr("Input Fields")),
         (new ConfigItemInt(cfgDev, tr("Small change by mouse wheel, %"), &propChangeWheelSm))
             ->withMinMax(1, 1000),
@@ -177,6 +203,7 @@ bool AppSettings::edit()
     };
     if (ConfigDlg::edit(opts))
     {
+        copyResultsSeparator = seps.keys().at(sepIdx);
         save();
         notify(&IAppSettingsListener::settingsChanged);
         return true;

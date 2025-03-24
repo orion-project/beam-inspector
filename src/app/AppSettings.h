@@ -46,6 +46,9 @@ public:
     bool roundHardConfigFps = true;
     bool roundHardConfigExp = true;
     double overexposedPixelsPercent = 0.1;
+    QChar copyResultsSeparator = ',';
+    bool copyResultsJustified = true;
+    QMap<QChar, QString> resultsSeparators() const;
 
     enum ConfigPages {
         cfgDev,
@@ -54,6 +57,7 @@ public:
         cfgIds,
     #endif
         cfgOpts,
+        cfgTable,
     };
 
     void load();

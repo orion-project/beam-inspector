@@ -74,6 +74,7 @@ set(PROJECT_SOURCES
     src/plot/CrosshairOverlay.h src/plot/CrosshairOverlay.cpp
     src/plot/PlotExport.h src/plot/PlotExport.cpp
     src/plot/RoiRectGraph.h src/plot/RoiRectGraph.cpp
+    src/widgets/DataTable.h src/widgets/DataTable.cpp
     src/widgets/FileSelector.h src/widgets/FileSelector.cpp
     src/widgets/Plot.h src/widgets/Plot.cpp
     src/widgets/PlotIntf.h src/widgets/PlotIntf.cpp

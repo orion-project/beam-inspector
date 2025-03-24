@@ -21,5 +21,6 @@ Number of frames over which the moving average is calculated.
 ## See also
 
 - [Results table](./results_table.md)
+- [App Preferences: Table](./app_settings_table.md)
 
 &nbsp;
