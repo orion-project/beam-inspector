@@ -165,6 +165,7 @@ struct RandomOffset
 struct CameraCommons
 {
     static QString supportedImageFilters();
+    static const QStringList& supportedImageExts();
 };
 
 struct TableRowsSpec

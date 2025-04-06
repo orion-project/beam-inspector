@@ -228,7 +228,16 @@ double RandomOffset::next()
 //                               CameraCommons
 //------------------------------------------------------------------------------
 
+const QStringList& CameraCommons::supportedImageExts()
+{
+    static QStringList exts { "png", "pgm", "jpg" };
+    return exts;
+}
+
 QString CameraCommons::supportedImageFilters()
 {
-    return qApp->tr("Images (*.png *.pgm *.jpg);;All Files (*.*)");
+    QStringList filters;
+    for (const QString& ext : supportedImageExts())
+        filters << QStringLiteral("*.") + ext;
+    return qApp->tr("Images (%1);;All Files (*.*)").arg(filters.join(' '));
 }

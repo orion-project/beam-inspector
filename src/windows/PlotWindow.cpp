@@ -145,6 +145,7 @@ private:
 PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
 {
     setObjectName("PlotWindow");
+    setAcceptDrops(true);
 
     Ori::Gui::PopupMessage::setTarget(this);
 
@@ -502,6 +503,40 @@ void PlotWindow::changeEvent(QEvent* e)
         _plot->adjustWidgetSize();
 }
 
+#include <QMimeData>
+void PlotWindow::dragEnterEvent(QDragEnterEvent* e)
+{
+    for (const auto &url : e->mimeData()->urls()) {
+        if (url.scheme() == QStringLiteral("file")) {
+            QString ext = QFileInfo(url.path()).suffix().toLower();
+            if (ext == "json" || CameraCommons::supportedImageExts().contains(ext)) {
+                e->acceptProposedAction();
+                return;
+            }
+        }
+    }
+}
+
+void PlotWindow::dropEvent(QDropEvent* e)
+{
+    for (const auto &url : e->mimeData()->urls()) {
+        QString fileName = url.path();
+        if (fileName.startsWith('/'))
+            fileName = fileName.right(fileName.length()-1);
+        QString ext = QFileInfo(fileName).suffix().toLower();
+        if (ext == "json") {
+            _plot->loadCrosshairs(fileName);
+            e->acceptProposedAction();
+            return;
+        }
+        if (CameraCommons::supportedImageExts().contains(ext)) {
+            openImage(fileName);
+            e->acceptProposedAction();
+            return;
+        }
+    }
+}
+
 bool PlotWindow::event(QEvent *event)
 {
     if (auto e = dynamic_cast<ImageEvent*>(event); e) {
@@ -693,7 +728,7 @@ void PlotWindow::stopCapture()
     if (!_camera) return;
     auto thread = dynamic_cast<QThread*>(_camera.get());
     if (!thread) {
-        qWarning() << LOG_ID << "Current camera is not thread based, nothing to stop";
+        //qWarning() << LOG_ID << "Current camera is not thread based, nothing to stop";
         return;
     }
     Ori::Gui::PopupMessage::affirm(tr("Stopping..."), 0);

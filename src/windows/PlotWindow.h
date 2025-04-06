@@ -43,6 +43,8 @@ signals:
 protected:
     void closeEvent(class QCloseEvent*) override;
     void changeEvent(QEvent* e) override;
+    void dragEnterEvent(QDragEnterEvent* e) override;
+    void dropEvent(QDropEvent* e) override;
     bool event(QEvent *event) override;
 
 private:
