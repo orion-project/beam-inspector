@@ -2,9 +2,9 @@
 
 #include "app/AppSettings.h"
 
-#include "qcp/src/core.h"
-#include "qcp/src/painter.h"
-#include "qcp/src/layoutelements/layoutelement-axisrect.h"
+#include "qcustomplot/src/core.h"
+#include "qcustomplot/src/painter.h"
+#include "qcustomplot/src/layoutelements/layoutelement-axisrect.h"
 
 #include <QBoxLayout>
 #include <QFormLayout>

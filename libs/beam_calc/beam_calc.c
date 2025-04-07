@@ -491,7 +491,11 @@ void cgn_ext_copy_to_f64(const CgnBeamCalc *c, CgnBeamBkgnd *b, double *dst, int
         } else {
             *min_z = full_z ? 0 : b->min;
             *max_z = full_z ? top_z : b->max;
+        #ifdef _WIN32
             memcpy_s(dst, sizeof(double)*sz, b->subtracted, sizeof(double)*sz);
+        #else
+            memcpy(dst, b->subtracted, sizeof(double)*sz);
+        #endif
         }
     } else {
         if (normalize) {

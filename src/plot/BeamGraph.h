@@ -1,10 +1,10 @@
 #ifndef BEAM_GRAPH_H
 #define BEAM_GRAPH_H
 
-#include "qcp/src/colorgradient.h"
-#include "qcp/src/item.h"
-#include "qcp/src/items/item-straightline.h"
-#include "qcp/src/plottables/plottable-colormap.h"
+#include "qcustomplot/src/colorgradient.h"
+#include "qcustomplot/src/item.h"
+#include "qcustomplot/src/items/item-straightline.h"
+#include "qcustomplot/src/plottables/plottable-colormap.h"
 
 //------------------------------------------------------------------------------
 

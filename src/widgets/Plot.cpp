@@ -12,8 +12,8 @@
 #include "tools/OriMruList.h"
 #include "widgets/OriPopupMessage.h"
 
-#include "qcp/src/core.h"
-#include "qcp/src/layoutelements/layoutelement-axisrect.h"
+#include "qcustomplot/src/core.h"
+#include "qcustomplot/src/layoutelements/layoutelement-axisrect.h"
 
 #define APERTURE_ZOOM_MARGIN 0.01
 
