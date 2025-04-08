@@ -133,10 +133,10 @@ private:
     void showCamConfig(bool replot);
     void showSelectedCamera();
     void stopCapture();
+    void cleanResults();
     void updateControls();
     void updateColorMapMenu();
     void updateHardConfgPanel();
-    void updateProfilesPanel();
     void updateThemeColors();
 };
 

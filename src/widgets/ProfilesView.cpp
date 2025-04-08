@@ -1,32 +1,103 @@
 #include "ProfilesView.h"
 
+#include "widgets/PlotIntf.h"
+
+#include "beam_calc.h"
+
 #include "helpers/OriLayouts.h"
 
 #include "qcustomplot/src/core.h"
 #include "qcustomplot/src/layoutelements/layoutelement-axisrect.h"
 #include "qcustomplot/src/plottables/plottable-graph.h"
 
-ProfilesView::ProfilesView(QWidget *parent) : QWidget{parent}
+struct CalcProfilesArg
+{
+    int imgW;
+    int imgH;
+    double *imgData;
+    double profileWidth;
+    int pointCount;
+};
+
+template <typename T>
+void calcProfiles(const CalcProfilesArg &arg, const CgnBeamResult &res, QVector<T>& gx, QVector<T>& gy)
+{
+    const int w = arg.imgW;
+    const int h = arg.imgH;
+    const double *data = arg.imgData;
+    const int c = arg.pointCount - 1;
+    const double step_x = res.dx / 2.0 * arg.profileWidth / (double)(c);
+    const double step_y = res.dy / 2.0 * arg.profileWidth / (double)(c);
+    const double a = res.phi / 57.29577951308232;
+    const double sin_a = sin(a);
+    const double cos_a = cos(a);
+    const int x0 = round(res.xc);
+    const int y0 = round(res.yc);
+    int xi, yi, dx, dy;
+    double r, p;
+    for (int i = 0; i < arg.pointCount; i++) {
+        // along X-width
+        r = step_x * (double)i;
+        dx = round(r * cos_a);
+        dy = round(r * sin_a);
+
+        // positive half
+        xi = x0 + dx;
+        yi = y0 + dy;
+        p = (xi >= 0 && xi < w && yi >= 0 && yi < h) ? data[w * yi + xi] : 0;
+        gx[c + i].key = r;
+        gx[c + i].value = p;
+        //qDebug() << "+x" << i <<  xi << yi << r << p;
+
+        // negative half
+        xi = x0 - dx;
+        yi = y0 - dy;
+        p = (xi >= 0 && xi < w && yi >= 0 && yi < h) ? data[w * yi + xi] : 0;
+        gx[c - i].key = -r;
+        gx[c - i].value = p;
+        //qDebug() << "-x" << i << xi << yi << r << p;
+
+        // along Y-width
+        r = step_y * (double)i;
+        dx = round(r * sin_a);
+        dy = round(r * cos_a);
+
+        // positive half
+        xi = x0 + dx;
+        yi = y0 + dy;
+        p = (xi >= 0 && xi < w && yi >= 0 && yi < h) ? data[w * yi + xi] : 0;
+        gy[c + i].key = r;
+        gy[c + i].value = p;
+        //qDebug() << "+y" << i << xi << yi << r << p;
+
+        // negative half
+        r = step_y * (double)i;
+        xi = x0 - dx;
+        yi = y0 - dy;
+        p = (xi >= 0 && xi < w && yi >= 0 && yi < h) ? data[w * yi + xi] : 0;
+        gy[c - i].key = -r;
+        gy[c - i].value = p;
+        //qDebug() << "-y" << i << xi << yi << r << p;
+    }
+}
+
+ProfilesView::ProfilesView(PlotIntf *plotIntf) : QWidget(), _plotIntf(plotIntf)
 {
     _plot = new QCustomPlot;
 
-    _axisRectY = new QCPAxisRect(_plot);
-    _plot->plotLayout()->addElement(0, 1, _axisRectY);
+    _axisRectMinor = new QCPAxisRect(_plot);
+    _axisMinorX = _axisRectMinor->axis(QCPAxis::atBottom);
+    _axisMinorY = _axisRectMinor->axis(QCPAxis::atLeft);
+
+    _plot->plotLayout()->addElement(0, 1, _axisRectMinor);
     _plot->plotLayout()->setMargins(QMargins(12, 0, 12, 0));
 
     _graphX = _plot->addGraph();
-    _graphY = _plot->addGraph(_axisRectY->axis(QCPAxis::atBottom), _axisRectY->axis(QCPAxis::atLeft));
+    _graphY = _plot->addGraph(_axisMinorX, _axisMinorY);
 
-    QVector<QCPGraphData> dataGauss(50);
-    for (int i = 0; i < dataGauss.size(); ++i)
-    {
-        dataGauss[i].key = i/(double)dataGauss.size()*10-5.0;
-        dataGauss[i].value = qExp(-dataGauss[i].key*dataGauss[i].key*0.2)*1000;
-    }
-    _graphX->data()->set(dataGauss);
-    _graphY->data()->set(dataGauss);
-    _graphX->rescaleAxes();
-    _graphY->rescaleAxes();
+    QVector<QCPGraphData> data(2*_pointCount - 1);
+    _graphX->data()->set(data);
+    _graphY->data()->set(data);
 
     setThemeColors(PlotHelpers::SYSTEM, false);
 
@@ -36,6 +107,40 @@ ProfilesView::ProfilesView(QWidget *parent) : QWidget{parent}
 void ProfilesView::setThemeColors(PlotHelpers::Theme theme, bool replot)
 {
     PlotHelpers::setThemeColors(_plot, theme);
-    PlotHelpers::setDefaultAxesFormat(_axisRectY, theme);
+    PlotHelpers::setDefaultAxesFormat(_axisRectMinor, theme);
     if (replot) _plot->replot();
+}
+
+void ProfilesView::showResult()
+{
+    CalcProfilesArg arg {
+        .imgW = _plotIntf->graphW(),
+        .imgH = _plotIntf->graphH(),
+        .imgData = _plotIntf->rawGraph(),
+        .profileWidth = _profileWidth,
+        .pointCount = _pointCount,
+    };
+
+    auto results = _plotIntf->results();
+    if (results.empty()) return;
+    const auto& res = results.first();
+
+    calcProfiles(arg, res, _graphX->data()->rawData(), _graphY->data()->rawData());
+
+    double min = _plotIntf->rangeMin();
+    double max = _plotIntf->rangeMax();
+    _plot->yAxis->setRange(min, max);
+    _axisMinorY->setRange(min, max);
+    double newRangeX = res.dx /2.0 * _profileWidth;
+    if (newRangeX > rangeX) {
+        rangeX = newRangeX;
+        _plot->xAxis->setRange(-rangeX, rangeX);
+        _axisMinorX->setRange(-rangeX, rangeX);
+    }
+    _plot->replot();
+}
+
+void ProfilesView::cleanResult()
+{
+    rangeX = 0;
 }

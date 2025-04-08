@@ -470,7 +470,7 @@ void PlotWindow::createDockPanel()
     _hardConfigDock->setWidget(_stubConfigPanel);
     addDockWidget(Qt::RightDockWidgetArea, _hardConfigDock);
 
-    _profilesView = new ProfilesView;
+    _profilesView = new ProfilesView(_plot->plotIntf());
 
     _profilesDock = new QDockWidget(tr("Profiles"));
     _profilesDock->setObjectName("DockProfiles");
@@ -788,6 +788,8 @@ void PlotWindow::dataReady()
     _tableIntf->showResult();
     _plotIntf->showResult();
     _plot->replot();
+    if (_profilesDock->isVisible())
+        _profilesView->showResult();
 }
 
 void PlotWindow::openImageDlg()
@@ -817,9 +819,7 @@ void PlotWindow::processImage()
         qWarning() << LOG_ID << "Current camera is not StillImageCamera";
         return;
     }
-    _plot->stopEditRoi(false);
-    _plotIntf->cleanResult();
-    _tableIntf->cleanResult();
+    cleanResults();
     if (!cam->isDemoMode())
         _mru->append(cam->fileName());
     _camera->setRawView(_actionRawView->isChecked(), false);
@@ -831,6 +831,14 @@ void PlotWindow::processImage()
     _plot->zoomAuto(false);
     dataReady();
     showFps(0, 0);
+}
+
+void PlotWindow::cleanResults()
+{
+    _plot->stopEditRoi(false);
+    _plotIntf->cleanResult();
+    _tableIntf->cleanResult();
+    _profilesView->cleanResult();
 }
 
 void PlotWindow::editCamConfig(int pageId)
@@ -982,9 +990,7 @@ void PlotWindow::activateCamDemoRender()
 
     stopCapture();
 
-    _plot->stopEditRoi(false);
-    _plotIntf->cleanResult();
-    _tableIntf->cleanResult();
+    cleanResults();
     auto cam = new VirtualDemoCamera(_plotIntf, _tableIntf, this);
     connect(cam, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualDemoCamera::stats, this, &PlotWindow::statsReceived);
@@ -1005,9 +1011,7 @@ void PlotWindow::activateCamDemoImage()
 
     stopCapture();
 
-    _plot->stopEditRoi(false);
-    _plotIntf->cleanResult();
-    _tableIntf->cleanResult();
+    cleanResults();
     auto cam = new VirtualImageCamera(_plotIntf, _tableIntf, this);
     connect(cam, &VirtualImageCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualImageCamera::stats, this, &PlotWindow::statsReceived);
@@ -1036,9 +1040,7 @@ void PlotWindow::activateCamIds()
     stopCapture();
     _camera.reset(nullptr);
 
-    _plot->stopEditRoi(false);
-    _plotIntf->cleanResult();
-    _tableIntf->cleanResult();
+    cleanResults();
     auto cam = new IdsCamera(camId, _plotIntf, _tableIntf, this);
     connect(cam, &IdsCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &IdsCamera::stats, this, &PlotWindow::statsReceived);
@@ -1077,7 +1079,8 @@ void PlotWindow::toggleHardConfig()
 void PlotWindow::toggleProfilesView()
 {
     _profilesDock->setVisible(!_profilesDock->isVisible());
-    updateProfilesPanel();
+    if (_profilesDock->isVisible())
+        _profilesView->showResult();
 }
 
 void PlotWindow::updateHardConfgPanel()
@@ -1100,13 +1103,6 @@ void PlotWindow::updateHardConfgPanel()
         _camConfigPanel = panel;
         _hardConfigDock->setWidget(_camConfigPanel);
     }
-}
-
-void PlotWindow::updateProfilesPanel()
-{
-    if (!_profilesDock->isVisible())
-        return;
-    // TODO
 }
 
 void PlotWindow::updateColorMapMenu()
