@@ -77,6 +77,7 @@ signals:
     void roiEdited();
     void crosshairsEdited();
     void crosshairsLoaded();
+    void mousePositionChanged(double x, double y);
 
 protected:
     void resizeEvent(QResizeEvent*) override;

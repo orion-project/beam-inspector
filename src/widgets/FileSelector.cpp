@@ -92,11 +92,13 @@ bool FileSelector::selectFile()
 {
     QFileDialog dlg(qApp->activeModalWidget(), tr("Select Target File"), _selectedDir);
     dlg.setNameFilters(_filters);
+    if (_saveDlg)
+        dlg.setAcceptMode(QFileDialog::AcceptSave);
     QString selectedFile = fileName();
     if (!selectedFile.isEmpty()) {
         dlg.selectFile(selectedFile);
         QString ext = QFileInfo(selectedFile).suffix().toLower();
-        for (const auto& f : _filters) {
+        for (const auto& f : std::as_const(_filters)) {
             if (f.contains(ext)) {
                 dlg.selectNameFilter(f);
                 break;

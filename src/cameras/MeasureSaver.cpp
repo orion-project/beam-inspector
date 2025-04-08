@@ -274,7 +274,7 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
         << SEP << QString::number(phi, 'f', 1)          \
         << SEP << QString::number(eps, 'f', 3);         \
     if (!_auxCols.empty())                              \
-        for (const auto& id : _auxCols)                 \
+        for (const auto& id : std::as_const(_auxCols))  \
             out << SEP << aux.value(id);                \
     out << '\n';                                        \
 }
@@ -351,7 +351,7 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
                 _avg_cnt++;
             }
             if (!_auxCols.empty()) {
-                for (const auto &id : _auxCols)
+                for (const auto &id : std::as_const(_auxCols))
                     _auxAvgVals[id] += r.cols.value(id);
                 _auxAvgCnt++;
             }
@@ -363,7 +363,7 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
 
             if (i == e->count-1 || r.time - _intervalBeg >= _intervalLen) {
                 if (!_auxCols.empty())
-                    for (const auto &id : _auxCols)
+                    for (const auto &id : std::as_const(_auxCols))
                         _auxAvgVals[id] /= _auxAvgCnt;
 
                 OUT_ROW(_avg_cnt == 0,
@@ -464,6 +464,7 @@ public:
     MesureSaverDlg(const MeasureConfig &cfg) {
         fileSelector = new FileSelector;
         fileSelector->setFilters({{tr("CSV Files (*.csv)"), "csv"}});
+        fileSelector->setSaveDlg(true);
 
         rbFramesAll = new QRadioButton(tr("Every frame"));
         rbFramesSec = new QRadioButton(tr("Given interval"));

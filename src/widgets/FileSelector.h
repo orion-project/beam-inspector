@@ -20,6 +20,7 @@ public:
     void setFileName(const QString &fileName);
     void setSelectedDir(const QString &dir) { _selectedDir = dir; }
     void setFilters(const QList<QPair<QString, QString>> &filters);
+    void setSaveDlg(bool on) { _saveDlg = true; }
 
     bool selectFile();
 
@@ -33,6 +34,7 @@ private:
     QString _selectedDir;
     QStringList _filters;
     QStringList _exts;
+    bool _saveDlg = false;
 
     void updateStatus();
 };

@@ -47,7 +47,8 @@ StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table, const QStri
 
     if (_fileName.isEmpty() || !QFile::exists(_fileName)) {
         QString fallbackFile = qApp->applicationDirPath() + "/beam.png";
-        qWarning() << "File does not exists:" << _fileName << "| Opting to demo:" << fallbackFile;
+        if (!_fileName.isEmpty()) // File name is empty when the app starts normally
+            qWarning() << "File does not exists:" << _fileName << "| Opting to demo:" << fallbackFile;
         _fileName = fallbackFile;
         _demoMode = true;
     }
