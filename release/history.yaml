@@ -4,6 +4,7 @@ history:
   chahges:
   - text: Context menu for results table
   - text: Load images and crosshairs via drag and drop
+  - text: Show mouse coordinates in the status bar
 
 - version: 0.0.18
   date: 2024-03-06

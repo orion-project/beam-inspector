@@ -68,6 +68,8 @@ enum StatusPanels
     STATUS_SEPARATOR_3,
     STATUS_NO_DATA,
     STATUS_BGND,
+    STATUS_SEPARATOR_4,
+    STATUS_MOUSE_POS,
 
     STATUS_PANEL_COUNT,
 };
@@ -415,9 +417,13 @@ void PlotWindow::createStatusBar()
     _statusBar->setText(STATUS_SEPARATOR_1, "|");
     _statusBar->setText(STATUS_SEPARATOR_2, "|");
     _statusBar->setText(STATUS_SEPARATOR_3, "|");
+    _statusBar->setText(STATUS_SEPARATOR_4, "|");
     _statusBar->setMargin(STATUS_SEPARATOR_1, 0, 0);
     _statusBar->setMargin(STATUS_SEPARATOR_2, 0, 0);
     _statusBar->setMargin(STATUS_SEPARATOR_3, 0, 0);
+    _statusBar->setMargin(STATUS_SEPARATOR_4, 0, 0);
+    _statusBar->setText(STATUS_MOUSE_POS, "");
+    _statusBar->setHint(STATUS_MOUSE_POS, tr("Mouse coordinates"));
     _statusBar->setMargin(STATUS_ROI_ICON, 6, 0);
     _statusBar->setMargin(STATUS_ROI, 0, 6);
     _statusBar->setDblClick(STATUS_ROI, [this]{ editRoiCfg(); });
@@ -469,6 +475,12 @@ void PlotWindow::createPlot()
     connect(_plot, &Plot::roiEdited, this, &PlotWindow::roiEdited);
     connect(_plot, &Plot::crosshairsEdited, this, &PlotWindow::crosshairsEdited);
     connect(_plot, &Plot::crosshairsLoaded, this, &PlotWindow::crosshairsLoaded);
+    connect(_plot, &Plot::mousePositionChanged, this, [this](double x, double y) {
+        if (!_camera) return;
+        const PixelScale& scale = _camera->pixelScale();
+        QString coordText = QStringLiteral("X=%1; Y=%2").arg(scale.format(x), scale.format(y));
+        _statusBar->setText(STATUS_MOUSE_POS, coordText);
+    });
     _plot->augmentCrosshairLoadSave(
         [this](QJsonObject &root){ loadCrosshairsMore(root); },
         [this](QJsonObject &root){ saveCrosshairsMore(root); }

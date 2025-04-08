@@ -52,6 +52,11 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _plot->axisRect()->setBackground(QBrush(QIcon(":/misc/no_plot").pixmap(16)));
     _plot->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(_plot, &QWidget::customContextMenuRequested, this, &Plot::showContextMenu);
+    connect(_plot, &QCustomPlot::mouseMove, this, [this](QMouseEvent *event) {
+        double x = _plot->xAxis->pixelToCoord(event->pos().x());
+        double y = _plot->yAxis->pixelToCoord(event->pos().y());
+        emit mousePositionChanged(x, y);
+    });
 
     auto gridLayer = _plot->xAxis->grid()->layer();
     _plot->addLayer("beam", gridLayer, QCustomPlot::limBelow);
@@ -117,7 +122,7 @@ void Plot::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
 {
     _imageW = scale.pixelToUnit(sensorW);
     _imageH = scale.pixelToUnit(sensorH);
-    for (const auto &it : _relativeItems)
+    for (const auto &it : std::as_const(_relativeItems))
         it->setImageSize(sensorW, sensorH, scale);
 }
 
