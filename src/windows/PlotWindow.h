@@ -18,6 +18,7 @@ class MeasureProgressBar;
 class MeasureSaver;
 class Plot;
 class PlotIntf;
+class ProfilesView;
 class TableIntf;
 
 namespace Ori {
@@ -57,7 +58,7 @@ private:
         *_actionCamWelcome, *_actionCamImage, *_actionCamDemoRender, *_actionCamDemoImage, *_actionRefreshCams,
         *_actionResultsPanel, *_actionHardConfig, *_actionSaveRaw, *_actionRawView,
         *_actionCrosshairsShow, *_actionCrosshairsEdit, *_actionSetCamCustomName,
-        *_actionSetupPowerMeter, *_actionUseMultiRoi;
+        *_actionSetupPowerMeter, *_actionUseMultiRoi, *_actionProfilesView;
     QAction *_buttonMeasure, *_buttonOpenImg;
     QActionGroup *_colorMapActions;
     QTableWidget *_table;
@@ -69,10 +70,11 @@ private:
     QToolButton *_buttonSelectCam;
     QString _prevImage;
     MeasureProgressBar *_measureProgress;
-    QDockWidget *_resultsDock, *_hardConfigDock;
+    QDockWidget *_resultsDock, *_hardConfigDock, *_profilesDock;
     HardConfigPanel *_stubConfigPanel = nullptr;
     HardConfigPanel *_camConfigPanel = nullptr;
     QMap<QString, QString> _camCustomNames;
+    ProfilesView *_profilesView;
 
     void createDockPanel();
     void createMenuBar();
@@ -110,6 +112,7 @@ private:
     void toggleResultsPanel();
     void toggleRoi();
     void toggleMultiRoi();
+    void toggleProfilesView();
     void saveCrosshairsMore(QJsonObject&);
     void loadCrosshairsMore(QJsonObject&);
 
@@ -133,6 +136,7 @@ private:
     void updateControls();
     void updateColorMapMenu();
     void updateHardConfgPanel();
+    void updateProfilesPanel();
     void updateThemeColors();
 };
 

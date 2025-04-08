@@ -2,6 +2,7 @@
 #define PLOT_WIDGET_H
 
 #include "cameras/CameraTypes.h"
+#include "widgets/PlotHelpers.h"
 
 #include <QWidget>
 
@@ -33,8 +34,7 @@ public:
 
     void replot();
 
-    enum Theme { SYSTEM, LIGHT };
-    void setThemeColors(Theme theme, bool replot);
+    void setThemeColors(PlotHelpers::Theme theme, bool replot);
     void setColorMap(const QString& colorMap, bool replot);
     void setBeamInfoVisible(bool on, bool replot);
     void setImageSize(int sensorW, int sensorH, const PixelScale &scale);
