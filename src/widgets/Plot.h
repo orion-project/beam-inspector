@@ -35,7 +35,7 @@ public:
 
     enum Theme { SYSTEM, LIGHT };
     void setThemeColors(Theme theme, bool replot);
-    void setColorMap(const QString& fileName, bool replot);
+    void setColorMap(const QString& colorMap, bool replot);
     void setBeamInfoVisible(bool on, bool replot);
     void setImageSize(int sensorW, int sensorH, const PixelScale &scale);
     void setRoi(const RoiRect &a);

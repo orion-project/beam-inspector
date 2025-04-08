@@ -188,7 +188,7 @@ void Camera::setRois(const QList<RoiRect>& rois)
             }
     }
     _config.rois = rois;
-    for (auto roi : _config.rois) roi.fix();
+    for (auto roi : std::as_const(_config.rois)) roi.fix();
     saveConfig();
     if (powerWarning)
         raisePowerWarning();
@@ -213,7 +213,7 @@ void Camera::setRoisSize(const FrameSize& sz)
     _config.mroiSize = sz;
 
     QList<QPointF> points;
-    for (const auto &roi : _config.rois) {
+    for (const auto &roi : std::as_const(_config.rois)) {
         points << QPointF(
             (roi.left + roi.right) / 2.0,
             (roi.top + roi.bottom) / 2.0
@@ -228,6 +228,14 @@ void Camera::setRoiMode(RoiMode mode)
         _config.roiMode = mode;
         saveConfig();
         raisePowerWarning();
+    }
+}
+
+void Camera::setColorMap(const QString& colorMap)
+{
+    if (_config.plot.colorMap != colorMap) {
+        _config.plot.colorMap = colorMap;
+        saveConfig();
     }
 }
 

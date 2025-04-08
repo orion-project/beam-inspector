@@ -246,8 +246,9 @@ void Plot::setThemeColors(Theme theme, bool replot)
     if (replot) _plot->replot();
 }
 
-void Plot::setColorMap(const QString& fileName, bool replot)
+void Plot::setColorMap(const QString& colorMap, bool replot)
 {
+    QString fileName = AppSettings::colorMapPath(colorMap.isEmpty() ? AppSettings::defaultColorMap() : colorMap);
     PrecalculatedGradient gradient(fileName);
     _colorMap->setGradient(gradient);
     _colorScale->setGradient(gradient);

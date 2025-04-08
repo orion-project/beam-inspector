@@ -36,6 +36,7 @@ public:
 
 WelcomeCamera::WelcomeCamera(PlotIntf *plot, TableIntf *table) : Camera(plot, table, "WelcomeCamera")
 {
+    loadConfig();
 }
 
 void WelcomeCamera::startCapture()

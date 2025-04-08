@@ -71,6 +71,7 @@ struct PlotOptions
     bool rescale = false;
     bool fullRange = true;
     PixelScale customScale;
+    QString colorMap;
 };
 
 struct PowerMeter

@@ -73,9 +73,6 @@ void AppSettings::load()
     LOAD(propChangeArrowSm, Int, 20);
     LOAD(propChangeArrowBig, Int, 100);
 
-    s.beginGroup(GROUP_PLOT);
-    LOAD(colorMap, String, "CET-L08");
-
     s.beginGroup("Update");
     updateCheckInterval = UpdateCheckInterval(s.value("checkInterval", int(UpdateCheckInterval::Weekly)).toInt());
 
@@ -109,9 +106,6 @@ void AppSettings::save()
     SAVE(propChangeWheelBig);
     SAVE(propChangeArrowSm);
     SAVE(propChangeArrowBig);
-
-    s.beginGroup(GROUP_PLOT);
-    SAVE(colorMap);
 
     s.beginGroup("Update");
     s.setValue("checkInterval", int(updateCheckInterval));
@@ -222,13 +216,12 @@ QList<AppSettings::ColorMap> AppSettings::colorMaps()
     QDir dir(colorMapDir());
     dir.setSorting(QDir::Name);
     dir.setNameFilters({QStringLiteral("*.csv")});
-    auto currentMap = currentColorMap();
-    for (const auto& fi : dir.entryInfoList()) {
+    auto entries = dir.entryInfoList();
+    for (const auto& fi : std::as_const(entries)) {
         QString path = fi.absoluteFilePath();
         ColorMap map {
             .name = fi.baseName(),
-            .file = path,
-            .isCurrent = path == currentMap,
+            .file = fi.baseName(),
             .isExists = true,
         };
         QString descrFile = path.replace(QStringLiteral(".csv"), QStringLiteral(".ini"));
@@ -242,21 +235,21 @@ QList<AppSettings::ColorMap> AppSettings::colorMaps()
     result << ColorMap();
     Ori::Settings s;
     s.beginGroup(GROUP_PLOT);
-    for (const auto& file : s.value(KEY_COLOR_MAPS).toStringList()) {
+    auto keys = s.value(KEY_COLOR_MAPS).toStringList();
+    for (const auto& file : std::as_const(keys)) {
         QFileInfo fi(file);
         QString path = fi.absoluteFilePath();
         result << ColorMap {
             .name = fi.baseName(),
             .file = path,
             .descr = path,
-            .isCurrent = path == currentMap,
             .isExists = fi.exists(),
         };
     }
     return result;
 }
 
-QString AppSettings::currentColorMap()
+QString AppSettings::colorMapPath(const QString &colorMap)
 {
     QFileInfo fi(colorMap);
     if (!fi.isAbsolute())
@@ -266,10 +259,9 @@ QString AppSettings::currentColorMap()
     return fi.absoluteFilePath();
 }
 
-void AppSettings::setCurrentColorMap(const QString& fileName)
+QString AppSettings::defaultColorMap()
 {
-    colorMap = fileName;
-    save();
+    return QStringLiteral("CET-L08");
 }
 
 void AppSettings::deleteInvalidColorMaps()

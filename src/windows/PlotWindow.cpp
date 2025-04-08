@@ -213,7 +213,6 @@ void PlotWindow::restoreState()
     _actionBeamInfo->setChecked(showBeamInfo);
     _actionRawView->setChecked(rawView);
     _plot->setRawView(rawView, false);
-    _plot->setColorMap(AppSettings::instance().currentColorMap(), false);
     _plot->setBeamInfoVisible(showBeamInfo, false);
     _plot->restoreState(s.settings());
     _actionCrosshairsShow->setChecked(_plot->isCrosshairsVisible());
@@ -518,7 +517,8 @@ void PlotWindow::changeEvent(QEvent* e)
 #include <QMimeData>
 void PlotWindow::dragEnterEvent(QDragEnterEvent* e)
 {
-    for (const auto &url : e->mimeData()->urls()) {
+    auto urls = e->mimeData()->urls();
+    for (const auto &url : std::as_const(urls)) {
         if (url.scheme() == QStringLiteral("file")) {
             QString ext = QFileInfo(url.path()).suffix().toLower();
             if (ext == "json" || CameraCommons::supportedImageExts().contains(ext)) {
@@ -531,7 +531,8 @@ void PlotWindow::dragEnterEvent(QDragEnterEvent* e)
 
 void PlotWindow::dropEvent(QDropEvent* e)
 {
-    for (const auto &url : e->mimeData()->urls()) {
+    auto urls = e->mimeData()->urls();
+    for (const auto &url : std::as_const(urls)) {
         QString fileName = url.path();
         if (fileName.startsWith('/'))
             fileName = fileName.right(fileName.length()-1);
@@ -631,6 +632,7 @@ void PlotWindow::showCamConfig(bool replot)
     _statusBar->setVisible(STATUS_BGND, !c.bgnd.on);
 
     auto s = _camera->pixelScale();
+    _plot->setColorMap(c.plot.colorMap, false);
     _plot->setImageSize(_camera->width(), _camera->height(), s);
     _plot->setRoi(c.roi);
     _plot->setRois(c.rois);
@@ -638,6 +640,7 @@ void PlotWindow::showCamConfig(bool replot)
     _tableIntf->setRows(_camera->tableRows());
     _tableIntf->setScale(s);
     _plotIntf->setScale(s);
+
     if (replot) _plot->replot();
 }
 
@@ -1081,7 +1084,13 @@ void PlotWindow::updateHardConfgPanel()
 void PlotWindow::updateColorMapMenu()
 {
     _colorMapMenu->clear();
-    for (const auto& map : AppSettings::instance().colorMaps())
+
+    QString currentColorMap = _camera ? _camera->config().plot.colorMap : "";
+    if (currentColorMap.isEmpty())
+        currentColorMap = AppSettings::defaultColorMap();
+
+    auto colorMaps = AppSettings::instance().colorMaps();
+    for (const auto& map : std::as_const(colorMaps))
     {
         if (map.name.isEmpty()) {
             _colorMapMenu->addSeparator();
@@ -1092,11 +1101,15 @@ void PlotWindow::updateColorMapMenu()
             name = QStringLiteral("%1 - %2").arg(name, map.descr);
         auto action = _colorMapMenu->addAction(name);
         action->setCheckable(true);
-        action->setChecked(map.isCurrent);
+
+        action->setChecked(map.file == currentColorMap);
         action->setDisabled(!map.isExists);
+
         connect(action, &QAction::triggered, this, [this, map]{
-            AppSettings::instance().setCurrentColorMap(map.name);
-            _plot->setColorMap(map.file, true);
+            if (_camera) {
+                _camera->setColorMap(map.file);
+                _plot->setColorMap(map.file, true);
+            }
         });
         _colorMapActions->addAction(action);
     }
@@ -1108,8 +1121,8 @@ void PlotWindow::updateColorMapMenu()
 void PlotWindow::selectColorMapFile()
 {
     QString fileName = AppSettings::instance().selectColorMapFile();
-    if (!fileName.isEmpty()) {
-        AppSettings::instance().setCurrentColorMap(fileName);
+    if (!fileName.isEmpty() && _camera) {
+        _camera->setColorMap(fileName);
         _plot->setColorMap(fileName, true);
     }
 }

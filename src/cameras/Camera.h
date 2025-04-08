@@ -67,6 +67,7 @@ public:
     void setRois(const QList<QPointF>&);
     void setRoisSize(const FrameSize&);
     void setRoiMode(RoiMode mode);
+    void setColorMap(const QString& colorMap);
     bool isRoiValid() const;
     bool editRoisSize();
 

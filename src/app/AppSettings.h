@@ -37,7 +37,6 @@ public:
     bool idsEnabled;
     QString idsSdkDir;
 #endif
-    QString colorMap;
     bool useConsole = false;
     bool isDevMode = false;
     bool showGoodnessTextOnPlot = false;
@@ -69,12 +68,11 @@ public:
         QString name;
         QString file;
         QString descr;
-        bool isCurrent;
         bool isExists;
     };
     QList<ColorMap> colorMaps();
-    QString currentColorMap();
-    void setCurrentColorMap(const QString& fileName);
+    static QString colorMapPath(const QString &colorMap);
+    static QString defaultColorMap();
     void deleteInvalidColorMaps();
     QString selectColorMapFile();
 };

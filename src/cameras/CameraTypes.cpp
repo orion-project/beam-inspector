@@ -35,6 +35,7 @@ void CameraConfig::load(QSettings *s)
     LOAD(plot.customScale.on, Bool, true);
     LOAD(plot.customScale.factor, Double, 5);
     LOAD(plot.customScale.unit, String, "um");
+    LOAD(plot.colorMap, String, "");
 
     LOAD(bgnd.on, Bool, true);
     LOAD(bgnd.iters, Int, 0);
@@ -84,6 +85,7 @@ void CameraConfig::save(QSettings *s, bool compact) const
         SAVE(plot.customScale.factor);
         SAVE(plot.customScale.unit);
     }
+    SAVE(plot.colorMap);
 
     SAVE(bgnd.on);
     if (!compact or bgnd.on) {
