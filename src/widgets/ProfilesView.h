@@ -1,6 +1,7 @@
 #ifndef PROFILES_VIEW_H
 #define PROFILES_VIEW_H
 
+#include "cameras/CameraTypes.h"
 #include "widgets/PlotHelpers.h"
 
 #include <QWidget>
@@ -19,19 +20,18 @@ public:
     explicit ProfilesView(PlotIntf *plotIntf);
 
     void setThemeColors(PlotHelpers::Theme theme, bool replot);
-
+    void setScale(const PixelScale& scale);
     void showResult();
     void cleanResult();
 
 private:
     PlotIntf *_plotIntf;
-    QCustomPlot *_plot;
-    QCPAxisRect *_axisRectMinor;
-    QCPAxis *_axisMinorX, *_axisMinorY;
+    QCustomPlot *_plotX, *_plotY;
     QCPGraph *_graphX, *_graphY;
+    PixelScale _scale;
     double _profileWidth = 2;
     int _pointCount = 100;
-    double rangeX = 0;
+    double _rangeX = 0;
 };
 
 #endif // PROFILES_VIEW_H

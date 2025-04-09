@@ -654,6 +654,7 @@ void PlotWindow::showCamConfig(bool replot)
     _tableIntf->setRows(_camera->tableRows());
     _tableIntf->setScale(s);
     _plotIntf->setScale(s);
+    _profilesView->setScale(s);
 
     if (replot) _plot->replot();
 }

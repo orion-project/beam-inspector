@@ -17,6 +17,7 @@ struct CalcProfilesArg
     double *imgData;
     double profileWidth;
     int pointCount;
+    const PixelScale &scale;
 };
 
 template <typename T>
@@ -45,7 +46,7 @@ void calcProfiles(const CalcProfilesArg &arg, const CgnBeamResult &res, QVector<
         xi = x0 + dx;
         yi = y0 + dy;
         p = (xi >= 0 && xi < w && yi >= 0 && yi < h) ? data[w * yi + xi] : 0;
-        gx[c + i].key = r;
+        gx[c + i].key = arg.scale.pixelToUnit(r);
         gx[c + i].value = p;
         //qDebug() << "+x" << i <<  xi << yi << r << p;
 
@@ -53,7 +54,7 @@ void calcProfiles(const CalcProfilesArg &arg, const CgnBeamResult &res, QVector<
         xi = x0 - dx;
         yi = y0 - dy;
         p = (xi >= 0 && xi < w && yi >= 0 && yi < h) ? data[w * yi + xi] : 0;
-        gx[c - i].key = -r;
+        gx[c - i].key = arg.scale.pixelToUnit(-r);
         gx[c - i].value = p;
         //qDebug() << "-x" << i << xi << yi << r << p;
 
@@ -66,7 +67,7 @@ void calcProfiles(const CalcProfilesArg &arg, const CgnBeamResult &res, QVector<
         xi = x0 + dx;
         yi = y0 + dy;
         p = (xi >= 0 && xi < w && yi >= 0 && yi < h) ? data[w * yi + xi] : 0;
-        gy[c + i].key = r;
+        gy[c + i].key = arg.scale.pixelToUnit(r);
         gy[c + i].value = p;
         //qDebug() << "+y" << i << xi << yi << r << p;
 
@@ -75,7 +76,7 @@ void calcProfiles(const CalcProfilesArg &arg, const CgnBeamResult &res, QVector<
         xi = x0 - dx;
         yi = y0 - dy;
         p = (xi >= 0 && xi < w && yi >= 0 && yi < h) ? data[w * yi + xi] : 0;
-        gy[c - i].key = -r;
+        gy[c - i].key = arg.scale.pixelToUnit(-r);
         gy[c - i].value = p;
         //qDebug() << "-y" << i << xi << yi << r << p;
     }
@@ -83,17 +84,11 @@ void calcProfiles(const CalcProfilesArg &arg, const CgnBeamResult &res, QVector<
 
 ProfilesView::ProfilesView(PlotIntf *plotIntf) : QWidget(), _plotIntf(plotIntf)
 {
-    _plot = new QCustomPlot;
+    _plotX = new QCustomPlot;
+    _plotY = new QCustomPlot;
 
-    _axisRectMinor = new QCPAxisRect(_plot);
-    _axisMinorX = _axisRectMinor->axis(QCPAxis::atBottom);
-    _axisMinorY = _axisRectMinor->axis(QCPAxis::atLeft);
-
-    _plot->plotLayout()->addElement(0, 1, _axisRectMinor);
-    _plot->plotLayout()->setMargins(QMargins(12, 0, 12, 0));
-
-    _graphX = _plot->addGraph();
-    _graphY = _plot->addGraph(_axisMinorX, _axisMinorY);
+    _graphX = _plotX->addGraph();
+    _graphY = _plotY->addGraph();
 
     QVector<QCPGraphData> data(2*_pointCount - 1);
     _graphX->data()->set(data);
@@ -101,14 +96,17 @@ ProfilesView::ProfilesView(PlotIntf *plotIntf) : QWidget(), _plotIntf(plotIntf)
 
     setThemeColors(PlotHelpers::SYSTEM, false);
 
-    Ori::Layouts::LayoutV({_plot}).setMargin(0).useFor(this);
+    Ori::Layouts::LayoutH({_plotX, _plotY}).setMargins(12, 0, 12, 0).useFor(this);
 }
 
 void ProfilesView::setThemeColors(PlotHelpers::Theme theme, bool replot)
 {
-    PlotHelpers::setThemeColors(_plot, theme);
-    PlotHelpers::setDefaultAxesFormat(_axisRectMinor, theme);
-    if (replot) _plot->replot();
+    PlotHelpers::setThemeColors(_plotX, theme);
+    PlotHelpers::setThemeColors(_plotY, theme);
+    if (replot) {
+        _plotX->replot();
+        _plotY->replot();
+    }
 }
 
 void ProfilesView::showResult()
@@ -119,6 +117,7 @@ void ProfilesView::showResult()
         .imgData = _plotIntf->rawGraph(),
         .profileWidth = _profileWidth,
         .pointCount = _pointCount,
+        .scale = _scale,
     };
 
     auto results = _plotIntf->results();
@@ -129,18 +128,25 @@ void ProfilesView::showResult()
 
     double min = _plotIntf->rangeMin();
     double max = _plotIntf->rangeMax();
-    _plot->yAxis->setRange(min, max);
-    _axisMinorY->setRange(min, max);
-    double newRangeX = res.dx /2.0 * _profileWidth;
-    if (newRangeX > rangeX) {
-        rangeX = newRangeX;
-        _plot->xAxis->setRange(-rangeX, rangeX);
-        _axisMinorX->setRange(-rangeX, rangeX);
+    _plotX->yAxis->setRange(min, max);
+    _plotY->yAxis->setRange(min, max);
+    double rangeX = _scale.pixelToUnit(res.dx /2.0 * _profileWidth);
+    if (rangeX > _rangeX) {
+        _rangeX = rangeX;
+        _plotX->xAxis->setRange(-_rangeX, _rangeX);
+        _plotY->xAxis->setRange(-_rangeX, _rangeX);
     }
-    _plot->replot();
+    _plotX->replot();
+    _plotY->replot();
 }
 
 void ProfilesView::cleanResult()
 {
-    rangeX = 0;
+    _rangeX = 0;
+}
+
+void ProfilesView::setScale(const PixelScale& scale)
+{
+    _scale = scale;
+    _rangeX = 0;
 }
