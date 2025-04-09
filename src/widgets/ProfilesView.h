@@ -27,11 +27,13 @@ public:
 private:
     PlotIntf *_plotIntf;
     QCustomPlot *_plotX, *_plotY;
-    QCPGraph *_graphX, *_graphY;
+    QCPGraph *_profileX, *_profileY, *_fitX, *_fitY;
     PixelScale _scale;
-    double _profileWidth = 2;
+    double _profileRange = 2;
     int _pointCount = 100;
     double _rangeX = 0;
+    double _MI = 1.0; // M-square value for hyper-gaussian fit
+    bool _showFit = true;
 };
 
 #endif // PROFILES_VIEW_H
