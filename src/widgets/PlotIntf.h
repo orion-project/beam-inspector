@@ -30,10 +30,15 @@ public:
     void cleanResult();
     void setRawView(bool on);
     QObject* eventsTarget() { return _eventsTarget; }
+    const QList<CgnBeamResult>& results() const { return _results; }
 
     void initGraph(int w, int h);
     double* rawGraph() const;
     void invalidateGraph() const;
+    int graphW() const { return _w; }
+    int graphH() const { return _h; }
+    double rangeMin() const { return _min; }
+    double rangeMax() const { return _max; }
 
 private:
     QObject *_eventsTarget;

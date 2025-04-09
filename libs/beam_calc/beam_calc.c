@@ -546,6 +546,63 @@ double cgn_calc_overexposure(const CgnBeamCalc *c, double th)
     }
 }
 
+void cgn_calc_profiles(const CgnBeamImage *img, const CgnBeamResult *res, CgnBeamProfiles *prf)
+{
+    const int w = img->w;
+    const int h = img->h;
+    const double *data = img->data;
+    const int c = prf->cnt - 1;
+    const double step_x = res->dx / 2.0 * prf->w / (double)(c);
+    const double step_y = res->dy / 2.0 * prf->w / (double)(c);
+    const double a = res->phi / 57.29577951308232;
+    const double sin_a = sin(a);
+    const double cos_a = cos(a);
+    int x0 = round(res->xc);
+    int y0 = round(res->yc);
+    int xi, yi, dx, dy;
+    double r, p;
+    for (int i = 0; i < prf->cnt; i++) {
+        // along X-width
+        r = step_x * (double)i;
+        dx = round(r * cos_a);
+        dy = round(r * sin_a);
+
+        // positive half
+        xi = x0 + dx;
+        yi = y0 + dy;
+        p = (xi >= 0 && xi < w && yi >= 0 && yi < h) ? data[w * yi + xi] : 0;
+        prf->x_r[c + i] = r;
+        prf->x_p[c + i] = p;
+
+        // negative half
+        xi = x0 - dx;
+        yi = y0 - dy;
+        p = (xi >= 0 && xi < w && yi >= 0 && yi < h) ? data[w * yi + xi] : 0;
+        prf->x_r[c - i] = -r;
+        prf->x_p[c - i] = p;
+
+        // along Y-width
+        r = step_y * (double)i;
+        dx = round(r * sin_a);
+        dy = round(r * cos_a);
+
+        // positive half
+        xi = x0 + dx;
+        yi = y0 + dy;
+        p = (xi >= 0 && xi < w && yi >= 0 && yi < h) ? data[w * yi + xi] : 0;
+        prf->y_r[c + i] = r;
+        prf->y_p[c + i] = p;
+
+        // negative half
+        r = step_y * (double)i;
+        xi = x0 - dx;
+        yi = y0 - dy;
+        p = (xi >= 0 && xi < w && yi >= 0 && yi < h) ? data[w * yi + xi] : 0;
+        prf->y_r[c - i] = -r;
+        prf->y_p[c - i] = p;
+    }
+}
+
 #ifdef USE_BLAS
 
 #define ALLOC(var, size) \

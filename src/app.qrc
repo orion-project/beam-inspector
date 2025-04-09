@@ -5,6 +5,8 @@
         <file alias="camera">../img/toolbar/camera.svg</file>
         <file alias="centroid">../img/toolbar/centroid.svg</file>
         <file alias="check">../img/toolbar/check.svg</file>
+        <file alias="copy">../img/toolbar/copy.svg</file>
+        <file alias="copy_img">../img/toolbar/copy_img.svg</file>
         <file alias="crosshair">../img/toolbar/crosshair.svg</file>
         <file alias="crosshair_edit">../img/toolbar/crosshair_edit.svg</file>
         <file alias="delete">../img/toolbar/delete.svg</file>
@@ -15,12 +17,14 @@
         <file alias="info">../img/toolbar/info.svg</file>
         <file alias="lock_on">../img/toolbar/lock_on.svg</file>
         <file alias="lock_off">../img/toolbar/lock_off.svg</file>
+        <file alias="mi">../img/toolbar/gauss_full_w.svg</file>
         <file alias="new">../img/toolbar/new.svg</file>
         <file alias="ok">../img/toolbar/ok.svg</file>
         <file alias="open">../img/toolbar/open.svg</file>
         <file alias="open_img">../img/toolbar/open_img.svg</file>
         <file alias="options">../img/toolbar/options.svg</file>
         <file alias="plus">../img/toolbar/plus.svg</file>
+        <file alias="profile">../img/toolbar/profile.svg</file>
         <file alias="raw_view">../img/toolbar/raw_view.svg</file>
         <file alias="roi">../img/toolbar/aper.svg</file>
         <file alias="roi_edit">../img/toolbar/aper_rotate.svg</file>
