@@ -17,6 +17,7 @@
         <file alias="info">../img/toolbar/info.svg</file>
         <file alias="lock_on">../img/toolbar/lock_on.svg</file>
         <file alias="lock_off">../img/toolbar/lock_off.svg</file>
+        <file alias="mi">../img/toolbar/gauss_full_w.svg</file>
         <file alias="new">../img/toolbar/new.svg</file>
         <file alias="ok">../img/toolbar/ok.svg</file>
         <file alias="open">../img/toolbar/open.svg</file>

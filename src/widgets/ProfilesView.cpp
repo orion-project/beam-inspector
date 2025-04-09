@@ -1,18 +1,20 @@
 #include "ProfilesView.h"
 
-#include "app/AppSettings.h"
 #include "widgets/PlotIntf.h"
 
 #include "beam_calc.h"
 
-#include "helpers/OriWidgets.h"
+#include "helpers/OriDialogs.h"
 #include "helpers/OriLayouts.h"
+#include "helpers/OriWidgets.h"
 #include "tools/OriSettings.h"
 #include "widgets/OriPopupMessage.h"
+#include "widgets/OriValueEdit.h"
 
 #include "qcustomplot/src/core.h"
 #include "qcustomplot/src/layoutelements/layoutelement-axisrect.h"
 #include "qcustomplot/src/layoutelements/layoutelement-legend.h"
+#include "qcustomplot/src/layoutelements/layoutelement-textelement.h"
 #include "qcustomplot/src/plottables/plottable-graph.h"
 
 #include <cmath>
@@ -174,6 +176,14 @@ ProfilesView::ProfilesView(PlotIntf *plotIntf) : QWidget(), _plotIntf(plotIntf)
     _plotX->axisRect()->insetLayout()->setInsetAlignment(0, Qt::AlignLeft|Qt::AlignTop);
     _plotY->axisRect()->insetLayout()->setInsetAlignment(0, Qt::AlignLeft|Qt::AlignTop);
 
+    _textMiX = new QCPTextElement(_plotX);
+    _textMiY = new QCPTextElement(_plotY);
+    connect(_textMiX, &QCPTextElement::doubleClicked, this, &ProfilesView::setMI);
+    connect(_textMiY, &QCPTextElement::doubleClicked, this, &ProfilesView::setMI);
+
+    _plotX->axisRect()->insetLayout()->addElement(_textMiX, Qt::AlignRight|Qt::AlignTop);
+    _plotY->axisRect()->insetLayout()->addElement(_textMiY, Qt::AlignRight|Qt::AlignTop);
+
     _profileX = _plotX->addGraph();
     _profileY = _plotY->addGraph();
     _profileX->setName("X");
@@ -207,17 +217,21 @@ ProfilesView::ProfilesView(PlotIntf *plotIntf) : QWidget(), _plotIntf(plotIntf)
     _actnCopyFitX = A_(tr("Copy Fitted Points"), this, [this]{ copyGraph(_fitX); }, ":/toolbar/copy");
     _actnCopyFitY = A_(tr("Copy Fitted Points"), this, [this]{ copyGraph(_fitY); }, ":/toolbar/copy");
 
+    _actnSetMI = A_(tr("Set beam quality (M²)..."), this, &ProfilesView::setMI, ":/toolbar/mi");
+
     _plotX->addAction(A_(tr("Copy Profile Points"), this, [this]{ copyGraph(_profileX); }, ":/toolbar/copy"));
     _plotX->addAction(_actnCopyFitX);
     _plotX->addAction(A_(tr("Copy as Image"), this, [this]{ copyImage(_plotX); }, ":/toolbar/copy_img"));
     _plotX->addAction(actnSep1);
     _plotX->addAction(_actnShowFit);
+    _plotX->addAction(_actnSetMI);
 
     _plotY->addAction(A_(tr("Copy Profile Points"), this, [this]{ copyGraph(_profileY); }, ":/toolbar/copy"));
     _plotY->addAction(_actnCopyFitY);
     _plotY->addAction(A_(tr("Copy as Image"), this, [this]{ copyImage(_plotY); }, ":/toolbar/copy_img"));
     _plotY->addAction(actnSep1);
     _plotY->addAction(_actnShowFit);
+    _plotY->addAction(_actnSetMI);
 }
 
 void ProfilesView::setThemeColors(PlotHelpers::Theme theme, bool replot)
@@ -288,9 +302,13 @@ void ProfilesView::updateVisibility()
     _fitY->setVisible(_showFit);
     _actnCopyFitX->setVisible(_showFit);
     _actnCopyFitY->setVisible(_showFit);
+    _actnSetMI->setVisible(_showFit);
+    _textMiX->setVisible(_showFit);
+    _textMiY->setVisible(_showFit);
     if (_showFit) {
         _fitX->addToLegend();
         _fitY->addToLegend();
+        showMI();
     } else {
         _fitX->removeFromLegend();
         _fitY->removeFromLegend();
@@ -319,6 +337,12 @@ void ProfilesView::toggleShowFit()
     _showFit = !_showFit;
     updateVisibility();
     storeState();
+    if (_showFit)
+        showResult();
+    else {
+        _plotX->replot();
+        _plotY->replot();
+    }
 }
 
 void ProfilesView::copyImage(QCustomPlot *plot)
@@ -343,4 +367,27 @@ void ProfilesView::copyGraph(QCPGraph *graph)
     qApp->clipboard()->setText(res);
 
     Ori::Gui::PopupMessage::affirm(tr("Data points been copied to Clipboard"), Qt::AlignRight|Qt::AlignBottom);
+}
+
+void ProfilesView::setMI()
+{
+    Ori::Widgets::ValueEdit editor;
+    Ori::Gui::adjustFont(&editor);
+    editor.setValue(_MI);
+
+    if (Ori::Dlg::showDialogWithPromptV("Beam quality parameter (M²)", &editor)) {
+        double mi = editor.value();
+        if (mi <= 0) mi = 1;
+        _MI = mi;
+        storeState();
+        showMI();
+        showResult();
+    }
+}
+
+void ProfilesView::showMI()
+{
+    QString s = QStringLiteral("M² = %1").arg(_MI);
+    _textMiX->setText(s);
+    _textMiY->setText(s);
 }

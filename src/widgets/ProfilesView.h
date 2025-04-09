@@ -10,6 +10,7 @@ class PlotIntf;
 
 class QCPAxisRect;
 class QCPGraph;
+class QCPTextElement;
 class QCustomPlot;
 
 class ProfilesView : public QWidget
@@ -29,8 +30,9 @@ private:
     PlotIntf *_plotIntf;
     QCustomPlot *_plotX, *_plotY;
     QCPGraph *_profileX, *_profileY, *_fitX, *_fitY;
+    QCPTextElement *_textMiX, *_textMiY;
     PixelScale _scale;
-    QAction *_actnShowFit, *_actnCopyFitX, *_actnCopyFitY;
+    QAction *_actnShowFit, *_actnCopyFitX, *_actnCopyFitY, *_actnSetMI;
     double _profileRange = 2;
     int _pointCount = 100;
     double _rangeX = 0;
@@ -42,6 +44,8 @@ private:
     void toggleShowFit();
     void copyGraph(QCPGraph *graph);
     void copyImage(QCustomPlot *plot);
+    void setMI();
+    void showMI();
 };
 
 #endif // PROFILES_VIEW_H
