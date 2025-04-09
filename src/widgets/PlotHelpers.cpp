@@ -38,7 +38,7 @@ void setDefaultAxesFormat(QCPAxisRect *axisRect, Theme theme)
 
 void setThemeColors(QCustomPlot *plot, Theme theme)
 {
-    plot->setBackground(qApp->palette().brush(QPalette::Base));
+    plot->setBackground(theme == LIGHT ? QBrush(Qt::white) : qApp->palette().brush(QPalette::Base));
     setDefaultAxesFormat(plot->axisRect(), theme);
 }
 

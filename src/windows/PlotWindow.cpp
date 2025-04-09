@@ -218,6 +218,7 @@ void PlotWindow::restoreState()
     _plot->setBeamInfoVisible(showBeamInfo, false);
     _plot->restoreState(s.settings());
     _actionCrosshairsShow->setChecked(_plot->isCrosshairsVisible());
+    _profilesView->restoreState(s.settings());
 }
 
 void PlotWindow::storeState()
