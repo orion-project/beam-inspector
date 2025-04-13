@@ -102,15 +102,30 @@ typedef struct {
     int y1, y2;
     int nan;
     double p;
-    double xc;
-    double yc;
+    double xc; // Beam center X
+    double yc; // Beam center Y
     double xx;
     double yy;
     double xy;
-    double dx;
-    double dy;
-    double phi;
+    double dx; // Beam width along principal axis X
+    double dy; // Beam width along principal axis Y
+    double phi; // CCW angle between principal axis X and the horizont, in degrees
 } CgnBeamResult;
+
+typedef struct {
+    int w;
+    int h;
+    double *data;
+} CgnBeamImage;
+
+typedef struct {
+    int cnt;
+    double w; // Profile width in times of beam width
+    double *x_r; // Radial distance along principal axis X
+    double *x_p; // Profile value along principal axis X
+    double *y_r; // Radial distance along principal axis Y
+    double *y_p; // Profile value along principal axis Y
+} CgnBeamProfiles;
 
 void cgn_calc_beam_naive(const CgnBeamCalc *c, CgnBeamResult *r);
 void cgn_calc_beam_bkgnd(const CgnBeamCalc *c, CgnBeamBkgnd *b, CgnBeamResult *r);
@@ -124,6 +139,7 @@ void cgn_convert_10g40_to_u16(uint8_t *dst, uint8_t *src, int sz);
 void cgn_convert_12g24_to_u16(uint8_t *dst, uint8_t *src, int sz);
 void cgn_ext_copy_to_f64(const CgnBeamCalc *c, CgnBeamBkgnd *b, double *dst, int normalize, int full_z, double *min_z, double *max_z);
 double cgn_calc_overexposure(const CgnBeamCalc *c, double th);
+void cgn_calc_profiles(const CgnBeamImage *img, const CgnBeamResult *res, CgnBeamProfiles *prf);
 
 #ifdef __cplusplus
 }

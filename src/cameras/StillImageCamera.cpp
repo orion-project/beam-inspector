@@ -183,7 +183,7 @@ void StillImageCamera::startCapture()
             g.subtract_bkgnd_v = 1;
             cgn_copy_to_f64(&c, g.subtracted, nullptr);
         }
-        for (const auto &roi : _config.rois) {
+        for (const auto &roi : std::as_const(_config.rois)) {
             setRoi(roi);
             cgn_calc_beam_bkgnd(&c, &g, &r);
             results << r;

@@ -17,6 +17,7 @@
 #include "widgets/DataTable.h"
 #include "widgets/Plot.h"
 #include "widgets/PlotIntf.h"
+#include "widgets/ProfilesView.h"
 #include "widgets/TableIntf.h"
 
 #include "helpers/OriDialogs.h"
@@ -173,6 +174,7 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
         // dock still is not visible when asking in resoreState
         _actionResultsPanel->setChecked(_resultsDock->isVisible());
         _actionHardConfig->setChecked(_hardConfigDock->isVisible());
+        _actionProfilesView->setChecked(_profilesDock->isVisible());
 
         // This initializes all graph structs
         activateCamWelcome();
@@ -216,6 +218,7 @@ void PlotWindow::restoreState()
     _plot->setBeamInfoVisible(showBeamInfo, false);
     _plot->restoreState(s.settings());
     _actionCrosshairsShow->setChecked(_plot->isCrosshairsVisible());
+    _profilesView->restoreState(s.settings());
 }
 
 void PlotWindow::storeState()
@@ -277,9 +280,11 @@ void PlotWindow::createMenuBar()
     _actionResultsPanel->setCheckable(true);
     _actionHardConfig = A_(tr("Device Control"), this, &PlotWindow::toggleHardConfig, ":/toolbar/hardware");
     _actionHardConfig->setCheckable(true);
+    _actionProfilesView = A_(tr("Profiles View"), this, &PlotWindow::toggleProfilesView, ":/toolbar/profile");
+    _actionProfilesView->setCheckable(true);
     auto menuView = M_(tr("View"), {
         _actionRawView, 0,
-        _actionResultsPanel, _actionHardConfig, 0,
+        _actionResultsPanel, _actionHardConfig, _actionProfilesView, 0,
         _actionBeamInfo, _colorMapMenu, 0,
         _actionZoomFull, _actionZoomRoi,
     });
@@ -465,6 +470,16 @@ void PlotWindow::createDockPanel()
     _hardConfigDock->setFeatures(QDockWidget::DockWidgetMovable);
     _hardConfigDock->setWidget(_stubConfigPanel);
     addDockWidget(Qt::RightDockWidgetArea, _hardConfigDock);
+
+    _profilesView = new ProfilesView(_plot->plotIntf());
+
+    _profilesDock = new QDockWidget(tr("Profiles"));
+    _profilesDock->setObjectName("DockProfiles");
+    _profilesDock->setAllowedAreas(Qt::BottomDockWidgetArea | Qt::TopDockWidgetArea);
+    _profilesDock->setFeatures(QDockWidget::DockWidgetMovable);
+    _profilesDock->setVisible(false);
+    _profilesDock->setWidget(_profilesView);
+    addDockWidget(Qt::BottomDockWidgetArea, _profilesDock);
 }
 
 void PlotWindow::createPlot()
@@ -640,6 +655,7 @@ void PlotWindow::showCamConfig(bool replot)
     _tableIntf->setRows(_camera->tableRows());
     _tableIntf->setScale(s);
     _plotIntf->setScale(s);
+    _profilesView->setScale(s);
 
     if (replot) _plot->replot();
 }
@@ -654,9 +670,10 @@ void PlotWindow::setThemeColors()
 void PlotWindow::updateThemeColors()
 {
     // Right now new palette is not ready yet, it returns old colors
-    QTimer::singleShot(100, this, [this]{
+    QTimer::singleShot(500, this, [this]{
         setThemeColors();
-        _plot->setThemeColors(Plot::SYSTEM, true);
+        _plot->setThemeColors(PlotHelpers::SYSTEM, true);
+        _profilesView->setThemeColors(PlotHelpers::SYSTEM, true);
     });
 }
 
@@ -773,6 +790,8 @@ void PlotWindow::dataReady()
     _tableIntf->showResult();
     _plotIntf->showResult();
     _plot->replot();
+    if (_profilesDock->isVisible())
+        _profilesView->showResult();
 }
 
 void PlotWindow::openImageDlg()
@@ -802,9 +821,7 @@ void PlotWindow::processImage()
         qWarning() << LOG_ID << "Current camera is not StillImageCamera";
         return;
     }
-    _plot->stopEditRoi(false);
-    _plotIntf->cleanResult();
-    _tableIntf->cleanResult();
+    cleanResults();
     if (!cam->isDemoMode())
         _mru->append(cam->fileName());
     _camera->setRawView(_actionRawView->isChecked(), false);
@@ -816,6 +833,14 @@ void PlotWindow::processImage()
     _plot->zoomAuto(false);
     dataReady();
     showFps(0, 0);
+}
+
+void PlotWindow::cleanResults()
+{
+    _plot->stopEditRoi(false);
+    _plotIntf->cleanResult();
+    _tableIntf->cleanResult();
+    _profilesView->cleanResult();
 }
 
 void PlotWindow::editCamConfig(int pageId)
@@ -967,9 +992,7 @@ void PlotWindow::activateCamDemoRender()
 
     stopCapture();
 
-    _plot->stopEditRoi(false);
-    _plotIntf->cleanResult();
-    _tableIntf->cleanResult();
+    cleanResults();
     auto cam = new VirtualDemoCamera(_plotIntf, _tableIntf, this);
     connect(cam, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualDemoCamera::stats, this, &PlotWindow::statsReceived);
@@ -990,9 +1013,7 @@ void PlotWindow::activateCamDemoImage()
 
     stopCapture();
 
-    _plot->stopEditRoi(false);
-    _plotIntf->cleanResult();
-    _tableIntf->cleanResult();
+    cleanResults();
     auto cam = new VirtualImageCamera(_plotIntf, _tableIntf, this);
     connect(cam, &VirtualImageCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualImageCamera::stats, this, &PlotWindow::statsReceived);
@@ -1021,9 +1042,7 @@ void PlotWindow::activateCamIds()
     stopCapture();
     _camera.reset(nullptr);
 
-    _plot->stopEditRoi(false);
-    _plotIntf->cleanResult();
-    _tableIntf->cleanResult();
+    cleanResults();
     auto cam = new IdsCamera(camId, _plotIntf, _tableIntf, this);
     connect(cam, &IdsCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &IdsCamera::stats, this, &PlotWindow::statsReceived);
@@ -1057,6 +1076,13 @@ void PlotWindow::toggleHardConfig()
 {
     _hardConfigDock->setVisible(!_hardConfigDock->isVisible());
     updateHardConfgPanel();
+}
+
+void PlotWindow::toggleProfilesView()
+{
+    _profilesDock->setVisible(!_profilesDock->isVisible());
+    if (_profilesDock->isVisible())
+        _profilesView->showResult();
 }
 
 void PlotWindow::updateHardConfgPanel()

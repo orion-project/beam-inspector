@@ -17,7 +17,7 @@ Main features:
 
 See [online help](./bin/help/index.md) for details.
 
-![](img/screens/inspector_0.0.10.png)
+![](img/screens/inspector_0.0.19.png)
 
 ## Supporters
 

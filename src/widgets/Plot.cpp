@@ -5,6 +5,7 @@
 #include "plot/CrosshairOverlay.h"
 #include "plot/PlotExport.h"
 #include "plot/RoiRectGraph.h"
+#include "widgets/PlotHelpers.h"
 #include "widgets/PlotIntf.h"
 
 #include "helpers/OriDialogs.h"
@@ -18,26 +19,6 @@
 #define APERTURE_ZOOM_MARGIN 0.01
 
 using Ori::Gui::PopupMessage;
-
-static QColor themeAxisColor(Plot::Theme theme)
-{
-    bool dark = theme == Plot::SYSTEM && qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark;
-    return qApp->palette().color(dark ? QPalette::Light : QPalette::Shadow);
-}
-
-static void setDefaultAxisFormat(QCPAxis *axis, Plot::Theme theme)
-{
-    axis->setTickLengthIn(0);
-    axis->setTickLengthOut(6);
-    axis->setSubTickLengthIn(0);
-    axis->setSubTickLengthOut(3);
-    axis->grid()->setPen(QPen(QColor(100, 100, 100), 0, Qt::DotLine));
-    axis->setTickLabelColor(theme == Plot::LIGHT ? Qt::black : qApp->palette().color(QPalette::WindowText));
-    auto pen = QPen(themeAxisColor(theme), 0, Qt::SolidLine);
-    axis->setTickPen(pen);
-    axis->setSubTickPen(pen);
-    axis->setBasePen(pen);
-}
 
 Plot::Plot(QWidget *parent) : QWidget{parent}
 {
@@ -88,7 +69,7 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _rois = new RoiRectsGraph(_plot);
     _relativeItems << _rois;
 
-    setThemeColors(SYSTEM, false);
+    setThemeColors(PlotHelpers::SYSTEM, false);
 
     auto l = new QVBoxLayout(this);
     l->setContentsMargins(0, 0, 0, 0);
@@ -234,15 +215,11 @@ void Plot::replot()
     _plot->replot();
 }
 
-void Plot::setThemeColors(Theme theme, bool replot)
+void Plot::setThemeColors(PlotHelpers::Theme theme, bool replot)
 {
-    _plot->setBackground(theme == LIGHT ? QBrush(Qt::white) : palette().brush(QPalette::Base));
-    setDefaultAxisFormat(_plot->xAxis, theme);
-    setDefaultAxisFormat(_plot->yAxis, theme);
-    setDefaultAxisFormat(_plot->xAxis2, theme);
-    setDefaultAxisFormat(_plot->yAxis2, theme);
-    setDefaultAxisFormat(_colorScale->axis(), theme);
-    _colorScale->setFrameColor(themeAxisColor(theme));
+    PlotHelpers::setThemeColors(_plot, theme);
+    PlotHelpers::setDefaultAxisFormat(_colorScale->axis(), theme);
+    _colorScale->setFrameColor(PlotHelpers::themeAxisColor(theme));
     if (replot) _plot->replot();
 }
 
@@ -274,7 +251,9 @@ void Plot::selectBackColor()
 
 void Plot::exportImageDlg()
 {
-    ::exportImageDlg(_plot, [this]{setThemeColors(LIGHT, false);}, [this]{setThemeColors(SYSTEM, false);});
+    ::exportImageDlg(_plot,
+        [this]{setThemeColors(PlotHelpers::LIGHT, false);},
+        [this]{setThemeColors(PlotHelpers::SYSTEM, false);});
 }
 
 void Plot::startEditRoi()

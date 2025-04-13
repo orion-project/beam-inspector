@@ -23,7 +23,7 @@ void DataTable::contextMenuEvent(QContextMenuEvent* event)
     if (!_contextMenu)
     {
         _contextMenu = new QMenu(this);
-        _contextMenu->addAction(tr("Copy"), this, &DataTable::copy);
+        _contextMenu->addAction(QIcon(":/toolbar/copy"), tr("Copy"), this, &DataTable::copy);
         _contextMenu->addAction(tr("Select All"), this, &DataTable::selectAll);
     }
     _contextMenu->popup(mapToGlobal(event->pos()));
