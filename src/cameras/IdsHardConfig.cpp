@@ -427,6 +427,10 @@ public:
         showExp();
         showFps();
         exposureChanged();
+        if (fpsLock > 0) {
+            showFpsLock();
+            setFpsRaw(fpsLock, false);
+        }
     }
 
     void copyAutoExpLog()

@@ -1,12 +1,14 @@
 history:
 - version: 0.0.19
-  date: ?
+  date: 2025-04-13
   chahges:
   - text: Context menu for results table
   - text: Load images and crosshairs via drag and drop
   - text: Show mouse coordinates in the status bar
   - text: Store selected color map for each camera separately
   - text: Panel for beam profiles and gaussian fits
+  - text: Fix: set locked FPS after autoexposure
+  - text: Fix: auto limit plot after config edited
 
 - version: 0.0.18
   date: 2025-03-06

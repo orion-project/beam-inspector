@@ -652,6 +652,7 @@ void PlotWindow::showCamConfig(bool replot)
     _plot->setRoi(c.roi);
     _plot->setRois(c.rois);
     _plot->setRoiMode(c.roiMode);
+    _plot->zoomAuto(false);
     _tableIntf->setRows(_camera->tableRows());
     _tableIntf->setScale(s);
     _plotIntf->setScale(s);
