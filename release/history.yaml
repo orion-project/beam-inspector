@@ -6,6 +6,7 @@ history:
   - text: Load images and crosshairs via drag and drop
   - text: Show mouse coordinates in the status bar
   - text: Store selected color map for each camera separately
+  - text: Panel for beam profiles and gaussian fits
 
 - version: 0.0.18
   date: 2025-03-06

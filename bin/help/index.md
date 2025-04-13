@@ -22,6 +22,7 @@
 - [Results table](./results_table.md)
 - [Control panel](./cam_control.md)
     - [Exposure presets](./exp_presets.md)
+- [Profiles view](./profiles_view.md)
 - [Status bar](./status_bar.md)
 
 **Application Settings**

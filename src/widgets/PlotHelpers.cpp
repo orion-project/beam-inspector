@@ -6,14 +6,25 @@
 
 #include "qcustomplot/src/core.h"
 #include "qcustomplot/src/layoutelements/layoutelement-axisrect.h"
+#include "qcustomplot/src/layoutelements/layoutelement-legend.h"
+
 
 namespace PlotHelpers
 {
 
+bool isDarkTheme(Theme theme)
+{
+    return theme == Theme::SYSTEM && qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+}
+
 QColor themeAxisColor(Theme theme)
 {
-    bool dark = theme == Theme::SYSTEM && qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark;
-    return qApp->palette().color(dark ? QPalette::Light : QPalette::Shadow);
+    return qApp->palette().color(isDarkTheme(theme) ? QPalette::Light : QPalette::Shadow);
+}
+
+QColor themeAxisLabelColor(Theme theme)
+{
+    return theme == Theme::SYSTEM ? qApp->palette().color(QPalette::WindowText) : Qt::black;
 }
 
 void setDefaultAxisFormat(QCPAxis *axis, Theme theme)
@@ -23,7 +34,7 @@ void setDefaultAxisFormat(QCPAxis *axis, Theme theme)
     axis->setSubTickLengthIn(0);
     axis->setSubTickLengthOut(3);
     axis->grid()->setPen(QPen(QColor(100, 100, 100), 0, Qt::DotLine));
-    axis->setTickLabelColor(theme == Theme::LIGHT ? Qt::black : qApp->palette().color(QPalette::WindowText));
+    axis->setTickLabelColor(themeAxisLabelColor(theme));
     auto pen = QPen(themeAxisColor(theme), 0, Qt::SolidLine);
     axis->setTickPen(pen);
     axis->setSubTickPen(pen);
@@ -36,10 +47,18 @@ void setDefaultAxesFormat(QCPAxisRect *axisRect, Theme theme)
         setDefaultAxisFormat(axis, theme);
 }
 
+void setDefaultLegendFormat(QCPLegend *legend, Theme theme)
+{
+    legend->setBrush(isDarkTheme(theme) ? qApp->palette().color(QPalette::Window) : Qt::white);
+    legend->setBorderPen(themeAxisColor(theme));
+    legend->setTextColor(themeAxisLabelColor(theme));
+}
+
 void setThemeColors(QCustomPlot *plot, Theme theme)
 {
     plot->setBackground(theme == LIGHT ? QBrush(Qt::white) : qApp->palette().brush(QPalette::Base));
     setDefaultAxesFormat(plot->axisRect(), theme);
+    setDefaultLegendFormat(plot->legend, theme);
 }
 
 } // namespace PlotHelpers

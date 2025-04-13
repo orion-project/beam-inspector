@@ -32,20 +32,26 @@ private:
     QCPGraph *_profileX, *_profileY, *_fitX, *_fitY;
     QCPTextElement *_textMiX, *_textMiY;
     PixelScale _scale;
-    QAction *_actnShowFit, *_actnCopyFitX, *_actnCopyFitY, *_actnSetMI;
+    QAction *_actnShowFit, *_actnCopyFitX, *_actnCopyFitY, *_actnSetMI, *_actnCenterFit, *_actnShowFullY;
     double _profileRange = 2;
     int _pointCount = 100;
     double _rangeX = 0;
+    double _rangeY = 0;
     double _MI = 1.0; // M-square value for hyper-gaussian fit
     bool _showFit = true;
+    bool _centerFit = false;
+    bool _showFullY = false;
 
     void updateVisibility();
     void storeState();
     void toggleShowFit();
+    void toggleCenterFit();
+    void toggleShowFullY();
     void copyGraph(QCPGraph *graph);
     void copyImage(QCustomPlot *plot);
     void setMI();
     void showMI();
+    void autoScale();
 };
 
 #endif // PROFILES_VIEW_H
