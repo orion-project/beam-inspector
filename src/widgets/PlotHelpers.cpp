@@ -50,7 +50,7 @@ void setDefaultAxesFormat(QCPAxisRect *axisRect, Theme theme)
 void setDefaultLegendFormat(QCPLegend *legend, Theme theme)
 {
     legend->setBrush(isDarkTheme(theme) ? qApp->palette().color(QPalette::Window) : Qt::white);
-    legend->setBorderPen(themeAxisColor(theme));
+    legend->setBorderPen(QPen(themeAxisColor(theme), 0, Qt::SolidLine));
     legend->setTextColor(themeAxisLabelColor(theme));
 }
 
