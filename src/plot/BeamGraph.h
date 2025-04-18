@@ -36,6 +36,8 @@ public:
 
     void setFrameColor(const QColor& c);
     void setGradient(const QCPColorGradient &gradient);
+
+    QPointer<QCPColorScaleAxisRectPrivate> axisRect() { return mAxisRect; }
 };
 
 //------------------------------------------------------------------------------

@@ -7,6 +7,7 @@
 #include <QWidget>
 
 class QCustomPlot;
+class QCPItemLine;
 
 class CrosshairsOverlay;
 class BeamColorMap;
@@ -77,11 +78,12 @@ signals:
     void roiEdited();
     void crosshairsEdited();
     void crosshairsLoaded();
-    void mousePositionChanged(double x, double y);
+    void mousePositionChanged(double x, double y, double c);
 
 protected:
     void resizeEvent(QResizeEvent*) override;
     void keyPressEvent(QKeyEvent*) override;
+    void timerEvent(QTimerEvent *event) override;
     bool event(QEvent *event) override;
 
 private:
@@ -97,17 +99,21 @@ private:
     CrosshairsOverlay *_crosshairs;
     Ori::MruFileList *_mruCrosshairs;
     QList<BeamPlotItem*> _relativeItems;
+    QCPItemLine *_colorLevelMarker;
     int _imageW, _imageH;
     enum AutoZoomMode { ZOOM_NONE, ZOOM_FULL, ZOOM_APERTURE };
     AutoZoomMode _autoZoom = ZOOM_FULL;
     bool _autoZooming = false;
     bool _showBeamInfo = false;
     bool _rawView = false;
+    int _timerId = 0;
+    double _mouseX = 0, _mouseY = 0;
 
     void zoomToBounds(double x1, double y1, double x2, double y2, bool replot);
     void axisRangeChanged();
     void showContextMenu(const QPoint& pos);
     void updateRoiVisibility();
+    void handleMouseMove(QMouseEvent *event);
 };
 
 #endif // PLOT_WIDGET_H

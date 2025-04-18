@@ -14,6 +14,7 @@
 #include "widgets/OriPopupMessage.h"
 
 #include "qcustomplot/src/core.h"
+#include "qcustomplot/src/items/item-line.h"
 #include "qcustomplot/src/layoutelements/layoutelement-axisrect.h"
 
 #define APERTURE_ZOOM_MARGIN 0.01
@@ -33,11 +34,7 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _plot->axisRect()->setBackground(QBrush(QIcon(":/misc/no_plot").pixmap(16)));
     _plot->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(_plot, &QWidget::customContextMenuRequested, this, &Plot::showContextMenu);
-    connect(_plot, &QCustomPlot::mouseMove, this, [this](QMouseEvent *event) {
-        double x = _plot->xAxis->pixelToCoord(event->pos().x());
-        double y = _plot->yAxis->pixelToCoord(event->pos().y());
-        emit mousePositionChanged(x, y);
-    });
+    connect(_plot, &QCustomPlot::mouseMove, this, &Plot::handleMouseMove);
 
     auto gridLayer = _plot->xAxis->grid()->layer();
     _plot->addLayer("beam", gridLayer, QCustomPlot::limBelow);
@@ -69,8 +66,6 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _rois = new RoiRectsGraph(_plot);
     _relativeItems << _rois;
 
-    setThemeColors(PlotHelpers::SYSTEM, false);
-
     auto l = new QVBoxLayout(this);
     l->setContentsMargins(0, 0, 0, 0);
     l->addWidget(_plot);
@@ -83,9 +78,27 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
 
     _plotIntf = new PlotIntf(this, _plot, _colorMap, _colorScale, _beamInfo, _rois);
 
+    _colorLevelMarker = new QCPItemLine(_plot);
+    _colorLevelMarker->setLayer("overlay");
+    _colorLevelMarker->setClipToAxisRect(false);
+    _colorLevelMarker->setHead(QCPLineEnding(QCPLineEnding::esFlatArrow));
+    _colorLevelMarker->end->setAxisRect(_colorScale->axisRect());
+    _colorLevelMarker->end->setAxes(_colorScale->axisRect()->axis(QCPAxis::atBottom),
+                                    _colorScale->axisRect()->axis(QCPAxis::atRight));
+    _colorLevelMarker->end->setTypeX(QCPItemPosition::ptAxisRectRatio);
+    _colorLevelMarker->end->setTypeY(QCPItemPosition::ptPlotCoords);
+    _colorLevelMarker->end->setCoords(0, 0.5);
+    _colorLevelMarker->start->setAxisRect(_colorScale->axisRect());
+    _colorLevelMarker->start->setTypeX(QCPItemPosition::ptAbsolute);
+    _colorLevelMarker->start->setTypeY(QCPItemPosition::ptPlotCoords);
+    _colorLevelMarker->start->setParentAnchor(_colorLevelMarker->end);
+    _colorLevelMarker->start->setCoords(-_colorLevelMarker->head().length(), 0);
+
     _mruCrosshairs = new Ori::MruFileList(this);
     _mruCrosshairs->load("mruCrosshairs");
     connect(_mruCrosshairs, &Ori::MruFileList::clicked, this, qOverload<const QString&>(&Plot::loadCrosshairs));
+
+    setThemeColors(PlotHelpers::SYSTEM, false);
 }
 
 Plot::~Plot()
@@ -220,6 +233,7 @@ void Plot::setThemeColors(PlotHelpers::Theme theme, bool replot)
     PlotHelpers::setThemeColors(_plot, theme);
     PlotHelpers::setDefaultAxisFormat(_colorScale->axis(), theme);
     _colorScale->setFrameColor(PlotHelpers::themeAxisColor(theme));
+    _colorLevelMarker->setPen(PlotHelpers::themeAxisColor(theme));
     if (replot) _plot->replot();
 }
 
@@ -449,4 +463,36 @@ QList<QPointF> Plot::crosshairs() const
 QList<RoiRect> Plot::rois() const
 {
     return _crosshairs->rois();
+}
+
+void Plot::handleMouseMove(QMouseEvent *event)
+{
+    _mouseX = _plot->xAxis->pixelToCoord(event->pos().x());
+    _mouseY = _plot->yAxis->pixelToCoord(event->pos().y());
+
+    if (_timerId == 0)
+        _timerId = startTimer(100);
+}
+
+void Plot::timerEvent(QTimerEvent *event)
+{
+    // Average colors over 0.5% of image size using 3x3 grid
+    const double dx = double(_imageW)*0.0025;
+    const double dy = double(_imageH)*0.0025;
+    double c = 0;
+    for (int sy = -1; sy <= 1; sy++)
+        for (int sx = -1; sx <= 1; sx++) {
+            const double x = _mouseX + double(sx)*dx;
+            const double y = _mouseY + double(sy)*dy;
+            c += _colorMap->data()->data(x, y);
+        }
+    c /= 9.0;
+
+    _colorLevelMarker->end->setCoords(0, c);
+    _plot->replot();
+
+    emit mousePositionChanged(_mouseX, _mouseY, c);
+
+    killTimer(_timerId);
+    _timerId = 0;
 }

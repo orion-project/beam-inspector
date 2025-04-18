@@ -489,10 +489,10 @@ void PlotWindow::createPlot()
     connect(_plot, &Plot::roiEdited, this, &PlotWindow::roiEdited);
     connect(_plot, &Plot::crosshairsEdited, this, &PlotWindow::crosshairsEdited);
     connect(_plot, &Plot::crosshairsLoaded, this, &PlotWindow::crosshairsLoaded);
-    connect(_plot, &Plot::mousePositionChanged, this, [this](double x, double y) {
+    connect(_plot, &Plot::mousePositionChanged, this, [this](double x, double y, double c) {
         if (!_camera) return;
         const PixelScale& scale = _camera->pixelScale();
-        QString coordText = QStringLiteral("X=%1; Y=%2").arg(scale.format(x), scale.format(y));
+        QString coordText = QStringLiteral("%1 @ (%2 × %3)").arg(c).arg(scale.format(x), scale.format(y));
         _statusBar->setText(STATUS_MOUSE_POS, coordText);
     });
     _plot->augmentCrosshairLoadSave(
