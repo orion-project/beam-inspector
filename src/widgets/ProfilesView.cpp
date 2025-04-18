@@ -287,6 +287,7 @@ void ProfilesView::setThemeColors(PlotHelpers::Theme theme, bool replot)
     PlotHelpers::setThemeColors(_plotX, theme);
     PlotHelpers::setThemeColors(_plotY, theme);
     _textMiX->setTextColor(PlotHelpers::themeAxisLabelColor(theme));
+    _textMiY->setTextColor(PlotHelpers::themeAxisLabelColor(theme));
     QColor profileColor = PlotHelpers::isDarkTheme(theme) ? QColor(30, 144, 255) : QColor(Qt::blue);
     _profileX->setPen(QPen(profileColor));
     _profileY->setPen(QPen(profileColor));

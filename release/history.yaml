@@ -3,7 +3,7 @@ history:
   date: ?
   changes:
   - text: Fix plot moving when ROI bound edited
-  - text: Show level under mouse marker on color scale
+  - text: Show brightness under mouse
 
 - version: 0.0.19
   date: 2025-04-13
