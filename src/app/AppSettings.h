@@ -48,6 +48,12 @@ public:
     QChar copyResultsSeparator = ',';
     bool copyResultsJustified = true;
     QMap<QChar, QString> resultsSeparators() const;
+    int crosshairRadius = 5;
+    int crosshairExtent = 5;
+    int crosshairPenWidth = 1;
+    int crosshairTextOffsetX = 10;
+    int crosshairTextOffsetY = 0;
+    int crosshaitTextSize = 14;
 
     enum ConfigPages {
         cfgDev,
@@ -57,6 +63,7 @@ public:
     #endif
         cfgOpts,
         cfgTable,
+        cfgCrosshair,
     };
 
     void load();

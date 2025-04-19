@@ -84,6 +84,14 @@ void AppSettings::load()
     s.beginGroup("Table");
     LOAD(copyResultsSeparator, Char, ',');
     LOAD(copyResultsJustified, Bool, true);
+    
+    s.beginGroup("Crosshair");
+    LOAD(crosshairRadius, Int, 5);
+    LOAD(crosshairExtent, Int, 5);
+    LOAD(crosshairPenWidth, Int, 1);
+    LOAD(crosshairTextOffsetX, Int, 10);
+    LOAD(crosshairTextOffsetY, Int, 0);
+    LOAD(crosshaitTextSize, Int, 14);
 }
 
 void AppSettings::save()
@@ -118,6 +126,14 @@ void AppSettings::save()
     s.beginGroup("Table");
     SAVE(copyResultsSeparator);
     SAVE(copyResultsJustified);
+
+    s.beginGroup("Crosshair");
+    SAVE(crosshairRadius);
+    SAVE(crosshairExtent);
+    SAVE(crosshairPenWidth);
+    SAVE(crosshairTextOffsetX);
+    SAVE(crosshairTextOffsetY);
+    SAVE(crosshaitTextSize);
 }
 
 QMap<QChar, QString> AppSettings::resultsSeparators() const
@@ -147,6 +163,7 @@ bool AppSettings::edit()
         ConfigPage(cfgDbg, tr("Debug"), ":/toolbar/bug"),
         ConfigPage(cfgOpts, tr("Options"), ":/toolbar/options")
             .withHelpTopic("app_settings_opts"),
+        ConfigPage(cfgCrosshair, tr("Crosshairs"), ":/toolbar/crosshair")
     };
     opts.onHelpRequested = [](const QString &topic){ HelpSystem::topic(topic); };
     auto seps = resultsSeparators();
@@ -194,6 +211,13 @@ bool AppSettings::edit()
         new ConfigItemSection(cfgOpts, tr("Tweaks")),
         new ConfigItemBool(cfgOpts, tr("Camera control: Round frame rate"), &roundHardConfigFps),
         new ConfigItemBool(cfgOpts, tr("Camera control: Round exposure"), &roundHardConfigExp),
+        
+        (new ConfigItemInt(cfgCrosshair, tr("Radius"), &crosshairRadius))->withMinMax(0, 20),
+        (new ConfigItemInt(cfgCrosshair, tr("Extent"), &crosshairExtent))->withMinMax(0, 20),
+        (new ConfigItemInt(cfgCrosshair, tr("Pen width"), &crosshairPenWidth))->withMinMax(0, 5),
+        (new ConfigItemInt(cfgCrosshair, tr("Horizontal label offset"), &crosshairTextOffsetX))->withMinMax(-50, 50),
+        (new ConfigItemInt(cfgCrosshair, tr("Vertical label offset"), &crosshairTextOffsetY))->withMinMax(-50, 50),
+        (new ConfigItemInt(cfgCrosshair, tr("Font size"), &crosshaitTextSize))->withMinMax(10, 32),
     };
     if (ConfigDlg::edit(opts))
     {

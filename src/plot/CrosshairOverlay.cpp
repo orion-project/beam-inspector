@@ -1,5 +1,6 @@
 #include "CrosshairOverlay.h"
 
+#include "app/AppSettings.h"
 #include "app/HelpSystem.h"
 
 #include "helpers/OriDialogs.h"
@@ -9,9 +10,6 @@
 
 #include <QColorDialog>
 
-#define RADIUS 5
-#define EXTENT 5
-#define TEXT_POS 15
 #define DEF_ROI_SIZE 0.1
 #define DEF_DELTA_MIN 0.005
 #define DEF_DELTA_MAX 0.05
@@ -20,6 +18,7 @@ void Crosshair::setLabel(const QString &s)
 {
     label = s;
     text = QStaticText(label);
+    text.setTextFormat(Qt::PlainText);
     text.prepare();
 }
 
@@ -70,20 +69,34 @@ void CrosshairsOverlay::setItemCoords(Crosshair &c, double plotX, double plotY)
 void CrosshairsOverlay::draw(QCPPainter *painter)
 {
     if (!_hasCoords) return;
-    const double r = RADIUS;
-    const double w = RADIUS + EXTENT;
+    const auto &s = AppSettings::instance();
+    const double r = s.crosshairRadius;
+    const double w = s.crosshairRadius + s.crosshairExtent;
+    QFont f;
+    f.setPixelSize(s.crosshaitTextSize);
+    painter->setFont(f);
     for (const auto& c : _items) {
         painter->setBrush(Qt::NoBrush);
-        painter->setPen(QPen(c.color, 0, Qt::SolidLine));
+        painter->setPen(QPen(c.color, s.crosshairPenWidth, Qt::SolidLine));
         const double x = parentPlot()->xAxis->coordToPixel(c.unitX);
         const double y = parentPlot()->yAxis->coordToPixel(c.unitY);
-        painter->drawEllipse(QPointF(x, y), r, r);
+        if (s.crosshairRadius > 0)
+            painter->drawEllipse(QPointF(x, y), r, r);
         painter->drawLine(QLineF(x, y-w, x, y+w));
         painter->drawLine(QLineF(x-w, y, x+w, y));
         painter->setBrush(c.color);
-        painter->drawStaticText(x+TEXT_POS, y-c.text.size().height()/2, c.text);
-        painter->setPen(QPen(c.color, 0, Qt::DashLine));
-        painter->setBrush(Qt::NoBrush);
+        double textX, textY;
+        if (s.crosshairTextOffsetX > 0)
+            textX = x + r + s.crosshairTextOffsetX;
+        else if (s.crosshairTextOffsetX < 0)
+            textX = x - r + s.crosshairTextOffsetX - c.text.size().width();
+        else textX = x - c.text.size().width()/2.0;
+        if (s.crosshairTextOffsetY > 0)
+            textY = y + s.crosshairTextOffsetY;
+        else if (s.crosshairTextOffsetY < 0)
+            textY = y + s.crosshairTextOffsetY - c.text.size().height();
+        else textY = y - c.text.size().height()/2.0;
+        painter->drawStaticText(textX, textY, c.text);
     }
 }
 
@@ -124,19 +137,26 @@ void CrosshairsOverlay::mouseMove(QMouseEvent *e)
 
 int CrosshairsOverlay::itemIndexAtPos(const QPoint& pos)
 {
-    const double r = RADIUS * 1.5;
+    const auto &s = AppSettings::instance();
+    const double r = s.crosshairRadius * 1.5;
     for (int i = 0; i < _items.size(); i++) {
         const auto& c = _items.at(i);
         const double x = parentPlot()->xAxis->coordToPixel(c.unitX);
         const double y = parentPlot()->yAxis->coordToPixel(c.unitY);
-        int x1 = x-r, x2 = x+r, y1 = y-r, y2 = y+r;
+        double x1 = x-r, x2 = x+r, y1 = y-r, y2 = y+r;
         if (!c.label.isEmpty()) {
-            x2 = x + TEXT_POS + c.text.size().width();
-            int h = c.text.size().height();
-            if (h > 2*r) {
-                y1 = y - h/2;
-                y2 = y + h/2;
-            }
+            double w = c.text.size().width();
+            double h = c.text.size().height();
+            if (s.crosshairTextOffsetX > 0)
+                x1 = x + r + s.crosshairTextOffsetX, x2 = x1 + w;
+            else if (s.crosshairTextOffsetX < 0)
+                x2 = x - r + s.crosshairTextOffsetX, x1 = x2 - w;
+            else x1 = x - w/2.0, x2 = x + w/2.0;
+            if (s.crosshairTextOffsetY > 0)
+                y1 = y + s.crosshairTextOffsetY, y2 = y1 + h;
+            else if (s.crosshairTextOffsetY < 0)
+                y2 = y + s.crosshairTextOffsetY, y1 = y2 - h;
+            else y1 = y - h/2.0, y2 = y + h/2;
         }
         if (pos.x() >= x1 && pos.x() <= x2 && pos.y() >= y1 && pos.y() <= y2) {
             return i;
