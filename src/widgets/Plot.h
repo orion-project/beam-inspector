@@ -114,6 +114,7 @@ private:
     void showContextMenu(const QPoint& pos);
     void updateRoiVisibility();
     void handleMouseMove(QMouseEvent *event);
+    void showLevelAtMouse();
 };
 
 #endif // PLOT_WIDGET_H

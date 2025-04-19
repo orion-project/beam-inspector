@@ -29,6 +29,13 @@ QString Camera::resolutionStr() const
     return QStringLiteral("%1 × %2 × %3bit").arg(width()).arg(height()).arg(bpp());
 }
 
+QString Camera::formatBrightness(double v) const
+{
+    if (_config.plot.normalize)
+        return QString::number(v, 'f', 3);
+    return QString::number(v, 'f', 0);
+}
+
 void Camera::loadConfig()
 {
     Ori::Settings s;

@@ -73,6 +73,7 @@ public:
 
     PixelScale pixelScale() const;
     QString resolutionStr() const;
+    QString formatBrightness(double v) const;
 
     void loadConfig();
     void saveConfig(bool saveMore = false);

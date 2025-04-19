@@ -113,6 +113,7 @@ void PlotIntf::showResult()
     _colorScale->setDataRange(QCPRange(_min, _max));
     if (_w > 0) _beamData->setKeyRange(QCPRange(0, _scale.pixelToUnit(_w)));
     if (_h > 0) _beamData->setValueRange(QCPRange(0, _scale.pixelToUnit(_h)));
+    if (onDataShown) onDataShown();
 }
 
 template <class T> void toggleVisiblity(QList<T>& list, bool on)

@@ -77,6 +77,7 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     _relativeItems << _crosshairs;
 
     _plotIntf = new PlotIntf(this, _plot, _colorMap, _colorScale, _beamInfo, _rois);
+    _plotIntf->onDataShown = [this]{ showLevelAtMouse(); };
 
     _colorLevelMarker = new QCPItemLine(_plot);
     _colorLevelMarker->setLayer("overlay");
@@ -476,6 +477,15 @@ void Plot::handleMouseMove(QMouseEvent *event)
 
 void Plot::timerEvent(QTimerEvent *event)
 {
+    showLevelAtMouse();
+    _plot->replot();
+
+    killTimer(_timerId);
+    _timerId = 0;
+}
+
+void Plot::showLevelAtMouse()
+{
     // Average colors over 0.5% of image size using 3x3 grid
     const double dx = double(_imageW)*0.0025;
     const double dy = double(_imageH)*0.0025;
@@ -489,10 +499,5 @@ void Plot::timerEvent(QTimerEvent *event)
     c /= 9.0;
 
     _colorLevelMarker->end->setCoords(0, c);
-    _plot->replot();
-
     emit mousePositionChanged(_mouseX, _mouseY, c);
-
-    killTimer(_timerId);
-    _timerId = 0;
 }
