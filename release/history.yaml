@@ -2,8 +2,9 @@ history:
 - version: 0.0.20
   date: ?
   changes:
-  - text: Fix plot moving when ROI bound edited
   - text: Show brightness under mouse
+  - text: Show result label in table in multi-ROI mode
+  - text: Fix plot moving when ROI bound edited
 
 - version: 0.0.19
   date: 2025-04-13

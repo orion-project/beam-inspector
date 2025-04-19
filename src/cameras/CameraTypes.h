@@ -26,6 +26,7 @@ struct RoiRect
     double top = 0;
     double right = 0;
     double bottom = 0;
+    QString label;
 
     int width() const { return right - left; }
     int height() const { return bottom - top; }

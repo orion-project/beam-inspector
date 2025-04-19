@@ -59,6 +59,7 @@ void CameraConfig::load(QSettings *s)
         r.top = s->value("top", 0.25).toDouble();
         r.right = s->value("right", 0.75).toDouble();
         r.bottom = s->value("bottom", 0.75).toDouble();
+        r.label = s->value("label").toString();
         r.fix();
         rois << r;
     }
@@ -112,6 +113,7 @@ void CameraConfig::save(QSettings *s, bool compact) const
             s->setValue("top", roi.top);
             s->setValue("right", roi.right);
             s->setValue("bottom", roi.bottom);
+            s->setValue("label", roi.label);
         }
         s->endArray();
     }

@@ -25,6 +25,7 @@ void Crosshair::setLabel(const QString &s)
 
 CrosshairsOverlay::CrosshairsOverlay(QCustomPlot *parentPlot) : BeamPlotItem(parentPlot)
 {
+    setLayer("overlay");
     connect(parentPlot, &QCustomPlot::mouseMove, this, &CrosshairsOverlay::mouseMove);
     connect(parentPlot, &QCustomPlot::mousePress, this, &CrosshairsOverlay::mousePress);
     connect(parentPlot, &QCustomPlot::mouseRelease, this, &CrosshairsOverlay::mouseRelease);
@@ -189,6 +190,8 @@ void CrosshairsOverlay::changeItemLabel()
     if (Ori::Dlg::inputText(opts)) {
         c.setLabel(opts.value);
         parentPlot()->replot();
+        if (onEdited)
+            onEdited();
     }
 }
 
@@ -359,6 +362,7 @@ QList<RoiRect> CrosshairsOverlay::rois() const
         r.top = it.y - sz;
         r.right = it.x + sz;
         r.bottom = it.y + sz;
+        r.label = it.label;
         res << r;
     }
     return res;

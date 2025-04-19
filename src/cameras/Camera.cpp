@@ -310,7 +310,10 @@ TableRowsSpec Camera::tableRows() const
         rows.results << qApp->tr("Centroid");
     } else {
         for (int i = 0; i < _config.rois.size(); i++) {
-            rows.results << qApp->tr("Result #%1").arg(i+1);
+            const auto &roi = _config.rois.at(i);
+            if (roi.label.isEmpty())
+                rows.results << qApp->tr("Result #%1").arg(i+1);
+            else rows.results << roi.label;
         }
     }
     return rows;
