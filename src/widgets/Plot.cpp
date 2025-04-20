@@ -24,8 +24,10 @@ using Ori::Gui::PopupMessage;
 Plot::Plot(QWidget *parent) : QWidget{parent}
 {
     _plot = new QCustomPlot;
+    _plot->yAxis->ignoreMouseWheel = true;
     _plot->yAxis->setRangeReversed(true);
     _plot->axisRect()->setupFullAxesBox(true);
+    _plot->xAxis->ignoreMouseWheel = true;
     _plot->xAxis->setTickLabels(false);
     _plot->xAxis2->setTickLabels(true);
     _plot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
