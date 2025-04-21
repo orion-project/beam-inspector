@@ -316,14 +316,14 @@ void PlotWindow::createMenuBar()
     _actionCrosshairsShow->setCheckable(true);
     _actionCrosshairsEdit = A_(tr("Edit Crosshairs"), this, &PlotWindow::toggleCrosshairsEditing, ":/toolbar/crosshair_edit");
     _actionCrosshairsEdit->setCheckable(true);
-    auto actnClearCrosshairs = A_(tr("Clear Crosshairs"), _plot, &Plot::clearCrosshairs, ":/toolbar/trash");
-    auto actnLoadCrosshairs = A_(tr("Load From File..."), _plot, qOverload<>(&Plot::loadCrosshairs), ":/toolbar/open");
-    auto actnSaveCrosshairs = A_(tr("Save To File..."), _plot, &Plot::saveCrosshairs, ":/toolbar/save");
+    _actionClearCrosshairs = A_(tr("Clear Crosshairs"), _plot, &Plot::clearCrosshairs, ":/toolbar/trash");
+    _actionLoadCrosshairs = A_(tr("Load From File..."), _plot, qOverload<>(&Plot::loadCrosshairs), ":/toolbar/open");
+    _actionSaveCrosshairs = A_(tr("Save To File..."), _plot, &Plot::saveCrosshairs, ":/toolbar/save");
     auto menuOverlays = M_(tr("Overlays"), {
-        _actionCrosshairsShow, 0, _actionCrosshairsEdit, actnClearCrosshairs,
-        0, actnLoadCrosshairs, actnSaveCrosshairs,
+        _actionCrosshairsShow, 0, _actionCrosshairsEdit, _actionClearCrosshairs,
+        0, _actionLoadCrosshairs, _actionSaveCrosshairs,
     });
-    new Ori::Widgets::MruMenuPart(_plot->mruCrosshairs(), menuOverlays, actnLoadCrosshairs, this);
+    new Ori::Widgets::MruMenuPart(_plot->mruCrosshairs(), menuOverlays, _actionLoadCrosshairs, this);
     menuBar()->addMenu(menuOverlays);
 
     auto m = menuBar()->addMenu(tr("Help"));
@@ -687,6 +687,7 @@ void PlotWindow::updateControls()
     _actionCamConfig->setDisabled(started || !opened);
     _actionEditRoi->setDisabled(started || !opened);
     _actionUseRoi->setDisabled(started || !opened);
+    _actionUseMultiRoi->setDisabled(started || !opened);
     _actionOpenImg->setDisabled(started);
     _actionRawView->setDisabled(started || !opened);
     _actionMeasure->setText(started ? tr("Stop Measurements") : tr("Start Measurements"));
@@ -694,6 +695,11 @@ void PlotWindow::updateControls()
     _actionMeasure->setDisabled(!opened);
     _camConfigPanel->setReadOnly(started || !opened);
     _actionSetupPowerMeter->setDisabled(started || !opened);
+    _actionCrosshairsShow->setDisabled(started || !opened);
+    _actionCrosshairsEdit->setDisabled(started || !opened);
+    _actionClearCrosshairs->setDisabled(started || !opened);
+    _actionLoadCrosshairs->setDisabled(started || !opened);
+    _actionSaveCrosshairs->setDisabled(started || !opened);
 }
 
 void PlotWindow::toggleMeasure(bool force)

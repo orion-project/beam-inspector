@@ -156,6 +156,7 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     _width = cam->width();
     _height = cam->height();
     _bpp = cam->bpp();
+    const auto &camConfig = cam->config();
 
     auto scale = cam->pixelScale();
     _scale = scale.on ? scale.factor : 1;
@@ -221,13 +222,30 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     }
     QTextStream out(&csvFile);
     out << "Index"
-        << SEP << "Timestamp"
-        << SEP << "Center X"
-        << SEP << "Center Y"
-        << SEP << "Width X"
-        << SEP << "Width Y"
-        << SEP << "Azimuth"
-        << SEP << "Ellipticity";
+        << SEP << "Timestamp";
+    if (camConfig.roiMode == ROI_MULTI) {
+        _multires_cnt = camConfig.rois.size();
+        for (int i = 0; i < _multires_cnt; i++) {
+            const auto &roi = camConfig.rois.at(i);
+            QString colSuffix = roi.label.isEmpty() ? QString("#%1").arg(i) : roi.label;
+            out
+                << SEP << "Center X (" << colSuffix << ')'
+                << SEP << "Center Y (" << colSuffix << ')'
+                << SEP << "Width X (" << colSuffix << ')'
+                << SEP << "Width Y (" << colSuffix << ')'
+                << SEP << "Azimuth (" << colSuffix << ')'
+                << SEP << "Ellipticity (" << colSuffix << ')';
+        }
+    } else {
+        _multires_cnt = 0;
+        out
+            << SEP << "Center X"
+            << SEP << "Center Y"
+            << SEP << "Width X"
+            << SEP << "Width Y"
+            << SEP << "Azimuth"
+            << SEP << "Ellipticity";
+    }
     _auxCols = {};
     const auto& cols = cam->measurCols();
     if (!cols.isEmpty()) {
@@ -258,32 +276,39 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     _intervalIdx = 0;
     _avg_xc = 0, _avg_yc = 0;
     _avg_dx = 0, _avg_dy = 0;
-    _avg_phi = 0, _avg_eps = 0;
+    _avg_phi = 0;
     _avg_cnt = 0;
     _auxAvgVals = {};
     _auxAvgCnt = 0;
+    _multires_avg.clear();
+    _multires_avg_cnt.clear();
 
     return {};
 }
 
-#define OUT_VALS(xc, yc, dx, dy, phi, eps, aux) {       \
+#define OUT_VALS(xc, yc, dx, dy, phi, eps)              \
     out << SEP << QString::number(xc * _scale, 'f', 1)  \
         << SEP << QString::number(yc * _scale, 'f', 1)  \
         << SEP << QString::number(dx * _scale, 'f', 1)  \
         << SEP << QString::number(dy * _scale, 'f', 1)  \
         << SEP << QString::number(phi, 'f', 1)          \
-        << SEP << QString::number(eps, 'f', 3);         \
-    if (!_auxCols.empty())                              \
+        << SEP << QString::number(eps, 'f', 3);
+        
+#define OUT_AUX(aux)                                    \
+    if (!_auxCols.empty()) {                            \
         for (const auto& id : std::as_const(_auxCols))  \
-            out << SEP << aux.value(id);                \
-    out << '\n';                                        \
-}
+            if (id < MULTIRES_IDX)                      \
+                out << SEP << aux.value(id);            \
+    }                                                   \
+    out << '\n';
 
-#define OUT_ROW(nan, xc, yc, dx, dy, phi, eps, aux)                            \
+#define OUT_TIME                                                               \
     out << _intervalIdx << SEP                                                 \
-        << _captureStart.addMSecs(r.time).toString(Qt::ISODateWithMs);         \
-    if (nan) OUT_VALS(0, 0, 0, 0, 0, 0, aux)                                   \
-    else OUT_VALS(xc, yc, dx, dy, phi, eps, aux)
+        << _captureStart.addMSecs(r.time).toString(Qt::ISODateWithMs);
+
+#define OUT_ROW(nan, xc, yc, dx, dy, phi)                                      \
+    if (nan) OUT_VALS(0, 0, 0, 0, 0, 0)                                        \
+    else OUT_VALS(xc, yc, dx, dy, phi, EPS(dx, dy))
 
 
 bool MeasureSaver::event(QEvent *event)
@@ -332,7 +357,21 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
     {
         for (int i = 0; i < e->count; i++) {
             const auto &r = e->results[i];
-            OUT_ROW(r.nan, r.xc, r.yc, r.dx, r.dy, r.phi, r.eps(), r.cols);
+            OUT_TIME;
+            if (_multires_cnt) {
+                for (int j = 0; j < _multires_cnt; j++) {
+                    const bool nan = r.cols[MULTIRES_IDX_NAN(j)] == 1;
+                    const double xc = r.cols[MULTIRES_IDX_XC(j)];
+                    const double yc = r.cols[MULTIRES_IDX_YC(j)];
+                    const double dx = r.cols[MULTIRES_IDX_DX(j)];
+                    const double dy = r.cols[MULTIRES_IDX_DY(j)];
+                    const double phi = r.cols[MULTIRES_IDX_PHI(j)];
+                    OUT_ROW(nan, xc, yc, dx, dy, phi);
+                }
+            } else {
+                OUT_ROW(r.nan, r.xc, r.yc, r.dx, r.dy, r.phi);
+            }
+            OUT_AUX(r.cols);
             _intervalIdx++;
         }
     }
@@ -340,15 +379,27 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
     {
         for (int i = 0; i < e->count; i++) {
             const auto &r = e->results[i];
-
-            if (!r.nan) {
-                _avg_xc += r.xc;
-                _avg_yc += r.yc;
-                _avg_dx += r.dx;
-                _avg_dy += r.dy;
-                _avg_phi += r.phi;
-                _avg_eps += r.eps();
-                _avg_cnt++;
+            if (_multires_cnt) {
+                for (int j = 0; j < _multires_cnt; j++) {
+                    const bool nan = r.cols[MULTIRES_IDX_NAN(j)] == 1;
+                    if (!nan) {
+                        _multires_avg[MULTIRES_IDX_XC(j)] += r.cols[MULTIRES_IDX_XC(j)];
+                        _multires_avg[MULTIRES_IDX_YC(j)] += r.cols[MULTIRES_IDX_YC(j)];
+                        _multires_avg[MULTIRES_IDX_DX(j)] += r.cols[MULTIRES_IDX_DX(j)];
+                        _multires_avg[MULTIRES_IDX_DY(j)] += r.cols[MULTIRES_IDX_DY(j)];
+                        _multires_avg[MULTIRES_IDX_PHI(j)] += r.cols[MULTIRES_IDX_PHI(j)];
+                        _multires_avg_cnt[j]++;
+                    }
+                }
+            } else {
+                if (!r.nan) {
+                    _avg_xc += r.xc;
+                    _avg_yc += r.yc;
+                    _avg_dx += r.dx;
+                    _avg_dy += r.dy;
+                    _avg_phi += r.phi;
+                    _avg_cnt++;
+                }
             }
             if (!_auxCols.empty()) {
                 for (const auto &id : std::as_const(_auxCols))
@@ -364,23 +415,45 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
             if (i == e->count-1 || r.time - _intervalBeg >= _intervalLen) {
                 if (!_auxCols.empty())
                     for (const auto &id : std::as_const(_auxCols))
-                        _auxAvgVals[id] /= _auxAvgCnt;
+                        if (id < MULTIRES_IDX)
+                            _auxAvgVals[id] /= _auxAvgCnt;
 
-                OUT_ROW(_avg_cnt == 0,
-                        _avg_xc / _avg_cnt,
-                        _avg_yc / _avg_cnt,
-                        _avg_dx / _avg_cnt,
-                        _avg_dy / _avg_cnt,
-                        _avg_phi / _avg_cnt,
-                        _avg_eps / _avg_cnt,
-                        _auxAvgVals);
+                OUT_TIME;
+                if (_multires_cnt) {
+                    for (int j = 0; j < _multires_cnt; j++) {
+                        const int avg_cnt = _multires_avg_cnt[j];
+                        const double avg_xc = _multires_avg[MULTIRES_IDX_XC(j)];
+                        const double avg_yc = _multires_avg[MULTIRES_IDX_YC(j)];
+                        const double avg_dx = _multires_avg[MULTIRES_IDX_DX(j)];
+                        const double avg_dy = _multires_avg[MULTIRES_IDX_DY(j)];
+                        const double avg_phi = _multires_avg[MULTIRES_IDX_PHI(j)];
+                        OUT_ROW(avg_cnt == 0,
+                                avg_xc / avg_cnt,
+                                avg_yc / avg_cnt,
+                                avg_dx / avg_cnt,
+                                avg_dy / avg_cnt,
+                                avg_phi / avg_cnt
+                                );
+                    }
+                    _multires_avg.clear();
+                    _multires_avg_cnt.clear();
+                } else {
+                    OUT_ROW(_avg_cnt == 0,
+                            _avg_xc / _avg_cnt,
+                            _avg_yc / _avg_cnt,
+                            _avg_dx / _avg_cnt,
+                            _avg_dy / _avg_cnt,
+                            _avg_phi / _avg_cnt
+                            );
+                    _avg_xc = 0, _avg_yc = 0;
+                    _avg_dx = 0, _avg_dy = 0;
+                    _avg_phi = 0;
+                    _avg_cnt = 0;
+                }
+                OUT_AUX(_auxAvgVals);
 
                 _intervalIdx++;
                 _intervalBeg = r.time;
-                _avg_xc = 0, _avg_yc = 0;
-                _avg_dx = 0, _avg_dy = 0;
-                _avg_phi = 0, _avg_eps = 0;
-                _avg_cnt = 0;
                 _auxAvgVals = {};
                 _auxAvgCnt = 0;
             }
@@ -391,7 +464,21 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
         for (int i = 0; i < e->count; i++) {
             const auto &r = e->results[i];
             if (i == 0 || i == e->count-1 || r.time - _intervalBeg >= _intervalLen) {
-                OUT_ROW(r.nan, r.xc, r.yc, r.dx, r.dy, r.phi, r.eps(), r.cols);
+                OUT_TIME;
+                if (_multires_cnt) {
+                    for (int j = 0; j < _multires_cnt; j++) {
+                        const bool nan = r.cols[MULTIRES_IDX_NAN(j)] == 1;
+                        const double xc = r.cols[MULTIRES_IDX_XC(j)];
+                        const double yc = r.cols[MULTIRES_IDX_YC(j)];
+                        const double dx = r.cols[MULTIRES_IDX_DX(j)];
+                        const double dy = r.cols[MULTIRES_IDX_DY(j)];
+                        const double phi = r.cols[MULTIRES_IDX_PHI(j)];
+                        OUT_ROW(nan, xc, yc, dx, dy, phi);
+                    }
+                } else {
+                    OUT_ROW(r.nan, r.xc, r.yc, r.dx, r.dy, r.phi);
+                }
+                OUT_AUX(r.cols);
                 _intervalBeg = r.time;
                 _intervalIdx++;
             }

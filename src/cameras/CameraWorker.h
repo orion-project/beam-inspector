@@ -338,12 +338,24 @@ public:
                 QCoreApplication::postEvent(saver, e);
             }
             measurs->time = time;
-            measurs->nan = r.nan;
-            measurs->dx = r.dx;
-            measurs->dy = r.dy;
-            measurs->xc = r.xc;
-            measurs->yc = r.yc;
-            measurs->phi = r.phi;
+            if (multiRoi) {
+                for (int i = 0; i < results.size(); i++) {
+                    const auto &r = results.at(i);
+                    measurs->cols[MULTIRES_IDX_NAN(i)] = r.nan ? 1 : 0;
+                    measurs->cols[MULTIRES_IDX_DX(i)] = r.dx;
+                    measurs->cols[MULTIRES_IDX_DY(i)] = r.dy;
+                    measurs->cols[MULTIRES_IDX_XC(i)] = r.xc;
+                    measurs->cols[MULTIRES_IDX_YC(i)] = r.yc;
+                    measurs->cols[MULTIRES_IDX_PHI(i)] = r.phi;
+                }
+            } else {
+                measurs->nan = r.nan;
+                measurs->dx = r.dx;
+                measurs->dy = r.dy;
+                measurs->xc = r.xc;
+                measurs->yc = r.yc;
+                measurs->phi = r.phi;
+            }
             if (saveBrightness)
                 measurs->cols[COL_BRIGHTNESS] = cgn_calc_brightness_1(&c);
             if (showPower && calibratePowerFrames == 0)

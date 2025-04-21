@@ -11,6 +11,14 @@ class QSettings;
 
 class Camera;
 
+#define MULTIRES_IDX 100
+#define MULTIRES_IDX_NAN(i) (MULTIRES_IDX*(i+1) + 0)
+#define MULTIRES_IDX_DX(i)  (MULTIRES_IDX*(i+1) + 1)
+#define MULTIRES_IDX_DY(i)  (MULTIRES_IDX*(i+1) + 2)
+#define MULTIRES_IDX_XC(i)  (MULTIRES_IDX*(i+1) + 3)
+#define MULTIRES_IDX_YC(i)  (MULTIRES_IDX*(i+1) + 4)
+#define MULTIRES_IDX_PHI(i) (MULTIRES_IDX*(i+1) + 5)
+
 struct MeasureConfig
 {
     QString fileName;
@@ -40,8 +48,9 @@ struct Measurement
     double dy;
     double phi;
     QMap<int, double> cols;
-    inline double eps() const { return qMin(dx, dy) / qMax(dx, dy); }
 };
+
+#define EPS(dx, dy) (qMin(dx, dy) / qMax(dx, dy))
 
 class MeasureEvent : public QEvent
 {
@@ -99,8 +108,11 @@ private:
     qint64 _intervalBeg;
     qint64 _intervalLen;
     int _intervalIdx;
-    double _avg_xc, _avg_yc, _avg_dx, _avg_dy, _avg_phi, _avg_eps;
+    double _avg_xc, _avg_yc, _avg_dx, _avg_dy, _avg_phi;
     double _avg_cnt;
+    QMap<int, double> _multires_avg;
+    QMap<int, int> _multires_avg_cnt;
+    int _multires_cnt = 0;
     int _savedImgCount = 0;
     QList<int> _auxCols;
     QMap<int, double> _auxAvgVals;
