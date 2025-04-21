@@ -622,8 +622,9 @@ public:
     }
 
     // IAppSettingsListener
-    void settingsChanged() override
+    void settingsChanged(bool affectsCamera) override
     {
+        Q_UNUSED(affectsCamera)
         applySettings(true);
     }
 

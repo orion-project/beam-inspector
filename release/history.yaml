@@ -1,11 +1,12 @@
 history:
 - version: 0.0.20
-  date: ?
+  date: 2025-04-21
   changes:
   - text: Show brightness under mouse
   - text: Show result label in table in multi-ROI mode
   - text: Save all measurement results in multi-ROI mode
   - text: Crosshairs display format preferences
+  - text: Can show part of results in table
   - text: Fix plot moving when ROI bound edited
   - text: Fix aspect-ratio breaking when scroll mouse wheel on axis
 

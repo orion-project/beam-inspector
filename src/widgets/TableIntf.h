@@ -32,7 +32,7 @@ private:
     };
     struct ResultRows
     {
-        ResultRow xc, yc, dx, dy, phi, eps;
+        std::optional<ResultRow> xc, yc, dx, dy, phi, eps;
     };
     QTableWidget *_table;
     ResultId _powerResult = -1;
@@ -47,7 +47,7 @@ private:
 
     QTableWidgetItem* makeHeader(RowIndex &row, const QString& title);
     ResultRow makeRow(RowIndex &row, const QString& title);
-    void setTextInvald(const TableIntf::ResultRow &it);
+    void setTextInvald(const std::optional<TableIntf::ResultRow> &it);
 };
 
 #endif // TABLE_INTF_H

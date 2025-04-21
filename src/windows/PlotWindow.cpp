@@ -254,7 +254,7 @@ void PlotWindow::createMenuBar()
     _actionSaveRaw = A_(tr("Export Raw Image..."), this, [this]{ _camera->requestRawImg(this); }, ":/toolbar/save_raw", QKeySequence("F6"));
     auto actnSaveImg = A_(tr("Export Plot Image..."), this, [this]{ _plot->exportImageDlg(); }, ":/toolbar/save_img", QKeySequence("F7"));
     auto actnClose = A_(tr("Exit"), this, &PlotWindow::close);
-    auto actnPrefs = A_(tr("Preferences..."), this, [this]{ AppSettings::instance().edit(); }, ":/toolbar/options");
+    auto actnPrefs = A_(tr("Preferences..."), this, [this]{ AppSettings::instance().edit(); }, ":/toolbar/options", QKeySequence("F11"));
     auto menuFile = M_(tr("File"), {
         actnNew,
         0, _actionSaveRaw, actnSaveImg,
@@ -855,7 +855,7 @@ void PlotWindow::editCamConfig(int pageId)
     const PixelScale prevScale = _camera->pixelScale();
     if (!_camera->editConfig(pageId))
         return;
-    configChanged();
+    doCamConfigChanged();
     if (_camera->pixelScale() != prevScale) {
         if (dynamic_cast<VirtualDemoCamera*>(_camera.get())) {
             _plot->zoomAuto(false);
@@ -890,16 +890,16 @@ void PlotWindow::editRoisSize()
     return;
 
     if (_camera->editRoisSize())
-        configChanged();
+        doCamConfigChanged();
 }
 
 void PlotWindow::setupPowerMeter()
 {
     if (_camera->setupPowerMeter())
-        configChanged();
+        doCamConfigChanged();
 }
 
-void PlotWindow::configChanged()
+void PlotWindow::doCamConfigChanged()
 {
     if (dynamic_cast<StillImageCamera*>(_camera.get())) {
         processImage();
@@ -912,19 +912,19 @@ void PlotWindow::configChanged()
 void PlotWindow::roiEdited()
 {
     _camera->setRoi(_plot->roi());
-    configChanged();
+    doCamConfigChanged();
 }
 
 void PlotWindow::crosshairsEdited()
 {
     _camera->setRois(_plot->rois());
-    configChanged();
+    doCamConfigChanged();
 }
 
 void PlotWindow::crosshairsLoaded()
 {
     _camera->setRois(_plot->rois());
-    configChanged();
+    doCamConfigChanged();
 #ifdef WITH_IDS
     if (auto cam = dynamic_cast<IdsCamera*>(_camera.get()); cam) {
         cam->saveConfig(true);
@@ -942,7 +942,7 @@ void PlotWindow::toggleRoi()
     if (!on && _plot->isRoiEditing())
         _plot->stopEditRoi(false);
     _camera->setRoiMode(on ? ROI_SINGLE : ROI_NONE);
-    configChanged();
+    doCamConfigChanged();
 }
 
 void PlotWindow::toggleMultiRoi()
@@ -965,7 +965,7 @@ void PlotWindow::toggleMultiRoi()
         }
     }
     _camera->setRoiMode(on ? ROI_MULTI : ROI_NONE);
-    configChanged();
+    doCamConfigChanged();
 }
 
 void PlotWindow::activateCamWelcome()
@@ -1243,10 +1243,12 @@ void PlotWindow::loadCrosshairsMore(QJsonObject &root)
 #endif
 }
 
-void PlotWindow::settingsChanged()
+void PlotWindow::settingsChanged(bool affectsCamera)
 {
 #ifdef WITH_IDS
     if (auto cam = dynamic_cast<IdsCamera*>(_camera.get()); cam)
         cam->requestExpWarning();
 #endif
+    if (affectsCamera)
+        doCamConfigChanged();
 }

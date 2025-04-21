@@ -19,7 +19,7 @@ public:
     IAppSettingsListener();
     virtual ~IAppSettingsListener();
 
-    virtual void settingsChanged() {}
+    virtual void settingsChanged(bool affectsCamera) {}
 };
 
 class AppSettings : public QObject, public Ori::Notifier<IAppSettingsListener>
@@ -54,6 +54,12 @@ public:
     int crosshairTextOffsetX = 10;
     int crosshairTextOffsetY = 0;
     int crosshaitTextSize = 14;
+    bool tableShowXC = true;
+    bool tableShowYC = true;
+    bool tableShowDX = true;
+    bool tableShowDY = true;
+    bool tableShowPhi = true;
+    bool tableShowEps = true;
 
     enum ConfigPages {
         cfgDev,

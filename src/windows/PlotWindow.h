@@ -36,7 +36,7 @@ public:
     ~PlotWindow();
 
     // IAppSettingsListener
-    void settingsChanged() override;
+    void settingsChanged(bool affectsCamera) override;
 
 signals:
     void camConfigChanged();
@@ -118,7 +118,7 @@ private:
     void loadCrosshairsMore(QJsonObject&);
 
     void captureStopped();
-    void configChanged();
+    void doCamConfigChanged();
     void dataReady();
     void roiEdited();
     void crosshairsEdited();

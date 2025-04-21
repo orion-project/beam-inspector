@@ -84,6 +84,12 @@ void AppSettings::load()
     s.beginGroup("Table");
     LOAD(copyResultsSeparator, Char, ',');
     LOAD(copyResultsJustified, Bool, true);
+    LOAD(tableShowXC, Bool, true);
+    LOAD(tableShowYC, Bool, true);
+    LOAD(tableShowDX, Bool, true);
+    LOAD(tableShowDY, Bool, true);
+    LOAD(tableShowPhi, Bool, true);
+    LOAD(tableShowEps, Bool, true);
     
     s.beginGroup("Crosshair");
     LOAD(crosshairRadius, Int, 5);
@@ -126,6 +132,12 @@ void AppSettings::save()
     s.beginGroup("Table");
     SAVE(copyResultsSeparator);
     SAVE(copyResultsJustified);
+    SAVE(tableShowXC);
+    SAVE(tableShowYC);
+    SAVE(tableShowDX);
+    SAVE(tableShowDY);
+    SAVE(tableShowPhi);
+    SAVE(tableShowEps);
 
     s.beginGroup("Crosshair");
     SAVE(crosshairRadius);
@@ -168,10 +180,25 @@ bool AppSettings::edit()
     opts.onHelpRequested = [](const QString &topic){ HelpSystem::topic(topic); };
     auto seps = resultsSeparators();
     int sepIdx = seps.keys().indexOf(copyResultsSeparator);
+    bool old_tableShowXC = tableShowXC;
+    bool old_tableShowYC = tableShowYC;
+    bool old_tableShowDX = tableShowDX;
+    bool old_tableShowDY = tableShowDY;
+    bool old_tableShowPhi = tableShowPhi;
+    bool old_tableShowEps = tableShowEps;
     opts.items = {
         new ConfigItemSection(cfgTable, tr("Copy results")),
         new ConfigItemRadio(cfgTable, tr("Value separator"), seps.values(), &sepIdx),
         new ConfigItemBool(cfgTable, tr("Justify values in columns"), &copyResultsJustified),
+        
+        new ConfigItemSpace(cfgTable, 12),
+        new ConfigItemSection(cfgTable, tr("Show results")),
+        new ConfigItemBool(cfgTable, tr("Center X"), &tableShowXC),
+        new ConfigItemBool(cfgTable, tr("Center Y"), &tableShowYC),
+        new ConfigItemBool(cfgTable, tr("Width X"), &tableShowDX),
+        new ConfigItemBool(cfgTable, tr("Width Y"), &tableShowDY),
+        new ConfigItemBool(cfgTable, tr("Azimuth"), &tableShowPhi),
+        new ConfigItemBool(cfgTable, tr("Ellipticity"), &tableShowEps),
 
         new ConfigItemSection(cfgDev, tr("Input Fields")),
         (new ConfigItemInt(cfgDev, tr("Small change by mouse wheel, %"), &propChangeWheelSm))
@@ -223,7 +250,14 @@ bool AppSettings::edit()
     {
         copyResultsSeparator = seps.keys().at(sepIdx);
         save();
-        notify(&IAppSettingsListener::settingsChanged);
+        bool affectsCamera =
+            old_tableShowXC != tableShowXC ||
+            old_tableShowYC != tableShowYC ||
+            old_tableShowDX != tableShowDX ||
+            old_tableShowDY != tableShowDY ||
+            old_tableShowPhi != tableShowPhi ||
+            old_tableShowEps != tableShowEps;
+        notify(&IAppSettingsListener::settingsChanged, affectsCamera);
         return true;
     }
     return false;

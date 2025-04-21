@@ -1,5 +1,7 @@
 #include "TableIntf.h"
 
+#include "app/AppSettings.h"
+
 #include <QApplication>
 #include <QHeaderView>
 #include <QStyleHints>
@@ -31,6 +33,8 @@ void TableIntf::setRows(const TableRowsSpec &rows)
     h->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     h->setHighlightSections(false);
 
+    const auto &s = AppSettings::instance();
+
     _table->setRowCount(0);
     _resRows.clear();
     _camRows.clear();
@@ -38,12 +42,18 @@ void TableIntf::setRows(const TableRowsSpec &rows)
     for (const auto &title : rows.results) {
         makeHeader(row, title);
         ResultRows it;
-        it.xc = makeRow(row, qApp->tr("Center X"));
-        it.yc = makeRow(row, qApp->tr("Center Y"));
-        it.dx = makeRow(row, qApp->tr("Width X"));
-        it.dy = makeRow(row, qApp->tr("Width Y"));
-        it.phi = makeRow(row, qApp->tr("Azimuth"));
-        it.eps = makeRow(row, qApp->tr("Ellipticity"));
+        if (s.tableShowXC)
+            it.xc = makeRow(row, qApp->tr("Center X"));
+        if (s.tableShowYC)
+            it.yc = makeRow(row, qApp->tr("Center Y"));
+        if (s.tableShowDX)
+            it.dx = makeRow(row, qApp->tr("Width X"));
+        if (s.tableShowDY)
+            it.dy = makeRow(row, qApp->tr("Width Y"));
+        if (s.tableShowPhi)
+            it.phi = makeRow(row, qApp->tr("Azimuth"));
+        if (s.tableShowEps)
+            it.eps = makeRow(row, qApp->tr("Ellipticity"));
         _resRows << it;
     }
     if (!rows.aux.isEmpty()) {
@@ -111,11 +121,12 @@ void TableIntf::setResult(const QList<CgnBeamResult>& val, const QList<CgnBeamRe
     _camData = data;
 }
 
-void TableIntf::setTextInvald(const TableIntf::ResultRow &row)
+void TableIntf::setTextInvald(const std::optional<TableIntf::ResultRow> &row)
 {
-    row.val->setText(QStringLiteral(" --- "));
-    if (row.sdev)
-        row.sdev->setText(QStringLiteral(" --- "));
+    if (!row) return;
+    row->val->setText(QStringLiteral(" --- "));
+    if (row->sdev)
+        row->sdev->setText(QStringLiteral(" --- "));
 }
 
 static QString formatPower(double v, int f)
@@ -202,22 +213,22 @@ void TableIntf::showResult()
         }
 
         double eps = qMin(res.dx, res.dy) / qMax(res.dx, res.dy);
-        row.xc.val->setText(_scale.formatWithMargins(res.xc));
-        row.yc.val->setText(_scale.formatWithMargins(res.yc));
-        row.dx.val->setText(_scale.formatWithMargins(res.dx));
-        row.dy.val->setText(_scale.formatWithMargins(res.dy));
-        row.phi.val->setText(QStringLiteral(" %1° ").arg(res.phi, 0, 'f', 1));
-        row.eps.val->setText(QStringLiteral(" %1 ").arg(eps, 0, 'f', 3));
+        if (row.xc) row.xc->val->setText(_scale.formatWithMargins(res.xc));
+        if (row.yc) row.yc->val->setText(_scale.formatWithMargins(res.yc));
+        if (row.dx) row.dx->val->setText(_scale.formatWithMargins(res.dx));
+        if (row.dy) row.dy->val->setText(_scale.formatWithMargins(res.dy));
+        if (row.phi) row.phi->val->setText(QStringLiteral(" %1° ").arg(res.phi, 0, 'f', 1));
+        if (row.eps) row.eps->val->setText(QStringLiteral(" %1 ").arg(eps, 0, 'f', 3));
 
         if (_showSdev && i <= _resSdev.size() - 1) {
             const auto &res = _resSdev.at(i);
             double eps = qMin(res.dx, res.dy) / qMax(res.dx, res.dy);
-            row.xc.sdev->setText(_scale.formatWithMargins(res.xc));
-            row.yc.sdev->setText(_scale.formatWithMargins(res.yc));
-            row.dx.sdev->setText(_scale.formatWithMargins(res.dx));
-            row.dy.sdev->setText(_scale.formatWithMargins(res.dy));
-            row.phi.sdev->setText(QStringLiteral(" %1° ").arg(res.phi, 0, 'f', 1));
-            row.eps.sdev->setText(QStringLiteral(" %1 ").arg(eps, 0, 'f', 3));
+            if (row.xc) row.xc->sdev->setText(_scale.formatWithMargins(res.xc));
+            if (row.yc) row.yc->sdev->setText(_scale.formatWithMargins(res.yc));
+            if (row.dx) row.dx->sdev->setText(_scale.formatWithMargins(res.dx));
+            if (row.dy) row.dy->sdev->setText(_scale.formatWithMargins(res.dy));
+            if (row.phi) row.phi->sdev->setText(QStringLiteral(" %1° ").arg(res.phi, 0, 'f', 1));
+            if (row.eps) row.eps->sdev->setText(QStringLiteral(" %1 ").arg(eps, 0, 'f', 3));
         }
     }
     for (int i = _resData.size(); i < _resRows.size(); i++) {
