@@ -6,6 +6,8 @@
 
 #include "app/AppSettings.h"
 
+#include "core/OriResult.h"
+
 #include <windows.h>
 
 #include <QDebug>
@@ -94,6 +96,62 @@ static QString loadLibDeps(const QString &sdkDir, const QString &libName, QStrin
     return {};
 }
 
+using VerResult = Ori::Result<QString>;
+
+static VerResult getLibVer(const QString &libPath)
+{
+    auto stdName = libPath.toStdString();
+
+    DWORD dwHandle;
+    DWORD dwSize = GetFileVersionInfoSizeA(stdName.c_str(), &dwHandle);
+    if (dwSize == 0)
+        return VerResult::fail(getSysError(GetLastError()));
+    
+    LPVOID lpData = malloc(dwSize);
+    if (!lpData)
+        return VerResult::fail("memory allocation failed");
+    
+    if (!GetFileVersionInfoA(stdName.c_str(), 0, dwSize, lpData)) {
+        auto err = getSysError(GetLastError());
+        free(lpData);
+        return VerResult::fail(err);
+    }
+    
+    VS_FIXEDFILEINFO* pFileInfo;
+    UINT uLen;
+    if (!VerQueryValueA(lpData, "\\", (LPVOID*)&pFileInfo, &uLen)) {
+        auto err = getSysError(GetLastError());
+        free(lpData);
+        return VerResult::fail(err);
+    }
+    if (uLen == 0) {
+        free(lpData);
+        return VerResult::fail("No file info found");
+    }
+    
+    DWORD dwFileVersionMS = pFileInfo->dwFileVersionMS;
+    DWORD dwFileVersionLS = pFileInfo->dwFileVersionLS;
+    WORD wMajor = HIWORD(dwFileVersionMS);
+    WORD wMinor = LOWORD(dwFileVersionMS);
+    WORD wBuild = HIWORD(dwFileVersionLS);
+    WORD wRevision = LOWORD(dwFileVersionLS);
+
+    free(lpData);
+
+    return VerResult::ok(QStringLiteral("%1.%2.%3.%4").arg(wMajor).arg(wMinor).arg(wBuild).arg(wRevision)); 
+}
+
+static QString getSdkVer(const QString &sdkDir)
+{
+    QString verFile = sdkDir + "/../../../../version.txt";
+    QFile f(verFile);
+    if (!f.exists())
+        return "Version file not found: " + verFile;
+    if (!f.open(QIODeviceBase::ReadOnly|QIODeviceBase::Text))
+        return f.errorString();
+    return f.readAll().trimmed();
+}
+
 IdsLib::IdsLib()
 {
     if (!AppSettings::instance().idsEnabled)
@@ -101,13 +159,19 @@ IdsLib::IdsLib()
 
     QStringList libs;
     QString sdkDir = QDir::cleanPath(AppSettings::instance().idsSdkDir);
+    qDebug() << LOG_ID << "SDK version:" << getSdkVer(sdkDir);
     if (auto res = loadLibDeps(sdkDir, "ids_peak_comfort_c.dll", libs); !res.isEmpty()) {
         libError = res;
         return;
     }
     
     for (const auto& libPath : libs) {
-        qDebug() << LOG_ID << "Loading" << libPath;
+        auto r = getLibVer(libPath);
+        if (r.ok())
+            qDebug() << LOG_ID << "Loading" << libPath << r.result();
+        else
+            qDebug() << LOG_ID << "Loading" << libPath << "(ver:" << r.error() << ')';
+
         if (!QFile::exists(libPath)) {
             qWarning() << LOG_ID << "Library not found" << libPath;
             libError = "Library not found: " + libPath;

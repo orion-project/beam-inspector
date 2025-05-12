@@ -106,6 +106,7 @@ endif()
 
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
+    version
     qcustomplot
     cgn_beam_render
     cgn_beam_calc
