@@ -488,6 +488,8 @@ void Plot::timerEvent(QTimerEvent *event)
 
 void Plot::showLevelAtMouse()
 {
+    if (_mouseX < 0 || _mouseY < 0) return;
+
     // Average colors over 0.5% of image size using 3x3 grid
     const double dx = double(_imageW)*0.0025;
     const double dy = double(_imageH)*0.0025;
