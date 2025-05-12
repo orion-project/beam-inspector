@@ -140,7 +140,11 @@ public:
             LOAD_FACTORS(peak_Decimation_FactorY_GetList, decimation.ys);
         }
         #undef LOAD_FACTORS
+        return {};
+    }
 
+    QString getImageSize()
+    {
         // Reset ROI to max before settings binning/decimation
         peak_size roiMin, roiMax, roiInc;
         res = IDS.peak_ROI_Size_GetRange(hCam, &roiMin, &roiMax, &roiInc);
@@ -330,6 +334,7 @@ public:
         qDebug() << LOG_ID << "Camera opened" << id;
 
         if (auto err = initResolution(); !err.isEmpty()) return err;
+        if (auto err = getImageSize(); !err.isEmpty()) return err;
         if (auto err = initPixelFormat(); !err.isEmpty()) return err;
         if (auto err = showCurrProps(); !err.isEmpty()) return err;
 
