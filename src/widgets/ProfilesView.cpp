@@ -36,7 +36,8 @@ struct CalcProfilesArg
     const PixelScale &scale;
 };
 
-static void calcProfiles(const CalcProfilesArg &arg, const CgnBeamResult &res, QVector<QCPGraphData>& gx, QVector<QCPGraphData>& gy)
+template <typename TPoints>
+void calcProfiles(const CalcProfilesArg &arg, const CgnBeamResult &res, TPoints& gx, TPoints& gy)
 {
     const int w = arg.imgW;
     const int h = arg.imgH;
@@ -204,25 +205,39 @@ ProfilesView::ProfilesView(PlotIntf *plotIntf) : QWidget(), _plotIntf(plotIntf)
     _plotX->axisRect()->insetLayout()->addElement(_textMiX, Qt::AlignRight|Qt::AlignTop);
     _plotY->axisRect()->insetLayout()->addElement(_textMiY, Qt::AlignRight|Qt::AlignTop);
 
+    QVector<QCPGraphData> data(totalPoints());
+
+    // _rawX = _plotX->addGraph();
+    // _rawY = _plotY->addGraph();
+    // _rawX->setName("X (raw)");
+    // _rawY->setName("Y (raw)");
+    // QPen rawPen;
+    // rawPen.setColor(QColor(0, 255, 0));
+    // rawPen.setStyle(Qt::DotLine);
+    // _rawX->setPen(rawPen);
+    // _rawY->setPen(rawPen);
+    // _rawX->data()->set(data);
+    // _rawY->data()->set(data);
+
     _profileX = _plotX->addGraph();
     _profileY = _plotY->addGraph();
     _profileX->setName("X");
     _profileY->setName("Y");
+    _profileX->data()->set(data);
+    _profileY->data()->set(data);
 
     _fitX = _plotX->addGraph();
     _fitY = _plotY->addGraph();
-
     QPen fitPen;
     fitPen.setColor(QColor(255, 0, 0));
     fitPen.setStyle(Qt::DashLine);
     _fitX->setPen(fitPen);
     _fitY->setPen(fitPen);
-
-    QVector<QCPGraphData> data(2*_pointCount - 1);
-    _profileX->data()->set(data);
-    _profileY->data()->set(data);
     _fitX->data()->set(data);
     _fitY->data()->set(data);
+
+    _lastX.resize(totalPoints());
+    _lastY.resize(totalPoints());
 
     setThemeColors(PlotHelpers::SYSTEM, false);
 
@@ -315,7 +330,72 @@ void ProfilesView::showResult()
     auto& profileX = _profileX->data()->rawData();
     auto& profileY = _profileY->data()->rawData();
 
-    calcProfiles(arg, res, profileX, profileY);
+    if (_mavgFrames > 0)
+    {
+        calcProfiles(arg, res, _lastX, _lastY);
+        _profiles.enqueue({ _lastX, _lastY });
+        int pointCount = totalPoints();
+
+        // auto& rawX = _rawX->data()->rawData();
+        // auto& rawY = _rawY->data()->rawData();
+        // for (int i = 0; i < pointCount; i++) {
+        //     rawX[i].key = _lastX.at(i).key;
+        //     rawX[i].value = _lastX.at(i).value;
+        //     rawY[i].key = _lastY.at(i).key;
+        //     rawY[i].value = _lastY.at(i).value;
+        // }
+
+        auto& avgX = _profileX->data()->rawData();
+        auto& avgY = _profileY->data()->rawData();
+
+        if (_profiles.size() > _mavgFrames) {
+            const auto first = _profiles.dequeue();
+            const double avgCount = _profiles.size();
+            for (int i = 0; i < pointCount; i++) {
+                {
+                    const double prev_k = avgX.at(i).key;
+                    const double prev_v = avgX.at(i).value;
+                    const double first_k = first.x.at(i).key;
+                    const double first_v = first.x.at(i).value;
+                    const double last_k = _lastX.at(i).key;
+                    const double last_v = _lastX.at(i).value;
+                    avgX[i].key = prev_k + (last_k - first_k) / avgCount;
+                    avgX[i].value = prev_v + (last_v - first_v) / avgCount;
+                }
+                {
+                    const double prev_k = avgY.at(i).key;
+                    const double prev_v = avgY.at(i).value;
+                    const double first_k = first.y.at(i).key;
+                    const double first_v = first.y.at(i).value;
+                    const double last_k = _lastY.at(i).key;
+                    const double last_v = _lastY.at(i).value;
+                    avgY[i].key = prev_k + (last_k - first_k) / avgCount;
+                    avgY[i].value = prev_v + (last_v - first_v) / avgCount;
+                }
+            }
+        } else {
+            for (const auto& profile : _profiles) {
+                for (int i = 0; i < pointCount; i++) {
+                    avgX[i].key += profile.x.at(i).key;
+                    avgX[i].value += profile.x.at(i).value;
+                    avgY[i].key += profile.y.at(i).key;
+                    avgY[i].value += profile.y.at(i).value;
+                }
+            }
+            const double avgCount = _profiles.size();
+            for (int i = 0; i < pointCount; i++) {
+                avgX[i].key /= avgCount;
+                avgX[i].value /= avgCount;
+                avgY[i].key /= avgCount;
+                avgY[i].value /= avgCount;
+            }
+        }
+    }
+    else
+    {
+        calcProfiles(arg, res, profileX, profileY);
+    }
+
 
     GaussParams gpX, gpY;
     calcGaussParams(profileX, gpX);
@@ -355,9 +435,23 @@ void ProfilesView::cleanResult()
     _rangeY = 0;
 }
 
-void ProfilesView::setScale(const PixelScale& scale)
+void ProfilesView::setConfig(const PixelScale& scale, const Averaging& mavg)
 {
     _scale = scale;
+    
+    _mavgFrames = mavg.on ? mavg.frames : 0;
+    auto& avgX = _profileX->data()->rawData();
+    auto& avgY = _profileY->data()->rawData();
+    for (int i = 0; i < totalPoints(); i++) {
+        avgX[i].key = 0;
+        avgX[i].value = 0;
+        avgY[i].key = 0;
+        avgY[i].value = 0;
+    }
+    _profiles.clear();
+    
+    updateVisibility();
+
     QTimer::singleShot(1000, [this]{
         _rangeX = 0;
         _rangeY = 0;

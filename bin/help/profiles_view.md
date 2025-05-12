@@ -12,6 +12,8 @@ For profile graphs, the full width at half maximum (FWHM) is shown. For the fitt
 
 Horizontal axis labels of the profile plots and beam width values are displayed either in pixels or in physical units if this is enabled in [camera settings](./cam_settings_plot.md#rescale-pixels).
 
+If the averaging is enabled for the [results table](./cam_settings_table.md#show-moving-average), then the profile graphs are also averaged over the specified number of frames.
+
 ## Context menu commands
 
 ### Show Gaussian Fit
@@ -41,3 +43,9 @@ Copy the plot as an image to the clipboard. The command operates on a plot under
 ### Autoscale plots
 
 Force the plots to recalculate ranges of horizontal and vertical axes to optimally display all data.
+
+## See also
+
+- [Camera Settings: Table](./cam_settings_table.md)
+
+&nbsp;

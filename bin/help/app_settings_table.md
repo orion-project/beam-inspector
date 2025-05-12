@@ -32,6 +32,10 @@ Ellipticity   0.758   0.568
 Power       0.968 W 0.011 W
 ```
 
+### Show results
+
+Defines which rows are shown in the [results table](./results_table.md).
+
 ## See also
 
 - [Camera Settings: Table](./cam_settings_table.md)

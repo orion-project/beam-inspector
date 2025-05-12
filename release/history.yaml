@@ -1,9 +1,9 @@
 history:
 - version: 0.0.21
-  date: ?
+  date: 2025-05-12
   changes:
+  - text: Average profile graphs
   - text: Can save logs into file
-  - text: Clearer name for Gaussian fit plots
   - text: Fix crash on IDS cameras that does not support binning
 
 - version: 0.0.20
