@@ -2,6 +2,7 @@ history:
 - version: 0.0.21
   date: ?
   changes:
+  - text: Clearer name for Gaussian fit plots
   - text: Fix crash on IDS cameras that does not support binning
 
 - version: 0.0.20

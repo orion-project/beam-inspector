@@ -8,7 +8,7 @@
 
 The panel shows the cross-sections (profiles) of the beam spot over principal axes and an optional Gaussian fit for the data.
 
-For profile graphs, the full width at half maximum (FWHM) is shown. For the fitted graphs, the view calculates the Gaussian beam width at 1/e² level. Conventionally, the Gaussian beam width is given as a radius, but here it's displayed as a diameter (full width) to make it easier to compare with values displayed in the [results table](./results_table.md). The value is marked as E2FW on the plots.
+For profile graphs, the full width at half maximum (FWHM) is shown. For the fitted graphs, the view calculates the Gaussian beam width at 1/e² level. Conventionally, the Gaussian beam width is given as a radius, but here it's displayed as a diameter (full width) to make it easier to compare with values displayed in the [results table](./results_table.md).
 
 Horizontal axis labels of the profile plots and beam width values are displayed either in pixels or in physical units if this is enabled in [camera settings](./cam_settings_plot.md#rescale-pixels).
 

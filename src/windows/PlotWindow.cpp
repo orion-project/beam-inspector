@@ -400,6 +400,7 @@ void PlotWindow::createToolBar()
     tb->addSeparator();
     tb->addAction(_actionResultsPanel);
     tb->addAction(_actionHardConfig);
+    tb->addAction(_actionProfilesView);
     tb->addSeparator();
     tb->addAction(_actionUseRoi);
     tb->addAction(_actionUseMultiRoi);

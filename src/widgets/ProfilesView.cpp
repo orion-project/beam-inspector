@@ -326,8 +326,8 @@ void ProfilesView::showResult()
     if (_showFit) {
         const double wx = calcGaussFit(profileX, _fitX->data()->rawData(), gpX, _MI, _centerFit);
         const double wy = calcGaussFit(profileY, _fitY->data()->rawData(), gpY, _MI, _centerFit);
-        _fitX->setName(QStringLiteral("Fit (E2FW: %1)").arg(_scale.format(wx)));
-        _fitY->setName(QStringLiteral("Fit (E2FW: %1)").arg(_scale.format(wy)));
+        _fitX->setName(QStringLiteral("Gauss fit (1/e²: %1)").arg(_scale.format(wx)));
+        _fitY->setName(QStringLiteral("Gauss fit (1/e²: %1)").arg(_scale.format(wy)));
     }
 
     double rangeY = _showFullY ? _plotIntf->rangeMax() : qMax(gpX.amplitude, gpY.amplitude);
