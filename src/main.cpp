@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     // It's only useful on Windows where there is no
     // direct way to use the console for GUI applications.
     if (parser.isSet(optionConsole) || AppSettings::instance().useConsole)
-        Ori::Debug::installMessageHandler();
+        Ori::Debug::installMessageHandler(AppSettings::instance().saveLogFile);
 
     // Load application settings before any command start
     AppSettings::instance().isDevMode = parser.isSet(optionDevMode);

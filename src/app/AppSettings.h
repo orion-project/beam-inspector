@@ -38,6 +38,7 @@ public:
     QString idsSdkDir;
 #endif
     bool useConsole = false;
+    bool saveLogFile = false;
     bool isDevMode = false;
     bool showGoodnessTextOnPlot = false;
     bool showGoodnessRelative = false;

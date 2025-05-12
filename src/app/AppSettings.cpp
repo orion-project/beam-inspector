@@ -58,6 +58,7 @@ void AppSettings::load()
 
     s.beginGroup("Debug");
     LOAD(useConsole, Bool, false);
+    LOAD(saveLogFile, Bool, false);
     LOAD(showGoodnessTextOnPlot, Bool, false);
     LOAD(showGoodnessRelative, Bool, false);
 
@@ -106,6 +107,7 @@ void AppSettings::save()
 
     s.beginGroup("Debug");
     SAVE(useConsole);
+    SAVE(saveLogFile);
     SAVE(showGoodnessTextOnPlot);
     SAVE(showGoodnessRelative);
 
@@ -218,11 +220,14 @@ bool AppSettings::edit()
     #endif
 
         new ConfigItemBool(cfgDbg, tr("Show log window (restart required)"), &useConsole),
+        (new ConfigItemBool(cfgDbg, tr("Save log into file"), &saveLogFile))
+            ->withParent(&useConsole),
         new ConfigItemSpace(cfgDbg, 12),
         (new ConfigItemSection(cfgDbg, tr("Multi-pass cell alignment")))
             ->withHint(tr("Toggle multi-roi mode to apply")),
         new ConfigItemBool(cfgDbg, tr("Show goodness values on plot"), &showGoodnessTextOnPlot),
-        new ConfigItemBool(cfgDbg, tr("Show goodness values in relative units"), &showGoodnessRelative),
+        (new ConfigItemBool(cfgDbg, tr("Show goodness in relative units"), &showGoodnessRelative))
+            ->withParent(&showGoodnessTextOnPlot),
 
         (new ConfigItemDropDown(cfgOpts, tr("Automatically check for updates"), (int*)&updateCheckInterval))
             ->withOption(int(UpdateCheckInterval::None), tr("None"))

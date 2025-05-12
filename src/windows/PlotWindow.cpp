@@ -586,6 +586,7 @@ void PlotWindow::showFps(double fps, double hardFps)
     if (fps <= 0) {
         _statusBar->setText(STATUS_FPS, QStringLiteral("FPS: NA"));
         _statusBar->setHint(STATUS_FPS, {});
+        _statusBar->setStyleSheet(STATUS_FPS, {});
         return;
     }
     _statusBar->setText(STATUS_FPS, QStringLiteral("FPS: ") % QString::number(fps, 'f', 2));
