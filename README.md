@@ -9,15 +9,20 @@ Main features:
 - Basic control of the camera exposure parameters (exposure time, analog & digital gain)
 - Laser beam width, position, and ellipticity measurements according to ISO 11146.
 - Background subtraction
-- Area of interest selection
+- Area of interest selection (several or multiple regions)
 - Laser beam parameter tracking for stability measurements
 - Beam position reference overlay
 - Analysis of static images
 - Variable color maps
+- Beam profiles with Gaussian fit
 
 See [online help](./bin/help/index.md) for details.
 
 ![](img/screens/inspector_0.0.19.png)
+
+## Build
+
+See [build instructions](./docs/build.md).
 
 ## Supporters
 

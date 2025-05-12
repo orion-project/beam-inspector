@@ -151,7 +151,7 @@ if(WITH_IDS)
         INTERFACE_INCLUDE_DIRECTORIES
     )
     target_include_directories(${PROJECT_NAME} PRIVATE
-        ${IDS_PEAK_INCLUDE_DIR}
+        "${IDS_PEAK_INCLUDE_DIR}"
     )
 endif()
 
