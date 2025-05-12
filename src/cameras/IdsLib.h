@@ -94,6 +94,8 @@ public:
 
 private:
     IdsLib();
+    
+    bool loadLib(const QString &lib);
 };
 
 #endif // WITH_IDS

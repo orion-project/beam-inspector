@@ -9,6 +9,7 @@
 #include <windows.h>
 
 #include <QDebug>
+#include <QDir>
 #include <QFile>
 
 static HMODULE __hLib = 0;
@@ -39,24 +40,74 @@ IdsLib& IdsLib::instance()
     return lib;
 }
 
+static QString loadLibDeps(const QString &sdkDir, const QString &libName, QStringList &deps)
+{
+    QString libPath = sdkDir + '/' + libName;
+    qDebug() << LOG_ID << "Check deps for" << libPath;
+    if (!QFile::exists(libPath)) {
+        qWarning() << LOG_ID << "Library not found" << libPath;
+        return "Library not found: " + libPath;
+    }
+    auto hLib = LoadLibraryExA(libPath.toStdString().c_str(), NULL, DONT_RESOLVE_DLL_REFERENCES);
+    if (!hLib) {
+        auto err = getSysError(GetLastError());
+        qWarning() << LOG_ID << "Failed to load" << libPath << err;
+        return QString("Unable to load library %1: %2").arg(libPath, err);
+    }
+    
+    PIMAGE_DOS_HEADER peHeader = (PIMAGE_DOS_HEADER)hLib;
+    if (peHeader->e_magic != IMAGE_DOS_SIGNATURE) {
+        printf("Error: Not a valid PE file\n");
+        FreeLibrary(hLib);
+        return QString("Unable to load library %1: invalid PE-header").arg(libPath);
+    }
+    
+    PIMAGE_NT_HEADERS ntHeader = (PIMAGE_NT_HEADERS)((BYTE*)hLib + peHeader->e_lfanew);
+    if (ntHeader->Signature != IMAGE_NT_SIGNATURE) {
+        printf("Error: Not a valid PE file\n");
+        FreeLibrary(hLib);
+        return QString("Unable to load library %1: invalid NT-header").arg(libPath);
+    }
+    
+    PIMAGE_IMPORT_DESCRIPTOR importDesc = (PIMAGE_IMPORT_DESCRIPTOR)((BYTE*)hLib + 
+        ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
+    if (ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size == 0 || 
+        ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress == 0) {
+        FreeLibrary(hLib);
+        return QString("Unable to load library %1: imports is empty").arg(libPath);
+    }
+    while (importDesc->Name != 0) {
+        QString dllName = QString((const char*)((BYTE*)hLib + importDesc->Name));
+        QString dllPath = sdkDir + '/' + dllName;
+        if (QFile::exists(dllPath) && !deps.contains(dllPath)) {
+            QString res = loadLibDeps(sdkDir, dllName, deps);
+            if (!res.isEmpty()) {
+                FreeLibrary(hLib);
+                return res;
+            }
+        }
+        importDesc++;
+    }
+    
+    deps << libPath;
+    FreeLibrary(hLib);
+    return {};
+}
+
 IdsLib::IdsLib()
 {
     if (!AppSettings::instance().idsEnabled)
         return;
 
-    QStringList libs = {
-        "GCBase_MD_VC140_v3_2_IDS.dll",
-        "Log_MD_VC140_v3_2_IDS.dll",
-        "MathParser_MD_VC140_v3_2_IDS.dll",
-        "NodeMapData_MD_VC140_v3_2_IDS.dll",
-        "XmlParser_MD_VC140_v3_2_IDS.dll",
-        "GenApi_MD_VC140_v3_2_IDS.dll",
-        "FirmwareUpdate_MD_VC140_v3_2_IDS.dll",
-        "ids_peak_comfort_c.dll",
-    };
-    QString sdkPath = AppSettings::instance().idsSdkDir;
-    for (const auto& lib : libs) {
-        QString libPath = sdkPath + '/' + lib;
+    QStringList libs;
+    QString sdkDir = QDir::cleanPath(AppSettings::instance().idsSdkDir);
+    if (auto res = loadLibDeps(sdkDir, "ids_peak_comfort_c.dll", libs); !res.isEmpty()) {
+        libError = res;
+        return;
+    }
+    
+    for (const auto& libPath : libs) {
+        qDebug() << LOG_ID << "Loading" << libPath;
         if (!QFile::exists(libPath)) {
             qWarning() << LOG_ID << "Library not found" << libPath;
             libError = "Library not found: " + libPath;
