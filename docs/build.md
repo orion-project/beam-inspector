@@ -1,5 +1,11 @@
 # Building and testing
 
+```bash
+git clone https://github.com/orion-project/beam-inspector.git
+cd beam-inspector
+git submodule update --init --recursive
+```
+
 By default, the application uses [Qt Creator](https://www.qt.io/download-dev) IDE and Qt 6.8+ for building the project. Just open the project's `CMakeLists.txt` in Qt Creator and configure it to build with an installed Qt kit.
 
 You can also build the application using CMake directly (TODO: explain) or using [Visual Studio Code](https://code.visualstudio.com/) extension [CMake Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools) (TODO: explain).
