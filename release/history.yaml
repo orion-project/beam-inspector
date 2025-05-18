@@ -1,5 +1,10 @@
 history:
 - version: 0.0.21
+  date: ?
+  changes:
+  - text: Support different versions of IDS SDK
+
+- version: 0.0.21
   date: 2025-05-12
   changes:
   - text: Average profile graphs

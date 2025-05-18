@@ -106,6 +106,7 @@ endif()
 
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
+    version
     qcustomplot
     cgn_beam_render
     cgn_beam_calc
@@ -151,7 +152,7 @@ if(WITH_IDS)
         INTERFACE_INCLUDE_DIRECTORIES
     )
     target_include_directories(${PROJECT_NAME} PRIVATE
-        ${IDS_PEAK_INCLUDE_DIR}
+        "${IDS_PEAK_INCLUDE_DIR}"
     )
 endif()
 
