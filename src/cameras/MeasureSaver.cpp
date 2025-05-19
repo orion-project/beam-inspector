@@ -3,6 +3,7 @@
 #include "app/HelpSystem.h"
 #include "cameras/Camera.h"
 #include "cameras/CameraTypes.h"
+#include "widgets/PlotHelpers.h"
 
 #include "helpers/OriDialogs.h"
 #include "helpers/OriLayouts.h"
@@ -571,7 +572,7 @@ public:
         edDuration->connect(edDuration, &QLineEdit::textChanged, edDuration, [this]{ updateDurationSecs(); });
 
         labDuration = new QLabel;
-        labDuration->setForegroundRole(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Mid);
+        labDuration->setForegroundRole(PlotHelpers::isDarkTheme() ? QPalette::Light : QPalette::Mid);
 
         rbSkipImg = new QRadioButton(tr("Don't save"));
         rbSaveImg = new QRadioButton(tr("Save every"));
@@ -581,7 +582,7 @@ public:
         edImgInterval->connect(edImgInterval, &QLineEdit::textChanged, edImgInterval, [this]{ updateImgIntervalSecs(); });
 
         labImgInterval = new QLabel;
-        labImgInterval->setForegroundRole(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Mid);
+        labImgInterval->setForegroundRole(PlotHelpers::isDarkTheme() ? QPalette::Light : QPalette::Mid);
 
         cbPresets = new QComboBox;
         cbPresets->setPlaceholderText(tr("Select a preset"));

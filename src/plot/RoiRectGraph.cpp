@@ -1,6 +1,7 @@
 #include "RoiRectGraph.h"
 
 #include "app/AppSettings.h"
+#include "widgets/PlotHelpers.h"
 
 #include "qcustomplot/src/core.h"
 #include "qcustomplot/src/painter.h"
@@ -308,7 +309,7 @@ void RoiRectGraph::makeEditor()
     _editor->setFrameShape(QFrame::NoFrame);
     _editor->setFrameShadow(QFrame::Plain);
     auto shadow = new QGraphicsDropShadowEffect;
-    if (qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark)
+    if (PlotHelpers::isDarkTheme())
         shadow->setColor(QColor(255, 255, 255, 180));
     else
         shadow->setColor(QColor(0, 0, 0, 180));

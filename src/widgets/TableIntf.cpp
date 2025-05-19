@@ -1,6 +1,7 @@
 #include "TableIntf.h"
 
 #include "app/AppSettings.h"
+#include "widgets/PlotHelpers.h"
 
 #include <QApplication>
 #include <QHeaderView>
@@ -13,7 +14,7 @@ TableIntf::TableIntf(QTableWidget *table) : _table(table)
     _table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     _table->setSelectionBehavior(QAbstractItemView::SelectRows);
 
-    if (qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark)
+    if (PlotHelpers::isDarkTheme())
         _warnColor = 0xFFFF8C00;
     else _warnColor = 0xffffdcbc;
 }
