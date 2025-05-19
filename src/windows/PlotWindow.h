@@ -78,6 +78,7 @@ private:
     HardConfigPanel *_camConfigPanel = nullptr;
     QMap<QString, QString> _camCustomNames;
     ProfilesView *_profilesView;
+    bool _keepZoom = false;
 
     void createDockPanel();
     void createMenuBar();
@@ -141,6 +142,7 @@ private:
     void updateColorMapMenu();
     void updateHardConfgPanel();
     void updateThemeColors();
+    void updateZoom();
 };
 
 #endif // PLOT_WINDOW_H

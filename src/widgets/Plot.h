@@ -100,7 +100,7 @@ private:
     Ori::MruFileList *_mruCrosshairs;
     QList<BeamPlotItem*> _relativeItems;
     QCPItemLine *_colorLevelMarker;
-    int _imageW, _imageH;
+    int _imageW = 0, _imageH = 0;
     enum AutoZoomMode { ZOOM_NONE, ZOOM_FULL, ZOOM_APERTURE };
     AutoZoomMode _autoZoom = ZOOM_FULL;
     bool _autoZooming = false;

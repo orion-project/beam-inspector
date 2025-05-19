@@ -17,6 +17,7 @@
 #include "qcustomplot/src/items/item-line.h"
 #include "qcustomplot/src/layoutelements/layoutelement-axisrect.h"
 
+#define LOG_ID "Plot:"
 #define APERTURE_ZOOM_MARGIN 0.01
 
 using Ori::Gui::PopupMessage;
@@ -119,6 +120,7 @@ void Plot::setImageSize(int sensorW, int sensorH, const PixelScale &scale)
 {
     _imageW = scale.pixelToUnit(sensorW);
     _imageH = scale.pixelToUnit(sensorH);
+    qDebug() << LOG_ID << "Image size" << sensorW << 'x' << sensorH << "scaled to" << _imageW << 'x' << _imageH;
     for (const auto &it : std::as_const(_relativeItems))
         it->setImageSize(sensorW, sensorH, scale);
 }
@@ -192,7 +194,9 @@ void Plot::zoomToBounds(double x1, double y1, double x2, double y2, bool replot)
 
 void Plot::zoomFull(bool replot)
 {
+    if (_imageW <= 0 || _imageH <= 0) return;
     _autoZoom = ZOOM_FULL;
+    qDebug() << LOG_ID << "Autozoom (full)" << _imageW << 'x' << _imageH;
     zoomToBounds(0, 0, _imageW, _imageH, replot);
 }
 
@@ -209,6 +213,7 @@ void Plot::zoomRoi(bool replot)
     const double y2 = _roi->getY2();
     const double dx = (x2 - x1) * APERTURE_ZOOM_MARGIN;
     const double dy = (y2 - y1) * APERTURE_ZOOM_MARGIN;
+    qDebug() << LOG_ID << "Autozoom (ROI)" << x2-x1 << 'x' << y2-y1;
     zoomToBounds(x1-dx, y1-dy, x2+dx, y2+dy, replot);
 }
 
