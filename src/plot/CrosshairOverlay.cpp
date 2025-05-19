@@ -66,6 +66,29 @@ void CrosshairsOverlay::setItemCoords(Crosshair &c, double plotX, double plotY)
     c.y = c.pixelY / _maxPixelY;
 }
 
+QRectF CrosshairsOverlay::getLabelRect(const Crosshair &c, double x, double y) const
+{
+    const auto &s = AppSettings::instance();
+    const double r = s.crosshairRadius;
+    const double offsetX = s.crosshairTextOffsetX;
+    const double offsetY = s.crosshairTextOffsetY;
+    auto sz = c.text.size();
+    const double textW = sz.width();
+    const double textH = sz.height();
+    double textX, textY;
+    if (offsetX > 0)
+        textX = x + r + offsetX;
+    else if (offsetX < 0)
+        textX = x - r + offsetX - textW;
+    else textX = x - textW / 2.0;
+    if (offsetY > 0)
+        textY = y + offsetY;
+    else if (offsetY < 0)
+        textY = y + offsetY - textH;
+    else textY = y - textH / 2.0;
+    return QRectF(textX, textY, textW, textH);
+}
+
 void CrosshairsOverlay::draw(QCPPainter *painter)
 {
     if (!_hasCoords) return;
@@ -75,7 +98,7 @@ void CrosshairsOverlay::draw(QCPPainter *painter)
     QFont f;
     f.setPixelSize(s.crosshaitTextSize);
     painter->setFont(f);
-    for (const auto& c : _items) {
+    for (const auto& c : qAsConst(_items)) {
         painter->setBrush(Qt::NoBrush);
         painter->setPen(QPen(c.color, s.crosshairPenWidth, Qt::SolidLine));
         const double x = parentPlot()->xAxis->coordToPixel(c.unitX);
@@ -85,18 +108,9 @@ void CrosshairsOverlay::draw(QCPPainter *painter)
         painter->drawLine(QLineF(x, y-w, x, y+w));
         painter->drawLine(QLineF(x-w, y, x+w, y));
         painter->setBrush(c.color);
-        double textX, textY;
-        if (s.crosshairTextOffsetX > 0)
-            textX = x + r + s.crosshairTextOffsetX;
-        else if (s.crosshairTextOffsetX < 0)
-            textX = x - r + s.crosshairTextOffsetX - c.text.size().width();
-        else textX = x - c.text.size().width()/2.0;
-        if (s.crosshairTextOffsetY > 0)
-            textY = y + s.crosshairTextOffsetY;
-        else if (s.crosshairTextOffsetY < 0)
-            textY = y + s.crosshairTextOffsetY - c.text.size().height();
-        else textY = y - c.text.size().height()/2.0;
-        painter->drawStaticText(textX, textY, c.text);
+        auto r = getLabelRect(c, x, y);
+        painter->setBrush(c.color);
+        painter->drawStaticText(r.x(), r.y(), c.text);
     }
 }
 
@@ -143,23 +157,17 @@ int CrosshairsOverlay::itemIndexAtPos(const QPoint& pos)
         const auto& c = _items.at(i);
         const double x = parentPlot()->xAxis->coordToPixel(c.unitX);
         const double y = parentPlot()->yAxis->coordToPixel(c.unitY);
-        double x1 = x-r, x2 = x+r, y1 = y-r, y2 = y+r;
-        if (!c.label.isEmpty()) {
-            double w = c.text.size().width();
-            double h = c.text.size().height();
-            if (s.crosshairTextOffsetX > 0)
-                x1 = x + r + s.crosshairTextOffsetX, x2 = x1 + w;
-            else if (s.crosshairTextOffsetX < 0)
-                x2 = x - r + s.crosshairTextOffsetX, x1 = x2 - w;
-            else x1 = x - w/2.0, x2 = x + w/2.0;
-            if (s.crosshairTextOffsetY > 0)
-                y1 = y + s.crosshairTextOffsetY, y2 = y1 + h;
-            else if (s.crosshairTextOffsetY < 0)
-                y2 = y + s.crosshairTextOffsetY, y1 = y2 - h;
-            else y1 = y - h/2.0, y2 = y + h/2;
-        }
+        const double x1 = x-r, x2 = x+r, y1 = y-r, y2 = y+r;
         if (pos.x() >= x1 && pos.x() <= x2 && pos.y() >= y1 && pos.y() <= y2) {
             return i;
+        }
+        if (!c.label.isEmpty()) {
+            auto r = getLabelRect(c, x, y);
+            const double x1 = r.x(), x2 = x1 + r.width();
+            const double y1 = r.y(), y2 = y1 + r.height();
+            if (pos.x() >= x1 && pos.x() <= x2 && pos.y() >= y1 && pos.y() <= y2) {
+                return i;
+            }
         }
     }
     return -1;
@@ -226,7 +234,7 @@ void CrosshairsOverlay::removeItem()
 void CrosshairsOverlay::addItem()
 {
     int maxLabel = 0;
-    for (const auto& c : _items) {
+    for (const auto& c : qAsConst(_items)) {
         bool ok;
         int label = c.label.toInt(&ok);
         if (ok && label > maxLabel)
@@ -270,7 +278,8 @@ void CrosshairsOverlay::load(QSettings *s)
 {
     s->beginGroup("Crosshairs");
     s->beginGroup("items");
-    for (const auto& g : s->childGroups()) {
+    auto groups = s->childGroups();
+    for (const auto& g : qAsConst(groups)) {
         s->beginGroup(g);
         Crosshair c;
         c.x = s->value("x").toDouble();
@@ -295,7 +304,7 @@ void CrosshairsOverlay::clear()
 QString CrosshairsOverlay::save(const QString& fileName)
 {
     QJsonArray items;
-    for (const auto &c : _items) {
+    for (const auto &c : qAsConst(_items)) {
         items << QJsonObject {
             {"x", c.x},
             {"y", c.y},

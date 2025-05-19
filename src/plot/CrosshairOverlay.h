@@ -59,7 +59,7 @@ private:
     QMenu *_menuForEmpty = nullptr;
     QMenu *_menuForItem = nullptr;
     QJsonObject loadedData;
-
+    
     void setItemCoords(Crosshair &c, double plotX, double plotY);
     void mouseMove(QMouseEvent*);
     void mousePress(QMouseEvent*);
@@ -69,6 +69,7 @@ private:
     void changeItemLabel();
     void removeItem();
     void addItem();
+    QRectF getLabelRect(const Crosshair &c, double x, double y) const;
 };
 
 #endif // CROSSHAIRS_OVERLAY_H

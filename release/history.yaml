@@ -4,6 +4,7 @@ history:
   changes:
   - text: Downgrade to Qt 6.2.4 for supporting older OSes
   - text: Fix crash when scrolling in the Autoexposure box
+  - text: Fix crosshairs dragging when click the circle
 
 - version: 0.0.22
   date: 2025-05-12
