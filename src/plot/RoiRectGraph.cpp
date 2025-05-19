@@ -34,11 +34,13 @@ protected:
         switch (e->key()) {
         case Qt::Key_Up:
         case Qt::Key_Right:
-            stepBy(_sign * (e->modifiers().testFlag(Qt::ControlModifier) ? 100 : 1));
+            if (!isReadOnly())
+                stepBy(_sign * (e->modifiers().testFlag(Qt::ControlModifier) ? 100 : 1));
             break;
         case Qt::Key_Down:
         case Qt::Key_Left:
-            stepBy(_sign * (e->modifiers().testFlag(Qt::ControlModifier) ? -100 : -1));
+            if (!isReadOnly())
+                stepBy(_sign * (e->modifiers().testFlag(Qt::ControlModifier) ? -100 : -1));
             break;
         default:
             QSpinBox::keyPressEvent(e);
