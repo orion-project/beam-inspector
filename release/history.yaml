@@ -1,9 +1,9 @@
 history:
 - version: 0.0.23
-  date: ?
+  date: 2025-05-19
   changes:
   - text: Use hardware pixel scale by default
-  - text: Downgrade Qt to 6.2.4 for supporting older OSes
+  - text: Downgrade Qt to 6.2.4 to support older OSes
   - text: Fix crash when scrolling in the Autoexposure box
   - text: Fix crosshairs dragging when click the circle
   - text: Fix profiles averaging

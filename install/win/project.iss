@@ -1,8 +1,9 @@
 #define AppName      "Beam Inspector"
 #define AppExe       "beam-inspector.exe"
+#define RawAppName   "beam-inspector"
 #define AppPublisher "orion-project.org"
 #define AppURL       "https://github.com/orion-project/beam-inspector"
-#define BaseDir      "..\..\out\redist"
+#define BaseDir      "..\..\out\redist_6.2.4"
 #define BinDir       "..\..\bin"
 
 #define FileHandle = FileOpen("..\..\release\version.txt")
@@ -37,13 +38,16 @@ SolidCompression=yes
 PrivilegesRequired=lowest
 ChangesAssociations=yes
 VersionInfoVersion={#AppVerFull}.0
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 WizardSmallImageFile=logo.bmp
 
 ; Windows 10 (1809) is the minimum supported by Qt6
 ; https://doc.qt.io/qt-6/supported-platforms.html
-MinVersion=10.0.17763
+; MinVersion=10.0.17763
+;
+; But Qt 6.2 can be installed on the older version
+MinVersion=10.0    
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -53,7 +57,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "{#BaseDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
-Source: "{#BinDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
+Source: "{#BinDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs; Excludes: "~*.*,*.log"
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"
@@ -62,10 +66,12 @@ Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 
 [UninstallDelete]
-Type: files;          Name: "{autoappdata}\{#AppPublisher}\{#AppName}.*"
+Type: files;          Name: "{autoappdata}\{#AppPublisher}\{#RawAppName}.*"
 Type: dirifempty;     Name: "{autoappdata}\{#AppPublisher}"
 Type: filesandordirs; Name: "{localappdata}\{#AppPublisher}\{#AppName}"
 Type: dirifempty;     Name: "{localappdata}\{#AppPublisher}"
+Type: files;          Name: "{app}\*.log"
+Type: dirifempty;     Name: "{app}"
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
