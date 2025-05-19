@@ -374,7 +374,13 @@ void ProfilesView::showResult()
                 }
             }
         } else {
-            for (const auto& profile : _profiles) {
+            for (int i = 0; i < pointCount; i++) {
+                avgX[i].key = 0;
+                avgX[i].value = 0;
+                avgY[i].key = 0;
+                avgY[i].value = 0;
+            }
+            for (const auto& profile : std::as_const(_profiles)) {
                 for (int i = 0; i < pointCount; i++) {
                     avgX[i].key += profile.x.at(i).key;
                     avgX[i].value += profile.x.at(i).value;
@@ -395,7 +401,6 @@ void ProfilesView::showResult()
     {
         calcProfiles(arg, res, profileX, profileY);
     }
-
 
     GaussParams gpX, gpY;
     calcGaussParams(profileX, gpX);
@@ -442,17 +447,11 @@ void ProfilesView::setConfig(const PixelScale& scale, const Averaging& mavg)
     _mavgFrames = mavg.on ? mavg.frames : 0;
     auto& avgX = _profileX->data()->rawData();
     auto& avgY = _profileY->data()->rawData();
-    for (int i = 0; i < totalPoints(); i++) {
-        avgX[i].key = 0;
-        avgX[i].value = 0;
-        avgY[i].key = 0;
-        avgY[i].value = 0;
-    }
     _profiles.clear();
     
     updateVisibility();
 
-    QTimer::singleShot(1000, [this]{
+    QTimer::singleShot(1000, this, [this]{
         _rangeX = 0;
         _rangeY = 0;
     });

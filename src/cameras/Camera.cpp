@@ -83,8 +83,12 @@ bool Camera::editConfig(int page)
     ;
     opts.onHelpRequested = [](const QString &topic){ HelpSystem::topic(topic); };
     auto hardScale = sensorScale();
+    bool rescalePlot = _config.plot.rescale;
     bool useSensorScale = !_config.plot.customScale.on;
     bool useCustomScale = _config.plot.customScale.on;
+    // Using of hard scale is checked but camera doesn't support it
+    if (rescalePlot && useSensorScale && !hardScale.on)
+        rescalePlot = false, useSensorScale = false, useCustomScale = true;
     bool scaleFullRange = _config.plot.fullRange;
     bool scaleDataRange = !_config.plot.fullRange;
     double cornerFraction = _config.bgnd.corner * 100;
@@ -102,7 +106,7 @@ bool Camera::editConfig(int page)
         (new ConfigItemBool(cfgPlot, qApp->tr("Colorize over data range"), &scaleDataRange))
             ->withRadioGroup("colorize"),
         new ConfigItemSpace(cfgPlot, 12),
-        new ConfigItemBool(cfgPlot, qApp->tr("Rescale pixels"), &_config.plot.rescale),
+        new ConfigItemBool(cfgPlot, qApp->tr("Rescale pixels"), &rescalePlot),
         (new ConfigItemBool(cfgPlot, qApp->tr("Use hardware scale"), &useSensorScale))
             ->setDisabled(!hardScale.on)
             ->withRadioGroup("pixel_scale")
@@ -154,6 +158,7 @@ bool Camera::editConfig(int page)
     {
         RoiRect oldRoi = _config.roi;
         _config.plot.fullRange = scaleFullRange;
+        _config.plot.rescale = rescalePlot;
         _config.plot.customScale.on = useCustomScale;
         _config.bgnd.corner = cornerFraction / 100.0;
         _config.roi.left = double(roiPixelLeft)/double(width());

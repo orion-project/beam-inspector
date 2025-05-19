@@ -30,9 +30,9 @@ int PowerMeter::maxAvgFrames = 10;
 void CameraConfig::load(QSettings *s)
 {
     LOAD(plot.normalize, Bool, true);
-    LOAD(plot.rescale, Bool, false);
+    LOAD(plot.rescale, Bool, true);
     LOAD(plot.fullRange, Bool, true);
-    LOAD(plot.customScale.on, Bool, true);
+    LOAD(plot.customScale.on, Bool, false);
     LOAD(plot.customScale.factor, Double, 5);
     LOAD(plot.customScale.unit, String, "um");
     LOAD(plot.colorMap, String, "");
