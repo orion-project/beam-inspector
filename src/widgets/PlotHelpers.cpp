@@ -15,7 +15,7 @@ namespace PlotHelpers
 bool isDarkTheme()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-    return theme == qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+    return qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark;
 #else
     return false;
 #endif

@@ -257,17 +257,17 @@ public:
     std::function<void(bool, bool, bool)> scrolled;
 protected:
     void keyPressEvent(QKeyEvent *e) override {
-        if (e->key() == Qt::Key_Up) {
+        if (e->key() == Qt::Key_Up && scrolled) {
             scrolled(false, true, e->modifiers().testFlag(Qt::ControlModifier));
             e->accept();
-        } else if (e->key() == Qt::Key_Down) {
+        } else if (e->key() == Qt::Key_Down && scrolled) {
             scrolled(false, false, e->modifiers().testFlag(Qt::ControlModifier));
             e->accept();
         } else
             ValueEdit::keyPressEvent(e);
     }
     void wheelEvent(QWheelEvent *e) override {
-        if (hasFocus()) {
+        if (hasFocus() && scrolled) {
             scrolled(true, e->angleDelta().y() > 0, e->modifiers().testFlag(Qt::ControlModifier));
             e->accept();
         } else
@@ -411,7 +411,7 @@ public:
         };
         autoExp->finished = [this]{ stopAutoExp(); };
 
-        for (auto group : groups)
+        for (auto group : qAsConst(groups))
             group->setDisabled(true);
         if (!autoExp->start())
             stopAutoExp();
@@ -420,7 +420,7 @@ public:
     void stopAutoExp()
     {
         watingBrightness = false;
-        for (auto group : groups)
+        for (auto group : qAsConst(groups))
             group->setDisabled(false);
         double fps = props["Fps"];
         if (auto res = IDS.peak_FrameRate_Set(hCam, fps); PEAK_ERROR(res)) {
@@ -701,7 +701,7 @@ public:
     {
         if (!getCamProp)
             return;
-        for (auto b : presetButtons)
+        for (auto b : qAsConst(presetButtons))
             b->setChecked(false);
         auto props = makePreset();
         auto presets = getPresets();
@@ -719,8 +719,7 @@ public:
     void makePresetButtons()
     {
         auto presets = getPresets();
-        QMap<QString, QPushButton*> buttons;
-        for (auto b : presetButtons) {
+        for (auto b : qAsConst(presetButtons)) {
             groupPresets->layout()->removeWidget(b);
         }
         qDeleteAll(presetButtons);
@@ -757,7 +756,7 @@ public:
             connect(actDel, &QAction::triggered, this, &IdsHardConfigPanelImpl::removePreset);
             actions << actDel;
 
-            for (auto a : actions) a->setData(i);
+            for (auto a : qAsConst(actions)) a->setData(i);
             b->addActions(actions);
         }
         auto b = new QPushButton(tr(" Add new preset..."));
@@ -885,7 +884,7 @@ public:
         {
             if (!preset) return;
             auto newPreset = parent->makePreset();
-            auto confirm = parent->formatPreset(newPreset) +
+            QString confirm = parent->formatPreset(newPreset) +
                 tr("<p>Update <b>%1</b> with these values?</p>").arg((*preset)[PKEY_NAME].toString());
             if (Ori::Dlg::yes(confirm)) {
                 (*presets)[index] = newPreset;
@@ -1013,7 +1012,7 @@ IdsHardConfigPanel::IdsHardConfigPanel(peak_camera_handle hCam,
 
 void IdsHardConfigPanel::setReadOnly(bool on)
 {
-    for (auto group : _impl->groups)
+    for (auto group : qAsConst(_impl->groups))
         group->setDisabled(on);
 }
 

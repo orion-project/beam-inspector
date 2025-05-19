@@ -3,6 +3,7 @@ history:
   date: ?
   changes:
   - text: Downgrade to Qt 6.2.4 for supporting older OSes
+  - text: Fix crash when scrolling in the Autoexposure box
 
 - version: 0.0.22
   date: 2025-05-12
