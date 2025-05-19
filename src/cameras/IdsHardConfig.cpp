@@ -457,7 +457,7 @@ public:
         {
         public:
             LogLine(QStringList &log, QString *line) : QTextStream(line), log(log), line(line) {}
-            ~LogLine() { qDebug() << LOG_ID << "Autoexposure:" << (*line); log << (*line); }
+            ~LogLine() { qDebug().noquote() << LOG_ID << "Autoexposure:" << (*line); log << (*line); }
             QStringList &log;
             QString *line;
         };
@@ -500,6 +500,8 @@ public:
                 log() << msg;
                 return false;
             }
+            log() << "exp_min=" << expMin << " exp_max=" << expMax << " exp_step=" << expStep;
+            
             exp = expMin;
             if (auto res = IDS.peak_ExposureTime_Set(hCam, exp); PEAK_ERROR(res)) {
                 QString msg = QString("Failed to set exposure to %1: %2").arg(exp).arg(IDS.getPeakError(res));
@@ -507,6 +509,7 @@ public:
                 log() << msg;
                 return false;
             }
+            
             double fpsMin, fpsMax, fpsInc;
             if (auto res = IDS.peak_FrameRate_GetRange(hCam, &fpsMin, &fpsMax, &fpsInc); PEAK_ERROR(res)) {
                 QString msg = QString("Failed to get FPS range: %1").arg(IDS.getPeakError(res));
@@ -514,6 +517,8 @@ public:
                 log() << msg;
                 return false;
             }
+            log() << "fps_min=" << fpsMin << " fps_max=" << fpsMax << " fps_inc=" << fpsInc;
+            
             fps = fpsMax;
             if (auto res = IDS.peak_FrameRate_Set(hCam, fps); PEAK_ERROR(res)) {
                 QString msg = QString("Failed to set FPS to %1: %2").arg(fps).arg(IDS.getPeakError(res));

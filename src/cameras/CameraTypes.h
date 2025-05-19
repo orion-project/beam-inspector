@@ -186,4 +186,6 @@ struct GoodnessLimits
 using AnyRecord = QMap<QString, QVariant>;
 using AnyRecords = QList<AnyRecord>;
 
+#define HEX(v) QStringLiteral("0x%1").arg(v, 0, 16)
+
 #endif // CAMERA_TYPES_H

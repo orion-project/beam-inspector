@@ -134,10 +134,14 @@ public:
         if (cam->_cfg->binning.configurable) {
             LOAD_FACTORS(peak_Binning_FactorX_GetList, binning.xs);
             LOAD_FACTORS(peak_Binning_FactorY_GetList, binning.ys);
+            qDebug().nospace() << LOG_ID << " Binnings x="
+                << cam->_cfg->binning.xs << ", y=" << cam->_cfg->binning.ys;
         }
         if (cam->_cfg->decimation.configurable) {
             LOAD_FACTORS(peak_Decimation_FactorX_GetList, decimation.xs);
             LOAD_FACTORS(peak_Decimation_FactorY_GetList, decimation.ys);
+            qDebug().nospace() << LOG_ID << " Decimations x="
+                << cam->_cfg->decimation.xs << ", y=" << cam->_cfg->decimation.ys;
         }
         #undef LOAD_FACTORS
         return {};
@@ -149,23 +153,25 @@ public:
         peak_size roiMin, roiMax, roiInc;
         res = IDS.peak_ROI_Size_GetRange(hCam, &roiMin, &roiMax, &roiInc);
         CHECK_ERR("Unable to get ROI range");
-        qDebug() << LOG_ID << "ROI"
-            << QString("min=%1x%24").arg(roiMin.width).arg(roiMin.height)
-            << QString("max=%1x%24").arg(roiMax.width).arg(roiMax.height)
-            << QString("inc=%1x%24").arg(roiInc.width).arg(roiInc.height);
+        qDebug().noquote() << LOG_ID << "ROI range"
+            << QString("min=%1x%2, max=%3x%4, inc=%5x%6")
+                .arg(roiMin.width).arg(roiMin.height)
+                .arg(roiMax.width).arg(roiMax.height)
+                .arg(roiInc.width).arg(roiInc.height);
 
         peak_roi roi;
         res = IDS.peak_ROI_Get(hCam, &roi);
         CHECK_ERR("Unable to get ROI");
-        qDebug() << LOG_ID << "ROI"
-            << QString("size=%1x%2").arg(roi.size.width).arg(roi.size.height)
-            << QString("offset=%1x%2").arg(roi.offset.x).arg(roi.offset.y);
+        qDebug().noquote() << LOG_ID << "ROI"
+            << QString("size=%1x%2, offset=%3x%4")
+                .arg(roi.size.width).arg(roi.size.height)
+                .arg(roi.offset.x).arg(roi.offset.y);
         if (roi.size.width != roiMax.width || roi.size.height != roiMax.height) {
             roi.offset.x = 0;
             roi.offset.y = 0;
             roi.size.width = roiMax.width;
             roi.size.height = roiMax.height;
-            qDebug() << LOG_ID << "Set ROI"
+            qDebug().noquote() << LOG_ID << "Set ROI"
                 << QString("size=%1x%2").arg(roi.size.width).arg(roi.size.height);
             res = IDS.peak_ROI_Set(hCam, roi);
             CHECK_ERR("Unable to set ROI");
@@ -190,7 +196,7 @@ public:
                     cam->_cfg->decimation.reset();
                 }
             }
-            qDebug() << LOG_ID << "Binning" << cam->_cfg->binning.str();
+            qDebug().noquote() << LOG_ID << "Binning" << cam->_cfg->binning.str();
         }
         if (cam->_cfg->decimation.configurable) {
             CLAMP_FACTOR(decimation.x, decimation.xs);
@@ -201,7 +207,7 @@ public:
                 res = IDS.peak_Decimation_Get(hCam, &cam->_cfg->decimation.x, &cam->_cfg->decimation.y);
                 CHECK_ERR("Unable to get decimation");
             }
-            qDebug() << LOG_ID << "Decimation" << cam->_cfg->decimation.str();
+            qDebug().noquote() << LOG_ID << "Decimation" << cam->_cfg->decimation.str();
         }
         #undef CLAMP_FACTOR
 
@@ -210,7 +216,7 @@ public:
             (cam->_cfg->decimation.configurable && cam->_cfg->decimation.on())) {
             res = IDS.peak_ROI_Get(hCam, &roi);
             CHECK_ERR("Unable to get ROI");
-            qDebug() << LOG_ID << "ROI" << QString("size=%1x%2").arg(roi.size.width).arg(roi.size.height);
+            qDebug().noquote() << LOG_ID << "ROI" << QString("size=%1x%2").arg(roi.size.width).arg(roi.size.height);
         }
         c.w = roi.size.width;
         c.h = roi.size.height;
@@ -257,7 +263,7 @@ public:
         QMap<int, peak_pixel_format> supportedFormats;
         for (int i = 0; i < formatCount; i++) {
             auto pf = pixelFormats.at(i);
-            qDebug() << LOG_ID << "Supported pixel format" << QString::number(pf, 16);
+            qDebug().noquote() << LOG_ID << "Supported pixel format" << HEX(pf);
             if (pf == PEAK_PIXEL_FORMAT_MONO8) {
                 cam->_cfg->supportedBpp << 8;
                 supportedFormats.insert(8, pf);
@@ -281,7 +287,7 @@ public:
         } else {
             targetFormat = supportedFormats[c.bpp];
         }
-        qDebug() << LOG_ID << "Set pixel format" << QString::number(targetFormat, 16) << c.bpp << "bpp";
+        qDebug().noquote() << LOG_ID << "Set pixel format" << HEX(targetFormat) << c.bpp << "bpp";
         res = IDS.peak_PixelFormat_Set(hCam, targetFormat);
         CHECK_ERR("Unable to set pixel format");
         cam->_cfg->bpp = c.bpp;
@@ -313,6 +319,13 @@ public:
         SHOW_CAM_PROP("FPS", IDS.peak_FrameRate_Get, double);
         SHOW_CAM_PROP("Exposure", IDS.peak_ExposureTime_Get, double);
         #undef SHOW_CAM_PROP
+        
+        double min, max, inc;
+        res = IDS.peak_ExposureTime_GetRange(hCam, &min, &max, &inc);
+        if (PEAK_ERROR(res))
+            qDebug() << LOG_ID << "Unable to get exposure range" << IDS.getPeakError(res);
+        else qDebug().nospace() << LOG_ID << " Exposure range min=" << min << ", max=" << max << ", inc=" << inc;
+        
         return {};
     }
 
@@ -331,7 +344,7 @@ public:
 
         res = IDS.peak_Camera_Open(id, &hCam);
         CHECK_ERR("Unable to open camera");
-        qDebug() << LOG_ID << "Camera opened" << id;
+        qDebug().nospace() << LOG_ID << " Camera opened, id=" << id;
 
         if (auto err = initResolution(); !err.isEmpty()) return err;
         if (auto err = getImageSize(); !err.isEmpty()) return err;
@@ -501,7 +514,8 @@ QVector<CameraItem> IdsCamera::getCameras()
 
     QVector<CameraItem> result;
     for (const auto &cam : cams) {
-        qDebug() << LOG_ID << cam.cameraID << cam.cameraType << cam.modelName << cam.serialNumber;
+        qDebug().noquote() << LOG_ID << QString("id=%1, type=0x%2, model=%3, serial=%4")
+            .arg(cam.cameraID).arg(cam.cameraType, 0, 16).arg(cam.modelName, cam.serialNumber);
         result << CameraItem {
             .cameraId = cam.cameraID,
             .customId = makeCustomId(cam),

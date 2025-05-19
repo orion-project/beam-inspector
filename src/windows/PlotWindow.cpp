@@ -366,7 +366,7 @@ void PlotWindow::fillCamSelector()
             Ori::Dlg::error(err);
         });
     } else {
-        for (const auto& cam : IdsCamera::getCameras()) {
+        foreach (const auto& cam, IdsCamera::getCameras()) {
             auto name = cam.displayName;
             auto customName = s.value(cam.customId).toString();
             if (!customName.isEmpty()) {
@@ -1063,7 +1063,7 @@ void PlotWindow::activateCamIds()
     if (!action) return;
 
     auto camId = action->data();
-    qDebug() << LOG_ID << "Activate camera: IDS id =" << camId.toString();
+    qDebug().noquote().nospace() << LOG_ID << " Activate camera: IDS id=" << camId.toString();
 
     auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get());
     if (imgCam) _prevImage = imgCam->fileName();

@@ -200,7 +200,7 @@ void IdsCameraConfig::load(QSettings *s)
     for (int i = 0; i < size; i++) {
         s->setArrayIndex(i);
         AnyRecord preset;
-        for (const auto &key : s->allKeys())
+        foreach (const auto &key, s->allKeys())
             preset[key] = s->value(key);
         presets << preset;
     }
@@ -211,7 +211,7 @@ void IdsCameraConfig::load(QSettings *s)
 void IdsCameraConfig::saveExpPresets(QJsonObject &root)
 {
     QJsonArray items;
-    for (auto const &preset : expPresets) {
+    foreach (auto const &preset, expPresets) {
         QJsonObject item;
         for (auto it = preset.constBegin(); it != preset.constEnd(); it++)
             item[it.key()] = QJsonValue::fromVariant(it.value());
@@ -227,7 +227,7 @@ void IdsCameraConfig::loadExpPresets(QJsonObject &root)
     for (auto it = items.begin(); it != items.end(); it++) {
         auto item = it->toObject();
         AnyRecord preset;
-        for (const auto &key : item.keys())
+        foreach (const auto &key, item.keys())
             preset[key] = item[key].toVariant();
         expPresets << preset;
     }

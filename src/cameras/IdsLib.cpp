@@ -165,7 +165,7 @@ IdsLib::IdsLib()
         return;
     }
     
-    for (const auto& libPath : libs) {
+    foreach (const auto& libPath, libs) {
         auto r = getLibVer(libPath);
         if (r.ok())
             qDebug() << LOG_ID << "Loading" << libPath << r.result();
