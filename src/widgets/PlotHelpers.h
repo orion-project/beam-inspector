@@ -13,6 +13,7 @@ namespace PlotHelpers
 
 enum Theme { SYSTEM, LIGHT };
 
+bool isDarkTheme();
 bool isDarkTheme(Theme theme);
 
 QColor themeAxisColor(Theme theme);

@@ -6,12 +6,14 @@
 #include "app/HelpSystem.h"
 #include "cameras/CameraTypes.h"
 #include "cameras/IdsLib.h"
+#include "widgets/PlotHelpers.h"
 
 #include "core/OriFloatingPoint.h"
 #include "helpers/OriLayouts.h"
 #include "helpers/OriDialogs.h"
 #include "widgets/OriValueEdit.h"
 
+#include <QAction>
 #include <QApplication>
 #include <QBoxLayout>
 #include <QCheckBox>
@@ -60,7 +62,7 @@ bool theSame(const AnyRecord &p1, const AnyRecord &p2)
 #define PROP_CONTROL(Prop, title) { \
     auto label = new QLabel; \
     label->setWordWrap(true); \
-    label->setForegroundRole(qApp->styleHints()->colorScheme() == Qt::ColorScheme::Dark ? QPalette::Light : QPalette::Mid); \
+    label->setForegroundRole(PlotHelpers::isDarkTheme() ? QPalette::Light : QPalette::Mid); \
     auto edit = new CamPropEdit; \
     edit->scrolled = [this](bool wheel, bool inc, bool big){ set##Prop##Fast(wheel, inc, big); }; \
     edit->connect(edit, &ValueEdit::focused, edit, [this](bool focus){ if (!focus) show##Prop(); }); \

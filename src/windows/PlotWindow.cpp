@@ -163,7 +163,9 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     setCentralWidget(_plot);
     fillCamSelector();
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
     connect(qApp->styleHints(), &QStyleHints::colorSchemeChanged, this, &PlotWindow::updateThemeColors);
+#endif
     setThemeColors();
 
     restoreState();
@@ -326,14 +328,16 @@ void PlotWindow::createMenuBar()
     new Ori::Widgets::MruMenuPart(_plot->mruCrosshairs(), menuOverlays, _actionLoadCrosshairs, this);
     menuBar()->addMenu(menuOverlays);
 
-    auto m = menuBar()->addMenu(tr("Help"));
     auto help = HelpSystem::instance();
-    m->addAction(QIcon(":/ori_images/help"), tr("Help"), QKeySequence::HelpContents, help, &HelpSystem::showContent);
-    m->addAction(QIcon(":/toolbar/home"), tr("Visit Homepage"), help, &HelpSystem::visitHomePage);
-    m->addAction(QIcon(":/toolbar/bug"), tr("Send Bug Report"), help, &HelpSystem::sendBugReport);
-    m->addAction(tr("Check For Updates"), help, &HelpSystem::checkForUpdates);
-    m->addSeparator();
-    m->addAction(tr("About..."), help, &HelpSystem::showAbout);
+    auto actnHelp = A_(tr("Help"), help, &HelpSystem::showContent, ":/ori_images/help", QKeySequence::HelpContents);
+    auto actnHome = A_(tr("Visit Homepage"), help, &HelpSystem::visitHomePage, ":/toolbar/home");
+    auto actnBug = A_(tr("Send Bug Report"), help, &HelpSystem::sendBugReport, ":/toolbar/bug");
+    auto actnUpdates = A_(tr("Check For Updates"), help, &HelpSystem::checkForUpdates);
+    auto actnAbout = A_(tr("About..."), help, &HelpSystem::showAbout);
+    auto menuHelp = M_(tr("Help"), {
+        actnHelp, actnHome, actnBug, actnUpdates, 0, actnAbout
+    });
+    menuBar()->addMenu(menuHelp);
 #undef M_
 #undef A_
 }

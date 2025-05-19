@@ -22,7 +22,7 @@ static QString getSysError(DWORD err)
     wchar_t buf[bufSize];
     auto size = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM, 0, err, 0, buf, bufSize, 0);
     if (size == 0)
-        return QStringLiteral("code: 0x").arg(err, 0, 16);
+        return QStringLiteral("code: 0x%1").arg(err, 0, 16);
     return QString::fromWCharArray(buf, size).trimmed();
 }
 

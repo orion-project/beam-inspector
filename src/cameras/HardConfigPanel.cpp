@@ -1,5 +1,6 @@
 #include "HardConfigPanel.h"
 
+#include <QIcon>
 #include <QLabel>
 #include <QVBoxLayout>
 

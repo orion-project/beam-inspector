@@ -4,9 +4,11 @@
 #include "app/AppSettings.h"
 
 #include <QMainWindow>
+#include <QMap>
 #include <QPointer>
 
 class QAction;
+class QActionGroup;
 class QTableWidget;
 class QTableWidgetItem;
 class QToolButton;

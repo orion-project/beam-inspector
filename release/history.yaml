@@ -1,6 +1,12 @@
 history:
-- version: 0.0.21
+- version: 0.0.23
   date: ?
+  changes:
+  - text: Downgrade to Qt 6.2.4 for supporting older OSes
+
+- version: 0.0.22
+  date: 2025-05-12
+  comment: Not published
   changes:
   - text: Support different versions of IDS SDK
 
