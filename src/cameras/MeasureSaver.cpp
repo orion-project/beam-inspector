@@ -11,6 +11,8 @@
 #include "widgets/FileSelector.h"
 #include "widgets/OriPopupMessage.h"
 
+#include <windows.h>
+
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
@@ -49,6 +51,72 @@ static int parseDuration(const QString &str)
     int s = match.captured("sec").toInt();
     return 3600*h + 60*m + s;
 }
+
+//------------------------------------------------------------------------------
+//                               MeasureFile
+//------------------------------------------------------------------------------
+
+struct CsvFile
+{
+    HANDLE hFile = INVALID_HANDLE_VALUE;
+    QString error;
+    
+    bool open(const QString &fileName)
+    {
+        hFile = CreateFileW(
+            fileName.toStdWString().c_str(),
+            FILE_APPEND_DATA | SYNCHRONIZE,
+            FILE_SHARE_READ,
+            NULL,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL
+        );
+        if (hFile == INVALID_HANDLE_VALUE) {
+            getSysError();
+            return false;
+        }
+        return true;
+    }
+    
+    bool close()
+    {
+        if (!CloseHandle(hFile)) {
+            hFile = INVALID_HANDLE_VALUE;
+            getSysError();
+            return false;
+        }
+        hFile = INVALID_HANDLE_VALUE;
+        return true;
+    }
+    
+    bool writeLine(const QString &line)
+    {
+        QByteArray bytes = line.toUtf8();
+        DWORD bytesWritten = 0;
+        if (!WriteFile(hFile, bytes.data(), bytes.size(), &bytesWritten, NULL)) {
+            getSysError();
+            return false;
+        }
+        if (bytesWritten != bytes.size()) {
+            error = QString("Written %1 of %2 bytes").arg(bytesWritten).arg(bytes.size());
+            return false;
+        }
+        return true;
+    }
+    
+    void getSysError()
+    {
+        DWORD err = GetLastError();
+        const int bufSize = 4096;
+        wchar_t buf[bufSize];
+        auto size = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM, 0, err, 0, buf, bufSize, 0);
+        if (size == 0)
+            error = QStringLiteral("code: 0x%1").arg(err, 0, 16);
+        else
+            error = QString::fromWCharArray(buf, size).trimmed();
+    }
+};
 
 //------------------------------------------------------------------------------
 //                               MeasureConfig
@@ -139,6 +207,12 @@ MeasureSaver::~MeasureSaver()
     _thread->quit();
     _thread->wait();
     qDebug() << LOG_ID << "Stopped";
+    
+    if (_csvFile) {
+        if (!_csvFile->close())
+            qWarning() << LOG_ID << "Error while closing results file" << _config.fileName << _csvFile->error;
+        else qDebug() << LOG_ID << "Results file closed successfully" << _config.fileName;
+    }
 }
 
 QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
@@ -216,12 +290,15 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
 
     // Prepare results file
     qDebug() << LOG_ID << "Recreate target" << _config.fileName;
-    QFile csvFile(_config.fileName);
-    if (!csvFile.open(QIODeviceBase::WriteOnly | QIODeviceBase::Truncate)) {
-        qCritical() << LOG_ID << "Failed to create resuls file" << _config.fileName << csvFile.errorString();
-        return tr("Failed to create resuls file:\n%1").arg(csvFile.errorString());
+    _csvFile = std::unique_ptr<CsvFile>(new CsvFile);
+    if (!_csvFile->open(_config.fileName)) {
+        qCritical() << LOG_ID << "Failed to create results file" << _config.fileName << _csvFile->error;
+        return tr("Failed to create results file:\n%1").arg(_csvFile->error);
     }
-    QTextStream out(&csvFile);
+
+    // Write column headers
+    QString headerLine;
+    QTextStream out(&headerLine);
     out << "Index"
         << SEP << "Timestamp";
     if (camConfig.roiMode == ROI_MULTI) {
@@ -256,7 +333,11 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
         }
     }
     out << '\n';
-    csvFile.close();
+    
+    if (!_csvFile->writeLine(headerLine)) {
+        qCritical() << LOG_ID << "Failed to write results file" << _config.fileName << _csvFile->error;
+        return tr("Failed to write results file:\n%1").arg(_csvFile->error);
+    }
 
 #ifdef SAVE_CHECK_FILE
     QFile checkFile(_config.fileName + ".check");
@@ -346,14 +427,8 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
     else qCritical() << "Failed to open check file" << checkFile.errorString();
 #endif
 
-    QFile f(_config.fileName);
-    if (!f.open(QIODeviceBase::WriteOnly | QIODeviceBase::Append)) {
-        qCritical() << LOG_ID << "Failed to open resuls file" << _config.fileName << f.errorString();
-        emit interrupted(tr("Failed to open resuls file") + '\n' + _config.fileName + '\n' + f.errorString());
-        return;
-    }
-
-    QTextStream out(&f);
+    QString line;
+    QTextStream out(&line);
     if (_config.allFrames)
     {
         for (int i = 0; i < e->count; i++) {
@@ -486,6 +561,12 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
         }
     }
 
+    if (!_csvFile->writeLine(line)) {
+        qCritical() << LOG_ID << "Failed to save resuls into file" << _config.fileName << _csvFile->error;
+        emit interrupted(tr("Failed to save results into file") + '\n' + _config.fileName + '\n' + _csvFile->error);
+        return;
+    }
+
     auto elapsed = QDateTime::currentSecsSinceEpoch() - _measureStart;
 
     QSettings s(_cfgFile, QSettings::IniFormat);
@@ -588,7 +669,7 @@ public:
         cbPresets->setPlaceholderText(tr("Select a preset"));
         cbPresets->setToolTip(tr("Measurements preset"));
         cbPresets->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred));
-        cbPresets->connect(cbPresets, &QComboBox::currentTextChanged, [this](const QString &t){ selectedPresetChnaged(t); });
+        cbPresets->connect(cbPresets, &QComboBox::currentTextChanged, cbPresets, [this](const QString &t){ selectedPresetChnaged(t); });
 
         auto toolbar = new QToolBar;
         auto color = toolbar->palette().brush(QPalette::Base).color();
@@ -781,7 +862,7 @@ public:
         s.beginGroup(INI_GROUP_PRESETS);
         auto names = s.settings()->childKeys();
         names.sort();
-        for (const auto &name : names)
+        for (const auto &name : std::as_const(names))
             cbPresets->addItem(name, s.value(name));
         if (!selected.isEmpty())
             cbPresets->setCurrentText(selected);

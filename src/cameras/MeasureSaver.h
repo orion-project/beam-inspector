@@ -10,6 +10,7 @@
 class QSettings;
 
 class Camera;
+struct CsvFile;
 
 #define MULTIRES_IDX 100
 #define MULTIRES_IDX_NAN(i) (MULTIRES_IDX*(i+1) + 0)
@@ -117,6 +118,7 @@ private:
     QList<int> _auxCols;
     QMap<int, double> _auxAvgVals;
     double _auxAvgCnt;
+    std::unique_ptr<CsvFile> _csvFile;
 
     void processMeasure(MeasureEvent *e);
     void saveImage(ImageEvent *e);
