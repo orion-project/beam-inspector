@@ -7,6 +7,7 @@
 #include <QObject>
 #include <QSharedPointer>
 
+class QLockFile;
 class QSettings;
 
 class Camera;
@@ -58,9 +59,28 @@ class MeasureEvent : public QEvent
 public:
     MeasureEvent() : QEvent(QEvent::User) {}
 
+    /// A number of results data buffer.
+    /// It's continuously incremented with every MeasureEvent.
     int num;
+    
+    /// A number of results in the buffer.
+    /// It should be the same in each MeasureEvent (1000, as configured)
+    /// but can be different when the measurement is stopped (less than 1000)
     int count;
+    
+    /// A pointer to the results data buffer.
+    /// The buffer is located in the camera worker thread.
+    /// The worker collects 1000 results to the buffer, then switches to another buffer,
+    /// and sends the previous one in MeasureEvent to be saved into <measurement>.csv file.
+    /// This allows for continuous capturing without buffer locking while saving.
+    /// Even on 60FPS the capturing of 1000 results takes about 1/60*1000 ~ 16sec
+    /// which is pretty enough for saving data to the results file before buffer swaps.
+    /// It's supposed that the file is in a local folder and opened exclusively for writing
+    /// so no one should interfere and slow down the writing.
     Measurement *results;
+
+    /// Arbitrary info about the measurement.
+    /// It's saved into <measurement>.ini file 
     QMap<QString, QVariant> stats;
 };
 
@@ -119,6 +139,7 @@ private:
     QMap<int, double> _auxAvgVals;
     double _auxAvgCnt;
     std::unique_ptr<CsvFile> _csvFile;
+    std::unique_ptr<QLockFile> _lockFile;
 
     void processMeasure(MeasureEvent *e);
     void saveImage(ImageEvent *e);

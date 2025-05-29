@@ -64,6 +64,8 @@ struct CsvFile
     
     bool open(const QString &fileName)
     {
+        // Use WinAPI for locking the target file for writing
+        // Other apps still can open it for reading
         hFile = CreateFileW(
             fileName.toStdWString().c_str(),
             FILE_APPEND_DATA | SYNCHRONIZE,
@@ -236,7 +238,6 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
         qCritical() << LOG_ID << "Results file is used by another running measurement" << cfg.fileName;
         return tr("Results file is used by another running measurement");
     }
-    qDebug() << LOG_ID << "Lock file" << _lockFile->fileName();
 
     _config = cfg;
     _width = cam->width();
