@@ -203,6 +203,7 @@ int MeasureConfig::imgIntervalSecs() const
 
 MeasureSaver::MeasureSaver() : QObject()
 {
+    _id = QUuid::createUuid().toString(QUuid::Id128);
 }
 
 MeasureSaver::~MeasureSaver()
@@ -274,11 +275,14 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     }
     cfgFile.close();
 
+    auto measureStart = QDateTime::currentDateTime();
+
     // Save measurement config
     qDebug() << LOG_ID << "Write settings" << _cfgFile;
     QSettings s(_cfgFile, QSettings::IniFormat);
     s.beginGroup(INI_GROUP_MEASURE);
-    s.setValue("timestamp", QDateTime::currentDateTime().toString(Qt::ISODate));
+    s.setValue("id", _id);
+    s.setValue("timestamp", measureStart.toString(Qt::ISODate));
     if (cfg.saveImg)
         s.setValue("imageDir", _imgDir);
     _config.save(&s, true);
@@ -363,7 +367,7 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     _thread->start();
     qDebug() << LOG_ID << "Started" << QThread::currentThreadId();
 
-    _measureStart = QDateTime::currentSecsSinceEpoch();
+    _measureStart = measureStart.toSecsSinceEpoch();
 
     _intervalBeg = -1;
     _intervalLen = _config.intervalSecs * 1000;
@@ -398,7 +402,7 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
 
 #define OUT_TIME                                                               \
     out << _intervalIdx << SEP                                                 \
-        << _captureStart.addMSecs(r.time).toString(Qt::ISODateWithMs);
+        << formatTime(r.time, Qt::ISODateWithMs);
 
 #define OUT_ROW(nan, xc, yc, dx, dy, phi)                                      \
     if (nan) OUT_VALS(0, 0, 0, 0, 0, 0)                                        \
@@ -593,7 +597,7 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
     if (!_errors.isEmpty()) {
         s.beginGroup("Errors");
         for (auto it = _errors.constBegin(); it != _errors.constEnd(); it++) {
-            QString key = _captureStart.addMSecs(it.key()).toString(Qt::ISODateWithMs);
+            QString key = formatTime(it.key(), Qt::ISODateWithMs);
             s.setValue(key, it.value());
         }
         _errors.clear();

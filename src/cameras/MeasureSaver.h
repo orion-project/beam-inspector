@@ -107,8 +107,6 @@ public:
 
     QString start(const MeasureConfig &cfg, Camera* cam);
 
-    void setCaptureStart(const QDateTime &t) { _captureStart = t; }
-
 signals:
     void finished();
     void interrupted(const QString &error);
@@ -117,7 +115,7 @@ protected:
     bool event(QEvent *event) override;
 
 private:
-    QDateTime _captureStart;
+    QString _id;
     QSharedPointer<QThread> _thread;
     MeasureConfig _config;
     QString _cfgFile, _imgDir;
@@ -125,6 +123,7 @@ private:
     int _width, _height, _bpp;
     double _scale = 1;
     int _duration = 0;
+    /// Measurement session start time. This is a time when the start() method is called
     qint64 _measureStart;
     qint64 _intervalBeg;
     qint64 _intervalLen;
@@ -146,7 +145,7 @@ private:
 
     template <typename T>
     QString formatTime(qint64 time, T fmt) {
-        return _captureStart.addMSecs(time).toString(fmt);
+        return QDateTime::fromMSecsSinceEpoch(time).toString(fmt);
     }
 };
 
