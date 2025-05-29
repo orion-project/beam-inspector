@@ -111,7 +111,9 @@ private:
     void toggleCrosshairsEditing();
     void toggleCrosshairsVisbility();
     void toggleHardConfig();
-    void toggleMeasure(bool force);
+    void toggleMeasure();
+    void startMeasure();
+    void stopMeasure(bool force);
     void toggleRawView();
     void toggleResultsPanel();
     void toggleRoi();

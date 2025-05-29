@@ -7,9 +7,11 @@
 #include <QObject>
 #include <QSharedPointer>
 
+class QLockFile;
 class QSettings;
 
 class Camera;
+struct CsvFile;
 
 #define MULTIRES_IDX 100
 #define MULTIRES_IDX_NAN(i) (MULTIRES_IDX*(i+1) + 0)
@@ -57,10 +59,32 @@ class MeasureEvent : public QEvent
 public:
     MeasureEvent() : QEvent(QEvent::User) {}
 
+    /// A number of results data buffer.
+    /// It's continuously incremented with every MeasureEvent.
     int num;
+    
+    /// A number of results in the buffer.
+    /// It should be the same in each MeasureEvent (1000, as configured)
+    /// but can be different when the measurement is stopped (less than 1000)
     int count;
+    
+    /// A pointer to the results data buffer.
+    /// The buffer is located in the camera worker thread.
+    /// The worker collects 1000 results to the buffer, then switches to another buffer,
+    /// and sends the previous one in MeasureEvent to be saved into <measurement>.csv file.
+    /// This allows for continuous capturing without buffer locking while saving.
+    /// Even on 60FPS the capturing of 1000 results takes about 1/60*1000 ~ 16sec
+    /// which is pretty enough for saving data to the results file before buffer swaps.
+    /// It's supposed that the file is in a local folder and opened exclusively for writing
+    /// so no one should interfere and slow down the writing.
     Measurement *results;
+
+    /// Arbitrary info about the measurement.
+    /// It's saved into <measurement>.ini file 
     QMap<QString, QVariant> stats;
+    
+    bool last = false;
+    bool finished = false;
 };
 
 class ImageEvent : public QEvent
@@ -86,25 +110,23 @@ public:
 
     QString start(const MeasureConfig &cfg, Camera* cam);
 
-    void setCaptureStart(const QDateTime &t) { _captureStart = t; }
-
 signals:
     void finished();
-    void interrupted(const QString &error);
+    void failed(const QString &error);
 
 protected:
     bool event(QEvent *event) override;
 
 private:
-    QDateTime _captureStart;
+    QString _id;
+    /// Measurement session start time
+    QDateTime _measureStart;
     QSharedPointer<QThread> _thread;
     MeasureConfig _config;
     QString _cfgFile, _imgDir;
     QMap<qint64, QString> _errors;
     int _width, _height, _bpp;
     double _scale = 1;
-    int _duration = 0;
-    qint64 _measureStart;
     qint64 _intervalBeg;
     qint64 _intervalLen;
     int _intervalIdx;
@@ -114,16 +136,31 @@ private:
     QMap<int, int> _multires_avg_cnt;
     int _multires_cnt = 0;
     int _savedImgCount = 0;
+    qint64 _elapsedSecs = 0;
     QList<int> _auxCols;
     QMap<int, double> _auxAvgVals;
     double _auxAvgCnt;
+    qint64 _prevFrameTime;
+    std::unique_ptr<CsvFile> _csvFile;
+    std::unique_ptr<QLockFile> _lockFile;
+    QString _failure;
+    bool _isFinished = false;
 
+    QString checkConfig();
+    QString acquireLock();
+    QString saveIniFile(Camera *cam);
+    QString prepareCsvFile(Camera *cam);
+    QString prepareImagesDir();
     void processMeasure(MeasureEvent *e);
     void saveImage(ImageEvent *e);
+    void saveStats(MeasureEvent *e);
+    void stopFail(const QString &error);
+    
+    void calcIntervalAverage(QTextStream &out, const Measurement &r);
 
     template <typename T>
     QString formatTime(qint64 time, T fmt) {
-        return _captureStart.addMSecs(time).toString(fmt);
+        return QDateTime::fromMSecsSinceEpoch(time).toString(fmt);
     }
 };
 

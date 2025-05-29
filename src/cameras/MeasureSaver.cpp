@@ -11,6 +11,8 @@
 #include "widgets/FileSelector.h"
 #include "widgets/OriPopupMessage.h"
 
+#include <windows.h>
+
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
@@ -21,6 +23,7 @@
 #include <QFileInfo>
 #include <QLabel>
 #include <QLineEdit>
+#include <QLockFile>
 #include <QPushButton>
 #include <QRadioButton>
 #include <QSpinBox>
@@ -49,6 +52,115 @@ static int parseDuration(const QString &str)
     int s = match.captured("sec").toInt();
     return 3600*h + 60*m + s;
 }
+
+//------------------------------------------------------------------------------
+//                                   CsvFile
+//------------------------------------------------------------------------------
+
+struct CsvFile
+{
+    HANDLE hFile = INVALID_HANDLE_VALUE;
+    QString error;
+    
+    bool open(const QString &fileName)
+    {
+        // Use WinAPI for locking the target file for writing
+        // Other apps still can open it for reading
+        hFile = CreateFileW(
+            fileName.toStdWString().c_str(),
+            FILE_APPEND_DATA | SYNCHRONIZE,
+            FILE_SHARE_READ,
+            NULL,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL
+        );
+        if (hFile == INVALID_HANDLE_VALUE) {
+            getSysError();
+            return false;
+        }
+        return true;
+    }
+    
+    bool close()
+    {
+        if (!CloseHandle(hFile)) {
+            hFile = INVALID_HANDLE_VALUE;
+            getSysError();
+            return false;
+        }
+        hFile = INVALID_HANDLE_VALUE;
+        return true;
+    }
+    
+    bool writeLine(const QString &line)
+    {
+        QByteArray bytes = line.toUtf8();
+        DWORD bytesWritten = 0;
+        if (!WriteFile(hFile, bytes.data(), bytes.size(), &bytesWritten, NULL)) {
+            getSysError();
+            return false;
+        }
+        if (bytesWritten != bytes.size()) {
+            error = QString("Written %1 of %2 bytes").arg(bytesWritten).arg(bytes.size());
+            return false;
+        }
+        return true;
+    }
+    
+    void getSysError()
+    {
+        DWORD err = GetLastError();
+        const int bufSize = 4096;
+        wchar_t buf[bufSize];
+        auto size = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM, 0, err, 0, buf, bufSize, 0);
+        if (size == 0)
+            error = QStringLiteral("code: 0x%1").arg(err, 0, 16);
+        else
+            error = QString::fromWCharArray(buf, size).trimmed();
+    }
+};
+
+//------------------------------------------------------------------------------
+//                               MeasureJournal
+//------------------------------------------------------------------------------
+
+struct MeasureJournal
+{
+    enum Stage {START, STOP};
+    QStringList lines;
+
+    MeasureJournal(Stage stage, QString &id)
+    {
+        lines << QString("%1 %2").arg(stage == START ? "START" : "STOP", id);
+    }
+    
+    ~MeasureJournal()
+    {
+        QString fileName = qApp->applicationDirPath() + "/measurements.log";
+        QLockFile lockFile(fileName + ".lock");
+        if (!lockFile.tryLock(1000)) {
+            qCritical() << LOG_ID << "Failed to acquire lock to journal" << lockFile.fileName() << lockFile.error();
+            return;
+        }
+        QFile journalFile(fileName);
+        if (!journalFile.open(QIODeviceBase::WriteOnly | QIODeviceBase::Append)) {
+            qCritical() << LOG_ID << "Failed to open journal file" << fileName << journalFile.errorString();
+            return;
+        }
+        journalFile.write("----------------------------------------------\n");
+        for (const auto &line : std::as_const(lines)) {
+            journalFile.write(line.toUtf8());
+            journalFile.write("\n");
+        }
+        journalFile.write("----------------------------------------------\n");
+    }
+    
+    void write(const QString &key, const QVariant &value)
+    {
+        lines << QStringLiteral("%1: %2").arg(key, value.toString());
+    }
+};
 
 //------------------------------------------------------------------------------
 //                               MeasureConfig
@@ -132,53 +244,119 @@ int MeasureConfig::imgIntervalSecs() const
 
 MeasureSaver::MeasureSaver() : QObject()
 {
+    _id = QUuid::createUuid().toString(QUuid::Id128);
+    _measureStart = QDateTime::currentDateTime();
 }
 
 MeasureSaver::~MeasureSaver()
 {
+    MeasureJournal journal(MeasureJournal::STOP, _id);
+    journal.write("timestamp", QDateTime::currentDateTime().toString(Qt::ISODate));
+    if (!_failure.isEmpty()) {
+        journal.write("reason", "failed");
+        journal.write("failure", _failure);
+    } else if (_isFinished) {
+        journal.write("reason", "finished");
+    } else {
+        journal.write("reason", "canceled");
+    }
+    journal.write("elapsedTime", formatSecs(_elapsedSecs));
+    journal.write("resultsSaved", _intervalIdx);
+    journal.write("imagesSaved", _savedImgCount);
+
     _thread->quit();
     _thread->wait();
     qDebug() << LOG_ID << "Stopped";
+    
+    if (_csvFile) {
+        if (!_csvFile->close()) {
+            journal.write("error", _csvFile->error);
+            qWarning() << LOG_ID << "Error while closing results file" << _config.fileName << _csvFile->error;
+        } else {
+            qDebug() << LOG_ID << "Results file closed successfully" << _config.fileName;
+        }
+    }
 }
 
 QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
 {
-    if (!cfg.durationInf) {
-        _duration = cfg.durationSecs();
-        if (_duration <= 0)
-            return tr("Invalid measurements duration: %1").arg(cfg.duration);
-    }
-
-    if (cfg.saveImg && parseDuration(cfg.imgInterval) <= 0) {
-        return tr("Invalid image save interval: %1").arg(cfg.imgInterval);
-    }
-
     _config = cfg;
     _width = cam->width();
     _height = cam->height();
     _bpp = cam->bpp();
-    const auto &camConfig = cam->config();
+    _intervalBeg = -1;
+    _intervalLen = _config.intervalSecs * 1000;
+    _intervalIdx = 0;
+    _avg_xc = 0, _avg_yc = 0;
+    _avg_dx = 0, _avg_dy = 0;
+    _avg_phi = 0;
+    _avg_cnt = 0;
+    _auxAvgVals = {};
+    _auxAvgCnt = 0;
+    _multires_avg.clear();
+    _multires_avg_cnt.clear();
+    _scale = cam->pixelScale().scaleFactor();
+    _prevFrameTime = 0;
 
-    auto scale = cam->pixelScale();
-    _scale = scale.on ? scale.factor : 1;
+    MeasureJournal journal(MeasureJournal::START, _id);
+    journal.write("timestamp", _measureStart.toString(Qt::ISODate));
+    journal.write("fileName", _config.fileName);
+    journal.write("camera", cam->name());
+    
+    QString            res = checkConfig();
+    if (res.isEmpty()) res = acquireLock();
+    if (res.isEmpty()) res = prepareCsvFile(cam);
+    if (res.isEmpty()) res = prepareImagesDir();
+    if (res.isEmpty()) res = saveIniFile(cam);
+    if (!res.isEmpty()) {
+        journal.write("error", res);
+        return res;
+    }
+    
+#ifdef SAVE_CHECK_FILE
+    QFile checkFile(_config.fileName + ".check");
+    if (!checkFile.open(QIODeviceBase::WriteOnly | QIODeviceBase::Truncate)) {
+        qCritical() << LOG_ID << "Failed to open check file" << checkFile.errorString();
+    }
+#endif
 
-    // Prepare images dir
-    if (_config.saveImg) {
-        QFileInfo fi(_config.fileName);
-        QDir dir = fi.dir();
-        QString subdir = fi.baseName() + ".images";
-        _imgDir = dir.path() + '/' + subdir;
-        if (dir.exists(subdir))
-            qDebug() << LOG_ID << "Img dir exists" << _imgDir;
-        else if (dir.mkdir(subdir))
-            qDebug() << LOG_ID << "Img dir created" << _imgDir;
-        else {
-            qCritical() << LOG_ID << "Failed to create img dir" << _imgDir;
-            return tr("Failed to create subdirectory for beam images");
+    _thread.reset(new QThread);
+    moveToThread(_thread.get());
+    _thread->start();
+    qDebug() << LOG_ID << "Started" << QThread::currentThreadId() << _id;
+    return {};
+}
+
+QString MeasureSaver::checkConfig()
+{
+    if (!_config.durationInf) {
+        auto durationSecs = _config.durationSecs();
+        if (durationSecs <= 0) {
+            qCritical() << LOG_ID << "Invalid measurements duration" << _config.duration << "->" << durationSecs;
+            return tr("Invalid measurements duration: %1").arg(_config.duration);
         }
     }
 
-    // Prepare config file
+    if (_config.saveImg && parseDuration(_config.imgInterval) <= 0) {
+        qCritical() << LOG_ID << "Invalid image save interval" << _config.imgInterval;
+        return tr("Invalid image save interval: %1").arg(_config.imgInterval);
+    }
+    return QString();
+}
+
+QString MeasureSaver::acquireLock()
+{
+    _lockFile = std::unique_ptr<QLockFile>(new QLockFile(_config.fileName + ".lock"));
+    _lockFile->setStaleLockTime(0);
+    if (!_lockFile->tryLock()) {
+        qCritical() << LOG_ID << "Results file is used by another running measurement" << _config.fileName;
+        return tr("Results file is used by another running measurement");
+    }
+    return QString();
+}
+
+QString MeasureSaver::saveIniFile(Camera *cam)
+{
     _cfgFile = _config.fileName;
     _cfgFile.replace(QFileInfo(_config.fileName).suffix(), "ini");
     QFile cfgFile(_cfgFile);
@@ -188,12 +366,12 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     }
     cfgFile.close();
 
-    // Save measurement config
     qDebug() << LOG_ID << "Write settings" << _cfgFile;
     QSettings s(_cfgFile, QSettings::IniFormat);
     s.beginGroup(INI_GROUP_MEASURE);
-    s.setValue("timestamp", QDateTime::currentDateTime().toString(Qt::ISODate));
-    if (cfg.saveImg)
+    s.setValue("id", _id);
+    s.setValue("timestamp", _measureStart.toString(Qt::ISODate));
+    if (_config.saveImg)
         s.setValue("imageDir", _imgDir);
     _config.save(&s, true);
     s.endGroup();
@@ -214,14 +392,42 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     cam->config().save(&s, true);
     s.endGroup();
 
-    // Prepare results file
-    qDebug() << LOG_ID << "Recreate target" << _config.fileName;
-    QFile csvFile(_config.fileName);
-    if (!csvFile.open(QIODeviceBase::WriteOnly | QIODeviceBase::Truncate)) {
-        qCritical() << LOG_ID << "Failed to create resuls file" << _config.fileName << csvFile.errorString();
-        return tr("Failed to create resuls file:\n%1").arg(csvFile.errorString());
+    return QString();
+}
+
+QString MeasureSaver::prepareImagesDir()
+{
+    if (_config.saveImg) {
+        QFileInfo fi(_config.fileName);
+        QDir dir = fi.dir();
+        QString subdir = fi.baseName() + ".images";
+        _imgDir = dir.path() + '/' + subdir;
+        if (dir.exists(subdir))
+            qDebug() << LOG_ID << "Img dir exists" << _imgDir;
+        else if (dir.mkdir(subdir))
+            qDebug() << LOG_ID << "Img dir created" << _imgDir;
+        else {
+            qCritical() << LOG_ID << "Failed to create img dir" << _imgDir;
+            return tr("Failed to create subdirectory for beam images");
+        }
     }
-    QTextStream out(&csvFile);
+    return QString();
+}
+
+QString MeasureSaver::prepareCsvFile(Camera *cam)
+{
+    const auto &camConfig = cam->config();
+
+    qDebug() << LOG_ID << "Recreate target" << _config.fileName;
+    _csvFile = std::unique_ptr<CsvFile>(new CsvFile);
+    if (!_csvFile->open(_config.fileName)) {
+        qCritical() << LOG_ID << "Failed to create results file" << _config.fileName << _csvFile->error;
+        return tr("Failed to create results file:\n%1").arg(_csvFile->error);
+    }
+
+    // Write column headers
+    QString headerLine;
+    QTextStream out(&headerLine);
     out << "Index"
         << SEP << "Timestamp";
     if (camConfig.roiMode == ROI_MULTI) {
@@ -256,35 +462,13 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
         }
     }
     out << '\n';
-    csvFile.close();
-
-#ifdef SAVE_CHECK_FILE
-    QFile checkFile(_config.fileName + ".check");
-    if (!checkFile.open(QIODeviceBase::WriteOnly | QIODeviceBase::Truncate)) {
-        qCritical() << LOG_ID << "Failed to open check file" << checkFile.errorString();
+    
+    if (!_csvFile->writeLine(headerLine)) {
+        qCritical() << LOG_ID << "Failed to write results file" << _config.fileName << _csvFile->error;
+        return tr("Failed to write results file:\n%1").arg(_csvFile->error);
     }
-#endif
-
-    _thread.reset(new QThread);
-    moveToThread(_thread.get());
-    _thread->start();
-    qDebug() << LOG_ID << "Started" << QThread::currentThreadId();
-
-    _measureStart = QDateTime::currentSecsSinceEpoch();
-
-    _intervalBeg = -1;
-    _intervalLen = _config.intervalSecs * 1000;
-    _intervalIdx = 0;
-    _avg_xc = 0, _avg_yc = 0;
-    _avg_dx = 0, _avg_dy = 0;
-    _avg_phi = 0;
-    _avg_cnt = 0;
-    _auxAvgVals = {};
-    _auxAvgCnt = 0;
-    _multires_avg.clear();
-    _multires_avg_cnt.clear();
-
-    return {};
+    
+    return QString();
 }
 
 #define OUT_VALS(xc, yc, dx, dy, phi, eps)              \
@@ -303,9 +487,9 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     }                                                   \
     out << '\n';
 
-#define OUT_TIME                                                               \
+#define OUT_TIME(t)                                                            \
     out << _intervalIdx << SEP                                                 \
-        << _captureStart.addMSecs(r.time).toString(Qt::ISODateWithMs);
+        << formatTime(t, Qt::ISODateWithMs);
 
 #define OUT_ROW(nan, xc, yc, dx, dy, phi)                                      \
     if (nan) OUT_VALS(0, 0, 0, 0, 0, 0)                                        \
@@ -346,19 +530,13 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
     else qCritical() << "Failed to open check file" << checkFile.errorString();
 #endif
 
-    QFile f(_config.fileName);
-    if (!f.open(QIODeviceBase::WriteOnly | QIODeviceBase::Append)) {
-        qCritical() << LOG_ID << "Failed to open resuls file" << _config.fileName << f.errorString();
-        emit interrupted(tr("Failed to open resuls file") + '\n' + _config.fileName + '\n' + f.errorString());
-        return;
-    }
-
-    QTextStream out(&f);
+    QString line;
+    QTextStream out(&line);
     if (_config.allFrames)
     {
         for (int i = 0; i < e->count; i++) {
             const auto &r = e->results[i];
-            OUT_TIME;
+            OUT_TIME(r.time);
             if (_multires_cnt) {
                 for (int j = 0; j < _multires_cnt; j++) {
                     const bool nan = r.cols[MULTIRES_IDX_NAN(j)] == 1;
@@ -380,6 +558,14 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
     {
         for (int i = 0; i < e->count; i++) {
             const auto &r = e->results[i];
+
+            if (_intervalBeg < 0)
+                _intervalBeg = r.time;
+                
+            if (r.time - _intervalBeg >= _intervalLen) {
+                calcIntervalAverage(out, r);
+            }
+
             if (_multires_cnt) {
                 for (int j = 0; j < _multires_cnt; j++) {
                     const bool nan = r.cols[MULTIRES_IDX_NAN(j)] == 1;
@@ -407,56 +593,10 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
                     _auxAvgVals[id] += r.cols.value(id);
                 _auxAvgCnt++;
             }
+            _prevFrameTime = r.time;
 
-            if (i == 0) {
-                _intervalBeg = r.time;
-                continue;
-            }
-
-            if (i == e->count-1 || r.time - _intervalBeg >= _intervalLen) {
-                if (!_auxCols.empty())
-                    for (const auto &id : std::as_const(_auxCols))
-                        if (id < MULTIRES_IDX)
-                            _auxAvgVals[id] /= _auxAvgCnt;
-
-                OUT_TIME;
-                if (_multires_cnt) {
-                    for (int j = 0; j < _multires_cnt; j++) {
-                        const int avg_cnt = _multires_avg_cnt[j];
-                        const double avg_xc = _multires_avg[MULTIRES_IDX_XC(j)];
-                        const double avg_yc = _multires_avg[MULTIRES_IDX_YC(j)];
-                        const double avg_dx = _multires_avg[MULTIRES_IDX_DX(j)];
-                        const double avg_dy = _multires_avg[MULTIRES_IDX_DY(j)];
-                        const double avg_phi = _multires_avg[MULTIRES_IDX_PHI(j)];
-                        OUT_ROW(avg_cnt == 0,
-                                avg_xc / avg_cnt,
-                                avg_yc / avg_cnt,
-                                avg_dx / avg_cnt,
-                                avg_dy / avg_cnt,
-                                avg_phi / avg_cnt
-                                );
-                    }
-                    _multires_avg.clear();
-                    _multires_avg_cnt.clear();
-                } else {
-                    OUT_ROW(_avg_cnt == 0,
-                            _avg_xc / _avg_cnt,
-                            _avg_yc / _avg_cnt,
-                            _avg_dx / _avg_cnt,
-                            _avg_dy / _avg_cnt,
-                            _avg_phi / _avg_cnt
-                            );
-                    _avg_xc = 0, _avg_yc = 0;
-                    _avg_dx = 0, _avg_dy = 0;
-                    _avg_phi = 0;
-                    _avg_cnt = 0;
-                }
-                OUT_AUX(_auxAvgVals);
-
-                _intervalIdx++;
-                _intervalBeg = r.time;
-                _auxAvgVals = {};
-                _auxAvgCnt = 0;
+            if (i == e->count-1 && e->last) {
+                calcIntervalAverage(out, r);
             }
         }
     }
@@ -464,8 +604,12 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
     {
         for (int i = 0; i < e->count; i++) {
             const auto &r = e->results[i];
-            if (i == 0 || i == e->count-1 || r.time - _intervalBeg >= _intervalLen) {
-                OUT_TIME;
+
+            if (_intervalBeg < 0)
+                _intervalBeg = r.time;
+
+            if (r.time - _intervalBeg >= _intervalLen || (i == e->count-1 && e->last)) {
+                OUT_TIME(r.time);
                 if (_multires_cnt) {
                     for (int j = 0; j < _multires_cnt; j++) {
                         const bool nan = r.cols[MULTIRES_IDX_NAN(j)] == 1;
@@ -486,11 +630,87 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
         }
     }
 
-    auto elapsed = QDateTime::currentSecsSinceEpoch() - _measureStart;
+    if (!_csvFile->writeLine(line)) {
+        qCritical() << LOG_ID << "Failed to save resuls into file" << _config.fileName << _csvFile->error;
+        stopFail(tr("Failed to save results into file") + '\n' + _config.fileName + '\n' + _csvFile->error);
+        return;
+    }
 
+    _elapsedSecs = QDateTime::currentSecsSinceEpoch() - _measureStart.toSecsSinceEpoch();
+
+    saveStats(e);
+
+    if (e->last) {
+        if (e->finished) {
+            qDebug() << LOG_ID << "Finished" << _id << "after" << _elapsedSecs << 's';
+            _isFinished = true;
+            emit finished();
+        } else {
+            qDebug() << LOG_ID << "Canceled" << _id << "after" << _elapsedSecs << 's';
+        }
+    }
+}
+
+void MeasureSaver::calcIntervalAverage(QTextStream &out, const Measurement &r)
+{
+    if (!_auxCols.empty())
+        for (const auto &id : std::as_const(_auxCols))
+            if (id < MULTIRES_IDX)
+                _auxAvgVals[id] /= _auxAvgCnt;
+
+    OUT_TIME(_prevFrameTime);
+
+    if (_multires_cnt) {
+        for (int j = 0; j < _multires_cnt; j++) {
+            const int avg_cnt = _multires_avg_cnt[j];
+            const double avg_xc = _multires_avg[MULTIRES_IDX_XC(j)];
+            const double avg_yc = _multires_avg[MULTIRES_IDX_YC(j)];
+            const double avg_dx = _multires_avg[MULTIRES_IDX_DX(j)];
+            const double avg_dy = _multires_avg[MULTIRES_IDX_DY(j)];
+            const double avg_phi = _multires_avg[MULTIRES_IDX_PHI(j)];
+            OUT_ROW(avg_cnt == 0,
+                    avg_xc / avg_cnt,
+                    avg_yc / avg_cnt,
+                    avg_dx / avg_cnt,
+                    avg_dy / avg_cnt,
+                    avg_phi / avg_cnt
+                    );
+        }
+        _multires_avg.clear();
+        _multires_avg_cnt.clear();
+    } else {
+        OUT_ROW(_avg_cnt == 0,
+                _avg_xc / _avg_cnt,
+                _avg_yc / _avg_cnt,
+                _avg_dx / _avg_cnt,
+                _avg_dy / _avg_cnt,
+                _avg_phi / _avg_cnt
+                );
+        _avg_xc = 0, _avg_yc = 0;
+        _avg_dx = 0, _avg_dy = 0;
+        _avg_phi = 0;
+        _avg_cnt = 0;
+    }
+
+    OUT_AUX(_auxAvgVals);
+
+    _intervalIdx++;
+    _intervalBeg = r.time;
+    _auxAvgVals = {};
+    _auxAvgCnt = 0;
+}
+
+void MeasureSaver::stopFail(const QString &error)
+{
+    _failure = error;
+    emit failed(_failure);
+}
+
+void MeasureSaver::saveStats(MeasureEvent *e)
+{
     QSettings s(_cfgFile, QSettings::IniFormat);
     s.beginGroup("Stats");
-    s.setValue("elapsedTime", formatSecs(elapsed));
+    s.setValue("elapsedTime", formatSecs(_elapsedSecs));
     s.setValue("resultsSaved", _intervalIdx);
     s.setValue("imagesSaved", _savedImgCount);
     for (auto it = e->stats.constBegin(); it != e->stats.constEnd(); it++)
@@ -500,15 +720,12 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
     if (!_errors.isEmpty()) {
         s.beginGroup("Errors");
         for (auto it = _errors.constBegin(); it != _errors.constEnd(); it++) {
-            QString key = _captureStart.addMSecs(it.key()).toString(Qt::ISODateWithMs);
+            QString key = formatTime(it.key(), Qt::ISODateWithMs);
             s.setValue(key, it.value());
         }
         _errors.clear();
         s.endGroup();
     }
-
-    if (_duration > 0 and elapsed >= _duration)
-        emit finished();
 }
 
 void MeasureSaver::saveImage(ImageEvent *e)
@@ -588,7 +805,7 @@ public:
         cbPresets->setPlaceholderText(tr("Select a preset"));
         cbPresets->setToolTip(tr("Measurements preset"));
         cbPresets->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred));
-        cbPresets->connect(cbPresets, &QComboBox::currentTextChanged, [this](const QString &t){ selectedPresetChnaged(t); });
+        cbPresets->connect(cbPresets, &QComboBox::currentTextChanged, cbPresets, [this](const QString &t){ selectedPresetChnaged(t); });
 
         auto toolbar = new QToolBar;
         auto color = toolbar->palette().brush(QPalette::Base).color();
@@ -781,7 +998,7 @@ public:
         s.beginGroup(INI_GROUP_PRESETS);
         auto names = s.settings()->childKeys();
         names.sort();
-        for (const auto &name : names)
+        for (const auto &name : std::as_const(names))
             cbPresets->addItem(name, s.value(name));
         if (!selected.isEmpty())
             cbPresets->setCurrentText(selected);

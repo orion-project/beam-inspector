@@ -389,9 +389,7 @@ public:
 
     void run()
     {
-        qDebug() << LOG_ID << "Started" << QThread::currentThreadId();
-        start = QDateTime::currentDateTime();
-        timer.start();
+        startCapture();
         while (true) {
             tm = timer.elapsed();
             avgFrameCount++;

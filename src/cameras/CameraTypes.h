@@ -48,6 +48,7 @@ struct PixelScale
 
     inline double pixelToUnit(const double& v) const { return on ? v*factor : v; }
     inline double unitToPixel(const double& v) const { return on ? v/factor : v; }
+    inline double scaleFactor() const { return on ? factor : 1; }
 
     bool operator ==(const PixelScale& s) const;
     bool operator !=(const PixelScale& s) const { return !(*this == s); }

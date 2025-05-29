@@ -118,9 +118,7 @@ public:
     }
 
     void run() {
-        qDebug() << LOG_ID << "Started" << QThread::currentThreadId();
-        start = QDateTime::currentDateTime();
-        timer.start();
+        startCapture();
         while (true) {
             if (waitFrame()) continue;
 
