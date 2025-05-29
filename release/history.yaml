@@ -1,4 +1,9 @@
 history:
+- version: 0.0.24
+  date: ?
+  changes:
+  - text: Lock results file during measurements
+
 - version: 0.0.23
   date: 2025-05-19
   changes:

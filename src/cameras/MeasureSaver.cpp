@@ -23,6 +23,7 @@
 #include <QFileInfo>
 #include <QLabel>
 #include <QLineEdit>
+#include <QLockFile>
 #include <QPushButton>
 #include <QRadioButton>
 #include <QSpinBox>
@@ -220,12 +221,22 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     if (!cfg.durationInf) {
         _duration = cfg.durationSecs();
         if (_duration <= 0)
+            qCritical() << LOG_ID << "Invalid measurements duration" << cfg.duration;
             return tr("Invalid measurements duration: %1").arg(cfg.duration);
     }
 
     if (cfg.saveImg && parseDuration(cfg.imgInterval) <= 0) {
+        qCritical() << LOG_ID << "Invalid image save interval" << cfg.imgInterval;
         return tr("Invalid image save interval: %1").arg(cfg.imgInterval);
     }
+    
+    _lockFile = std::unique_ptr<QLockFile>(new QLockFile(cfg.fileName + ".lock"));
+    _lockFile->setStaleLockTime(0);
+    if (!_lockFile->tryLock()) {
+        qCritical() << LOG_ID << "Results file is used by another running measurement" << cfg.fileName;
+        return tr("Results file is used by another running measurement");
+    }
+    qDebug() << LOG_ID << "Lock file" << _lockFile->fileName();
 
     _config = cfg;
     _width = cam->width();
