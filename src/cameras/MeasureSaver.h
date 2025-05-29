@@ -116,6 +116,8 @@ protected:
 
 private:
     QString _id;
+    /// Measurement session start time
+    QDateTime _measureStart;
     QSharedPointer<QThread> _thread;
     MeasureConfig _config;
     QString _cfgFile, _imgDir;
@@ -123,8 +125,6 @@ private:
     int _width, _height, _bpp;
     double _scale = 1;
     int _duration = 0;
-    /// Measurement session start time. This is a time when the start() method is called
-    qint64 _measureStart;
     qint64 _intervalBeg;
     qint64 _intervalLen;
     int _intervalIdx;
@@ -140,8 +140,14 @@ private:
     std::unique_ptr<CsvFile> _csvFile;
     std::unique_ptr<QLockFile> _lockFile;
 
+    QString checkConfig();
+    QString acquireLock();
+    QString saveIniFile(Camera *cam);
+    QString prepareCsvFile(Camera *cam);
+    QString prepareImagesDir();
     void processMeasure(MeasureEvent *e);
     void saveImage(ImageEvent *e);
+    void saveStats(MeasureEvent *e, qint64 elapsed);
 
     template <typename T>
     QString formatTime(qint64 time, T fmt) {
