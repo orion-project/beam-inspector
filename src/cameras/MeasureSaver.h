@@ -82,6 +82,9 @@ public:
     /// Arbitrary info about the measurement.
     /// It's saved into <measurement>.ini file 
     QMap<QString, QVariant> stats;
+    
+    bool last = false;
+    bool finished = false;
 };
 
 class ImageEvent : public QEvent
@@ -109,7 +112,7 @@ public:
 
 signals:
     void finished();
-    void interrupted(const QString &error);
+    void failed(const QString &error);
 
 protected:
     bool event(QEvent *event) override;
@@ -124,7 +127,6 @@ private:
     QMap<qint64, QString> _errors;
     int _width, _height, _bpp;
     double _scale = 1;
-    int _duration = 0;
     qint64 _intervalBeg;
     qint64 _intervalLen;
     int _intervalIdx;
@@ -134,11 +136,14 @@ private:
     QMap<int, int> _multires_avg_cnt;
     int _multires_cnt = 0;
     int _savedImgCount = 0;
+    qint64 _elapsedSecs = 0;
     QList<int> _auxCols;
     QMap<int, double> _auxAvgVals;
     double _auxAvgCnt;
     std::unique_ptr<CsvFile> _csvFile;
     std::unique_ptr<QLockFile> _lockFile;
+    QString _failure;
+    bool _isFinished = false;
 
     QString checkConfig();
     QString acquireLock();
@@ -147,7 +152,8 @@ private:
     QString prepareImagesDir();
     void processMeasure(MeasureEvent *e);
     void saveImage(ImageEvent *e);
-    void saveStats(MeasureEvent *e, qint64 elapsed);
+    void saveStats(MeasureEvent *e);
+    void stopFail(const QString &error);
 
     template <typename T>
     QString formatTime(qint64 time, T fmt) {

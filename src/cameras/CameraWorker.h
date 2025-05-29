@@ -360,9 +360,13 @@ public:
                 measurs->cols[COL_BRIGHTNESS] = cgn_calc_brightness_1(&c);
             if (showPower && calibratePowerFrames == 0)
                 measurs->cols[COL_POWER] = power * powerScale;
-            if (++measurIdx == MEASURE_BUF_SIZE ||
-                (measureDuration > 0 && (time - measureStart >= measureDuration))) {
-                sendMeasure();
+            measurIdx++;
+            if (measureDuration > 0 && (time - measureStart >= measureDuration)) {
+                sendMeasure(true, true);
+                saver = nullptr;
+            }
+            if (measurIdx == MEASURE_BUF_SIZE) {
+                sendMeasure(false, false);
             } else {
                 measurs++;
             }
@@ -370,13 +374,15 @@ public:
         saverMutex.unlock();
     }
 
-    inline void sendMeasure()
+    inline void sendMeasure(bool last, bool finished)
     {
         auto e = new MeasureEvent;
         e->num = measurBufIdx;
         e->count = measurIdx;
         e->results = measurBufs[measurBufIdx % MEASURE_BUF_COUNT];
         e->stats = stats;
+        e->last = last;
+        e->finished = finished;
         QCoreApplication::postEvent(saver, e);
         measurs = measurBufs[++measurBufIdx % MEASURE_BUF_COUNT];
         measurIdx = 0;
@@ -413,7 +419,7 @@ public:
     void startCapture()
     {
         qDebug() << logId << "Started" << QThread::currentThreadId();
-        captureStart = QDateTime::currentDateTime().toMSecsSinceEpoch();
+        captureStart = QDateTime::currentMSecsSinceEpoch();
         timer.start();
     }
 
@@ -434,7 +440,7 @@ public:
     {
         saverMutex.lock();
         if (measurIdx > 0)
-            sendMeasure();
+            sendMeasure(true, false);
         saver = nullptr;
         measureStart = -1;
         measureDuration = -1;

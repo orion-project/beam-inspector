@@ -8,6 +8,7 @@ __pycache__
 libs/openblas*
 bin/help/.vscode
 bin/beam-inspector
+bin/measurements.log
 tmp
 out
 build

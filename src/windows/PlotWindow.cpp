@@ -515,8 +515,7 @@ void PlotWindow::closeEvent(QCloseEvent* ce)
             ce->ignore();
             return;
         }
-        // could be finished while dialog opened
-        if (_saver) toggleMeasure(true);
+        stopMeasure(true);
     }
 
     auto thread = dynamic_cast<QThread*>(_camera.get());
@@ -713,32 +712,21 @@ void PlotWindow::updateControls()
     _actionSaveCrosshairs->setDisabled(started || !opened);
 }
 
-void PlotWindow::toggleMeasure(bool force)
+void PlotWindow::toggleMeasure()
+{
+    if (_saver)
+        stopMeasure(false);
+    else
+        startMeasure();
+}
+
+void PlotWindow::startMeasure()
 {
     auto cam = _camera.get();
     if (!cam) return;
 
     if (!cam->isCapturing()) {
         Ori::Gui::PopupMessage::warning(tr("Camera is not opened"));
-        return;
-    }
-
-    if (_saver)
-    {
-        if (!force) {
-            if (!Ori::Dlg::yes(tr("Interrupt measurements?")))
-                return;
-            // could be finished while dialog opened
-            if (!_saver)
-                return;
-        }
-
-        cam->stopMeasure();
-        // Process the last MeasureEvent
-        qApp->processEvents();
-        _saver.reset(nullptr);
-        _measureProgress->setVisible(false);
-        updateControls();
         return;
     }
 
@@ -757,12 +745,12 @@ void PlotWindow::toggleMeasure(bool force)
         return;
     }
     connect(saver, &MeasureSaver::finished, this, [this]{
-        toggleMeasure(true);
+        stopMeasure(true);
         Ori::Gui::PopupMessage::affirm(tr("<b>Measurements finished<b>"), 0);
     });
-    connect(saver, &MeasureSaver::interrupted, this, [this](const QString &error){
-        toggleMeasure(true);
-        Ori::Gui::PopupMessage::error(tr("<b>Measurements interrupted</b><p>") + QString(error).replace("\n", "<br>"), 0);
+    connect(saver, &MeasureSaver::failed, this, [this](const QString &error){
+        stopMeasure(true);
+        Ori::Gui::PopupMessage::error(tr("<b>Measurements failed</b><p>") + QString(error).replace("\n", "<br>"), 0);
     });
     _saver.reset(saver);
     Ori::Gui::PopupMessage::cancel();
@@ -771,6 +759,30 @@ void PlotWindow::toggleMeasure(bool force)
     _measureProgress->reset(cfg->durationInf ? 0 : cfg->durationSecs(), cfg->fileName);
 
     updateControls();
+}
+
+void PlotWindow::stopMeasure(bool force)
+{
+    auto cam = _camera.get();
+    if (!cam) return;
+
+    if (!_saver) return;
+
+    if (!force) {
+        if (!Ori::Dlg::yes(tr("Interrupt measurements?")))
+            return;
+        // could be finished while dialog opened
+        if (!_saver)
+            return;
+    }
+
+    cam->stopMeasure();
+    // Process the last MeasureEvent, if it is
+    qApp->processEvents();
+    _saver.reset(nullptr);
+    _measureProgress->setVisible(false);
+    updateControls();
+    return;
 }
 
 void PlotWindow::stopCapture()
@@ -1077,8 +1089,7 @@ void PlotWindow::activateCamIds()
     connect(cam, &IdsCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &IdsCamera::finished, this, &PlotWindow::captureStopped);
     connect(cam, &IdsCamera::error, this, [this, cam](const QString& err){
-        if (_saver)
-            toggleMeasure(true);
+        stopMeasure(true);
         cam->stopCapture();
         updateControls();
         Ori::Dlg::error(err);

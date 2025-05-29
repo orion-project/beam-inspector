@@ -122,6 +122,47 @@ struct CsvFile
 };
 
 //------------------------------------------------------------------------------
+//                               MeasureJournal
+//------------------------------------------------------------------------------
+
+struct MeasureJournal
+{
+    enum Stage {START, STOP};
+    QStringList lines;
+
+    MeasureJournal(Stage stage, QString &id)
+    {
+        lines << QString("%1 %2").arg(stage == START ? "START" : "STOP", id);
+    }
+    
+    ~MeasureJournal()
+    {
+        QString fileName = qApp->applicationDirPath() + "/measurements.log";
+        QLockFile lockFile(fileName + ".lock");
+        if (!lockFile.tryLock(1000)) {
+            qCritical() << LOG_ID << "Failed to acquire lock to journal" << lockFile.fileName() << lockFile.error();
+            return;
+        }
+        QFile journalFile(fileName);
+        if (!journalFile.open(QIODeviceBase::WriteOnly | QIODeviceBase::Append)) {
+            qCritical() << LOG_ID << "Failed to open journal file" << fileName << journalFile.errorString();
+            return;
+        }
+        journalFile.write("----------------------------------------------\n");
+        for (const auto &line : std::as_const(lines)) {
+            journalFile.write(line.toUtf8());
+            journalFile.write("\n");
+        }
+        journalFile.write("----------------------------------------------\n");
+    }
+    
+    void write(const QString &key, const QVariant &value)
+    {
+        lines << QStringLiteral("%1: %2").arg(key, value.toString());
+    }
+};
+
+//------------------------------------------------------------------------------
 //                               MeasureConfig
 //------------------------------------------------------------------------------
 
@@ -209,14 +250,31 @@ MeasureSaver::MeasureSaver() : QObject()
 
 MeasureSaver::~MeasureSaver()
 {
+    MeasureJournal journal(MeasureJournal::STOP, _id);
+    journal.write("timestamp", QDateTime::currentDateTime().toString(Qt::ISODate));
+    if (!_failure.isEmpty()) {
+        journal.write("reason", "failed");
+        journal.write("failure", _failure);
+    } else if (_isFinished) {
+        journal.write("reason", "finished");
+    } else {
+        journal.write("reason", "canceled");
+    }
+    journal.write("elapsedTime", formatSecs(_elapsedSecs));
+    journal.write("resultsSaved", _intervalIdx);
+    journal.write("imagesSaved", _savedImgCount);
+
     _thread->quit();
     _thread->wait();
     qDebug() << LOG_ID << "Stopped";
     
     if (_csvFile) {
-        if (!_csvFile->close())
+        if (!_csvFile->close()) {
+            journal.write("error", _csvFile->error);
             qWarning() << LOG_ID << "Error while closing results file" << _config.fileName << _csvFile->error;
-        else qDebug() << LOG_ID << "Results file closed successfully" << _config.fileName;
+        } else {
+            qDebug() << LOG_ID << "Results file closed successfully" << _config.fileName;
+        }
     }
 }
 
@@ -239,12 +297,21 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     _multires_avg_cnt.clear();
     _scale = cam->pixelScale().scaleFactor();
 
-    if (auto res = checkConfig(); !res.isEmpty()) return res;
-    if (auto res = acquireLock(); !res.isEmpty()) return res;
-    if (auto res = prepareCsvFile(cam); !res.isEmpty()) return res;
-    if (auto res = prepareImagesDir(); !res.isEmpty()) return res;
-    if (auto res = saveIniFile(cam); !res.isEmpty()) return res;
-
+    MeasureJournal journal(MeasureJournal::START, _id);
+    journal.write("timestamp", _measureStart.toString(Qt::ISODate));
+    journal.write("fileName", _config.fileName);
+    journal.write("camera", cam->name());
+    
+    QString            res = checkConfig();
+    if (res.isEmpty()) res = acquireLock();
+    if (res.isEmpty()) res = prepareCsvFile(cam);
+    if (res.isEmpty()) res = prepareImagesDir();
+    if (res.isEmpty()) res = saveIniFile(cam);
+    if (!res.isEmpty()) {
+        journal.write("error", res);
+        return res;
+    }
+    
 #ifdef SAVE_CHECK_FILE
     QFile checkFile(_config.fileName + ".check");
     if (!checkFile.open(QIODeviceBase::WriteOnly | QIODeviceBase::Truncate)) {
@@ -255,16 +322,16 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     _thread.reset(new QThread);
     moveToThread(_thread.get());
     _thread->start();
-    qDebug() << LOG_ID << "Started" << QThread::currentThreadId();
+    qDebug() << LOG_ID << "Started" << QThread::currentThreadId() << _id;
     return {};
 }
 
 QString MeasureSaver::checkConfig()
 {
     if (!_config.durationInf) {
-        _duration = _config.durationSecs();
-        if (_duration <= 0) {
-            qCritical() << LOG_ID << "Invalid measurements duration" << _config.duration << "->" << _duration;
+        auto durationSecs = _config.durationSecs();
+        if (durationSecs <= 0) {
+            qCritical() << LOG_ID << "Invalid measurements duration" << _config.duration << "->" << durationSecs;
             return tr("Invalid measurements duration: %1").arg(_config.duration);
         }
     }
@@ -598,23 +665,36 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
 
     if (!_csvFile->writeLine(line)) {
         qCritical() << LOG_ID << "Failed to save resuls into file" << _config.fileName << _csvFile->error;
-        emit interrupted(tr("Failed to save results into file") + '\n' + _config.fileName + '\n' + _csvFile->error);
+        stopFail(tr("Failed to save results into file") + '\n' + _config.fileName + '\n' + _csvFile->error);
         return;
     }
 
-    auto elapsed = QDateTime::currentSecsSinceEpoch() - _measureStart.toSecsSinceEpoch();
+    _elapsedSecs = QDateTime::currentSecsSinceEpoch() - _measureStart.toSecsSinceEpoch();
 
-    saveStats(e, elapsed);
+    saveStats(e);
 
-    if (_duration > 0 and elapsed >= _duration)
-        emit finished();
+    if (e->last) {
+        if (e->finished) {
+            qDebug() << LOG_ID << "Finished" << _id << "after" << _elapsedSecs << 's';
+            _isFinished = true;
+            emit finished();
+        } else {
+            qDebug() << LOG_ID << "Canceled" << _id << "after" << _elapsedSecs << 's';
+        }
+    }
 }
 
-void MeasureSaver::saveStats(MeasureEvent *e, qint64 elapsed)
+void MeasureSaver::stopFail(const QString &error)
+{
+    _failure = error;
+    emit failed(_failure);
+}
+
+void MeasureSaver::saveStats(MeasureEvent *e)
 {
     QSettings s(_cfgFile, QSettings::IniFormat);
     s.beginGroup("Stats");
-    s.setValue("elapsedTime", formatSecs(elapsed));
+    s.setValue("elapsedTime", formatSecs(_elapsedSecs));
     s.setValue("resultsSaved", _intervalIdx);
     s.setValue("imagesSaved", _savedImgCount);
     for (auto it = e->stats.constBegin(); it != e->stats.constEnd(); it++)
