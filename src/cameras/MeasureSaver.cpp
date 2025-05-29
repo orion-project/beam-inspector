@@ -296,6 +296,7 @@ QString MeasureSaver::start(const MeasureConfig &cfg, Camera *cam)
     _multires_avg.clear();
     _multires_avg_cnt.clear();
     _scale = cam->pixelScale().scaleFactor();
+    _prevFrameTime = 0;
 
     MeasureJournal journal(MeasureJournal::START, _id);
     journal.write("timestamp", _measureStart.toString(Qt::ISODate));
@@ -486,9 +487,9 @@ QString MeasureSaver::prepareCsvFile(Camera *cam)
     }                                                   \
     out << '\n';
 
-#define OUT_TIME                                                               \
+#define OUT_TIME(t)                                                            \
     out << _intervalIdx << SEP                                                 \
-        << formatTime(r.time, Qt::ISODateWithMs);
+        << formatTime(t, Qt::ISODateWithMs);
 
 #define OUT_ROW(nan, xc, yc, dx, dy, phi)                                      \
     if (nan) OUT_VALS(0, 0, 0, 0, 0, 0)                                        \
@@ -535,7 +536,7 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
     {
         for (int i = 0; i < e->count; i++) {
             const auto &r = e->results[i];
-            OUT_TIME;
+            OUT_TIME(r.time);
             if (_multires_cnt) {
                 for (int j = 0; j < _multires_cnt; j++) {
                     const bool nan = r.cols[MULTIRES_IDX_NAN(j)] == 1;
@@ -557,6 +558,14 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
     {
         for (int i = 0; i < e->count; i++) {
             const auto &r = e->results[i];
+
+            if (_intervalBeg < 0)
+                _intervalBeg = r.time;
+                
+            if (r.time - _intervalBeg >= _intervalLen) {
+                calcIntervalAverage(out, r);
+            }
+
             if (_multires_cnt) {
                 for (int j = 0; j < _multires_cnt; j++) {
                     const bool nan = r.cols[MULTIRES_IDX_NAN(j)] == 1;
@@ -584,56 +593,10 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
                     _auxAvgVals[id] += r.cols.value(id);
                 _auxAvgCnt++;
             }
+            _prevFrameTime = r.time;
 
-            if (i == 0) {
-                _intervalBeg = r.time;
-                continue;
-            }
-
-            if (i == e->count-1 || r.time - _intervalBeg >= _intervalLen) {
-                if (!_auxCols.empty())
-                    for (const auto &id : std::as_const(_auxCols))
-                        if (id < MULTIRES_IDX)
-                            _auxAvgVals[id] /= _auxAvgCnt;
-
-                OUT_TIME;
-                if (_multires_cnt) {
-                    for (int j = 0; j < _multires_cnt; j++) {
-                        const int avg_cnt = _multires_avg_cnt[j];
-                        const double avg_xc = _multires_avg[MULTIRES_IDX_XC(j)];
-                        const double avg_yc = _multires_avg[MULTIRES_IDX_YC(j)];
-                        const double avg_dx = _multires_avg[MULTIRES_IDX_DX(j)];
-                        const double avg_dy = _multires_avg[MULTIRES_IDX_DY(j)];
-                        const double avg_phi = _multires_avg[MULTIRES_IDX_PHI(j)];
-                        OUT_ROW(avg_cnt == 0,
-                                avg_xc / avg_cnt,
-                                avg_yc / avg_cnt,
-                                avg_dx / avg_cnt,
-                                avg_dy / avg_cnt,
-                                avg_phi / avg_cnt
-                                );
-                    }
-                    _multires_avg.clear();
-                    _multires_avg_cnt.clear();
-                } else {
-                    OUT_ROW(_avg_cnt == 0,
-                            _avg_xc / _avg_cnt,
-                            _avg_yc / _avg_cnt,
-                            _avg_dx / _avg_cnt,
-                            _avg_dy / _avg_cnt,
-                            _avg_phi / _avg_cnt
-                            );
-                    _avg_xc = 0, _avg_yc = 0;
-                    _avg_dx = 0, _avg_dy = 0;
-                    _avg_phi = 0;
-                    _avg_cnt = 0;
-                }
-                OUT_AUX(_auxAvgVals);
-
-                _intervalIdx++;
-                _intervalBeg = r.time;
-                _auxAvgVals = {};
-                _auxAvgCnt = 0;
+            if (i == e->count-1 && e->last) {
+                calcIntervalAverage(out, r);
             }
         }
     }
@@ -641,8 +604,12 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
     {
         for (int i = 0; i < e->count; i++) {
             const auto &r = e->results[i];
-            if (i == 0 || i == e->count-1 || r.time - _intervalBeg >= _intervalLen) {
-                OUT_TIME;
+
+            if (_intervalBeg < 0)
+                _intervalBeg = r.time;
+
+            if (r.time - _intervalBeg >= _intervalLen || (i == e->count-1 && e->last)) {
+                OUT_TIME(r.time);
                 if (_multires_cnt) {
                     for (int j = 0; j < _multires_cnt; j++) {
                         const bool nan = r.cols[MULTIRES_IDX_NAN(j)] == 1;
@@ -682,6 +649,55 @@ void MeasureSaver::processMeasure(MeasureEvent *e)
             qDebug() << LOG_ID << "Canceled" << _id << "after" << _elapsedSecs << 's';
         }
     }
+}
+
+void MeasureSaver::calcIntervalAverage(QTextStream &out, const Measurement &r)
+{
+    if (!_auxCols.empty())
+        for (const auto &id : std::as_const(_auxCols))
+            if (id < MULTIRES_IDX)
+                _auxAvgVals[id] /= _auxAvgCnt;
+
+    OUT_TIME(_prevFrameTime);
+
+    if (_multires_cnt) {
+        for (int j = 0; j < _multires_cnt; j++) {
+            const int avg_cnt = _multires_avg_cnt[j];
+            const double avg_xc = _multires_avg[MULTIRES_IDX_XC(j)];
+            const double avg_yc = _multires_avg[MULTIRES_IDX_YC(j)];
+            const double avg_dx = _multires_avg[MULTIRES_IDX_DX(j)];
+            const double avg_dy = _multires_avg[MULTIRES_IDX_DY(j)];
+            const double avg_phi = _multires_avg[MULTIRES_IDX_PHI(j)];
+            OUT_ROW(avg_cnt == 0,
+                    avg_xc / avg_cnt,
+                    avg_yc / avg_cnt,
+                    avg_dx / avg_cnt,
+                    avg_dy / avg_cnt,
+                    avg_phi / avg_cnt
+                    );
+        }
+        _multires_avg.clear();
+        _multires_avg_cnt.clear();
+    } else {
+        OUT_ROW(_avg_cnt == 0,
+                _avg_xc / _avg_cnt,
+                _avg_yc / _avg_cnt,
+                _avg_dx / _avg_cnt,
+                _avg_dy / _avg_cnt,
+                _avg_phi / _avg_cnt
+                );
+        _avg_xc = 0, _avg_yc = 0;
+        _avg_dx = 0, _avg_dy = 0;
+        _avg_phi = 0;
+        _avg_cnt = 0;
+    }
+
+    OUT_AUX(_auxAvgVals);
+
+    _intervalIdx++;
+    _intervalBeg = r.time;
+    _auxAvgVals = {};
+    _auxAvgCnt = 0;
 }
 
 void MeasureSaver::stopFail(const QString &error)

@@ -140,6 +140,7 @@ private:
     QList<int> _auxCols;
     QMap<int, double> _auxAvgVals;
     double _auxAvgCnt;
+    qint64 _prevFrameTime;
     std::unique_ptr<CsvFile> _csvFile;
     std::unique_ptr<QLockFile> _lockFile;
     QString _failure;
@@ -154,6 +155,8 @@ private:
     void saveImage(ImageEvent *e);
     void saveStats(MeasureEvent *e);
     void stopFail(const QString &error);
+    
+    void calcIntervalAverage(QTextStream &out, const Measurement &r);
 
     template <typename T>
     QString formatTime(qint64 time, T fmt) {

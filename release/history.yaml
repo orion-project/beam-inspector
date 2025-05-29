@@ -1,8 +1,9 @@
 history:
 - version: 0.0.24
-  date: ?
+  date: 20205-05-29
   changes:
   - text: Lock results file during measurements
+  - text: Fix measurement interval averaging at buffer boundary
 
 - version: 0.0.23
   date: 2025-05-19
