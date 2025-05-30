@@ -3,6 +3,7 @@ history:
   date: 20205-05-29
   changes:
   - text: Lock results file during measurements
+  - text: Write measurements history into a file
   - text: Fix measurement interval averaging at buffer boundary
 
 - version: 0.0.23
