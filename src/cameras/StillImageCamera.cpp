@@ -209,7 +209,7 @@ void StillImageCamera::startCapture()
         { ROW_CALC_TIME, {calcTime} },
     });
     
-    _stabil->setResult({});
+    _stabil->setResult(0, {});
 }
 
 void StillImageCamera::setRawView(bool on, bool reconfig)

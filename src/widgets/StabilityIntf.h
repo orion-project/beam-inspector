@@ -12,7 +12,7 @@ class StabilityIntf
 public:
     StabilityIntf(StabilityView *view);
     
-    void setResult(const QList<CgnBeamResult>& val);
+    void setResult(qint64 time, const QList<CgnBeamResult>& val);
     
 private:
     StabilityView *_view;

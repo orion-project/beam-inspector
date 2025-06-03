@@ -40,6 +40,7 @@ public:
 
     qint64 captureStart = 0;
     QElapsedTimer timer;
+    /// Current frame time from the start of capturing @a captureStart
     qint64 tm;
     qint64 prevFrame = 0;
     qint64 prevReady = 0;
@@ -333,15 +334,14 @@ public:
             expWarningRequest = nullptr;
         }
         if (!rawView && saver) {
-            qint64 time = timer.elapsed();
-            if (saveImgInterval > 0 and (prevSaveImg == 0 or time - prevSaveImg >= saveImgInterval)) {
-                prevSaveImg = time;
+            if (saveImgInterval > 0 and (prevSaveImg == 0 or tm - prevSaveImg >= saveImgInterval)) {
+                prevSaveImg = tm;
                 auto e = new ImageEvent;
-                e->time = captureStart + time;
+                e->time = frameTimeAbs();
                 e->buf = QByteArray((const char*)c.buf, c.w*c.h*(c.bpp > 8 ? 2 : 1));
                 QCoreApplication::postEvent(saver, e);
             }
-            measurs->time = captureStart + time;
+            measurs->time = frameTimeAbs();
             if (multiRoi) {
                 for (int i = 0; i < results.size(); i++) {
                     const auto &r = results.at(i);
@@ -365,7 +365,7 @@ public:
             if (showPower && calibratePowerFrames == 0)
                 measurs->cols[COL_POWER] = power * powerScale;
             measurIdx++;
-            if (measureDuration > 0 && (time - measureStart >= measureDuration)) {
+            if (measureDuration > 0 && (tm - measureStart >= measureDuration)) {
                 sendMeasure(true, true);
                 saver = nullptr;
             }
@@ -408,7 +408,7 @@ public:
             plot->invalidateGraph();
             plot->setResult({}, 0, rangeTop);
             table->setResult({}, {}, tableData());
-            stabil->setResult({});
+            stabil->setResult(frameTimeAbs(), {});
             return true;
         }
 
@@ -419,7 +419,7 @@ public:
 
         table->setResult(results, sdevs, tableData());
         
-        // Stability plotter accepts latest instant results (not averaged)
+        // Stability plotter accepts the latest instant results (not averaged)
         if (doMavg) {
             QList<CgnBeamResult> res;
             if (multiRoi) {
@@ -435,9 +435,9 @@ public:
                     res << CgnBeamResult { .nan = true };
                 else res << q.last();
             }
-            stabil->setResult(res);
+            stabil->setResult(frameTimeAbs(), res);
         } else {
-            stabil->setResult(results);
+            stabil->setResult(frameTimeAbs(), results);
         }
         
         return true;
@@ -448,6 +448,11 @@ public:
         qDebug() << logId << "Started" << QThread::currentThreadId();
         captureStart = QDateTime::currentMSecsSinceEpoch();
         timer.start();
+    }
+    
+    inline qint64 frameTimeAbs()
+    {
+        return captureStart + tm;
     }
 
     void startMeasure(MeasureSaver *s)

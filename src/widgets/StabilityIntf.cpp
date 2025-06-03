@@ -7,7 +7,7 @@ StabilityIntf::StabilityIntf(StabilityView *view): _view(view)
 
 }
 
-void StabilityIntf::setResult(const QList<CgnBeamResult>& val)
+void StabilityIntf::setResult(qint64 time, const QList<CgnBeamResult>& val)
 {
-
+    _view->setResult(time, val);
 }

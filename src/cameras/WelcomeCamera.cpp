@@ -69,7 +69,7 @@ void WelcomeCamera::startCapture()
     _plot->setResult({r}, 0, b.p);
     cgn_render_beam_to_doubles(&b, _plot->rawGraph());
     _plot->invalidateGraph();
-    _stabil->setResult({});
+    _stabil->setResult(0, {});
 }
 
 HardConfigPanel* WelcomeCamera::hardConfgPanel(QWidget *parent)
