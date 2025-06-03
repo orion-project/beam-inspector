@@ -18,6 +18,7 @@
 #include "widgets/Plot.h"
 #include "widgets/PlotIntf.h"
 #include "widgets/ProfilesView.h"
+#include "widgets/StabilityView.h"
 #include "widgets/TableIntf.h"
 
 #include "helpers/OriDialogs.h"
@@ -177,6 +178,7 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
         _actionResultsPanel->setChecked(_resultsDock->isVisible());
         _actionHardConfig->setChecked(_hardConfigDock->isVisible());
         _actionProfilesView->setChecked(_profilesDock->isVisible());
+        _actionStabilityView->setChecked(_stabilityDock->isVisible());
 
         // This initializes all graph structs
         activateCamWelcome();
@@ -221,6 +223,7 @@ void PlotWindow::restoreState()
     _plot->restoreState(s.settings());
     _actionCrosshairsShow->setChecked(_plot->isCrosshairsVisible());
     _profilesView->restoreState(s.settings());
+    _stabilityView->restoreState(s.settings());
 }
 
 void PlotWindow::storeState()
@@ -284,9 +287,11 @@ void PlotWindow::createMenuBar()
     _actionHardConfig->setCheckable(true);
     _actionProfilesView = A_(tr("Profiles View"), this, &PlotWindow::toggleProfilesView, ":/toolbar/profile");
     _actionProfilesView->setCheckable(true);
+    _actionStabilityView = A_(tr("Stability View"), this, &PlotWindow::toggleStabGraphView);
+    _actionStabilityView->setCheckable(true);
     auto menuView = M_(tr("View"), {
         _actionRawView, 0,
-        _actionResultsPanel, _actionHardConfig, _actionProfilesView, 0,
+        _actionResultsPanel, _actionHardConfig, _actionProfilesView, _actionStabilityView, 0,
         _actionBeamInfo, _colorMapMenu, 0,
         _actionZoomFull, _actionZoomRoi,
     });
@@ -485,6 +490,16 @@ void PlotWindow::createDockPanel()
     _profilesDock->setVisible(false);
     _profilesDock->setWidget(_profilesView);
     addDockWidget(Qt::BottomDockWidgetArea, _profilesDock);
+    
+    _stabilityView = new StabilityView();
+    
+    _stabilityDock = new QDockWidget(tr("Stability"));
+    _stabilityDock->setObjectName("DockStability");
+    _stabilityDock->setAllowedAreas(Qt::BottomDockWidgetArea | Qt::TopDockWidgetArea);
+    _stabilityDock->setFeatures(QDockWidget::DockWidgetMovable);
+    _stabilityDock->setVisible(false);
+    _stabilityDock->setWidget(_stabilityView);
+    addDockWidget(Qt::BottomDockWidgetArea, _stabilityDock);
 }
 
 void PlotWindow::createPlot()
@@ -661,6 +676,7 @@ void PlotWindow::showCamConfig(bool replot)
     _tableIntf->setScale(s);
     _plotIntf->setScale(s);
     _profilesView->setConfig(s, _camera->config().mavg);
+    _stabilityView->setConfig(s);
 
     if (replot) _plot->replot();
 }
@@ -679,6 +695,7 @@ void PlotWindow::updateThemeColors()
         setThemeColors();
         _plot->setThemeColors(PlotHelpers::SYSTEM, true);
         _profilesView->setThemeColors(PlotHelpers::SYSTEM, true);
+        _stabilityView->setThemeColors(PlotHelpers::SYSTEM, true);
     });
 }
 
@@ -871,6 +888,7 @@ void PlotWindow::cleanResults()
     _plotIntf->cleanResult();
     _tableIntf->cleanResult();
     _profilesView->cleanResult();
+    _stabilityView->cleanResult();
 }
 
 void PlotWindow::editCamConfig(int pageId)
@@ -1123,6 +1141,13 @@ void PlotWindow::toggleProfilesView()
     _profilesDock->setVisible(!_profilesDock->isVisible());
     if (_profilesDock->isVisible())
         _profilesView->showResult();
+}
+
+void PlotWindow::toggleStabGraphView()
+{
+    _stabilityDock->setVisible(!_stabilityDock->isVisible());
+    if (_stabilityDock->isVisible())
+        _stabilityView->showResult();
 }
 
 void PlotWindow::updateHardConfgPanel()

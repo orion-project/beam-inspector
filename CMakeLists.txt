@@ -78,6 +78,7 @@ set(PROJECT_SOURCES
     src/widgets/PlotIntf.h src/widgets/PlotIntf.cpp
     src/widgets/PlotHelpers.h src/widgets/PlotHelpers.cpp
     src/widgets/ProfilesView.h src/widgets/ProfilesView.cpp
+    src/widgets/StabilityView.h src/widgets/StabilityView.cpp
     src/widgets/TableIntf.h src/widgets/TableIntf.cpp
     src/windows/PlotWindow.h src/windows/PlotWindow.cpp
 )

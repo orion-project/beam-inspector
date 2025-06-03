@@ -56,8 +56,6 @@ private:
     void toggleShowFit();
     void toggleCenterFit();
     void toggleShowFullY();
-    void copyGraph(QCPGraph *graph);
-    void copyImage(QCustomPlot *plot);
     void setMI();
     void showMI();
     void autoScale();
