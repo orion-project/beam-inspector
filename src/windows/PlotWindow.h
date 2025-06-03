@@ -22,6 +22,7 @@ class Plot;
 class PlotIntf;
 class ProfilesView;
 class StabilityView;
+class StabilityIntf;
 class TableIntf;
 
 namespace Ori {
@@ -68,6 +69,7 @@ private:
     QTableWidget *_table;
     TableIntf *_tableIntf;
     PlotIntf *_plotIntf;
+    StabilityIntf *_stabilIntf;
     Ori::MruFileList *_mru;
     Ori::Widgets::StatusBar *_statusBar;
     QMenu *_camSelectMenu, *_colorMapMenu;

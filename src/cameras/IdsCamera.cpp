@@ -60,8 +60,8 @@ public:
     int framesUnderrun = 0;
     int framesIncomplete = 0;
 
-    PeakIntf(peak_camera_id id, PlotIntf *plot, TableIntf *table, IdsCamera *cam)
-        : CameraWorker(plot, table, cam, cam, LOG_ID), id(id), cam(cam)
+    PeakIntf(peak_camera_id id, PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, IdsCamera *cam)
+        : CameraWorker(plot, table, stabil, cam, cam, LOG_ID), id(id), cam(cam)
     {
         tableData = [this]{
             QMap<int, CamTableData> data = {
@@ -534,12 +534,12 @@ void IdsCamera::unloadLib()
         IDS.unload();
 }
 
-IdsCamera::IdsCamera(QVariant id, PlotIntf *plot, TableIntf *table, QObject *parent) :
-    Camera(plot, table, "IdsCamera"), QThread(parent)
+IdsCamera::IdsCamera(QVariant id, PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, QObject *parent) :
+    Camera(plot, table, stabil, "IdsCamera"), QThread(parent)
 {
     _cfg.reset(new IdsCameraConfig);
 
-    auto peak = new PeakIntf(id.value<peak_camera_id>(), plot, table, this);
+    auto peak = new PeakIntf(id.value<peak_camera_id>(), plot, table, stabil, this);
     auto res = peak->init();
     if (!res.isEmpty())
     {

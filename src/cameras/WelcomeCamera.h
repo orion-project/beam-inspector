@@ -6,7 +6,7 @@
 class WelcomeCamera : public Camera
 {
 public:
-    WelcomeCamera(PlotIntf *plot, TableIntf *table);
+    WelcomeCamera(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil);
 
     QString name() const override { return "Welcome"; }
     int width() const override { return 80; }

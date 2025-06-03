@@ -8,6 +8,7 @@
 class HardConfigPanel;
 class MeasureSaver;
 class PlotIntf;
+class StabilityIntf;
 class TableIntf;
 
 class QWidget;
@@ -81,10 +82,11 @@ public:
 protected:
     PlotIntf *_plot;
     TableIntf *_table;
+    StabilityIntf *_stabil;
     QString _configGroup;
     CameraConfig _config;
 
-    Camera(PlotIntf *plot, TableIntf *table, const char* configGroup);
+    Camera(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, const char* configGroup);
 
     virtual void initConfigMore(Ori::Dlg::ConfigDlgOpts &opts) {}
     virtual void loadConfigMore(QSettings*) {}

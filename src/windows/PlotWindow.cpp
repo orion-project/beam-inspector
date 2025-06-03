@@ -19,6 +19,7 @@
 #include "widgets/PlotIntf.h"
 #include "widgets/ProfilesView.h"
 #include "widgets/StabilityView.h"
+#include "widgets/StabilityIntf.h"
 #include "widgets/TableIntf.h"
 
 #include "helpers/OriDialogs.h"
@@ -194,6 +195,7 @@ PlotWindow::~PlotWindow()
 {
     storeState();
     delete _tableIntf;
+    delete _stabilIntf;
 
 #ifdef WITH_IDS
     // Close camera explicitly, otherwise it gets closed after the lib unloaded
@@ -492,6 +494,7 @@ void PlotWindow::createDockPanel()
     addDockWidget(Qt::BottomDockWidgetArea, _profilesDock);
     
     _stabilityView = new StabilityView();
+    _stabilIntf = new StabilityIntf(_stabilityView);
     
     _stabilityDock = new QDockWidget(tr("Stability"));
     _stabilityDock->setObjectName("DockStability");
@@ -839,11 +842,13 @@ void PlotWindow::dataReady()
     _plot->replot();
     if (_profilesDock->isVisible())
         _profilesView->showResult();
+    if (_stabilityDock->isVisible())
+        _stabilityView->showResult();
 }
 
 void PlotWindow::openImageDlg()
 {
-    auto cam = new StillImageCamera(_plotIntf, _tableIntf);
+    auto cam = new StillImageCamera(_plotIntf, _tableIntf, _stabilIntf);
     if (cam->fileName().isEmpty()) {
         delete cam;
         return;
@@ -857,7 +862,7 @@ void PlotWindow::openImage(const QString& fileName)
 {
     if (_camera)
         stopCapture();
-    _camera.reset((Camera*)new StillImageCamera(_plotIntf, _tableIntf, fileName));
+    _camera.reset((Camera*)new StillImageCamera(_plotIntf, _tableIntf, _stabilIntf, fileName));
     processImage();
 }
 
@@ -1021,7 +1026,7 @@ void PlotWindow::activateCamWelcome()
     auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get());
     if (imgCam) _prevImage = imgCam->fileName();
 
-    _camera.reset((Camera*)new WelcomeCamera(_plotIntf, _tableIntf));
+    _camera.reset((Camera*)new WelcomeCamera(_plotIntf, _tableIntf, _stabilIntf));
     showCamConfig(false);
     updateHardConfgPanel();
     showFps(0, 0);
@@ -1050,7 +1055,7 @@ void PlotWindow::activateCamDemoRender()
     stopCapture();
 
     cleanResults();
-    auto cam = new VirtualDemoCamera(_plotIntf, _tableIntf, this);
+    auto cam = new VirtualDemoCamera(_plotIntf, _tableIntf, _stabilIntf, this);
     connect(cam, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualDemoCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &VirtualDemoCamera::finished, this, &PlotWindow::captureStopped);
@@ -1073,7 +1078,7 @@ void PlotWindow::activateCamDemoImage()
     stopCapture();
 
     cleanResults();
-    auto cam = new VirtualImageCamera(_plotIntf, _tableIntf, this);
+    auto cam = new VirtualImageCamera(_plotIntf, _tableIntf, _stabilIntf, this);
     connect(cam, &VirtualImageCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualImageCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &VirtualImageCamera::finished, this, &PlotWindow::captureStopped);
@@ -1102,7 +1107,7 @@ void PlotWindow::activateCamIds()
     _camera.reset(nullptr);
 
     cleanResults();
-    auto cam = new IdsCamera(camId, _plotIntf, _tableIntf, this);
+    auto cam = new IdsCamera(camId, _plotIntf, _tableIntf, _stabilIntf, this);
     connect(cam, &IdsCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &IdsCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &IdsCamera::finished, this, &PlotWindow::captureStopped);

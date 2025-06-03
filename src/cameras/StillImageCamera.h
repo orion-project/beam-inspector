@@ -8,8 +8,8 @@
 class StillImageCamera : public Camera
 {
 public:
-    StillImageCamera(PlotIntf *plot, TableIntf *table);
-    StillImageCamera(PlotIntf *plot, TableIntf *table, const QString& fileName);
+    StillImageCamera(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil);
+    StillImageCamera(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, const QString& fileName);
 
     QString name() const override;
     QString descr() const override;

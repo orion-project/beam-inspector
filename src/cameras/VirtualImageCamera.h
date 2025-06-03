@@ -13,7 +13,7 @@ class VirtualImageCamera : public QThread, public Camera
     Q_OBJECT
 
 public:
-    VirtualImageCamera(PlotIntf *plot, TableIntf *table, QObject *parent);
+    VirtualImageCamera(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, QObject *parent);
 
     QString name() const override { return "Demo (image)"; }
     int width() const override;

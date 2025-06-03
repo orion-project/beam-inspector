@@ -5,6 +5,7 @@
 #include "cameras/CameraTypes.h"
 #include "cameras/MeasureSaver.h"
 #include "widgets/PlotIntf.h"
+#include "widgets/StabilityIntf.h"
 #include "widgets/TableIntf.h"
 
 #include "beam_calc.h"
@@ -32,6 +33,7 @@ public:
 
     PlotIntf *plot;
     TableIntf *table;
+    StabilityIntf *stabil;
     Camera *camera;
     QThread *thread;
     bool rawView = false;
@@ -60,6 +62,8 @@ public:
     QList<RoiRect> rois;
     double *graph;
     QVector<double> subtracted;
+    /// Beam estimation results for each ROI, they are updated every frame.
+    /// If the averaging is enabled, then results contain averaged values.
     QList<CgnBeamResult> results;
     QList<QQueue<CgnBeamResult>> mavgs;
     QList<CgnBeamResult> sdevs;
@@ -96,8 +100,8 @@ public:
 
     const char *logId;
 
-    CameraWorker(PlotIntf *plot, TableIntf *table, Camera *cam, QThread *thread, const char *logId)
-        : plot(plot), table(table), camera(cam), thread(thread), logId(logId)
+    CameraWorker(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, Camera *cam, QThread *thread, const char *logId)
+        : plot(plot), table(table), stabil(stabil), camera(cam), thread(thread), logId(logId)
     {
         measurBuf1.resize(MEASURE_BUF_SIZE);
         measurBuf2.resize(MEASURE_BUF_SIZE);
@@ -404,6 +408,7 @@ public:
             plot->invalidateGraph();
             plot->setResult({}, 0, rangeTop);
             table->setResult({}, {}, tableData());
+            stabil->setResult({});
             return true;
         }
 
@@ -413,6 +418,28 @@ public:
         plot->setResult(results, minZ, maxZ);
 
         table->setResult(results, sdevs, tableData());
+        
+        // Stability plotter accepts latest instant results (not averaged)
+        if (doMavg) {
+            QList<CgnBeamResult> res;
+            if (multiRoi) {
+                for (int i = 0; i < rois.size(); i++) {
+                    const QQueue<CgnBeamResult> &q = mavgs.at(i);
+                    if (q.isEmpty())
+                        res << CgnBeamResult { .nan = true };
+                    else res << q.last();
+                }
+            } else {
+                const QQueue<CgnBeamResult> &q = mavgs.at(0);
+                if (q.isEmpty())
+                    res << CgnBeamResult { .nan = true };
+                else res << q.last();
+            }
+            stabil->setResult(res);
+        } else {
+            stabil->setResult(results);
+        }
+        
         return true;
     }
     

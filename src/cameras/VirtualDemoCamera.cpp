@@ -28,8 +28,8 @@ public:
     RandomOffset yc_offset;
     RandomOffset phi_offset;
 
-    BeamRenderer(PlotIntf *plot, TableIntf *table, VirtualDemoCamera *cam, QThread *thread)
-        : CameraWorker(plot, table, cam, cam, LOG_ID), cam(cam)
+    BeamRenderer(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, VirtualDemoCamera *cam, QThread *thread)
+        : CameraWorker(plot, table, stabil, cam, cam, LOG_ID), cam(cam)
     {
         b.w = CAMERA_WIDTH;
         b.h = CAMERA_HEIGHT;
@@ -145,12 +145,12 @@ public:
     }
 };
 
-VirtualDemoCamera::VirtualDemoCamera(PlotIntf *plot, TableIntf *table, QObject *parent) :
-    Camera(plot, table, "VirtualDemoCamera"), QThread(parent)
+VirtualDemoCamera::VirtualDemoCamera(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, QObject *parent) :
+    Camera(plot, table, stabil, "VirtualDemoCamera"), QThread(parent)
 {
     loadConfig();
 
-    _render.reset(new BeamRenderer(plot, table, this, this));
+    _render.reset(new BeamRenderer(plot, table, stabil, this, this));
     _render->togglePowerMeter();
 
     connect(parent, SIGNAL(camConfigChanged()), this, SLOT(camConfigChanged()));

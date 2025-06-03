@@ -19,8 +19,8 @@
 using namespace Ori::Dlg;
 using namespace Ori::Layouts;
 
-Camera::Camera(PlotIntf *plot, TableIntf *table, const char* configGroup) :
-    _plot(plot), _table(table), _configGroup(configGroup)
+Camera::Camera(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, const char* configGroup) :
+    _plot(plot), _table(table), _stabil(stabil), _configGroup(configGroup)
 {
 }
 

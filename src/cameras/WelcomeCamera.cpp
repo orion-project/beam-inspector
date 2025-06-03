@@ -2,6 +2,7 @@
 
 #include "cameras/HardConfigPanel.h"
 #include "widgets/PlotIntf.h"
+#include "widgets/StabilityIntf.h"
 #include "widgets/TableIntf.h"
 
 #include "beam_render.h"
@@ -34,7 +35,8 @@ public:
     }
 };
 
-WelcomeCamera::WelcomeCamera(PlotIntf *plot, TableIntf *table) : Camera(plot, table, "WelcomeCamera")
+WelcomeCamera::WelcomeCamera(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil) : 
+    Camera(plot, table, stabil, "WelcomeCamera")
 {
     loadConfig();
 }
@@ -67,6 +69,7 @@ void WelcomeCamera::startCapture()
     _plot->setResult({r}, 0, b.p);
     cgn_render_beam_to_doubles(&b, _plot->rawGraph());
     _plot->invalidateGraph();
+    _stabil->setResult({});
 }
 
 HardConfigPanel* WelcomeCamera::hardConfgPanel(QWidget *parent)
