@@ -20,6 +20,8 @@ public:
 
     QString fileName() const { return _fileName; }
     bool isDemoMode() const { return _demoMode; }
+    
+    bool hasStability() const override { return false; }
 
     void startCapture() override;
 

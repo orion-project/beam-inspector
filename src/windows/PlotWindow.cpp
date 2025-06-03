@@ -289,7 +289,7 @@ void PlotWindow::createMenuBar()
     _actionHardConfig->setCheckable(true);
     _actionProfilesView = A_(tr("Profiles View"), this, &PlotWindow::toggleProfilesView, ":/toolbar/profile");
     _actionProfilesView->setCheckable(true);
-    _actionStabilityView = A_(tr("Stability View"), this, &PlotWindow::toggleStabGraphView);
+    _actionStabilityView = A_(tr("Stability View"), this, &PlotWindow::toggleStabGraphView, ":/toolbar/stability");
     _actionStabilityView->setCheckable(true);
     auto menuView = M_(tr("View"), {
         _actionRawView, 0,
@@ -412,6 +412,7 @@ void PlotWindow::createToolBar()
     tb->addAction(_actionResultsPanel);
     tb->addAction(_actionHardConfig);
     tb->addAction(_actionProfilesView);
+    tb->addAction(_actionStabilityView);
     tb->addSeparator();
     tb->addAction(_actionUseRoi);
     tb->addAction(_actionUseMultiRoi);
@@ -679,7 +680,7 @@ void PlotWindow::showCamConfig(bool replot)
     _tableIntf->setScale(s);
     _plotIntf->setScale(s);
     _profilesView->setConfig(s, _camera->config().mavg);
-    _stabilityView->setConfig(s);
+    _stabilityView->setConfig(s, _camera->config().stabil);
 
     if (replot) _plot->replot();
 }
@@ -777,6 +778,9 @@ void PlotWindow::startMeasure()
     cam->startMeasure(_saver.get());
 
     _measureProgress->reset(cfg->durationInf ? 0 : cfg->durationSecs(), cfg->fileName);
+    
+    if (cam->config().stabil.resetOnMeasure)
+        _stabilityView->cleanResult();
 
     updateControls();
 }

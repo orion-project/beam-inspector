@@ -289,7 +289,7 @@ void VirtualImageCamera::loadConfigMore(QSettings *s)
 
 void VirtualImageCamera::initConfigMore(Ori::Dlg::ConfigDlgOpts &opts)
 {
-    int pageImg = cfgMax + 1;
+    int pageImg = cfgPageCount + 1;
     opts.pages << Ori::Dlg::ConfigPage(pageImg, tr("Image"), ":/toolbar/raw_view");
     opts.items
         << new Ori::Dlg::ConfigItemEmpty(pageImg, tr("Reselect camera to apply paramaters"))

@@ -14,6 +14,8 @@ public:
     int bpp() const override { return 8; }
 
     void startCapture() override;
+    
+    bool hasStability() const override { return false; }
 
     HardConfigPanel* hardConfgPanel(QWidget *parent) override;
 

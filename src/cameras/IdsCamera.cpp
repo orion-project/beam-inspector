@@ -664,7 +664,7 @@ void IdsCamera::setRawView(bool on, bool reconfig)
 void IdsCamera::initConfigMore(Ori::Dlg::ConfigDlgOpts &opts)
 {
     if (_peak)
-        _cfg->initDlg(_peak->hCam, opts, cfgMax);
+        _cfg->initDlg(_peak->hCam, opts, cfgPageCount);
 }
 
 void IdsCamera::saveConfigMore(QSettings *s)

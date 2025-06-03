@@ -101,6 +101,13 @@ struct Averaging
     int frames = 5;
 };
 
+struct Stability
+{
+    int displayMins;
+    QString axisText;
+    bool resetOnMeasure;
+};
+
 struct CameraConfig
 {
     PlotOptions plot;
@@ -111,6 +118,7 @@ struct CameraConfig
     FrameSize mroiSize = { 0.1, 0.1 };
     PowerMeter power;
     Averaging mavg;
+    Stability stabil;
 
     void load(QSettings *s);
     void save(QSettings *s, bool compact=false) const;

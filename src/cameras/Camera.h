@@ -58,10 +58,14 @@ public:
     virtual QList<QPair<int, QString>> measurCols() const { return {}; }
 
     const CameraConfig& config() const { return _config; }
-    enum ConfigPages { cfgPlot, cfgTable, cfgBgnd, cfgCentr, cfgRoi, cfgMax };
+    enum ConfigPages {
+        cfgPlot, cfgTable, cfgBgnd, cfgCentr, cfgRoi, cfgStabil,
+        cfgPageCount
+    };
     bool editConfig(int page = -1);
 
     virtual bool canMavg() const { return false; }
+    virtual bool hasStability() const { return true; }
 
     void setRoi(const RoiRect&);
     void setRois(const QList<RoiRect>&);
