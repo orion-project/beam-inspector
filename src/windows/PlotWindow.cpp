@@ -180,6 +180,8 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
         _actionHardConfig->setChecked(_hardConfigDock->isVisible());
         _actionProfilesView->setChecked(_profilesDock->isVisible());
         _actionStabilityView->setChecked(_stabilityDock->isVisible());
+        
+        _stabilityView->turnOn(_stabilityDock->isVisible());
 
         // This initializes all graph structs
         activateCamWelcome();
@@ -493,6 +495,7 @@ void PlotWindow::createDockPanel()
     _profilesDock->setVisible(false);
     _profilesDock->setWidget(_profilesView);
     addDockWidget(Qt::BottomDockWidgetArea, _profilesDock);
+    connect(_profilesDock, &QDockWidget::visibilityChanged, _profilesView, &ProfilesView::activate);
     
     _stabilityView = new StabilityView();
     _stabilIntf = new StabilityIntf(_stabilityView);
@@ -504,6 +507,7 @@ void PlotWindow::createDockPanel()
     _stabilityDock->setVisible(false);
     _stabilityDock->setWidget(_stabilityView);
     addDockWidget(Qt::BottomDockWidgetArea, _stabilityDock);
+    connect(_stabilityDock, &QDockWidget::visibilityChanged, _stabilityView, &StabilityView::activate);
 }
 
 void PlotWindow::createPlot()
@@ -1155,8 +1159,7 @@ void PlotWindow::toggleProfilesView()
 void PlotWindow::toggleStabGraphView()
 {
     _stabilityDock->setVisible(!_stabilityDock->isVisible());
-    if (_stabilityDock->isVisible())
-        _stabilityView->showResult();
+    _stabilityView->turnOn(_stabilityDock->isVisible());
 }
 
 void PlotWindow::updateHardConfgPanel()

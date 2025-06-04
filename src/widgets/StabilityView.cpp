@@ -30,28 +30,36 @@ StabilityView::StabilityView(QWidget *parent) : QWidget{parent}
     _plotHeat->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     _plotTime->legend->setVisible(true);
-
+    
+    _plotTime->yAxis->setPadding(8);
+    
     // By default, the legend is in the inset layout of the main axis rect.
     // So this is how we access it to change legend placement:
     _plotTime->axisRect()->insetLayout()->setInsetAlignment(0, Qt::AlignLeft|Qt::AlignTop);
     
     QSharedPointer<QCPAxisTickerDateTime> timeTicker(new QCPAxisTickerDateTime);
     timeTicker->setDateTimeSpec(Qt::LocalTime);
-    timeTicker->setDateTimeFormat("hh:mm:ss");
+    timeTicker->setDateTimeFormat("hh:mm:ss\nMMM dd");
     _plotTime->xAxis->setTicker(timeTicker);
     
     _timelineX = _plotTime->addGraph();
     _timelineY = _plotTime->addGraph();
-    _timelineX->setName("Center X");
-    _timelineY->setName("Center Y");
+    _timelineX->setName("X");
+    _timelineY->setName("Y");
     
     _timelineDurationText = new QCPTextElement(_plotTime);
     
     _plotTime->axisRect()->insetLayout()->addElement(_timelineDurationText, Qt::AlignRight|Qt::AlignTop);
+
     auto f = _plotTime->yAxis->labelFont();
     f.setPointSize(f.pointSize()+1);
+    _plotHeat->xAxis->setLabelFont(f);
+
+    // Vertically oriented font looks a bit ugly
+    // especially on narrow letters "i", "t", like in "pos_i_t_i_on"
     f.setLetterSpacing(QFont::AbsoluteSpacing, 1);
     _plotTime->yAxis->setLabelFont(f);
+    _plotHeat->yAxis->setLabelFont(f);
     
     setThemeColors(PlotHelpers::SYSTEM, false);
     
@@ -68,7 +76,7 @@ StabilityView::StabilityView(QWidget *parent) : QWidget{parent}
         PlotHelpers::copyImage(_plotHeat, [this](PlotHelpers::Theme theme){ setThemeColors(theme, false); });
     }, ":/toolbar/copy_img"));
     
-    Ori::Layouts::LayoutH({_plotTime, _plotHeat}).setMargins(12, 0, 12, 0).useFor(this);
+    Ori::Layouts::LayoutH({_plotTime, _plotHeat}).setMargin(0).useFor(this);
 }
 
 void StabilityView::setThemeColors(PlotHelpers::Theme theme, bool replot)
@@ -102,17 +110,25 @@ void StabilityView::setConfig(const PixelScale& scale, const Stability &stabil)
     _timelineDisplayS = stabil.displayMins * 60;
     
     if (!stabil.axisText.isEmpty()) {
-        QString axisText = stabil.axisText;
+        QString text = stabil.axisText;
+        QString unit;
         if (_scale.on && !_scale.unit.isEmpty())
-            axisText += QString(" [%1]").arg(_scale.unit);
-        _plotTime->yAxis->setLabel(axisText);
+            unit = QString(" [%1]").arg(_scale.unit);
+        _plotTime->yAxis->setLabel(text % unit);
+        _plotHeat->xAxis->setLabel(text % " X" % unit);
+        _plotHeat->yAxis->setLabel(text % " Y" % unit);
     } else {
         _plotTime->yAxis->setLabel(QString());
+        _plotHeat->xAxis->setLabel(QString());
+        _plotHeat->yAxis->setLabel(QString());
     }
 }
 
 void StabilityView::setResult(qint64 time, const QList<CgnBeamResult>& val)
 {
+    if (!_turnedOn)
+        return;
+
     if (val.isEmpty())
         return;
 
@@ -137,6 +153,9 @@ void StabilityView::setResult(qint64 time, const QList<CgnBeamResult>& val)
 
 void StabilityView::showResult()
 {
+    if (!_turnedOn)
+        return;
+
     if (!(_showTimeMs < 0 || _frameTimeMs - _showTimeMs >= UPDATE_INTERVAL_MS))
         return;
         
@@ -185,15 +204,17 @@ void StabilityView::showResult()
     } 
     _plotTime->xAxis->setRange(timelineDisplayMinS(), _timelineMaxS);
 
-    _plotTime->replot();
-    _plotHeat->replot();
-    
     _timelineDurationText->setText(formatSecs((_frameTimeMs - _startTimeMs) / 1000));
-    
-    //qDebug() << _timelineX->dataCount() << _plotTime->replotTime(true);
-    
+
     _showTimeMs = _frameTimeMs;
     _dataBufCursor = 0;
+
+    // In non-active mode the panel is still visbile but temporary overlapped by another tab
+    // So it still should process data. When we switch to its tab, plots must be shown properly
+    if (_active) {
+        _plotTime->replot();
+        _plotHeat->replot();
+    }
 }
 
 double StabilityView::timelineDisplayMinS() const
@@ -203,8 +224,8 @@ double StabilityView::timelineDisplayMinS() const
 
 void StabilityView::cleanResult()
 {
-    _timelineX->data().clear();
-    _timelineY->data().clear();
+    _timelineX->data()->clear();
+    _timelineY->data()->clear();
     _frameTimeMs = -1;
     _showTimeMs = -1;
     _cleanTimeMs = -1;
@@ -241,4 +262,35 @@ void StabilityView::copyGraph(QCPGraph *graph)
     }
     qApp->clipboard()->setText(res);
     Ori::Gui::PopupMessage::affirm(qApp->tr("Data points been copied to Clipboard"), Qt::AlignRight|Qt::AlignBottom);
+}
+
+void StabilityView::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+    
+    _plotHeat->setFixedWidth(_plotHeat->height());
+}
+
+void StabilityView::activate(bool on)
+{
+    qDebug() << "stabil active" << on;
+    
+    _active = on;
+
+    if (_active) {
+        _plotTime->replot();
+        _plotHeat->replot();
+    }
+}
+
+void StabilityView::turnOn(bool on)
+{
+    qDebug() << "Stabil turn on" << on;
+    if (!on) {
+        cleanResult();
+        _plotTime->replot();
+        _plotHeat->replot();
+        qDebug() << "Clean" << _timelineX->dataCount();
+    }
+    _turnedOn = on;
 }

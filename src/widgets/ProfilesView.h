@@ -26,6 +26,7 @@ public:
     void setConfig(const PixelScale& scale, const Averaging& mavg);
     void showResult();
     void cleanResult();
+    void activate(bool on);
 
     struct Point { double key, value ;};
     using Points = QVector<Point>;
@@ -50,6 +51,7 @@ private:
     bool _centerFit = false;
     bool _showFullY = false;
     int _mavgFrames = 0;
+    bool _active = false;
 
     void updateVisibility();
     void storeState();

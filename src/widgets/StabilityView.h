@@ -25,6 +25,11 @@ public:
     void setResult(qint64 time, const QList<CgnBeamResult>& val);
     void showResult();
     void cleanResult();
+    void activate(bool on);
+    void turnOn(bool on);
+    
+protected:
+    void resizeEvent(QResizeEvent *event);
 
 private:
     struct DataPoint {
@@ -47,6 +52,8 @@ private:
     QVector<DataPoint> _dataBuf;
     int _dataBufCursor = 0;
     double _timelineDisplayS = 300;
+    bool _active = false;
+    bool _turnedOn = false;
     
     void resetScale(bool time, bool value);
     double timelineDisplayMinS() const;

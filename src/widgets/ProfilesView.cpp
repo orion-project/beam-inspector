@@ -190,6 +190,9 @@ ProfilesView::ProfilesView(PlotIntf *plotIntf) : QWidget(), _plotIntf(plotIntf)
 
     _plotX->legend->setVisible(true);
     _plotY->legend->setVisible(true);
+    
+    _plotX->yAxis->setPadding(8);
+    _plotY->yAxis->setPadding(8);
 
     // By default, the legend is in the inset layout of the main axis rect.
     // So this is how we access it to change legend placement:
@@ -227,6 +230,8 @@ ProfilesView::ProfilesView(PlotIntf *plotIntf) : QWidget(), _plotIntf(plotIntf)
 
     _fitX = _plotX->addGraph();
     _fitY = _plotY->addGraph();
+    _fitX->setName("Fit");
+    _fitY->setName("Fit");
     QPen fitPen;
     fitPen.setColor(QColor(255, 0, 0));
     fitPen.setStyle(Qt::DashLine);
@@ -240,7 +245,7 @@ ProfilesView::ProfilesView(PlotIntf *plotIntf) : QWidget(), _plotIntf(plotIntf)
 
     setThemeColors(PlotHelpers::SYSTEM, false);
 
-    Ori::Layouts::LayoutH({_plotX, _plotY}).setMargins(12, 0, 12, 0).useFor(this);
+    Ori::Layouts::LayoutH({_plotX, _plotY}).setMargin(0).useFor(this);
 
     auto actnSep1 = new QAction(this);
     actnSep1->setSeparator(true);
@@ -317,6 +322,8 @@ void ProfilesView::setThemeColors(PlotHelpers::Theme theme, bool replot)
 
 void ProfilesView::showResult()
 {
+    if (!_active) return;
+
     CalcProfilesArg arg {
         .imgW = _plotIntf->graphW(),
         .imgH = _plotIntf->graphH(),
@@ -564,4 +571,9 @@ void ProfilesView::autoScale()
     _rangeX = 0;
     _rangeY = 0;
     showResult();
+}
+
+void ProfilesView::activate(bool on)
+{
+    _active = on;
 }
