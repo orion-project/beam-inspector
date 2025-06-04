@@ -2,6 +2,7 @@
 
 #include "helpers/OriLayouts.h"
 #include "helpers/OriWidgets.h"
+#include "plot/Heatmap.h"
 #include "widgets/OriPopupMessage.h"
 
 #include "qcustomplot/src/core.h"
@@ -16,6 +17,7 @@
 #define UPDATE_INTERVAL_MS 1000
 #define CLEAN_INTERVAL_MS 60000
 #define DATA_BUF_SIZE 10
+#define HEATMAP_SPLIT_COUNT 5
 
 StabilityView::StabilityView(QWidget *parent) : QWidget{parent}
 {
@@ -30,7 +32,6 @@ StabilityView::StabilityView(QWidget *parent) : QWidget{parent}
     _plotHeat->setContextMenuPolicy(Qt::ActionsContextMenu);
 
     _plotTime->legend->setVisible(true);
-    
     _plotTime->yAxis->setPadding(8);
     
     // By default, the legend is in the inset layout of the main axis rect.
@@ -46,6 +47,12 @@ StabilityView::StabilityView(QWidget *parent) : QWidget{parent}
     _timelineY = _plotTime->addGraph();
     _timelineX->setName("X");
     _timelineY->setName("Y");
+    
+    _heatmapData = new HeatmapData(HEATMAP_SPLIT_COUNT, HEATMAP_SPLIT_COUNT);
+    _heatmap = new Heatmap(_plotHeat->xAxis, _plotHeat->yAxis);
+    _heatmap->setData(_heatmapData);
+    _heatmap->setGradient(QCPColorGradient(QCPColorGradient::gpThermal));
+    _heatmap->setInterpolate(false);
     
     _timelineDurationText = new QCPTextElement(_plotTime);
     
@@ -160,7 +167,7 @@ void StabilityView::showResult()
         return;
         
     int newPoints = _dataBufCursor;
-    bool timelineRangeChangedV = false;
+    bool valueRangeChanged = false;
     for (int i = 0; i < newPoints; i++) {
         const auto &p = _dataBuf.at(i);
         const double sec = p.ms / 1000.0;
@@ -176,32 +183,39 @@ void StabilityView::showResult()
 
         const double timelineMaxV = qMax(timelineX, timelineY);
         if (_timelineMaxV < timelineMaxV || qIsNaN(_timelineMaxV))
-            _timelineMaxV = timelineMaxV, timelineRangeChangedV = true;
+            _timelineMaxV = timelineMaxV, valueRangeChanged = true;
         
         const double timelineMinV = qMin(timelineX, timelineY);
         if (_timelineMinV > timelineMinV || qIsNaN(_timelineMinV))
-            _timelineMinV = timelineMinV, timelineRangeChangedV = true;
+            _timelineMinV = timelineMinV, valueRangeChanged = true;
 
         _timelineMaxS = sec;
         if (_timelineMinS < 0)
             _timelineMinS = sec;
     }
-
-    if (timelineRangeChangedV) {
+    
+    if (valueRangeChanged) {
         const double m = (_timelineMaxV - _timelineMinV) * 0.1;
         _plotTime->yAxis->setRange(_timelineMinV - m, _timelineMaxV + m);
+        recalcHeatmap();
+    } else {
+        updateHeatmap(newPoints);
     }
+
+    // Don't clean invisible points
+    // They will be needed to recalculate the heatmap when the ranhe changed
+    //
+    // if (_cleanTimeMs < 0) {
+    //     _cleanTimeMs = _frameTimeMs;
+    // } else if (_frameTimeMs - _cleanTimeMs >= CLEAN_INTERVAL_MS) {
+    //     if (_timelineMaxS - _timelineMinS > _timelineDisplayS) {
+    //         _timelineMinS = _timelineMaxS - _timelineDisplayS;
+    //         _timelineX->data()->removeBefore(_timelineMinS);
+    //         _timelineY->data()->removeBefore(_timelineMinS);
+    //         _cleanTimeMs = _frameTimeMs;
+    //     }
+    // } 
     
-    if (_cleanTimeMs < 0) {
-        _cleanTimeMs = _frameTimeMs;
-    } else if (_frameTimeMs - _cleanTimeMs >= CLEAN_INTERVAL_MS) {
-        if (_timelineMaxS - _timelineMinS > _timelineDisplayS) {
-            _timelineMinS = _timelineMaxS - _timelineDisplayS;
-            _timelineX->data()->removeBefore(_timelineMinS);
-            _timelineY->data()->removeBefore(_timelineMinS);
-            _cleanTimeMs = _frameTimeMs;
-        }
-    } 
     _plotTime->xAxis->setRange(timelineDisplayMinS(), _timelineMaxS);
 
     _timelineDurationText->setText(formatSecs((_frameTimeMs - _startTimeMs) / 1000));
@@ -273,8 +287,6 @@ void StabilityView::resizeEvent(QResizeEvent *event)
 
 void StabilityView::activate(bool on)
 {
-    qDebug() << "stabil active" << on;
-    
     _active = on;
 
     if (_active) {
@@ -285,12 +297,59 @@ void StabilityView::activate(bool on)
 
 void StabilityView::turnOn(bool on)
 {
-    qDebug() << "Stabil turn on" << on;
     if (!on) {
         cleanResult();
         _plotTime->replot();
         _plotHeat->replot();
-        qDebug() << "Clean" << _timelineX->dataCount();
     }
     _turnedOn = on;
+}
+
+void StabilityView::recalcHeatmap()
+{
+    const auto xs = _timelineX->data();
+    const auto ys = _timelineY->data();
+    if (xs->size() != ys->size()) {
+        qCritical() << "Unequal point count in timeline graphs" << xs->size() << ys->size();
+        return;
+    }
+    int maxCellPoints = 0;
+    QCPRange r(qMin(_timelineMinV, -0.1), qMax(_timelineMaxV, 0.1));
+    _heatmapData->fill(0);
+    _heatmapData->setRange(r, r);
+    const int pointCount = xs->size();
+    for (int i = 0; i < pointCount; i++) {
+        int cellIndexX, cellIndexY;
+        _heatmapData->coordToCell(xs->at(i)->value, ys->at(i)->value, &cellIndexX, &cellIndexY);
+        int cellPoints = int(_heatmapData->cell(cellIndexX, cellIndexY)) + 1;
+        if (cellPoints > maxCellPoints) maxCellPoints = cellPoints;
+        _heatmapData->setCell(cellIndexX, cellIndexY, cellPoints);
+    }
+    _heatmap->setDataRange(QCPRange(0, maxCellPoints));
+    _plotHeat->xAxis->setRange(r);
+    _plotHeat->yAxis->setRange(r);
+}
+
+void StabilityView::updateHeatmap(int lastPoints)
+{
+    const auto xs = _timelineX->data();
+    const auto ys = _timelineY->data();
+    if (xs->size() != ys->size()) {
+        qCritical() << "Unequal point count in timeline graphs" << xs->size() << ys->size();
+        return;
+    }
+    const int pointCount = xs->size();
+    const int startIndex = pointCount - lastPoints;
+    int maxCellPoints = _heatmap->dataRange().upper;
+    bool dataRangeChanged = false;
+    for (int i = startIndex; i < pointCount; i++) {
+        int cellIndexX, cellIndexY;
+        _heatmapData->coordToCell(xs->at(i)->value, ys->at(i)->value, &cellIndexX, &cellIndexY);
+        int cellPoints = int(_heatmapData->cell(cellIndexX, cellIndexY)) + 1;
+        if (cellPoints > maxCellPoints) maxCellPoints = cellPoints, dataRangeChanged = true;
+        _heatmapData->setCell(cellIndexX, cellIndexY, cellPoints);
+    }
+    if (dataRangeChanged) {
+        _heatmap->setDataRange(QCPRange(0, maxCellPoints));
+    }
 }

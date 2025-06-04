@@ -70,6 +70,7 @@ set(PROJECT_SOURCES
     src/plot/BeamGraph.h src/plot/BeamGraph.cpp
     src/plot/BeamPlotItem.h src/plot/BeamPlotItem.cpp
     src/plot/CrosshairOverlay.h src/plot/CrosshairOverlay.cpp
+    src/plot/Heatmap.h src/plot/Heatmap.cpp
     src/plot/PlotExport.h src/plot/PlotExport.cpp
     src/plot/RoiRectGraph.h src/plot/RoiRectGraph.cpp
     src/widgets/DataTable.h src/widgets/DataTable.cpp

@@ -8,6 +8,9 @@
 
 #include <QWidget>
 
+class Heatmap;
+class HeatmapData;
+
 class QCPGraph;
 class QCPTextElement;
 class QCustomPlot;
@@ -41,6 +44,8 @@ private:
     QCustomPlot *_plotTime, *_plotHeat;
     QCPGraph *_timelineX, *_timelineY;
     QCPTextElement *_timelineDurationText;
+    Heatmap *_heatmap;
+    HeatmapData *_heatmapData;
     PixelScale _scale;
     double _timelineMinS = -1, _timelineMaxS = -1;
     double _timelineMinV = -1, _timelineMaxV = -1;
@@ -58,6 +63,8 @@ private:
     void resetScale(bool time, bool value);
     double timelineDisplayMinS() const;
     void copyGraph(QCPGraph *graph);
+    void recalcHeatmap();
+    void updateHeatmap(int lastPoints);
 };
 
 #endif // STABILITY_VIEW_H
