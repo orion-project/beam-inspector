@@ -65,7 +65,7 @@ private:
     
     void resetScale(bool time, bool value);
     double timelineDisplayMinS() const;
-    void copyGraph(QCPGraph *graph);
+    void copyGraph(QCPGraph *graph = nullptr);
     void recalcHeatmap();
     void updateHeatmap(int lastPoints);
 };

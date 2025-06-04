@@ -1,7 +1,9 @@
 #include "StabilityView.h"
 
+#include "app/AppSettings.h"
 #include "helpers/OriLayouts.h"
 #include "helpers/OriWidgets.h"
+#include "plot/BeamGraph.h"
 #include "plot/Heatmap.h"
 #include "widgets/OriPopupMessage.h"
 
@@ -49,8 +51,8 @@ StabilityView::StabilityView(QWidget *parent) : QWidget{parent}
     _heatmapData = new HeatmapData;
     _heatmap = new Heatmap(_plotHeat->xAxis, _plotHeat->yAxis);
     _heatmap->setData(_heatmapData);
-    _heatmap->setGradient(QCPColorGradient(QCPColorGradient::gpThermal));
     _heatmap->setInterpolate(false);
+    _heatmap->setGradient(PrecalculatedGradient(AppSettings::colorMapPath("CET-L17")));
     
     _timelineDurationText = new QCPTextElement(_plotTime);
     
@@ -68,15 +70,20 @@ StabilityView::StabilityView(QWidget *parent) : QWidget{parent}
     
     setThemeColors(PlotHelpers::SYSTEM, false);
     
-    _plotTime->addAction(A_(tr("Reset"), this, &StabilityView::cleanResult, ":/toolbar/update"));
-    _plotTime->addAction(Ori::Gui::separatorAction(this));
+    auto actnReset = A_(tr("Reset"), this, &StabilityView::cleanResult, ":/toolbar/update");
+    auto actnSep1 = Ori::Gui::separatorAction(this);
+    
+    _plotTime->addAction(actnReset);
+    _plotTime->addAction(actnSep1);
     _plotTime->addAction(A_(tr("Copy X Points"), this, [this]{ copyGraph(_timelineX); }));
     _plotTime->addAction(A_(tr("Copy Y Points"), this, [this]{ copyGraph(_timelineY); }));
-    
+    _plotTime->addAction(A_(tr("Copy X and Y Points"), this, [this]{ copyGraph(); }, ":/toolbar/copy"));
     _plotTime->addAction(A_(tr("Copy as Image"), this, [this]{
         PlotHelpers::copyImage(_plotTime, [this](PlotHelpers::Theme theme){ setThemeColors(theme, false); });
     }, ":/toolbar/copy_img"));
     
+    _plotHeat->addAction(actnReset);
+    _plotHeat->addAction(actnSep1);
     _plotHeat->addAction(A_(tr("Copy as Image"), this, [this]{
         PlotHelpers::copyImage(_plotHeat, [this](PlotHelpers::Theme theme){ setThemeColors(theme, false); });
     }, ":/toolbar/copy_img"));
@@ -291,12 +298,22 @@ void StabilityView::copyGraph(QCPGraph *graph)
 {
     QString res;
     QTextStream s(&res);
-    double startS = timelineDisplayMinS();
-    foreach (const auto& p, graph->data()->rawData()) {
-        if (p.key < startS)
-            continue;
-        QString timeStr = QDateTime::fromMSecsSinceEpoch(p.key * 1000.0).toString(Qt::ISODateWithMs);
-        s << timeStr << ',' << QString::number(p.value) << '\n';
+    if (graph) {
+        foreach (const auto& p, graph->data()->rawData()) {
+            s << QDateTime::fromMSecsSinceEpoch(p.key * 1000.0).toString(Qt::ISODateWithMs)
+              << ',' << QString::number(p.value)
+              << '\n';
+        }
+    } else {
+        const auto xs = _timelineX->data();
+        const auto ys = _timelineY->data();
+        const auto pointCount = qMin(xs->size(), ys->size()); // Should not differ
+        for (int i = 0; i < pointCount; i++) {
+            s << QDateTime::fromMSecsSinceEpoch(xs->at(i)->key * 1000.0).toString(Qt::ISODateWithMs)
+              << ',' << QString::number(xs->at(i)->value)
+              << ',' << QString::number(ys->at(i)->value)
+              << '\n';
+        }
     }
     qApp->clipboard()->setText(res);
     Ori::Gui::PopupMessage::affirm(qApp->tr("Data points been copied to Clipboard"), Qt::AlignRight|Qt::AlignBottom);
