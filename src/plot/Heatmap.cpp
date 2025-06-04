@@ -8,21 +8,14 @@
 //                                HeatmapData
 //------------------------------------------------------------------------------
 
-HeatmapData::HeatmapData(int keySize, int valueSize) :
-  mKeySize(0),
-  mValueSize(0),
-  mKeyRange(QCPRange(0, 1)),
-  mValueRange(QCPRange(0, 1)),
-  mData(nullptr),
-  mDataModified(true)
+HeatmapData::HeatmapData()
 {
-  setSize(keySize, valueSize);
-  fill(0);
 }
 
 HeatmapData::~HeatmapData()
 {
-  delete[] mData;
+  if (mData)
+    delete[] mData;
 }
 
 double HeatmapData::data(double key, double value)
@@ -49,7 +42,8 @@ void HeatmapData::setSize(int keySize, int valueSize)
   {
     mKeySize = keySize;
     mValueSize = valueSize;
-    delete[] mData;
+    if (mData)
+        delete[] mData;
     if (mKeySize > 0 && mValueSize > 0)
     {
 #ifdef __EXCEPTIONS
@@ -95,6 +89,11 @@ void HeatmapData::setCell(int keyIndex, int valueIndex, double z)
     mDataModified = true;
   } else
     qDebug() << Q_FUNC_INFO << "index out of bounds:" << keyIndex << valueIndex;
+}
+
+void HeatmapData::clear()
+{
+  setSize(0, 0);
 }
 
 void HeatmapData::fill(double z)

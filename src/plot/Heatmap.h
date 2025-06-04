@@ -9,7 +9,7 @@
 class HeatmapData
 {
 public:
-  HeatmapData(int keySize, int valueSize);
+  HeatmapData();
   ~HeatmapData();
   
   int keySize() const { return mKeySize; }
@@ -24,31 +24,32 @@ public:
   void setData(double key, double value, double z);
   void setCell(int keyIndex, int valueIndex, double z);
   
+  void clear();
   void fill(double z);
   bool isEmpty() const { return !mData || mKeySize == 0 || mValueSize == 0; }
   void coordToCell(double key, double value, int *keyIndex, int *valueIndex) const;
 
 protected:
-  int mKeySize, mValueSize;
+  int mKeySize = 0, mValueSize = 0;
   QCPRange mKeyRange, mValueRange;
 
-  double *mData;
-  bool mDataModified;
+  double *mData = nullptr;
+  bool mDataModified = false;
   
   friend class Heatmap;
 };
 
 /**
  * This is a simplified clone of QCPColorMap.
- * The difference is the original graph draws a colored cell around a value.
- * So the boundary values are drawn as half-cell:
+ * The original graph draws a colored cell around a value.
+ * So the boundary values are drawn as half-cells:
  * 
  * value: 0      1       2      3     (value range = 3)
  *        |---|------|------|---|
  * cell     0     1     2     3       (cell count = 4)
  * 
- * Or they optionally can be drawns as full-cells when setTightBoundary(false)
- * but this does't care any additional information;
+ * Or they optionally can be drawns as full cells when setTightBoundary(false)
+ * but this does't care any additional information.
  * 
  * The Heatmap draws cells between values.
  * This is useful for showing how many values fall into a region.
@@ -57,7 +58,7 @@ protected:
  *        |------|------|------|
  * cell:      0      1      2         (cell count = 3)
  * 
- * The value itself falls into the right cell.
+ * The value itself falls into the right neighbour cell.
  * The exclusion is the very-last value which falls into the left cell.
 */
 class Heatmap : public QCPAbstractPlottable

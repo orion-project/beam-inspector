@@ -47,9 +47,11 @@ private:
     Heatmap *_heatmap;
     HeatmapData *_heatmapData;
     PixelScale _scale;
-    double _timelineMinS = -1, _timelineMaxS = -1;
-    double _timelineMinV = -1, _timelineMaxV = -1;
-    double _offsetVx = -1, _offsetVy = -1;
+    double _timelineMinS, _timelineMaxS;
+    double _valueMin, _valueMax;
+    double _valueMinX, _valueMaxX;
+    double _valueMinY, _valueMaxY;
+    double _offsetX = -1, _offsetY = -1;
     qint64 _frameTimeMs = -1;
     qint64 _showTimeMs = -1;
     qint64 _cleanTimeMs = -1;
@@ -57,6 +59,7 @@ private:
     QVector<DataPoint> _dataBuf;
     int _dataBufCursor = 0;
     double _timelineDisplayS = 300;
+    int _heatmapCellCount = 0;
     bool _active = false;
     bool _turnedOn = false;
     

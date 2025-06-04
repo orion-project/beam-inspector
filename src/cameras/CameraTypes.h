@@ -104,6 +104,7 @@ struct Averaging
 struct Stability
 {
     int displayMins;
+    int heatmapCells;
     QString axisText;
     bool resetOnMeasure;
 };
