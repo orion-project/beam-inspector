@@ -250,20 +250,27 @@ MeasureSaver::MeasureSaver() : QObject()
 
 MeasureSaver::~MeasureSaver()
 {
+    QSettings ini(_cfgFile, QSettings::IniFormat);
+    ini.beginGroup("Stop");
+
     MeasureJournal journal(MeasureJournal::STOP, _id);
     journal.write("timestamp", QDateTime::currentDateTime().toString(Qt::ISODate));
     if (!_failure.isEmpty()) {
         journal.write("reason", "failed");
         journal.write("failure", _failure);
+        ini.setValue("reason", "failed");
+        ini.setValue("failure", _failure);
     } else if (_isFinished) {
         journal.write("reason", "finished");
+        ini.setValue("reason", "finished");
     } else {
         journal.write("reason", "canceled");
+        ini.setValue("reason", "canceled");
     }
     journal.write("elapsedTime", formatSecs(_elapsedSecs));
     journal.write("resultsSaved", _intervalIdx);
     journal.write("imagesSaved", _savedImgCount);
-
+    
     _thread->quit();
     _thread->wait();
     qDebug() << LOG_ID << "Stopped";
