@@ -15,6 +15,8 @@
 #include <QFileDialog>
 #include <QMessageBox>
 
+#define LOG_ID "StillImageCamera:"
+
 enum CamDataRow { ROW_LOAD_TIME, ROW_CALC_TIME };
 
 StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil) : 
@@ -106,6 +108,8 @@ void StillImageCamera::startCapture()
         return;
     }
     auto loadTime = timer.elapsed();
+    
+    qDebug() << LOG_ID << _fileName << _image.format() << "bits:" << _image.depth();
 
     auto fmt = _image.format();
     if (fmt != QImage::Format_Grayscale8 && fmt != QImage::Format_Grayscale16) {

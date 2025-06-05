@@ -1,6 +1,7 @@
 #include "MeasureSaver.h"
 
 #include "app/HelpSystem.h"
+#include "app/ImageUtils.h"
 #include "cameras/Camera.h"
 #include "cameras/CameraTypes.h"
 #include "widgets/PlotHelpers.h"
@@ -18,7 +19,6 @@
 #include <QComboBox>
 #include <QDebug>
 #include <QDir>
-#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QLabel>
@@ -732,23 +732,12 @@ void MeasureSaver::saveImage(ImageEvent *e)
 {
     QString time = formatTime(e->time, QStringLiteral("yyyy-MM-ddThh-mm-ss-zzz"));
     QString path = _imgDir + '/' + time + ".pgm";
-    QFile f(path);
-    if (!f.open(QIODevice::WriteOnly)) {
-        qWarning() << LOG_ID << "Failed to save image" << path << f.errorString();
-        _errors.insert(e->time, "Failed to save image " + path + ": " + f.errorString());
+    QString err = ImageUtils::savePgm(path, e->buf, _width, _height, _bpp);
+    if (!err.isEmpty()) {
+        qWarning() << LOG_ID << "Failed to save image" << path << err;
+        _errors.insert(e->time, "Failed to save image " + path + ": " + err);
         return;
     }
-    {
-        QTextStream header(&f);
-        header << "P5\n" << _width << ' ' << _height << '\n' << (1<<_bpp)-1 << '\n';
-    }
-    if (_bpp > 8) {
-        auto buf = (uint16_t*)e->buf.data();
-        for (int i = 0; i < _width*_height; i++) {
-            buf[i] = (buf[i] >> 8) | (buf[i] << 8);
-        }
-    }
-    f.write(e->buf);
     _savedImgCount++;
 }
 

@@ -3,6 +3,7 @@ history:
   date: ?
   changes:
   - text: Stability plots panel
+  - text: Fix saving of 10-bit and 12-bit raw images
 
 - version: 0.0.24
   date: 2025-05-29

@@ -1,6 +1,7 @@
 #include "PlotExport.h"
 
 #include "app/HelpSystem.h"
+#include "app/ImageUtils.h"
 
 #include "widgets/FileSelector.h"
 
@@ -266,19 +267,54 @@ public:
     QSharedPointer<QWidget> content;
 };
 
-void exportImageDlg(QByteArray data, int w, int h, bool hdr)
+void exportImageDlg(QByteArray data, int w, int h, int bpp)
 {
-    QImage img((const uchar*)data.data(), w, h, hdr ? QImage::Format_Grayscale16 : QImage::Format_Grayscale8);
+    if (bpp != 8 && bpp != 10 && bpp != 12) {
+        // Should not happen
+        qWarning() << "Unsupported image bitness" << bpp;
+        return;
+    }
+
+    QImage img;
+    if (bpp == 8) {
+        img = QImage((const uchar*)data.data(), w, h, QImage::Format_Grayscale8);
+    } else {
+        img = QImage(w, h, QImage::Format_Grayscale16);
+
+        // Here we need QImage to be able to display image and save as png (pgm is saved manually)
+        // But QImage does not understand 10 or 12 bit data, it needs to be rescaled to 16 bit.
+        const double scale = 65535.0 / float((1 << bpp) - 1);
+        auto srcData = (const uint16_t*)data.data();
+        for (int y = 0; y < h; y++) {
+            auto line = (uint16_t*)img.scanLine(y);
+            for (int x = 0; x < w; x++) {
+                const double pixel = srcData[y * w + x];
+                line[x] = pixel * scale;
+            }
+        }
+    }
+    
     ExportRawImageProps props;
     ExportRawImageDlg dlg(img, props);
     if (!dlg.exec())
         return;
     dlg.fillProps(props);
     props.save();
-    bool ok = img.save(props.fileName);
-    if (!ok) {
-        Ori::Gui::PopupMessage::error(qApp->translate("ExportImageDlg", "Failed to save image"));
-        return;
+    bool ok = true;
+    // QImage does not support PGM images with more than 8-bit data (Qt 6.2, 6.9).
+    // It can load them, but they are scaled down to 8-bit during loading.
+    // QImage can save 16 bit PNG, so we just do img.save() 
+    // but when saving as PGM, the data gets converted to 8-bit, so do save PGM manually
+    if (props.fileName.endsWith(".pgm", Qt::CaseInsensitive)) {
+        QString err = ImageUtils::savePgm(props.fileName, data, w, h, bpp);
+        if (!err.isEmpty()) {
+            qWarning() << "Failed to save image" << props.fileName << err;
+            ok = false;
+        }
+    } else {
+        ok = img.save(props.fileName);
     }
-    Ori::Gui::PopupMessage::affirm(qApp->translate("ExportImageDlg", "Image saved to ") + props.fileName);
+    if (ok)
+        Ori::Gui::PopupMessage::affirm(qApp->translate("ExportImageDlg", "Image saved to ") + props.fileName);
+    else Ori::Gui::PopupMessage::error(qApp->translate("ExportImageDlg", "Failed to save image"));
 }

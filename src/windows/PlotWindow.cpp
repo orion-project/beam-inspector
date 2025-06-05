@@ -596,7 +596,10 @@ void PlotWindow::dropEvent(QDropEvent* e)
 bool PlotWindow::event(QEvent *event)
 {
     if (auto e = dynamic_cast<ImageEvent*>(event); e) {
-        exportImageDlg(e->buf, _camera->width(), _camera->height(), _camera->bpp() > 8);
+        QByteArray imgData = e->buf;
+        QTimer::singleShot(0, this, [this, imgData]{
+            exportImageDlg(imgData, _camera->width(), _camera->height(), _camera->bpp());
+        });
         return true;
     }
     return QMainWindow::event(event);

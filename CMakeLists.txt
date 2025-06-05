@@ -54,6 +54,7 @@ set(PROJECT_SOURCES
     src/main.cpp
     src/app/AppSettings.h src/app/AppSettings.cpp
     src/app/HelpSystem.h src/app/HelpSystem.cpp
+    src/app/ImageUtils.h src/app/ImageUtils.cpp
     src/cameras/Camera.h src/cameras/Camera.cpp
     src/cameras/HardConfigPanel.h src/cameras/HardConfigPanel.cpp
     src/cameras/CameraTypes.h src/cameras/CameraTypes.cpp
