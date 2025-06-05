@@ -1,6 +1,7 @@
 #include "StillImageCamera.h"
 
 #include "widgets/PlotIntf.h"
+#include "widgets/StabilityIntf.h"
 #include "widgets/TableIntf.h"
 
 #include "beam_calc.h"
@@ -16,7 +17,8 @@
 
 enum CamDataRow { ROW_LOAD_TIME, ROW_CALC_TIME };
 
-StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table) : Camera(plot, table, "StillImageCamera")
+StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil) : 
+    Camera(plot, table, stabil, "StillImageCamera")
 {
     loadConfig();
 
@@ -34,8 +36,8 @@ StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table) : Camera(pl
     }
 }
 
-StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table, const QString& fileName) :
-    Camera(plot, table, "StillImageCamera"), _fileName(fileName)
+StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, const QString& fileName) :
+    Camera(plot, table, stabil, "StillImageCamera"), _fileName(fileName)
 {
     loadConfig();
 
@@ -206,6 +208,8 @@ void StillImageCamera::startCapture()
         { ROW_LOAD_TIME, {loadTime} },
         { ROW_CALC_TIME, {calcTime} },
     });
+    
+    _stabil->setResult(0, {});
 }
 
 void StillImageCamera::setRawView(bool on, bool reconfig)

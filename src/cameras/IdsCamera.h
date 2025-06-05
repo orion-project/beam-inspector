@@ -16,7 +16,7 @@ class IdsCamera final : public QThread, public Camera
     Q_OBJECT
 
 public:
-    IdsCamera(QVariant id, PlotIntf *plot, TableIntf *table, QObject *parent);
+    IdsCamera(QVariant id, PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, QObject *parent);
     ~IdsCamera();
 
     QString name() const override { return _name; }

@@ -5,6 +5,7 @@
 
 class QCPAxis;
 class QCPAxisRect;
+class QCPGraph;
 class QCPLegend;
 class QCustomPlot;
 
@@ -23,6 +24,9 @@ void setDefaultAxisFormat(QCPAxis *axis, Theme theme);
 void setDefaultAxesFormat(QCPAxisRect *axisRect, Theme theme);
 void setDefaultLegendFormat(QCPLegend *legend, Theme theme);
 void setThemeColors(QCustomPlot *plot, Theme theme);
+
+void copyImage(QCustomPlot *plot, std::function<void(Theme)> setThemeColors);
+void copyGraph(QCPGraph *graph);
 
 } // namespace PlotHelpers
 

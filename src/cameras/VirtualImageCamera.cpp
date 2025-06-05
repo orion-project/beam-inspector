@@ -28,8 +28,8 @@ public:
     RandomOffset jitterA;
     double centerX, centerY;
 
-    ImageCameraWorker(PlotIntf *plot, TableIntf *table, VirtualImageCamera *cam, QThread *thread)
-        : CameraWorker(plot, table, cam, cam, LOG_ID), cam(cam)
+    ImageCameraWorker(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, VirtualImageCamera *cam, QThread *thread)
+        : CameraWorker(plot, table, stabil, cam, cam, LOG_ID), cam(cam)
     {
         tableData = [this]{
             QMap<int, CamTableData> data = {
@@ -162,12 +162,12 @@ public:
     }
 };
 
-VirtualImageCamera::VirtualImageCamera(PlotIntf *plot, TableIntf *table, QObject *parent) :
-    Camera(plot, table, "VirtualImageCamera"), QThread(parent)
+VirtualImageCamera::VirtualImageCamera(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, QObject *parent) :
+    Camera(plot, table, stabil, "VirtualImageCamera"), QThread(parent)
 {
     loadConfig();
 
-    auto render = new ImageCameraWorker(plot, table, this, this);
+    auto render = new ImageCameraWorker(plot, table, stabil, this, this);
     auto res = render->init();
     if (!res.isEmpty())
     {
@@ -289,7 +289,7 @@ void VirtualImageCamera::loadConfigMore(QSettings *s)
 
 void VirtualImageCamera::initConfigMore(Ori::Dlg::ConfigDlgOpts &opts)
 {
-    int pageImg = cfgMax + 1;
+    int pageImg = cfgPageCount + 1;
     opts.pages << Ori::Dlg::ConfigPage(pageImg, tr("Image"), ":/toolbar/raw_view");
     opts.items
         << new Ori::Dlg::ConfigItemEmpty(pageImg, tr("Reselect camera to apply paramaters"))

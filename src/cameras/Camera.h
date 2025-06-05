@@ -8,6 +8,7 @@
 class HardConfigPanel;
 class MeasureSaver;
 class PlotIntf;
+class StabilityIntf;
 class TableIntf;
 
 class QWidget;
@@ -57,10 +58,14 @@ public:
     virtual QList<QPair<int, QString>> measurCols() const { return {}; }
 
     const CameraConfig& config() const { return _config; }
-    enum ConfigPages { cfgPlot, cfgTable, cfgBgnd, cfgCentr, cfgRoi, cfgMax };
+    enum ConfigPages {
+        cfgPlot, cfgTable, cfgBgnd, cfgCentr, cfgRoi, cfgStabil,
+        cfgPageCount
+    };
     bool editConfig(int page = -1);
 
     virtual bool canMavg() const { return false; }
+    virtual bool hasStability() const { return true; }
 
     void setRoi(const RoiRect&);
     void setRois(const QList<RoiRect>&);
@@ -81,10 +86,11 @@ public:
 protected:
     PlotIntf *_plot;
     TableIntf *_table;
+    StabilityIntf *_stabil;
     QString _configGroup;
     CameraConfig _config;
 
-    Camera(PlotIntf *plot, TableIntf *table, const char* configGroup);
+    Camera(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, const char* configGroup);
 
     virtual void initConfigMore(Ori::Dlg::ConfigDlgOpts &opts) {}
     virtual void loadConfigMore(QSettings*) {}

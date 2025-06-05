@@ -74,6 +74,11 @@ void CameraConfig::load(QSettings *s)
 
     LOAD(mavg.on, Bool, false);
     LOAD(mavg.frames, Int, 5);
+    
+    LOAD(stabil.displayMins, Int, 60);
+    LOAD(stabil.heatmapCells, Int, 10);
+    LOAD(stabil.axisText, String, "Beam position");
+    LOAD(stabil.resetOnMeasure, Bool, true);
 }
 
 void CameraConfig::save(QSettings *s, bool compact) const
@@ -130,6 +135,13 @@ void CameraConfig::save(QSettings *s, bool compact) const
     SAVE(mavg.on);
     if (!compact or mavg.on) {
         SAVE(mavg.frames);
+    }
+    
+    if (!compact) {
+        SAVE(stabil.displayMins);
+        SAVE(stabil.heatmapCells);
+        SAVE(stabil.axisText);
+        SAVE(stabil.resetOnMeasure);
     }
 }
 

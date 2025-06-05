@@ -5,6 +5,7 @@
 #include "cameras/CameraTypes.h"
 #include "cameras/MeasureSaver.h"
 #include "widgets/PlotIntf.h"
+#include "widgets/StabilityIntf.h"
 #include "widgets/TableIntf.h"
 
 #include "beam_calc.h"
@@ -32,12 +33,14 @@ public:
 
     PlotIntf *plot;
     TableIntf *table;
+    StabilityIntf *stabil;
     Camera *camera;
     QThread *thread;
     bool rawView = false;
 
     qint64 captureStart = 0;
     QElapsedTimer timer;
+    /// Current frame time from the start of capturing @a captureStart
     qint64 tm;
     qint64 prevFrame = 0;
     qint64 prevReady = 0;
@@ -60,6 +63,8 @@ public:
     QList<RoiRect> rois;
     double *graph;
     QVector<double> subtracted;
+    /// Beam estimation results for each ROI, they are updated every frame.
+    /// If the averaging is enabled, then results contain averaged values.
     QList<CgnBeamResult> results;
     QList<QQueue<CgnBeamResult>> mavgs;
     QList<CgnBeamResult> sdevs;
@@ -96,8 +101,8 @@ public:
 
     const char *logId;
 
-    CameraWorker(PlotIntf *plot, TableIntf *table, Camera *cam, QThread *thread, const char *logId)
-        : plot(plot), table(table), camera(cam), thread(thread), logId(logId)
+    CameraWorker(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, Camera *cam, QThread *thread, const char *logId)
+        : plot(plot), table(table), stabil(stabil), camera(cam), thread(thread), logId(logId)
     {
         measurBuf1.resize(MEASURE_BUF_SIZE);
         measurBuf2.resize(MEASURE_BUF_SIZE);
@@ -329,15 +334,14 @@ public:
             expWarningRequest = nullptr;
         }
         if (!rawView && saver) {
-            qint64 time = timer.elapsed();
-            if (saveImgInterval > 0 and (prevSaveImg == 0 or time - prevSaveImg >= saveImgInterval)) {
-                prevSaveImg = time;
+            if (saveImgInterval > 0 and (prevSaveImg == 0 or tm - prevSaveImg >= saveImgInterval)) {
+                prevSaveImg = tm;
                 auto e = new ImageEvent;
-                e->time = captureStart + time;
+                e->time = frameTimeAbs();
                 e->buf = QByteArray((const char*)c.buf, c.w*c.h*(c.bpp > 8 ? 2 : 1));
                 QCoreApplication::postEvent(saver, e);
             }
-            measurs->time = captureStart + time;
+            measurs->time = frameTimeAbs();
             if (multiRoi) {
                 for (int i = 0; i < results.size(); i++) {
                     const auto &r = results.at(i);
@@ -361,7 +365,7 @@ public:
             if (showPower && calibratePowerFrames == 0)
                 measurs->cols[COL_POWER] = power * powerScale;
             measurIdx++;
-            if (measureDuration > 0 && (time - measureStart >= measureDuration)) {
+            if (measureDuration > 0 && (tm - measureStart >= measureDuration)) {
                 sendMeasure(true, true);
                 saver = nullptr;
             }
@@ -404,6 +408,7 @@ public:
             plot->invalidateGraph();
             plot->setResult({}, 0, rangeTop);
             table->setResult({}, {}, tableData());
+            stabil->setResult(frameTimeAbs(), {});
             return true;
         }
 
@@ -413,6 +418,28 @@ public:
         plot->setResult(results, minZ, maxZ);
 
         table->setResult(results, sdevs, tableData());
+        
+        // Stability plotter accepts the latest instant results (not averaged)
+        if (doMavg) {
+            QList<CgnBeamResult> res;
+            if (multiRoi) {
+                for (int i = 0; i < rois.size(); i++) {
+                    const QQueue<CgnBeamResult> &q = mavgs.at(i);
+                    if (q.isEmpty())
+                        res << CgnBeamResult { .nan = true };
+                    else res << q.last();
+                }
+            } else {
+                const QQueue<CgnBeamResult> &q = mavgs.at(0);
+                if (q.isEmpty())
+                    res << CgnBeamResult { .nan = true };
+                else res << q.last();
+            }
+            stabil->setResult(frameTimeAbs(), res);
+        } else {
+            stabil->setResult(frameTimeAbs(), results);
+        }
+        
         return true;
     }
     
@@ -421,6 +448,11 @@ public:
         qDebug() << logId << "Started" << QThread::currentThreadId();
         captureStart = QDateTime::currentMSecsSinceEpoch();
         timer.start();
+    }
+    
+    inline qint64 frameTimeAbs()
+    {
+        return captureStart + tm;
     }
 
     void startMeasure(MeasureSaver *s)

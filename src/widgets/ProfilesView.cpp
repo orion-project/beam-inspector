@@ -9,7 +9,6 @@
 #include "helpers/OriLayouts.h"
 #include "helpers/OriWidgets.h"
 #include "tools/OriSettings.h"
-#include "widgets/OriPopupMessage.h"
 #include "widgets/OriValueEdit.h"
 
 #include "qcustomplot/src/core.h"
@@ -191,6 +190,9 @@ ProfilesView::ProfilesView(PlotIntf *plotIntf) : QWidget(), _plotIntf(plotIntf)
 
     _plotX->legend->setVisible(true);
     _plotY->legend->setVisible(true);
+    
+    _plotX->yAxis->setPadding(8);
+    _plotY->yAxis->setPadding(8);
 
     // By default, the legend is in the inset layout of the main axis rect.
     // So this is how we access it to change legend placement:
@@ -228,6 +230,8 @@ ProfilesView::ProfilesView(PlotIntf *plotIntf) : QWidget(), _plotIntf(plotIntf)
 
     _fitX = _plotX->addGraph();
     _fitY = _plotY->addGraph();
+    _fitX->setName("Fit");
+    _fitY->setName("Fit");
     QPen fitPen;
     fitPen.setColor(QColor(255, 0, 0));
     fitPen.setStyle(Qt::DashLine);
@@ -241,7 +245,7 @@ ProfilesView::ProfilesView(PlotIntf *plotIntf) : QWidget(), _plotIntf(plotIntf)
 
     setThemeColors(PlotHelpers::SYSTEM, false);
 
-    Ori::Layouts::LayoutH({_plotX, _plotY}).setMargins(12, 0, 12, 0).useFor(this);
+    Ori::Layouts::LayoutH({_plotX, _plotY}).setMargin(0).useFor(this);
 
     auto actnSep1 = new QAction(this);
     actnSep1->setSeparator(true);
@@ -255,8 +259,8 @@ ProfilesView::ProfilesView(PlotIntf *plotIntf) : QWidget(), _plotIntf(plotIntf)
     _actnShowFit = A_(tr("Show Gaussian Fit"), this, &ProfilesView::toggleShowFit, ":/toolbar/profile");
     _actnShowFit->setCheckable(true);
 
-    _actnCopyFitX = A_(tr("Copy Fitted Points"), this, [this]{ copyGraph(_fitX); });
-    _actnCopyFitY = A_(tr("Copy Fitted Points"), this, [this]{ copyGraph(_fitY); });
+    _actnCopyFitX = A_(tr("Copy Fitted Points"), this, [this]{ PlotHelpers::copyGraph(_fitX); });
+    _actnCopyFitY = A_(tr("Copy Fitted Points"), this, [this]{ PlotHelpers::copyGraph(_fitY); });
 
     _actnSetMI = A_(tr("Set Beam Quality (M²)..."), this, &ProfilesView::setMI, ":/toolbar/mi");
 
@@ -274,9 +278,11 @@ ProfilesView::ProfilesView(PlotIntf *plotIntf) : QWidget(), _plotIntf(plotIntf)
     _plotX->addAction(_actnCenterFit);
     _plotX->addAction(_actnSetMI);
     _plotX->addAction(actnSep1);
-    _plotX->addAction(A_(tr("Copy Profile Points"), this, [this]{ copyGraph(_profileX); }, ":/toolbar/copy"));
+    _plotX->addAction(A_(tr("Copy Profile Points"), this, [this]{ PlotHelpers::copyGraph(_profileX); }, ":/toolbar/copy"));
     _plotX->addAction(_actnCopyFitX);
-    _plotX->addAction(A_(tr("Copy as Image"), this, [this]{ copyImage(_plotX); }, ":/toolbar/copy_img"));
+    _plotX->addAction(A_(tr("Copy as Image"), this, [this]{
+        PlotHelpers::copyImage(_plotX, [this](PlotHelpers::Theme theme){ setThemeColors(theme, false); });
+    }, ":/toolbar/copy_img"));
     _plotX->addAction(actnSep2);
     //_plotX->addAction(_actnShowFullY);
     _plotX->addAction(actnAutoScale);
@@ -287,9 +293,11 @@ ProfilesView::ProfilesView(PlotIntf *plotIntf) : QWidget(), _plotIntf(plotIntf)
     _plotY->addAction(_actnCenterFit);
     _plotY->addAction(_actnSetMI);
     _plotY->addAction(actnSep1);
-    _plotY->addAction(A_(tr("Copy Profile Points"), this, [this]{ copyGraph(_profileY); }, ":/toolbar/copy"));
+    _plotY->addAction(A_(tr("Copy Profile Points"), this, [this]{ PlotHelpers::copyGraph(_profileY); }, ":/toolbar/copy"));
     _plotY->addAction(_actnCopyFitY);
-    _plotY->addAction(A_(tr("Copy as Image"), this, [this]{ copyImage(_plotY); }, ":/toolbar/copy_img"));
+    _plotY->addAction(A_(tr("Copy as Image"), this, [this]{
+        PlotHelpers::copyImage(_plotY, [this](PlotHelpers::Theme theme){ setThemeColors(theme, false); });
+    }, ":/toolbar/copy_img"));
     _plotY->addAction(actnSep2);
     //_plotY->addAction(_actnShowFullY);
     _plotY->addAction(actnAutoScale);
@@ -314,6 +322,8 @@ void ProfilesView::setThemeColors(PlotHelpers::Theme theme, bool replot)
 
 void ProfilesView::showResult()
 {
+    if (!_active) return;
+
     CalcProfilesArg arg {
         .imgW = _plotIntf->graphW(),
         .imgH = _plotIntf->graphH(),
@@ -532,30 +542,6 @@ void ProfilesView::toggleShowFullY()
     showResult();
 }
 
-void ProfilesView::copyImage(QCustomPlot *plot)
-{
-    QImage image(plot->width(), plot->height(), QImage::Format_RGB32);
-    QCPPainter painter(&image);
-    setThemeColors(PlotHelpers::LIGHT, false);
-    plot->toPainter(&painter);
-    setThemeColors(PlotHelpers::SYSTEM, false);
-    qApp->clipboard()->setImage(image);
-
-    Ori::Gui::PopupMessage::affirm(tr("Image has been copied to Clipboard"), Qt::AlignRight|Qt::AlignBottom);
-}
-
-void ProfilesView::copyGraph(QCPGraph *graph)
-{
-    QString res;
-    QTextStream s(&res);
-    foreach (const auto& p, graph->data()->rawData()) {
-        s << QString::number(p.key) << ',' << QString::number(p.value) << '\n';
-    }
-    qApp->clipboard()->setText(res);
-
-    Ori::Gui::PopupMessage::affirm(tr("Data points been copied to Clipboard"), Qt::AlignRight|Qt::AlignBottom);
-}
-
 void ProfilesView::setMI()
 {
     Ori::Widgets::ValueEdit editor;
@@ -585,4 +571,9 @@ void ProfilesView::autoScale()
     _rangeX = 0;
     _rangeY = 0;
     showResult();
+}
+
+void ProfilesView::activate(bool on)
+{
+    _active = on;
 }

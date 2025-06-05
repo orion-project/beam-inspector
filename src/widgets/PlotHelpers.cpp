@@ -1,13 +1,16 @@
 #include "PlotHelpers.h"
 
+#include "widgets/OriPopupMessage.h"
+
 #include <QApplication>
 #include <QPalette>
 #include <QStyleHints>
 
 #include "qcustomplot/src/core.h"
+#include "qcustomplot/src/painter.h"
 #include "qcustomplot/src/layoutelements/layoutelement-axisrect.h"
 #include "qcustomplot/src/layoutelements/layoutelement-legend.h"
-
+#include "qcustomplot/src/plottables/plottable-graph.h"
 
 namespace PlotHelpers
 {
@@ -72,6 +75,30 @@ void setThemeColors(QCustomPlot *plot, Theme theme)
     plot->setBackground(theme == LIGHT ? QBrush(Qt::white) : qApp->palette().brush(QPalette::Base));
     setDefaultAxesFormat(plot->axisRect(), theme);
     setDefaultLegendFormat(plot->legend, theme);
+}
+
+void copyImage(QCustomPlot *plot, std::function<void(Theme)> setThemeColors)
+{
+    QImage image(plot->width(), plot->height(), QImage::Format_RGB32);
+    QCPPainter painter(&image);
+    setThemeColors(PlotHelpers::LIGHT);
+    plot->toPainter(&painter);
+    setThemeColors(PlotHelpers::SYSTEM);
+    qApp->clipboard()->setImage(image);
+
+    Ori::Gui::PopupMessage::affirm(qApp->tr("Image has been copied to Clipboard"), Qt::AlignRight|Qt::AlignBottom);
+}
+
+void copyGraph(QCPGraph *graph)
+{
+    QString res;
+    QTextStream s(&res);
+    foreach (const auto& p, graph->data()->rawData()) {
+        s << QString::number(p.key) << ',' << QString::number(p.value) << '\n';
+    }
+    qApp->clipboard()->setText(res);
+
+    Ori::Gui::PopupMessage::affirm(qApp->tr("Data points been copied to Clipboard"), Qt::AlignRight|Qt::AlignBottom);
 }
 
 } // namespace PlotHelpers

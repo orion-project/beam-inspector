@@ -23,6 +23,7 @@
 - [Control panel](./cam_control.md)
     - [Exposure presets](./exp_presets.md)
 - [Profiles view](./profiles_view.md)
+- [Stability view](./stability_view.md)
 - [Status bar](./status_bar.md)
 
 **Application Settings**
@@ -40,5 +41,6 @@
 - [ROI](./cam_settings_roi.md)
 - [Hardware](./cam_settings_hard.md)
 - [Options](./cam_settings_opts.md)
+- [Stability](./cam_settings_stabil.md)
 
 &nbsp;

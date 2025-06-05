@@ -19,8 +19,8 @@
 using namespace Ori::Dlg;
 using namespace Ori::Layouts;
 
-Camera::Camera(PlotIntf *plot, TableIntf *table, const char* configGroup) :
-    _plot(plot), _table(table), _configGroup(configGroup)
+Camera::Camera(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, const char* configGroup) :
+    _plot(plot), _table(table), _stabil(stabil), _configGroup(configGroup)
 {
 }
 
@@ -81,6 +81,12 @@ bool Camera::editConfig(int page)
             .withLongTitle(qApp->tr("Region of Interest"))
             .withHelpTopic("cam_settings_roi")
     ;
+    if (hasStability()) {
+        opts.pages << ConfigPage(cfgStabil, qApp->tr("Stability"), ":/toolbar/stability")
+            .withSpacing(12)
+            .withLongTitle(qApp->tr("Stability Plot"))
+            .withHelpTopic("cam_settings_stabil");
+    }
     opts.onHelpRequested = [](const QString &topic){ HelpSystem::topic(topic); };
     auto hardScale = sensorScale();
     bool rescalePlot = _config.plot.rescale;
@@ -153,6 +159,16 @@ bool Camera::editConfig(int page)
         << (new ConfigItemInt(cfgRoi, qApp->tr("Bottom"), &roiPixelBottom))
             ->withMinMax(0, height())
     ;
+    if (hasStability()) {
+        opts.items
+            << (new ConfigItemInt(cfgStabil, qApp->tr("Timeline display window (min)"), &_config.stabil.displayMins))
+                ->withMinMax(1, 240)
+            << (new ConfigItemInt(cfgStabil, qApp->tr("Heatmap cell count"), &_config.stabil.heatmapCells))
+                ->withMinMax(5, 100)
+            << new ConfigItemStr(cfgStabil, qApp->tr("Axis text"), &_config.stabil.axisText)
+            << new ConfigItemBool(cfgStabil, qApp->tr("Reset when measurement starts"), &_config.stabil.resetOnMeasure)
+        ;
+    }
     initConfigMore(opts);
     if (ConfigDlg::edit(opts))
     {

@@ -18,6 +18,8 @@
 #include "widgets/Plot.h"
 #include "widgets/PlotIntf.h"
 #include "widgets/ProfilesView.h"
+#include "widgets/StabilityView.h"
+#include "widgets/StabilityIntf.h"
 #include "widgets/TableIntf.h"
 
 #include "helpers/OriDialogs.h"
@@ -177,6 +179,9 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
         _actionResultsPanel->setChecked(_resultsDock->isVisible());
         _actionHardConfig->setChecked(_hardConfigDock->isVisible());
         _actionProfilesView->setChecked(_profilesDock->isVisible());
+        _actionStabilityView->setChecked(_stabilityDock->isVisible());
+        
+        _stabilityView->turnOn(_stabilityDock->isVisible());
 
         // This initializes all graph structs
         activateCamWelcome();
@@ -192,6 +197,7 @@ PlotWindow::~PlotWindow()
 {
     storeState();
     delete _tableIntf;
+    delete _stabilIntf;
 
 #ifdef WITH_IDS
     // Close camera explicitly, otherwise it gets closed after the lib unloaded
@@ -221,6 +227,7 @@ void PlotWindow::restoreState()
     _plot->restoreState(s.settings());
     _actionCrosshairsShow->setChecked(_plot->isCrosshairsVisible());
     _profilesView->restoreState(s.settings());
+    _stabilityView->restoreState(s.settings());
 }
 
 void PlotWindow::storeState()
@@ -284,17 +291,20 @@ void PlotWindow::createMenuBar()
     _actionHardConfig->setCheckable(true);
     _actionProfilesView = A_(tr("Profiles View"), this, &PlotWindow::toggleProfilesView, ":/toolbar/profile");
     _actionProfilesView->setCheckable(true);
+    _actionStabilityView = A_(tr("Stability View"), this, &PlotWindow::toggleStabGraphView, ":/toolbar/stability");
+    _actionStabilityView->setCheckable(true);
     auto menuView = M_(tr("View"), {
         _actionRawView, 0,
-        _actionResultsPanel, _actionHardConfig, _actionProfilesView, 0,
+        _actionResultsPanel, _actionHardConfig, _actionProfilesView, _actionStabilityView, 0,
         _actionBeamInfo, _colorMapMenu, 0,
         _actionZoomFull, _actionZoomRoi,
     });
     if (AppSettings::instance().isDevMode) {
         menuView->addSeparator();
-        menuView->addAction(tr("Resize Main Window..."), this, &PlotWindow::devResizeWindow);
-        menuView->addAction(tr("Resize Results Panel..."), this, [this]{ devResizeDock(_resultsDock); });
-        menuView->addAction(tr("Resize Control Panel..."), this, [this]{ devResizeDock(_hardConfigDock); });
+        menuView->addAction("Resize Main Window...", this, &PlotWindow::devResizeWindow);
+        menuView->addAction("Resize Results Panel...", this, [this]{ devResizeDock(_resultsDock); });
+        menuView->addAction("Resize Control Panel...", this, [this]{ devResizeDock(_hardConfigDock); });
+        menuView->addAction("Show geometry", this, [this]{ qDebug() << geometry(); });
     }
 
     menuBar()->addMenu(menuView);
@@ -405,6 +415,7 @@ void PlotWindow::createToolBar()
     tb->addAction(_actionResultsPanel);
     tb->addAction(_actionHardConfig);
     tb->addAction(_actionProfilesView);
+    tb->addAction(_actionStabilityView);
     tb->addSeparator();
     tb->addAction(_actionUseRoi);
     tb->addAction(_actionUseMultiRoi);
@@ -485,6 +496,19 @@ void PlotWindow::createDockPanel()
     _profilesDock->setVisible(false);
     _profilesDock->setWidget(_profilesView);
     addDockWidget(Qt::BottomDockWidgetArea, _profilesDock);
+    connect(_profilesDock, &QDockWidget::visibilityChanged, _profilesView, &ProfilesView::activate);
+    
+    _stabilityView = new StabilityView();
+    _stabilIntf = new StabilityIntf(_stabilityView);
+    
+    _stabilityDock = new QDockWidget(tr("Stability"));
+    _stabilityDock->setObjectName("DockStability");
+    _stabilityDock->setAllowedAreas(Qt::BottomDockWidgetArea | Qt::TopDockWidgetArea);
+    _stabilityDock->setFeatures(QDockWidget::DockWidgetMovable);
+    _stabilityDock->setVisible(false);
+    _stabilityDock->setWidget(_stabilityView);
+    addDockWidget(Qt::BottomDockWidgetArea, _stabilityDock);
+    connect(_stabilityDock, &QDockWidget::visibilityChanged, _stabilityView, &StabilityView::activate);
 }
 
 void PlotWindow::createPlot()
@@ -661,6 +685,7 @@ void PlotWindow::showCamConfig(bool replot)
     _tableIntf->setScale(s);
     _plotIntf->setScale(s);
     _profilesView->setConfig(s, _camera->config().mavg);
+    _stabilityView->setConfig(s, _camera->config().stabil);
 
     if (replot) _plot->replot();
 }
@@ -679,6 +704,7 @@ void PlotWindow::updateThemeColors()
         setThemeColors();
         _plot->setThemeColors(PlotHelpers::SYSTEM, true);
         _profilesView->setThemeColors(PlotHelpers::SYSTEM, true);
+        _stabilityView->setThemeColors(PlotHelpers::SYSTEM, true);
     });
 }
 
@@ -757,6 +783,9 @@ void PlotWindow::startMeasure()
     cam->startMeasure(_saver.get());
 
     _measureProgress->reset(cfg->durationInf ? 0 : cfg->durationSecs(), cfg->fileName);
+    
+    if (cam->config().stabil.resetOnMeasure)
+        _stabilityView->cleanResult();
 
     updateControls();
 }
@@ -822,11 +851,13 @@ void PlotWindow::dataReady()
     _plot->replot();
     if (_profilesDock->isVisible())
         _profilesView->showResult();
+    if (_stabilityDock->isVisible())
+        _stabilityView->showResult();
 }
 
 void PlotWindow::openImageDlg()
 {
-    auto cam = new StillImageCamera(_plotIntf, _tableIntf);
+    auto cam = new StillImageCamera(_plotIntf, _tableIntf, _stabilIntf);
     if (cam->fileName().isEmpty()) {
         delete cam;
         return;
@@ -840,7 +871,7 @@ void PlotWindow::openImage(const QString& fileName)
 {
     if (_camera)
         stopCapture();
-    _camera.reset((Camera*)new StillImageCamera(_plotIntf, _tableIntf, fileName));
+    _camera.reset((Camera*)new StillImageCamera(_plotIntf, _tableIntf, _stabilIntf, fileName));
     processImage();
 }
 
@@ -871,6 +902,7 @@ void PlotWindow::cleanResults()
     _plotIntf->cleanResult();
     _tableIntf->cleanResult();
     _profilesView->cleanResult();
+    _stabilityView->cleanResult();
 }
 
 void PlotWindow::editCamConfig(int pageId)
@@ -1003,7 +1035,7 @@ void PlotWindow::activateCamWelcome()
     auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get());
     if (imgCam) _prevImage = imgCam->fileName();
 
-    _camera.reset((Camera*)new WelcomeCamera(_plotIntf, _tableIntf));
+    _camera.reset((Camera*)new WelcomeCamera(_plotIntf, _tableIntf, _stabilIntf));
     showCamConfig(false);
     updateHardConfgPanel();
     showFps(0, 0);
@@ -1032,7 +1064,7 @@ void PlotWindow::activateCamDemoRender()
     stopCapture();
 
     cleanResults();
-    auto cam = new VirtualDemoCamera(_plotIntf, _tableIntf, this);
+    auto cam = new VirtualDemoCamera(_plotIntf, _tableIntf, _stabilIntf, this);
     connect(cam, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualDemoCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &VirtualDemoCamera::finished, this, &PlotWindow::captureStopped);
@@ -1055,7 +1087,7 @@ void PlotWindow::activateCamDemoImage()
     stopCapture();
 
     cleanResults();
-    auto cam = new VirtualImageCamera(_plotIntf, _tableIntf, this);
+    auto cam = new VirtualImageCamera(_plotIntf, _tableIntf, _stabilIntf, this);
     connect(cam, &VirtualImageCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualImageCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &VirtualImageCamera::finished, this, &PlotWindow::captureStopped);
@@ -1084,7 +1116,7 @@ void PlotWindow::activateCamIds()
     _camera.reset(nullptr);
 
     cleanResults();
-    auto cam = new IdsCamera(camId, _plotIntf, _tableIntf, this);
+    auto cam = new IdsCamera(camId, _plotIntf, _tableIntf, _stabilIntf, this);
     connect(cam, &IdsCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &IdsCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &IdsCamera::finished, this, &PlotWindow::captureStopped);
@@ -1123,6 +1155,12 @@ void PlotWindow::toggleProfilesView()
     _profilesDock->setVisible(!_profilesDock->isVisible());
     if (_profilesDock->isVisible())
         _profilesView->showResult();
+}
+
+void PlotWindow::toggleStabGraphView()
+{
+    _stabilityDock->setVisible(!_stabilityDock->isVisible());
+    _stabilityView->turnOn(_stabilityDock->isVisible());
 }
 
 void PlotWindow::updateHardConfgPanel()

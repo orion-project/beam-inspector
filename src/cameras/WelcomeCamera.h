@@ -6,7 +6,7 @@
 class WelcomeCamera : public Camera
 {
 public:
-    WelcomeCamera(PlotIntf *plot, TableIntf *table);
+    WelcomeCamera(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil);
 
     QString name() const override { return "Welcome"; }
     int width() const override { return 80; }
@@ -14,6 +14,8 @@ public:
     int bpp() const override { return 8; }
 
     void startCapture() override;
+    
+    bool hasStability() const override { return false; }
 
     HardConfigPanel* hardConfgPanel(QWidget *parent) override;
 

@@ -70,6 +70,7 @@ set(PROJECT_SOURCES
     src/plot/BeamGraph.h src/plot/BeamGraph.cpp
     src/plot/BeamPlotItem.h src/plot/BeamPlotItem.cpp
     src/plot/CrosshairOverlay.h src/plot/CrosshairOverlay.cpp
+    src/plot/Heatmap.h src/plot/Heatmap.cpp
     src/plot/PlotExport.h src/plot/PlotExport.cpp
     src/plot/RoiRectGraph.h src/plot/RoiRectGraph.cpp
     src/widgets/DataTable.h src/widgets/DataTable.cpp
@@ -78,6 +79,8 @@ set(PROJECT_SOURCES
     src/widgets/PlotIntf.h src/widgets/PlotIntf.cpp
     src/widgets/PlotHelpers.h src/widgets/PlotHelpers.cpp
     src/widgets/ProfilesView.h src/widgets/ProfilesView.cpp
+    src/widgets/StabilityIntf.h src/widgets/StabilityIntf.cpp
+    src/widgets/StabilityView.h src/widgets/StabilityView.cpp
     src/widgets/TableIntf.h src/widgets/TableIntf.cpp
     src/windows/PlotWindow.h src/windows/PlotWindow.cpp
 )

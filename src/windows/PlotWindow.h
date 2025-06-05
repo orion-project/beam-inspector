@@ -21,6 +21,8 @@ class MeasureSaver;
 class Plot;
 class PlotIntf;
 class ProfilesView;
+class StabilityView;
+class StabilityIntf;
 class TableIntf;
 
 namespace Ori {
@@ -60,24 +62,26 @@ private:
         *_actionCamWelcome, *_actionCamImage, *_actionCamDemoRender, *_actionCamDemoImage, *_actionRefreshCams,
         *_actionResultsPanel, *_actionHardConfig, *_actionSaveRaw, *_actionRawView,
         *_actionCrosshairsShow, *_actionCrosshairsEdit, *_actionSetCamCustomName,
-        *_actionSetupPowerMeter, *_actionUseMultiRoi, *_actionProfilesView,
+        *_actionSetupPowerMeter, *_actionUseMultiRoi, *_actionProfilesView, *_actionStabilityView,
         *_actionClearCrosshairs, *_actionLoadCrosshairs, *_actionSaveCrosshairs;
     QAction *_buttonMeasure, *_buttonOpenImg;
     QActionGroup *_colorMapActions;
     QTableWidget *_table;
     TableIntf *_tableIntf;
     PlotIntf *_plotIntf;
+    StabilityIntf *_stabilIntf;
     Ori::MruFileList *_mru;
     Ori::Widgets::StatusBar *_statusBar;
     QMenu *_camSelectMenu, *_colorMapMenu;
     QToolButton *_buttonSelectCam;
     QString _prevImage;
     MeasureProgressBar *_measureProgress;
-    QDockWidget *_resultsDock, *_hardConfigDock, *_profilesDock;
+    QDockWidget *_resultsDock, *_hardConfigDock, *_profilesDock, *_stabilityDock;
     HardConfigPanel *_stubConfigPanel = nullptr;
     HardConfigPanel *_camConfigPanel = nullptr;
     QMap<QString, QString> _camCustomNames;
     ProfilesView *_profilesView;
+    StabilityView *_stabilityView;
     bool _keepZoom = false;
 
     void createDockPanel();
@@ -119,6 +123,7 @@ private:
     void toggleRoi();
     void toggleMultiRoi();
     void toggleProfilesView();
+    void toggleStabGraphView();
     void saveCrosshairsMore(QJsonObject&);
     void loadCrosshairsMore(QJsonObject&);
 
