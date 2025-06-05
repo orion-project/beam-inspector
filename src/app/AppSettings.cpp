@@ -292,6 +292,8 @@ QList<AppSettings::ColorMap> AppSettings::colorMaps()
             QSettings ini(descrFile, QSettings::IniFormat);
             ini.beginGroup("ColorMap");
             map.descr = ini.value("descr").toString();
+        } else {
+            continue;
         }
         result << map;
     }

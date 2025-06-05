@@ -8,6 +8,7 @@
 
 #include <QWidget>
 
+class BeamColorScale;
 class Heatmap;
 class HeatmapData;
 
@@ -46,6 +47,7 @@ private:
     QCPTextElement *_timelineDurationText;
     Heatmap *_heatmap;
     HeatmapData *_heatmapData;
+    BeamColorScale *_colorScale;
     PixelScale _scale;
     double _timelineMinS, _timelineMaxS;
     double _valueMin, _valueMax;

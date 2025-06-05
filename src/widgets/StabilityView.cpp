@@ -1,6 +1,7 @@
 #include "StabilityView.h"
 
 #include "app/AppSettings.h"
+#include "app/HelpSystem.h"
 #include "helpers/OriLayouts.h"
 #include "helpers/OriWidgets.h"
 #include "plot/BeamGraph.h"
@@ -48,11 +49,23 @@ StabilityView::StabilityView(QWidget *parent) : QWidget{parent}
     _timelineX->setName("X");
     _timelineY->setName("Y");
     
+    PrecalculatedGradient heatGradient(AppSettings::colorMapPath("viridis_r"));
+    heatGradient.setNanHandling(QCPColorGradient::nhNanColor);
+    heatGradient.setNanColor(Qt::white);
+    
     _heatmapData = new HeatmapData;
     _heatmap = new Heatmap(_plotHeat->xAxis, _plotHeat->yAxis);
     _heatmap->setData(_heatmapData);
     _heatmap->setInterpolate(false);
-    _heatmap->setGradient(PrecalculatedGradient(AppSettings::colorMapPath("CET-L17")));
+    _heatmap->setGradient(heatGradient);
+
+    _colorScale = new BeamColorScale(_plotHeat);
+    _colorScale->setBarWidth(6);
+    _colorScale->axis()->setPadding(10);
+    _colorScale->axis()->setTicks(false);
+    _colorScale->setGradient(heatGradient);
+    
+    _plotHeat->plotLayout()->addElement(0, 1, _colorScale);
     
     _timelineDurationText = new QCPTextElement(_plotTime);
     
@@ -71,7 +84,9 @@ StabilityView::StabilityView(QWidget *parent) : QWidget{parent}
     setThemeColors(PlotHelpers::SYSTEM, false);
     
     auto actnReset = A_(tr("Reset"), this, &StabilityView::cleanResult, ":/toolbar/update");
+    auto actnHelp = A_(tr("Help"), this, []{ HelpSystem::topic("stability_view"); }, ":/ori_images/help");
     auto actnSep1 = Ori::Gui::separatorAction(this);
+    auto actnSep2 = Ori::Gui::separatorAction(this);
     
     _plotTime->addAction(actnReset);
     _plotTime->addAction(actnSep1);
@@ -81,12 +96,16 @@ StabilityView::StabilityView(QWidget *parent) : QWidget{parent}
     _plotTime->addAction(A_(tr("Copy as Image"), this, [this]{
         PlotHelpers::copyImage(_plotTime, [this](PlotHelpers::Theme theme){ setThemeColors(theme, false); });
     }, ":/toolbar/copy_img"));
+    _plotTime->addAction(actnSep2);
+    _plotTime->addAction(actnHelp);
     
     _plotHeat->addAction(actnReset);
     _plotHeat->addAction(actnSep1);
     _plotHeat->addAction(A_(tr("Copy as Image"), this, [this]{
         PlotHelpers::copyImage(_plotHeat, [this](PlotHelpers::Theme theme){ setThemeColors(theme, false); });
     }, ":/toolbar/copy_img"));
+    _plotHeat->addAction(actnSep2);
+    _plotHeat->addAction(actnHelp);
     
     Ori::Layouts::LayoutH({_plotTime, _plotHeat}).setMargin(0).useFor(this);
 }
@@ -96,6 +115,7 @@ void StabilityView::setThemeColors(PlotHelpers::Theme theme, bool replot)
     PlotHelpers::setThemeColors(_plotTime, theme);
     PlotHelpers::setThemeColors(_plotHeat, theme);
     _timelineDurationText->setTextColor(PlotHelpers::themeAxisLabelColor(theme));
+    _colorScale->setFrameColor(PlotHelpers::themeAxisColor(theme));
     _timelineX->setPen(QPen(QColor(0, 0, 225, 125)));
     _timelineY->setPen(QPen(QColor(255, 0, 0, 125)));
     if (replot) {
@@ -299,17 +319,22 @@ void StabilityView::copyGraph(QCPGraph *graph)
     QString res;
     QTextStream s(&res);
     if (graph) {
-        foreach (const auto& p, graph->data()->rawData()) {
-            s << QDateTime::fromMSecsSinceEpoch(p.key * 1000.0).toString(Qt::ISODateWithMs)
-              << ',' << QString::number(p.value)
+        s << "Index,Timestamp," << (graph == _timelineX ? "X" : "Y") << '\n';
+        const auto d = graph->data();
+        for (int i = 0; i < d->size(); i++) {
+            s << i
+              << ',' << QDateTime::fromMSecsSinceEpoch(d->at(i)->key * 1000.0).toString(Qt::ISODateWithMs)
+              << ',' << QString::number(d->at(i)->value)
               << '\n';
         }
     } else {
         const auto xs = _timelineX->data();
         const auto ys = _timelineY->data();
         const auto pointCount = qMin(xs->size(), ys->size()); // Should not differ
+        s << "Index,Timestamp,X,Y\n";
         for (int i = 0; i < pointCount; i++) {
-            s << QDateTime::fromMSecsSinceEpoch(xs->at(i)->key * 1000.0).toString(Qt::ISODateWithMs)
+            s << i
+              << ',' << QDateTime::fromMSecsSinceEpoch(xs->at(i)->key * 1000.0).toString(Qt::ISODateWithMs)
               << ',' << QString::number(xs->at(i)->value)
               << ',' << QString::number(ys->at(i)->value)
               << '\n';
@@ -323,7 +348,7 @@ void StabilityView::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
     
-    _plotHeat->setFixedWidth(_plotHeat->height());
+    _plotHeat->setFixedWidth(_plotHeat->height() * 1.2);
 }
 
 void StabilityView::activate(bool on)
@@ -357,17 +382,23 @@ void StabilityView::recalcHeatmap()
     int maxCellPoints = 0;
     QCPRange rangeX(qMin(_valueMinX, -0.1), qMax(_valueMaxX, 0.1));
     QCPRange rangeY(qMin(_valueMinY, -0.1), qMax(_valueMaxY, 0.1));
-    _heatmapData->fill(0);
+    for (int i = 0; i < _heatmapData->keySize(); i++)
+        for (int j = 0; j < _heatmapData->valueSize(); j++)
+            _heatmapData->setCell(i, j, qQNaN());
     _heatmapData->setRange(rangeX, rangeY);
     const int pointCount = xs->size();
     for (int i = 0; i < pointCount; i++) {
         int cellIndexX, cellIndexY;
         _heatmapData->coordToCell(xs->at(i)->value, ys->at(i)->value, &cellIndexX, &cellIndexY);
-        int cellPoints = int(_heatmapData->cell(cellIndexX, cellIndexY)) + 1;
-        if (cellPoints > maxCellPoints) maxCellPoints = cellPoints;
-        _heatmapData->setCell(cellIndexX, cellIndexY, cellPoints);
+        double cellPoints = _heatmapData->cell(cellIndexX, cellIndexY);
+        if (qIsNaN(cellPoints)) cellPoints = 0;
+        const int newCellPoints = int(cellPoints) + 1;
+        if (newCellPoints > maxCellPoints) maxCellPoints = newCellPoints;
+        _heatmapData->setCell(cellIndexX, cellIndexY, newCellPoints);
     }
-    _heatmap->setDataRange(QCPRange(0, maxCellPoints));
+    QCPRange rangeData(0, maxCellPoints);
+    _heatmap->setDataRange(rangeData);
+    _colorScale->setDataRange(rangeData);
     _plotHeat->xAxis->setRange(rangeX);
     _plotHeat->yAxis->setRange(rangeY);
 }
@@ -387,11 +418,15 @@ void StabilityView::updateHeatmap(int lastPoints)
     for (int i = startIndex; i < pointCount; i++) {
         int cellIndexX, cellIndexY;
         _heatmapData->coordToCell(xs->at(i)->value, ys->at(i)->value, &cellIndexX, &cellIndexY);
-        int cellPoints = int(_heatmapData->cell(cellIndexX, cellIndexY)) + 1;
-        if (cellPoints > maxCellPoints) maxCellPoints = cellPoints, dataRangeChanged = true;
-        _heatmapData->setCell(cellIndexX, cellIndexY, cellPoints);
+        double cellPoints = int(_heatmapData->cell(cellIndexX, cellIndexY));
+        if (qIsNaN(cellPoints)) cellPoints = 0;
+        const int newCellPoints = int(cellPoints) + 1;
+        if (newCellPoints > maxCellPoints) maxCellPoints = newCellPoints, dataRangeChanged = true;
+        _heatmapData->setCell(cellIndexX, cellIndexY, newCellPoints);
     }
     if (dataRangeChanged) {
-        _heatmap->setDataRange(QCPRange(0, maxCellPoints));
+        QCPRange rangeData(0, maxCellPoints);
+        _heatmap->setDataRange(rangeData);
+        _colorScale->setDataRange(rangeData);
     }
 }

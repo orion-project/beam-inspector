@@ -301,9 +301,10 @@ void PlotWindow::createMenuBar()
     });
     if (AppSettings::instance().isDevMode) {
         menuView->addSeparator();
-        menuView->addAction(tr("Resize Main Window..."), this, &PlotWindow::devResizeWindow);
-        menuView->addAction(tr("Resize Results Panel..."), this, [this]{ devResizeDock(_resultsDock); });
-        menuView->addAction(tr("Resize Control Panel..."), this, [this]{ devResizeDock(_hardConfigDock); });
+        menuView->addAction("Resize Main Window...", this, &PlotWindow::devResizeWindow);
+        menuView->addAction("Resize Results Panel...", this, [this]{ devResizeDock(_resultsDock); });
+        menuView->addAction("Resize Control Panel...", this, [this]{ devResizeDock(_hardConfigDock); });
+        menuView->addAction("Show geometry", this, [this]{ qDebug() << geometry(); });
     }
 
     menuBar()->addMenu(menuView);

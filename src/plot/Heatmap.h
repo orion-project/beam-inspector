@@ -4,7 +4,6 @@
 #include "qcustomplot/src/axis/range.h"
 #include "qcustomplot/src/colorgradient.h"
 #include "qcustomplot/src/plottable.h"
-#include "qcustomplot/src/layoutelements/layoutelement-colorscale.h"
 
 class HeatmapData
 {

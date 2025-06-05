@@ -166,7 +166,7 @@ bool Camera::editConfig(int page)
             << (new ConfigItemInt(cfgStabil, qApp->tr("Heatmap cell count"), &_config.stabil.heatmapCells))
                 ->withMinMax(5, 100)
             << new ConfigItemStr(cfgStabil, qApp->tr("Axis text"), &_config.stabil.axisText)
-            << new ConfigItemBool(cfgStabil, qApp->tr("Reset when measurment starts"), &_config.stabil.resetOnMeasure)
+            << new ConfigItemBool(cfgStabil, qApp->tr("Reset when measurement starts"), &_config.stabil.resetOnMeasure)
         ;
     }
     initConfigMore(opts);
