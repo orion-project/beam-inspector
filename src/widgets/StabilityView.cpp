@@ -71,15 +71,15 @@ StabilityView::StabilityView(QWidget *parent) : QWidget{parent}
     
     _plotTime->axisRect()->insetLayout()->addElement(_timelineDurationText, Qt::AlignRight|Qt::AlignTop);
 
-    auto f = _plotTime->yAxis->labelFont();
-    f.setPointSize(f.pointSize()+1);
-    _plotHeat->xAxis->setLabelFont(f);
+    // auto f = _plotTime->yAxis->labelFont();
+    // f.setPointSize(f.pointSize()+1);
+    // _plotHeat->xAxis->setLabelFont(f);
 
-    // Vertically oriented font looks a bit ugly
-    // especially on narrow letters "i", "t", like in "pos_i_t_i_on"
-    f.setLetterSpacing(QFont::AbsoluteSpacing, 1);
-    _plotTime->yAxis->setLabelFont(f);
-    _plotHeat->yAxis->setLabelFont(f);
+    // // Vertically oriented font looks a bit ugly
+    // // especially on narrow letters "i", "t", like in "pos_i_t_i_on"
+    // f.setLetterSpacing(QFont::AbsoluteSpacing, 1);
+    // _plotTime->yAxis->setLabelFont(f);
+    // _plotHeat->yAxis->setLabelFont(f);
     
     setThemeColors(PlotHelpers::SYSTEM, false);
     
