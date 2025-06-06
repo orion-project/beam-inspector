@@ -318,3 +318,17 @@ void exportImageDlg(QByteArray data, int w, int h, int bpp)
         Ori::Gui::PopupMessage::affirm(qApp->translate("ExportImageDlg", "Image saved to ") + props.fileName);
     else Ori::Gui::PopupMessage::error(qApp->translate("ExportImageDlg", "Failed to save image"));
 }
+
+void exportImageDlg(QImage img)
+{
+    ExportRawImageProps props;
+    ExportRawImageDlg dlg(img, props);
+    if (!dlg.exec())
+        return;
+    dlg.fillProps(props);
+    props.save();
+    bool ok = img.save(props.fileName);
+    if (ok)
+        Ori::Gui::PopupMessage::affirm(qApp->translate("ExportImageDlg", "Image saved to ") + props.fileName);
+    else Ori::Gui::PopupMessage::error(qApp->translate("ExportImageDlg", "Failed to save image"));
+}

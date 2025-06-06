@@ -1,6 +1,6 @@
 history:
 - version: 0.0.25
-  date: ?
+  date: 2025-06-06
   changes:
   - text: Stability plots panel
   - text: Write stop reason to measurement ini file

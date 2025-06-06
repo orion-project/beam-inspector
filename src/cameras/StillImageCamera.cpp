@@ -1,5 +1,6 @@
 #include "StillImageCamera.h"
 
+#include "plot/PlotExport.h"
 #include "widgets/PlotIntf.h"
 #include "widgets/StabilityIntf.h"
 #include "widgets/TableIntf.h"
@@ -117,6 +118,7 @@ void StillImageCamera::startCapture()
             return;
         }
         loadTime = timer.elapsed();
+        qDebug() << LOG_ID << _fileName << "PGM" << "bits:" << pgm.bpp << "loaded in" << loadTime << "ms";
 
         pgmData = pgm.data;
         _width = pgm.width;
@@ -128,7 +130,6 @@ void StillImageCamera::startCapture()
         c.bpp = pgm.bpp;
         c.buf = (uint8_t*)pgmData.data();
  
-        qDebug() << LOG_ID << _fileName << "PGM" << "bits:" << _bpp << pgmData.size();
     } else {
         image = QImage(_fileName);
         if (image.isNull()) {
@@ -136,12 +137,38 @@ void StillImageCamera::startCapture()
             return;
         }
         loadTime = timer.elapsed();
+        qDebug() << LOG_ID << _fileName << image.format() << "bits:" << image.depth() << "loaded in" << loadTime << "ms";
         
         auto fmt = image.format();
+        // TODO: Check for grayscale data layout
+        // QImage can read grayscale jpegs if they saved by QImage
+        // e.g. do "Export raw image", save as jpg, then open - it should be displayed properly.
+        // But it shows something strange for the gryascale jpg saved by Photoshop (see beams/green_pointer_gray.jpg)
+        // Though visually this image looks ok (check it with exportImageDlg(image))
+        // It seems there are different layouts for grayscale images
+        // and sometimes we can just use image.bits() directly 
         if (fmt != QImage::Format_Grayscale8 && fmt != QImage::Format_Grayscale16) {
             Ori::Dlg::error(qApp->tr("Wrong image format, only grayscale images are supported"));
             return;
+        
+            // TODO: convert colored images to grayscale
+            // It's somehow related to the above TODO about different grayscale dat alayouts
+            // image.convertTo() produces a layout than can be used directly via image.bits()
+            // TODO: image.depth() is 32 for colored RGBA images but it should be converted to 8-bit gray
+            if (image.depth() > 8) {
+                fmt = QImage::Format_Grayscale16;
+            } else {
+                fmt = QImage::Format_Grayscale8;
+            }
+            image.convertTo(fmt, Qt::ColorOnly);
+            if (image.isNull()) {
+                Ori::Dlg::error(qApp->tr("Unsupported image format"));
+                return;
+            } else {
+                qDebug() << LOG_ID << _fileName << "converted to" << image.format() << "bits:" << image.depth();
+            }
         }
+        //exportImageDlg(image); // display image for visual check
         
         // declare explicitly as const to avoid deep copy
         const uchar* buf = image.bits();
@@ -154,8 +181,6 @@ void StillImageCamera::startCapture()
         c.h = image.height();
         c.bpp = fmt == QImage::Format_Grayscale16 ? 16 : 8;
         c.buf = (uint8_t*)buf;
-
-        qDebug() << LOG_ID << _fileName << image.format() << "bits:" << _bpp;
     }
 
     _plot->initGraph(c.w, c.h);
