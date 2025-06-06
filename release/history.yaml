@@ -5,6 +5,7 @@ history:
   - text: Stability plots panel
   - text: Write stop reason to measurement ini file
   - text: Fix saving of 10-bit and 12-bit raw images
+  - text: Fix opening of PGM images with more than 8-bit data
 
 - version: 0.0.24
   date: 2025-05-29

@@ -8,6 +8,7 @@
 
 #include "tools/OriSettings.h"
 #include "helpers/OriDialogs.h"
+#include "app/ImageUtils.h"
 
 #include <QApplication>
 #include <QDebug>
@@ -75,17 +76,17 @@ QString StillImageCamera::descr() const
 
 int StillImageCamera::width() const
 {
-    return _image.width();
+    return _width;
 }
 
 int StillImageCamera::height() const
 {
-    return _image.height();
+    return _height;
 }
 
 int StillImageCamera::bpp() const
 {
-    return _image.depth();
+    return _bpp;
 }
 
 TableRowsSpec StillImageCamera::tableRows() const
@@ -100,31 +101,62 @@ TableRowsSpec StillImageCamera::tableRows() const
 void StillImageCamera::startCapture()
 {
     QElapsedTimer timer;
-
     timer.start();
-    _image = QImage(_fileName);
-    if (_image.isNull()) {
-        Ori::Dlg::error(qApp->tr("Unable to to load image file"));
-        return;
-    }
-    auto loadTime = timer.elapsed();
     
-    qDebug() << LOG_ID << _fileName << _image.format() << "bits:" << _image.depth();
-
-    auto fmt = _image.format();
-    if (fmt != QImage::Format_Grayscale8 && fmt != QImage::Format_Grayscale16) {
-        Ori::Dlg::error(qApp->tr("Wrong image format, only grayscale images are supported"));
-        return;
-    }
-
-    // declare explicitly as const to avoid deep copy
-    const uchar* buf = _image.bits();
-
     CgnBeamCalc c;
-    c.w = _image.width();
-    c.h = _image.height();
-    c.bpp = fmt == QImage::Format_Grayscale16 ? 16 : 8;
-    c.buf = (uint8_t*)buf;
+    QImage image;
+    QByteArray pgmData;
+    qint64 loadTime;
+    
+    // QImage does not support PGM images with more than 8-bit data (Qt 6.2, 6.9).
+    // It can load them, but they are scaled down to 8-bit during loading.
+    if (_fileName.endsWith(".pgm", Qt::CaseInsensitive)) {
+        ImageUtils::PgmData pgm = ImageUtils::loadPgm(_fileName);
+        if (!pgm.error.isEmpty()) {
+            Ori::Dlg::error(qApp->tr("Unable to load PGM file: %1").arg(pgm.error));
+            return;
+        }
+        loadTime = timer.elapsed();
+
+        pgmData = pgm.data;
+        _width = pgm.width;
+        _height = pgm.height;
+        _bpp = pgm.bpp;
+        
+        c.w = pgm.width;
+        c.h = pgm.height;
+        c.bpp = pgm.bpp;
+        c.buf = (uint8_t*)pgmData.data();
+ 
+        qDebug() << LOG_ID << _fileName << "PGM" << "bits:" << _bpp << pgmData.size();
+    } else {
+        image = QImage(_fileName);
+        if (image.isNull()) {
+            Ori::Dlg::error(qApp->tr("Unable to load image file"));
+            return;
+        }
+        loadTime = timer.elapsed();
+        
+        auto fmt = image.format();
+        if (fmt != QImage::Format_Grayscale8 && fmt != QImage::Format_Grayscale16) {
+            Ori::Dlg::error(qApp->tr("Wrong image format, only grayscale images are supported"));
+            return;
+        }
+        
+        // declare explicitly as const to avoid deep copy
+        const uchar* buf = image.bits();
+        
+        _width = image.width();
+        _height = image.height();
+        _bpp = image.depth();
+        
+        c.w = image.width();
+        c.h = image.height();
+        c.bpp = fmt == QImage::Format_Grayscale16 ? 16 : 8;
+        c.buf = (uint8_t*)buf;
+
+        qDebug() << LOG_ID << _fileName << image.format() << "bits:" << _bpp;
+    }
 
     _plot->initGraph(c.w, c.h);
     double *graph = _plot->rawGraph();

@@ -29,9 +29,11 @@ public:
 
 private:
     QString _fileName;
-    QImage _image;
     bool _rawView = false;
     bool _demoMode = false;
+    int _width = 0;
+    int _height = 0;
+    int _bpp = 0;
 };
 
 #endif // STILL_IMAGE_CAMERA_H
