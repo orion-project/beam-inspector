@@ -1135,6 +1135,7 @@ void PlotWindow::activateCamIds()
     showCamConfig(false);
     updateZoom();
     _camera->startCapture();
+    // Show empty results if it's unable to open the camera
     if (!_camera->isCapturing()) {
         dataReady();
     }

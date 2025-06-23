@@ -20,6 +20,8 @@
 #define UPDATE_INTERVAL_MS 1000
 #define CLEAN_INTERVAL_MS 60000
 #define DATA_BUF_SIZE 10
+#define LOG_ID "StabilityView"
+//#define LOG_EX
 
 StabilityView::StabilityView(QWidget *parent) : QWidget{parent}
 {
@@ -43,6 +45,7 @@ StabilityView::StabilityView(QWidget *parent) : QWidget{parent}
     timeTicker->setDateTimeSpec(Qt::LocalTime);
     timeTicker->setDateTimeFormat("hh:mm:ss\nMMM dd");
     _plotTime->xAxis->setTicker(timeTicker);
+    _plotTime->yAxis->setRangeReversed(true);
     
     _timelineX = _plotTime->addGraph();
     _timelineY = _plotTime->addGraph();
@@ -66,6 +69,10 @@ StabilityView::StabilityView(QWidget *parent) : QWidget{parent}
     _colorScale->setGradient(heatGradient);
     
     _plotHeat->plotLayout()->addElement(0, 1, _colorScale);
+    _plotHeat->yAxis->setRangeReversed(true);
+    _plotHeat->axisRect()->setupFullAxesBox(true);
+    _plotHeat->yAxis2->setTicks(false);
+    _plotHeat->xAxis2->setTicks(false);
     
     _timelineDurationText = new QCPTextElement(_plotTime);
     
@@ -128,8 +135,30 @@ void StabilityView::restoreState(QSettings *s)
 {
 }
 
+#ifdef LOG_EX
+struct MethodLog
+{
+    MethodLog(const char *name): name(name)
+    {
+        qDebug() << LOG_ID << name << "beg";
+    }
+    
+    ~MethodLog()
+    {
+        qDebug() << LOG_ID  << name << "end";
+    }
+    
+    const char *name;
+};
+#endif
+
 void StabilityView::setConfig(const PixelScale& scale, const Stability &stabil)
 {
+#ifdef LOG_EX
+    MethodLog _("setConig");
+    qDebug().noquote() << LOG_ID << "scale:" << scale.str() << "stabil:" << stabil.str();
+#endif
+
     if (_scale != scale) {
         _scale = scale;
         resetScale(false, true);
@@ -166,6 +195,10 @@ void StabilityView::setResult(qint64 time, const QList<CgnBeamResult>& val)
     if (!_turnedOn)
         return;
 
+#ifdef LOG_EX
+    MethodLog _("setResult");
+#endif
+    
     if (val.isEmpty())
         return;
 
@@ -196,7 +229,14 @@ void StabilityView::showResult()
     if (!(_showTimeMs < 0 || _frameTimeMs - _showTimeMs >= UPDATE_INTERVAL_MS))
         return;
         
+#ifdef LOG_EX
+    MethodLog _("showResult");
+    qDebug() << LOG_ID << _dataBufCursor;
+#endif
+
     int newPoints = _dataBufCursor;
+    if (newPoints < 1) return;
+    
     bool valueRangeChanged = false;
     bool valueRangeChangedX = false; 
     bool valueRangeChangedY = false; 
@@ -285,6 +325,10 @@ double StabilityView::timelineDisplayMinS() const
 
 void StabilityView::cleanResult()
 {
+#ifdef LOG_EX
+    MethodLog _("cleanResult");
+#endif
+
     _timelineX->data()->clear();
     _timelineY->data()->clear();
     _frameTimeMs = -1;
@@ -373,6 +417,13 @@ void StabilityView::turnOn(bool on)
 
 void StabilityView::recalcHeatmap()
 {
+#ifdef LOG_EX
+    MethodLog _("recalcHeatmap");
+    qDebug() << LOG_ID
+        << _timelineX->data()->size() << _timelineY->data()->size()
+        << _heatmapData->keySize() << _heatmapData->valueSize();
+#endif
+
     const auto xs = _timelineX->data();
     const auto ys = _timelineY->data();
     if (xs->size() != ys->size()) {
@@ -405,6 +456,11 @@ void StabilityView::recalcHeatmap()
 
 void StabilityView::updateHeatmap(int lastPoints)
 {
+#ifdef LOG_EX
+    MethodLog _("updateHeatmap");
+    qDebug() << LOG_ID << _timelineX->data()->size() << _timelineY->data()->size();
+#endif
+
     const auto xs = _timelineX->data();
     const auto ys = _timelineY->data();
     if (xs->size() != ys->size()) {

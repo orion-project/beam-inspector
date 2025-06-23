@@ -1,4 +1,10 @@
 history:
+- version: 0.0.26
+  date: ?
+  changes:
+  - text: Invert Y-axis on stability plot
+  - text: Fix crash on stability plot when switching camera
+
 - version: 0.0.25
   date: 2025-06-06
   changes:

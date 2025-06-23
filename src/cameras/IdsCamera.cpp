@@ -14,23 +14,26 @@
 #define LOG_ID "IdsCamera:"
 #define FRAME_TIMEOUT 5000
 //#define LOG_FRAME_TIME
+//#define FAKE_CAM_ID 100
 
 enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME,
     ROW_FRAME_ERR, ROW_FRAME_UNDERRUN, ROW_FRAME_DROPPED, ROW_FRAME_INCOMPLETE,
     ROW_BRIGHTNESS, ROW_POWER };
 
-static QString makeDisplayName(const peak_camera_descriptor &cam)
+static QString makeDisplayName(const peak_camera_descriptor &cam, const QString &suffix = QString())
 {
-    return QString("%1 (*%2)").arg(
+    return QString("%1 (*%2)%3").arg(
         QString::fromLatin1(cam.modelName),
-        QString::fromLatin1(cam.serialNumber).right(4));
+        QString::fromLatin1(cam.serialNumber).right(4),
+        suffix);
 }
 
-static QString makeCustomId(const peak_camera_descriptor &cam)
+static QString makeCustomId(const peak_camera_descriptor &cam, const QString &suffix = QString())
 {
-    return QString("IDS-%1-%2").arg(
+    return QString("IDS-%1-%2%3").arg(
         QString::fromLatin1(cam.modelName),
-        QString::fromLatin1(cam.serialNumber));
+        QString::fromLatin1(cam.serialNumber),
+        suffix);
 }
 
 //------------------------------------------------------------------------------
@@ -332,17 +335,28 @@ public:
     QString init()
     {
         peak_camera_descriptor descr;
+    #ifdef FAKE_CAM_ID
+        res = IDS.peak_Camera_GetDescriptor(id > FAKE_CAM_ID ? (id-FAKE_CAM_ID) : id, &descr);
+        CHECK_ERR("Unable to get camera descriptor");
+        cam->_name = makeDisplayName(descr, id > FAKE_CAM_ID ? " (Copy)" : "");
+        cam->_customId = makeCustomId(descr, id > FAKE_CAM_ID ? "-copy" : "");
+    #else
         res = IDS.peak_Camera_GetDescriptor(id, &descr);
         CHECK_ERR("Unable to get camera descriptor");
         cam->_name = makeDisplayName(descr);
         cam->_customId = makeCustomId(descr);
+    #endif
         cam->_descr = QString("%1 (SN: %2)").arg(
             QString::fromLatin1(descr.modelName),
             QString::fromLatin1(descr.serialNumber));
         cam->_configGroup = cam->_customId;
         cam->loadConfig();
 
+    #ifdef FAKE_CAM_ID
+        res = IDS.peak_Camera_Open(id > FAKE_CAM_ID ? (id-FAKE_CAM_ID) : id, &hCam);
+    #else
         res = IDS.peak_Camera_Open(id, &hCam);
+    #endif
         CHECK_ERR("Unable to open camera");
         qDebug().nospace() << LOG_ID << " Camera opened, id=" << id;
 
@@ -516,9 +530,20 @@ QVector<CameraItem> IdsCamera::getCameras()
             .arg(cam.cameraID).arg(cam.cameraType, 0, 16).arg(cam.modelName, cam.serialNumber);
         result << CameraItem {
             .cameraId = cam.cameraID,
-            .customId = makeCustomId(cam),
-            .displayName = makeDisplayName(cam),
+            .customId = makeCustomId(cam, ""),
+            .displayName = makeDisplayName(cam, ""),
         };
+
+    #ifdef FAKE_CAM_ID
+        auto copyId = cam.cameraID + FAKE_CAM_ID;
+        qDebug().noquote() << LOG_ID << QString("id=%1, type=0x%2, model=%3, serial=%4")
+            .arg(copyId).arg(cam.cameraType, 0, 16).arg(cam.modelName, cam.serialNumber);
+        result << CameraItem {
+            .cameraId = copyId,
+            .customId = makeCustomId(cam, "-copy"),
+            .displayName = makeDisplayName(cam, " (copy)"),
+        };
+    #endif
     }
     return result;
 }

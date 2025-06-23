@@ -46,6 +46,14 @@ struct PixelScale
     double factor = 1;
     QString unit = "um";
 
+    QString str() const {
+        return
+            "[on=" + QString::number(on) +
+            ",factor=" + QString::number(factor) +
+            ",unit=" + unit +
+            "]";
+    }
+
     inline double pixelToUnit(const double& v) const { return on ? v*factor : v; }
     inline double unitToPixel(const double& v) const { return on ? v/factor : v; }
     inline double scaleFactor() const { return on ? factor : 1; }
@@ -103,10 +111,19 @@ struct Averaging
 
 struct Stability
 {
-    int displayMins;
-    int heatmapCells;
+    int displayMins = 60;
+    int heatmapCells = 10;
     QString axisText;
-    bool resetOnMeasure;
+    bool resetOnMeasure = true;
+    
+    QString str() const {
+        return
+            "[displayMins=" + QString::number(displayMins) +
+            ",heatmapCells=" + QString::number(heatmapCells) +
+            ",axisText='" + axisText + "'" +
+            ",resetOnMeasure=" + QString::number(resetOnMeasure) +
+            "]";
+    }
 };
 
 struct CameraConfig
