@@ -326,7 +326,7 @@ QString AppSettings::colorMapPath(const QString &colorMap)
 
 QString AppSettings::defaultColorMap()
 {
-    return QStringLiteral("CET-L08");
+    return QStringLiteral("CET-R2");
 }
 
 void AppSettings::deleteInvalidColorMaps()

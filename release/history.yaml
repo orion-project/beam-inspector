@@ -3,6 +3,7 @@ history:
   date: ?
   changes:
   - text: Invert Y-axis on stability plot
+  - text: Use Rainbow as default colormap
   - text: Fix crash on stability plot when switching camera
 
 - version: 0.0.25
