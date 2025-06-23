@@ -14,9 +14,13 @@ TableIntf::TableIntf(QTableWidget *table) : _table(table)
     _table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     _table->setSelectionBehavior(QAbstractItemView::SelectRows);
 
-    if (PlotHelpers::isDarkTheme())
+    if (PlotHelpers::isDarkTheme()) {
         _warnColor = 0xFFFF8C00;
-    else _warnColor = 0xffffdcbc;
+        _silentColor = 0xFF444477;
+    } else {
+        _warnColor = 0xffffdcbc;
+        _silentColor = 0xFF8888AA;
+    }
 }
 
 void TableIntf::setRows(const TableRowsSpec &rows)
@@ -43,18 +47,18 @@ void TableIntf::setRows(const TableRowsSpec &rows)
     for (const auto &title : rows.results) {
         makeHeader(row, title);
         ResultRows it;
-        if (s.tableShowXC)
-            it.xc = makeRow(row, qApp->tr("Center X"));
-        if (s.tableShowYC)
-            it.yc = makeRow(row, qApp->tr("Center Y"));
         if (s.tableShowDX)
             it.dx = makeRow(row, qApp->tr("Width X"));
         if (s.tableShowDY)
             it.dy = makeRow(row, qApp->tr("Width Y"));
-        if (s.tableShowPhi)
-            it.phi = makeRow(row, qApp->tr("Azimuth"));
         if (s.tableShowEps)
             it.eps = makeRow(row, qApp->tr("Ellipticity"));
+        if (s.tableShowXC)
+            it.xc = makeRow(row, qApp->tr("Center X"), true);
+        if (s.tableShowYC)
+            it.yc = makeRow(row, qApp->tr("Center Y"), true);
+        if (s.tableShowPhi)
+            it.phi = makeRow(row, qApp->tr("Azimuth"), true);
         _resRows << it;
     }
     if (!rows.aux.isEmpty()) {
@@ -81,7 +85,7 @@ QTableWidgetItem* TableIntf::makeHeader(RowIndex &row, const QString& title)
     return it;
 }
 
-TableIntf::ResultRow TableIntf::makeRow(RowIndex &row, const QString& title)
+TableIntf::ResultRow TableIntf::makeRow(RowIndex &row, const QString& title, bool silent)
 {
     _table->setRowCount(row+1);
     auto it = new QTableWidgetItem(" " + title + " ");
@@ -90,11 +94,15 @@ TableIntf::ResultRow TableIntf::makeRow(RowIndex &row, const QString& title)
     f.setPointSize(f.pointSize()+1);
     it->setFont(f);
     it->setBackground(_table->palette().brush(QPalette::Button));
+    if (silent)
+        it->setForeground(QColor(_silentColor));
     _table->setItem(row, 0, it);
 
     auto itVal = new QTableWidgetItem(" --- ");
     f.setBold(false);
     itVal->setFont(f);
+    if (silent)
+        itVal->setForeground(QColor(_silentColor));
     _table->setItem(row, 1, itVal);
 
     QTableWidgetItem *itSdev = nullptr;

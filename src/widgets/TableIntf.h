@@ -43,10 +43,11 @@ private:
     QList<CgnBeamResult> _resSdev;
     PixelScale _scale;
     int _warnColor;
+    int _silentColor;
     bool _showSdev = false;
 
     QTableWidgetItem* makeHeader(RowIndex &row, const QString& title);
-    ResultRow makeRow(RowIndex &row, const QString& title);
+    ResultRow makeRow(RowIndex &row, const QString& title, bool silent = false);
     void setTextInvald(const std::optional<TableIntf::ResultRow> &it);
 };
 

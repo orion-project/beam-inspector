@@ -195,12 +195,12 @@ bool AppSettings::edit()
         
         new ConfigItemSpace(cfgTable, 12),
         new ConfigItemSection(cfgTable, tr("Show results")),
-        new ConfigItemBool(cfgTable, tr("Center X"), &tableShowXC),
-        new ConfigItemBool(cfgTable, tr("Center Y"), &tableShowYC),
         new ConfigItemBool(cfgTable, tr("Width X"), &tableShowDX),
         new ConfigItemBool(cfgTable, tr("Width Y"), &tableShowDY),
-        new ConfigItemBool(cfgTable, tr("Azimuth"), &tableShowPhi),
         new ConfigItemBool(cfgTable, tr("Ellipticity"), &tableShowEps),
+        new ConfigItemBool(cfgTable, tr("Center X"), &tableShowXC),
+        new ConfigItemBool(cfgTable, tr("Center Y"), &tableShowYC),
+        new ConfigItemBool(cfgTable, tr("Azimuth"), &tableShowPhi),
 
         new ConfigItemSection(cfgDev, tr("Input Fields")),
         (new ConfigItemInt(cfgDev, tr("Small change by mouse wheel, %"), &propChangeWheelSm))

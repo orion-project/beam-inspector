@@ -100,12 +100,16 @@ void PlotIntf::showResult()
     {
         const CgnBeamResult& r = _results.at(0);
         double eps = qMin(r.dx, r.dy) / qMax(r.dx, r.dy);
-        _beamInfo->setText(QStringLiteral("Xc = %1\nYc = %2\nDx = %3\nDy = %4\nφ = %5°\nε = %6")
-            .arg(_scale.format(r.xc),
-                 _scale.format(r.yc),
-                 _scale.format(r.dx),
+        // _beamInfo->setText(QStringLiteral("Xc = %1\nYc = %2\nDx = %3\nDy = %4\nφ = %5°\nε = %6")
+        //     .arg(_scale.format(r.xc),
+        //          _scale.format(r.yc),
+        //          _scale.format(r.dx),
+        //          _scale.format(r.dy))
+        //     .arg(r.phi, 0, 'f', 1)
+        //     .arg(eps, 0, 'f', 3));
+        _beamInfo->setText(QStringLiteral("Dx = %1\nDy = %2\nε = %3")
+            .arg(_scale.format(r.dx),
                  _scale.format(r.dy))
-            .arg(r.phi, 0, 'f', 1)
             .arg(eps, 0, 'f', 3));
     }
     else _beamInfo->setText({});
