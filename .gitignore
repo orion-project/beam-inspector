@@ -1,7 +1,5 @@
 .cache
-.vscode/settings.json
-.vscode/tasks.json
-.vscode.
+.vscode
 .venv
 .ipynb_checkpoints
 __pycache__
