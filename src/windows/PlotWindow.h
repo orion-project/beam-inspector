@@ -82,7 +82,6 @@ private:
     QMap<QString, QString> _camCustomNames;
     ProfilesView *_profilesView;
     StabilityView *_stabilityView;
-    bool _keepZoom = false;
 
     void createDockPanel();
     void createMenuBar();
@@ -138,10 +137,10 @@ private:
 
     void fillCamSelector();
     void openImage(const QString& fileName);
-    void processImage();
+    void processImage(bool autozoom);
     void setThemeColors();
     void showFps(double fps, double hardFps);
-    void showCamConfig(bool replot);
+    void showCamConfig(bool replot, bool autozoom);
     void showSelectedCamera();
     void stopCapture();
     void cleanResults();
@@ -149,7 +148,6 @@ private:
     void updateColorMapMenu();
     void updateHardConfgPanel();
     void updateThemeColors();
-    void updateZoom();
 };
 
 #endif // PLOT_WINDOW_H

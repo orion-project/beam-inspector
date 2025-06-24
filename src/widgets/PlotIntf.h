@@ -52,7 +52,7 @@ private:
     BeamInfoText *_beamInfo;
     QCPColorMap *_colorMap;
     QCPColorScale *_colorScale;
-    BeamColorMapData *_beamData;
+    BeamColorMapData *_beamData = nullptr;
     QList<BeamEllipse*> _beamShapes;
     QList<BeamAxes*> _beamAxes;
     RoiRectsGraph *_rois;

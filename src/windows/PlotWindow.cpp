@@ -43,6 +43,7 @@
 #include <QFormLayout>
 #include <QLabel>
 #include <QMenuBar>
+#include <QMimeData>
 #include <QProcess>
 #include <QProgressBar>
 #include <QSpinBox>
@@ -183,11 +184,9 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
         
         _stabilityView->turnOn(_stabilityDock->isVisible());
 
-        // This initializes all graph structs
-        activateCamWelcome();
-
-        if (!AppSettings::instance().isDevMode)
-            openImage({});
+        if (AppSettings::instance().isDevMode)
+            activateCamWelcome();
+        else openImage({});
 
         HelpSystem::instance()->checkForUpdatesAuto();
     });
@@ -554,10 +553,9 @@ void PlotWindow::changeEvent(QEvent* e)
 
     // resizeEvent is not called when window gets maximized or restored
     if (e->type() == QEvent::WindowStateChange)
-        _plot->adjustWidgetSize();
+        _plot->adjustPlotForWidgetSize(true);
 }
 
-#include <QMimeData>
 void PlotWindow::dragEnterEvent(QDragEnterEvent* e)
 {
     auto urls = e->mimeData()->urls();
@@ -637,7 +635,7 @@ void PlotWindow::showSelectedCamera()
     setWindowTitle(name + " - " + qApp->applicationName());
 }
 
-void PlotWindow::showCamConfig(bool replot)
+void PlotWindow::showCamConfig(bool replot, bool autozoom)
 {
     bool isImage = dynamic_cast<StillImageCamera*>(_camera.get());
     _buttonOpenImg->setVisible(isImage);
@@ -680,7 +678,7 @@ void PlotWindow::showCamConfig(bool replot)
 
     auto s = _camera->pixelScale();
     _plot->setColorMap(c.plot.colorMap, false);
-    _plot->setImageSize(_camera->width(), _camera->height(), s);
+    _plot->setImageSize(_camera->width(), _camera->height(), s, !autozoom);
     _plot->setRoi(c.roi);
     _plot->setRois(c.rois);
     _plot->setRoiMode(c.roiMode);
@@ -690,6 +688,7 @@ void PlotWindow::showCamConfig(bool replot)
     _profilesView->setConfig(s, _camera->config().mavg);
     _stabilityView->setConfig(s, _camera->config().stabil);
 
+    if (autozoom) _plot->zoomAuto(false);
     if (replot) _plot->replot();
 }
 
@@ -709,12 +708,6 @@ void PlotWindow::updateThemeColors()
         _profilesView->setThemeColors(PlotHelpers::SYSTEM, true);
         _stabilityView->setThemeColors(PlotHelpers::SYSTEM, true);
     });
-}
-
-void PlotWindow::updateZoom()
-{
-    if (!_keepZoom)
-        _plot->zoomAuto(false);
 }
 
 void PlotWindow::updateControls()
@@ -867,7 +860,7 @@ void PlotWindow::openImageDlg()
     }
     stopCapture();
     _camera.reset((Camera*)cam);
-    processImage();
+    processImage(true);
 }
 
 void PlotWindow::openImage(const QString& fileName)
@@ -875,10 +868,10 @@ void PlotWindow::openImage(const QString& fileName)
     if (_camera)
         stopCapture();
     _camera.reset((Camera*)new StillImageCamera(_plotIntf, _tableIntf, _stabilIntf, fileName));
-    processImage();
+    processImage(true);
 }
 
-void PlotWindow::processImage()
+void PlotWindow::processImage(bool autozoom)
 {
     auto cam = dynamic_cast<StillImageCamera*>(_camera.get());
     if (!cam) {
@@ -891,10 +884,9 @@ void PlotWindow::processImage()
     _camera->setRawView(_actionRawView->isChecked(), false);
     _camera->startCapture();
     // do showCamConfig() after capture(), when image is already loaded and its size gets known
-    showCamConfig(false);
+    showCamConfig(false, autozoom);
     updateHardConfgPanel();
     updateControls();
-    updateZoom();
     dataReady();
     showFps(0, 0);
 }
@@ -910,20 +902,9 @@ void PlotWindow::cleanResults()
 
 void PlotWindow::editCamConfig(int pageId)
 {
-    const PixelScale prevScale = _camera->pixelScale();
     if (!_camera->editConfig(pageId))
         return;
     doCamConfigChanged();
-    if (_camera->pixelScale() != prevScale) {
-        if (dynamic_cast<StillImageCamera*>(_camera.get())) {
-            // The image will reprocessed as if it's a new one, nothing to do
-            return;
-        }
-        updateZoom();
-        if (dynamic_cast<WelcomeCamera*>(_camera.get())) {
-            dataReady();
-        }
-    }
 }
 
 void PlotWindow::editRoi()
@@ -961,11 +942,11 @@ void PlotWindow::doCamConfigChanged()
 {
     if (dynamic_cast<StillImageCamera*>(_camera.get())) {
         emit camConfigChanged();
-        processImage();
+        processImage(false);
         return;
     }
     emit camConfigChanged();
-    showCamConfig(true);
+    showCamConfig(true, false);
 }
 
 void PlotWindow::roiEdited()
@@ -977,9 +958,7 @@ void PlotWindow::roiEdited()
 void PlotWindow::crosshairsEdited()
 {
     _camera->setRois(_plot->rois());
-    _keepZoom = true;
     doCamConfigChanged();
-    _keepZoom = false;
 }
 
 void PlotWindow::crosshairsLoaded()
@@ -1038,13 +1017,13 @@ void PlotWindow::activateCamWelcome()
     auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get());
     if (imgCam) _prevImage = imgCam->fileName();
 
+    cleanResults();
     _camera.reset((Camera*)new WelcomeCamera(_plotIntf, _tableIntf, _stabilIntf));
-    showCamConfig(false);
+    showCamConfig(false, true);
     updateHardConfgPanel();
     showFps(0, 0);
     _camera->startCapture();
     updateControls();
-    updateZoom();
     dataReady();
 }
 
@@ -1074,8 +1053,7 @@ void PlotWindow::activateCamDemoRender()
     cam->setRawView(_actionRawView->isChecked(), false);
     _camera.reset((Camera*)cam);
     updateHardConfgPanel();
-    showCamConfig(false);
-    updateZoom();
+    showCamConfig(false, true);
     _camera->startCapture();
     updateControls();
 }
@@ -1097,8 +1075,7 @@ void PlotWindow::activateCamDemoImage()
     cam->setRawView(_actionRawView->isChecked(), false);
     _camera.reset((Camera*)cam);
     updateHardConfgPanel();
-    showCamConfig(false);
-    updateZoom();
+    showCamConfig(false, true);
     _camera->startCapture();
     updateControls();
 }
@@ -1132,8 +1109,7 @@ void PlotWindow::activateCamIds()
     cam->setRawView(_actionRawView->isChecked(), false);
     _camera.reset((Camera*)cam);
     updateHardConfgPanel();
-    showCamConfig(false);
-    updateZoom();
+    showCamConfig(false, true);
     _camera->startCapture();
     // Show empty results if it's unable to open the camera
     if (!_camera->isCapturing()) {
@@ -1242,7 +1218,7 @@ void PlotWindow::toggleRawView()
     _plot->setRawView(rawView, true);
 
     if (auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get()); imgCam)
-        processImage();
+        processImage(false);
 }
 
 void PlotWindow::toggleCrosshairsEditing()

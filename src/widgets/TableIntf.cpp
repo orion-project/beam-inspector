@@ -19,7 +19,7 @@ TableIntf::TableIntf(QTableWidget *table) : _table(table)
         _silentColor = 0xFF444477;
     } else {
         _warnColor = 0xffffdcbc;
-        _silentColor = 0xFF8888AA;
+        _silentColor = 0xFF888899;
     }
 }
 

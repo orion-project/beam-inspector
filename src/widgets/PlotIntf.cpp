@@ -36,7 +36,8 @@ void PlotIntf::invalidateGraph() const
 void PlotIntf::cleanResult()
 {
     _results.clear();
-    memset(_beamData->rawData(), 0, sizeof(double)*_w*_h);
+    if (_beamData)
+        memset(_beamData->rawData(), 0, sizeof(double)*_w*_h);
     _min = 0;
     _max = 0;
 }
