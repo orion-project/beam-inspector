@@ -5,6 +5,7 @@ history:
   - text: Invert Y-axis on stability plot
   - text: Use Rainbow as default colormap
   - text: Keep custom zoom of the beam plot
+  - text: Update stability plot when pixel scale is changed
   - text: Fix crash on stability plot when switching camera
 
 - version: 0.0.25

@@ -68,8 +68,11 @@ private:
     void resetScale(bool time, bool value);
     double timelineDisplayMinS() const;
     void copyGraph(QCPGraph *graph = nullptr);
+    void rescaleTimeline(const PixelScale &newScale);
     void recalcHeatmap();
     void updateHeatmap(int lastPoints);
+    bool adjustValueRange(double X, double Y);
+    void adjustTimelineVertAxis();
 };
 
 #endif // STABILITY_VIEW_H

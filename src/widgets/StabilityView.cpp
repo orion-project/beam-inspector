@@ -20,7 +20,7 @@
 #define UPDATE_INTERVAL_MS 1000
 #define CLEAN_INTERVAL_MS 60000
 #define DATA_BUF_SIZE 10
-#define LOG_ID "StabilityView"
+#define LOG_ID "StabilityView:"
 //#define LOG_EX
 
 StabilityView::StabilityView(QWidget *parent) : QWidget{parent}
@@ -156,12 +156,19 @@ void StabilityView::setConfig(const PixelScale& scale, const Stability &stabil)
 {
 #ifdef LOG_EX
     MethodLog _("setConig");
-    qDebug().noquote() << LOG_ID << "scale:" << scale.str() << "stabil:" << stabil.str();
 #endif
+    qDebug().noquote().nospace() << LOG_ID << " setConfig: "
+        << "scale=" << scale.str() << ", stabil=" << stabil.str();
 
+    if (_heatmapCellCount != stabil.heatmapCells) {
+        _heatmapCellCount = stabil.heatmapCells;
+        _heatmapData->clear();
+    }
+    
     if (_scale != scale) {
+        rescaleTimeline(scale);
+        recalcHeatmap();
         _scale = scale;
-        resetScale(false, true);
     }
     
     if (stabil.displayMins * 60 < _timelineDisplayS) {
@@ -169,11 +176,6 @@ void StabilityView::setConfig(const PixelScale& scale, const Stability &stabil)
         _cleanTimeMs = 0;
     }
     _timelineDisplayS = stabil.displayMins * 60;
-    
-    if (_heatmapCellCount != stabil.heatmapCells) {
-        _heatmapCellCount = stabil.heatmapCells;
-        _heatmapData->clear();
-    }
     
     if (!stabil.axisText.isEmpty()) {
         QString text = stabil.axisText;
@@ -238,8 +240,6 @@ void StabilityView::showResult()
     if (newPoints < 1) return;
     
     bool valueRangeChanged = false;
-    bool valueRangeChangedX = false; 
-    bool valueRangeChangedY = false; 
     for (int i = 0; i < newPoints; i++) {
         const auto &p = _dataBuf.at(i);
         const double sec = p.ms / 1000.0;
@@ -253,36 +253,18 @@ void StabilityView::showResult()
         _timelineX->addData(sec, X);
         _timelineY->addData(sec, Y);
 
-        const double max = qMax(X, Y);
-        if (_valueMax < max || qIsNaN(_valueMax))
-            _valueMax = max, valueRangeChanged = true;
-        if (_valueMaxX < X || qIsNaN(_valueMaxX))
-            _valueMaxX = X, valueRangeChangedX = true;
-        if (_valueMaxY < Y || qIsNaN(_valueMaxY))
-            _valueMaxY = Y, valueRangeChangedY = true;
-        
-        const double min = qMin(X, Y);
-        if (_valueMin > min || qIsNaN(_valueMin))
-            _valueMin = min, valueRangeChanged = true;
-        if (_valueMinX > X || qIsNaN(_valueMinX))
-            _valueMinX = X, valueRangeChangedX = true;
-        if (_valueMinY > Y || qIsNaN(_valueMinY))
-            _valueMinY = Y, valueRangeChangedY = true;
+        if (adjustValueRange(X, Y))
+            valueRangeChanged = true;
 
         _timelineMaxS = sec;
         if (_timelineMinS < 0)
             _timelineMinS = sec;
     }
     
-    if (valueRangeChanged) {
-        const double m = (_valueMax - _valueMin) * 0.1;
-        _plotTime->yAxis->setRange(_valueMin - m, _valueMax + m);
-        recalcHeatmap();
-    }
-    if (_heatmapData->isEmpty()) {
-        _heatmapData->setSize(_heatmapCellCount, _heatmapCellCount);
-        recalcHeatmap();
-    } if (valueRangeChangedX || valueRangeChangedY) {
+    // _heatmapData gets cleaned when _heatmapCellCount is changed
+    // all ranges could stay the same then, but the full recalc is required
+    if (valueRangeChanged || _heatmapData->isEmpty()) {
+        adjustTimelineVertAxis();
         recalcHeatmap();
     } else {
         updateHeatmap(newPoints);
@@ -419,28 +401,52 @@ void StabilityView::recalcHeatmap()
 {
 #ifdef LOG_EX
     MethodLog _("recalcHeatmap");
-    qDebug() << LOG_ID
-        << _timelineX->data()->size() << _timelineY->data()->size()
-        << _heatmapData->keySize() << _heatmapData->valueSize();
 #endif
+    qDebug().nospace() << LOG_ID << " recalcHeatmap:"
+        << " pointsX=" << _timelineX->data()->size() << ", pointsY=" << _timelineY->data()->size()
+        << ", cellsX=" << _heatmapData->keySize() << ", cellsY=" << _heatmapData->valueSize()
+        << ", rangeX=" << _valueMinX << ".." << _valueMaxX
+        << ", rangeY=" << _valueMinY << ".." << _valueMaxY;
 
     const auto xs = _timelineX->data();
     const auto ys = _timelineY->data();
     if (xs->size() != ys->size()) {
-        qCritical() << "Unequal point count in timeline graphs" << xs->size() << ys->size();
+        qCritical() << LOG_ID << "recalcHeatmap:"
+            << "Unequal point count in timeline graphs" << xs->size() << ys->size();
         return;
     }
+    const int pointCount = xs->size();
+    if (pointCount == 0) return;
+    
+    if (_heatmapData->isEmpty())
+        _heatmapData->setSize(_heatmapCellCount, _heatmapCellCount);
+
     int maxCellPoints = 0;
+    const int cellCountX = _heatmapData->keySize();
+    const int cellCountY = _heatmapData->valueSize();
     QCPRange rangeX(qMin(_valueMinX, -0.1), qMax(_valueMaxX, 0.1));
     QCPRange rangeY(qMin(_valueMinY, -0.1), qMax(_valueMaxY, 0.1));
-    for (int i = 0; i < _heatmapData->keySize(); i++)
-        for (int j = 0; j < _heatmapData->valueSize(); j++)
+    for (int i = 0; i < cellCountX; i++)
+        for (int j = 0; j < cellCountY; j++)
             _heatmapData->setCell(i, j, qQNaN());
     _heatmapData->setRange(rangeX, rangeY);
-    const int pointCount = xs->size();
     for (int i = 0; i < pointCount; i++) {
         int cellIndexX, cellIndexY;
-        _heatmapData->coordToCell(xs->at(i)->value, ys->at(i)->value, &cellIndexX, &cellIndexY);
+        const double valueX = xs->at(i)->value;
+        const double valueY = ys->at(i)->value;
+        _heatmapData->coordToCell(valueX, valueY, &cellIndexX, &cellIndexY);
+        if (cellIndexX < 0 || cellIndexX >= cellCountX) {
+            qWarning().nospace() << LOG_ID << " recalcHeatmap:"
+                << " Invalid cell index " << cellIndexX << " for X[" << i << "]=" << valueX
+                << " (cells=" << cellCountX << ", range=" << rangeX.lower << ".." << rangeX.upper << ')';
+            continue;
+        }
+        if (cellIndexY < 0 || cellIndexY >= cellCountY) {
+            qWarning().nospace() << LOG_ID << " recalcHeatmap:"
+                << " Invalid cell index " << cellIndexY << " for Y[" << i << "]=" << valueY
+                << " (cells=" << cellCountY << ", range=" << rangeY.lower << ".." << rangeY.upper << ')';
+            continue;
+        }
         double cellPoints = _heatmapData->cell(cellIndexX, cellIndexY);
         if (qIsNaN(cellPoints)) cellPoints = 0;
         const int newCellPoints = int(cellPoints) + 1;
@@ -458,22 +464,47 @@ void StabilityView::updateHeatmap(int lastPoints)
 {
 #ifdef LOG_EX
     MethodLog _("updateHeatmap");
-    qDebug() << LOG_ID << _timelineX->data()->size() << _timelineY->data()->size();
+    qDebug().nospace() << LOG_ID << " recalcHeatmap:"
+        << " pointsX=" << _timelineX->data()->size() << ", pointsY=" << _timelineY->data()->size()
+        << ", cellsX=" << _heatmapData->keySize() << ", cellsY=" << _heatmapData->valueSize()
+        << ", rangeX=" << _valueMinX << ".." << _valueMaxX
+        << ", rangeY=" << _valueMinY << ".." << _valueMaxY;
 #endif
 
     const auto xs = _timelineX->data();
     const auto ys = _timelineY->data();
     if (xs->size() != ys->size()) {
-        qCritical() << "Unequal point count in timeline graphs" << xs->size() << ys->size();
+        qCritical() << LOG_ID << "updateHeatmap:"
+            << "Unequal point count in timeline graphs" << xs->size() << ys->size();
         return;
     }
     const int pointCount = xs->size();
+    if (pointCount == 0) return;
+    
     const int startIndex = pointCount - lastPoints;
     int maxCellPoints = _heatmap->dataRange().upper;
+    const int cellCountX = _heatmapData->keySize();
+    const int cellCountY = _heatmapData->valueSize();
     bool dataRangeChanged = false;
     for (int i = startIndex; i < pointCount; i++) {
         int cellIndexX, cellIndexY;
-        _heatmapData->coordToCell(xs->at(i)->value, ys->at(i)->value, &cellIndexX, &cellIndexY);
+        const double valueX = xs->at(i)->value;
+        const double valueY = ys->at(i)->value;
+        _heatmapData->coordToCell(valueX, valueY, &cellIndexX, &cellIndexY);
+        if (cellIndexX < 0 || cellIndexX >= cellCountX) {
+            auto r = _heatmapData->keyRange();
+            qWarning().nospace() << LOG_ID << " updateHeatmap:"
+                << " Invalid cell index " << cellIndexX << " for X[" << i << "]=" << valueX
+                << " (cells=" << cellCountX << ", range=" << r.lower << ".." << r.upper << ')';
+            continue;
+        }
+        if (cellIndexY < 0 || cellIndexY >= cellCountY) {
+            auto r = _heatmapData->valueRange();
+            qWarning().nospace() << LOG_ID << " updateHeatmap:"
+                << " Invalid cell index " << cellIndexY << " for Y[" << i << "]=" << valueY
+                << " (cells=" << cellCountY << ", range=" << r.lower << ".." << r.upper << ')';
+            continue;
+        }
         double cellPoints = int(_heatmapData->cell(cellIndexX, cellIndexY));
         if (qIsNaN(cellPoints)) cellPoints = 0;
         const int newCellPoints = int(cellPoints) + 1;
@@ -485,4 +516,73 @@ void StabilityView::updateHeatmap(int lastPoints)
         _heatmap->setDataRange(rangeData);
         _colorScale->setDataRange(rangeData);
     }
+}
+
+void StabilityView::rescaleTimeline(const PixelScale &newScale)
+{
+#ifdef LOG_EX
+    MethodLog _("rescaleTimeline");
+#endif
+    qDebug().nospace() << LOG_ID << " rescaleTimeline:"
+        << " old rangeX=" << _valueMinX << ".." <<  _valueMaxX
+        << ", old rangeY=" << _valueMinY << ".." << _valueMaxY
+        << ", scale "<< _scale.scaleFactor() << " -> " << newScale.scaleFactor();
+
+    resetScale(false, true);
+
+    QVector<QCPGraphData> &xs = _timelineX->data()->rawData();
+    QVector<QCPGraphData> &ys = _timelineY->data()->rawData();
+    if (xs.size() != ys.size()) {
+        qCritical() << LOG_ID << "rescaleTimeline:"
+            << "Unequal point count in timeline graphs" << xs.size() << ys.size();
+        return;
+    }
+    const int pointCount = xs.size();
+    if (pointCount == 0) return;
+
+    for (int i = 0; i < pointCount; i++) {
+        QCPGraphData &x = xs[i];
+        QCPGraphData &y = ys[i];
+        const double oldX = x.value;
+        const double oldY = y.value;
+        x.value = newScale.pixelToUnit(_scale.unitToPixel(oldX));
+        y.value = newScale.pixelToUnit(_scale.unitToPixel(oldY));
+        adjustValueRange(x.value, y.value);
+        //qDebug() << "Rescale" << i << oldX << oldY << "->" << x.value << y.value;
+    }
+
+    qDebug().nospace() << LOG_ID << " rescaleTimeline:"
+        << " new rangeX=" << _valueMinX << ".." <<  _valueMaxX
+        << ", new rangeY=" << _valueMinY << ".." << _valueMaxY;
+    
+    adjustTimelineVertAxis();
+}
+
+bool StabilityView::adjustValueRange(double X, double Y)
+{
+    bool changed = false;
+
+    const double max = qMax(X, Y);
+    if (_valueMax < max || qIsNaN(_valueMax))
+        _valueMax = max, changed = true;
+    if (_valueMaxX < X || qIsNaN(_valueMaxX))
+        _valueMaxX = X, changed = true;
+    if (_valueMaxY < Y || qIsNaN(_valueMaxY))
+        _valueMaxY = Y, changed = true;
+    
+    const double min = qMin(X, Y);
+    if (_valueMin > min || qIsNaN(_valueMin))
+        _valueMin = min, changed = true;
+    if (_valueMinX > X || qIsNaN(_valueMinX))
+        _valueMinX = X, changed = true;
+    if (_valueMinY > Y || qIsNaN(_valueMinY))
+        _valueMinY = Y, changed = true;
+
+    return changed;
+}
+
+void StabilityView::adjustTimelineVertAxis()
+{
+    const double m = (_valueMax - _valueMin) * 0.1;
+    _plotTime->yAxis->setRange(_valueMin - m, _valueMax + m);
 }
