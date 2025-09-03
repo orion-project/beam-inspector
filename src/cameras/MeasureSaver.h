@@ -87,14 +87,7 @@ public:
     bool finished = false;
 };
 
-class ImageEvent : public QEvent
-{
-public:
-    ImageEvent() : QEvent(QEvent::User) {}
-
-    qint64 time;
-    QByteArray buf;
-};
+class ImageEvent;
 
 class MeasureSaver : public QObject
 {

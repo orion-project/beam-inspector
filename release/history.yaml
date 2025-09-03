@@ -1,4 +1,9 @@
 history:
+- version: 0.0.27
+  date: 
+  changes:
+  - text: Can save raw data blob when exporting raw image
+
 - version: 0.0.26
   date: 2025-06-23
   changes:

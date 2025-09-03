@@ -73,6 +73,14 @@ public:
                 };
             return data;
         };
+        
+        rawFrameData = [this]{
+            return RawFrameData {
+                .data = QByteArray((const char*)c.buf, c.w*c.h),
+                .pixelFormat = QImage::Format_Grayscale8,
+                .cameraModel = this->cam->name(),
+            };
+        };
 
         configure();
     }

@@ -56,6 +56,7 @@ public:
     peak_status res;
     peak_buffer buf;
     peak_frame_handle frame;
+    peak_pixel_format pixelFormat;
     QByteArray hdrBuf;
 
     int framesErr = 0;
@@ -282,16 +283,15 @@ public:
             return "Camera doesn't support any of known gray scale formats (Mono8, Mono10g40, Mono12g24)";
         }
         c.bpp = cam->_cfg->bpp;
-        peak_pixel_format targetFormat;
         if (!supportedFormats.contains(c.bpp)) {
             c.bpp = supportedFormats.firstKey();
-            targetFormat = supportedFormats.first();
+            pixelFormat = supportedFormats.first();
             qWarning() << LOG_ID << "Camera does not support " << cam->_cfg->bpp << "bpp, use " << c.bpp << "bpp";
         } else {
-            targetFormat = supportedFormats[c.bpp];
+            pixelFormat = supportedFormats[c.bpp];
         }
-        qDebug().noquote() << LOG_ID << "Set pixel format" << HEX(targetFormat) << c.bpp << "bpp";
-        res = IDS.peak_PixelFormat_Set(hCam, targetFormat);
+        qDebug().noquote() << LOG_ID << "Set pixel format" << HEX(pixelFormat) << c.bpp << "bpp";
+        res = IDS.peak_PixelFormat_Set(hCam, pixelFormat);
         CHECK_ERR("Unable to set pixel format");
         cam->_cfg->bpp = c.bpp;
         if (c.bpp > 8) {
@@ -377,6 +377,14 @@ public:
         showBrightness = cam->_cfg->showBrightness;
         saveBrightness = cam->_cfg->saveBrightness;
         togglePowerMeter();
+
+        rawFrameData = [this]{
+            return RawFrameData {
+                .data = QByteArray((const char*)buf.memoryAddress, buf.memorySize),
+                .pixelFormat = pixelFormat,
+                .cameraModel = cam->_descr,
+            };
+        };
 
         return {};
     }

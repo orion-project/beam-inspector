@@ -156,6 +156,23 @@ struct CamTableData
     bool warn = false;
 };
 
+struct RawFrameData
+{
+    QByteArray data;
+    int pixelFormat;
+    QString cameraModel;
+};
+
+class ImageEvent : public QEvent
+{
+public:
+    ImageEvent() : QEvent(QEvent::Type(QEvent::registerEventType())) {}
+
+    qint64 time;
+    QByteArray buf;
+    std::optional<RawFrameData> raw;
+};
+
 class BrightEvent : public QEvent
 {
 public:
