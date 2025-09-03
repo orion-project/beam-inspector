@@ -60,6 +60,14 @@ void FileSelector::setFilters(const QList<QPair<QString, QString>> &filters)
     }
 }
 
+void FileSelector::addFilter(const QPair<QString, QString> &filter)
+{
+    if (!_exts.contains(filter.second)) {
+        _filters << filter.first;
+        _exts << filter.second;
+    }
+}
+
 void FileSelector::updateStatus()
 {
     QString fn = fileName();

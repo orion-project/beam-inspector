@@ -25,6 +25,11 @@
 
 enum MeasureDataCol { COL_BRIGHTNESS, COL_POWER, COL_DEBUG_1, COL_DEBUG_2 };
 
+inline int bytesSize(const CgnBeamCalc &c)
+{
+    return c.w * c.h * (c.bpp > 8 ? 2 : 1);
+}
+
 class CameraWorker
 {
 public:
@@ -99,6 +104,7 @@ public:
 
     QMap<QString, QVariant> stats;
     std::function<QMap<int, CamTableData>()> tableData;
+    std::function<RawFrameData()> rawFrameData;
 
     const char *logId;
 
@@ -318,7 +324,9 @@ public:
         if (rawImgRequest) {
             auto e = new ImageEvent;
             e->time = 0;
-            e->buf = QByteArray((const char*)c.buf, c.w*c.h*(c.bpp > 8 ? 2 : 1));
+            e->buf = QByteArray((const char*)c.buf, bytesSize(c));
+            if (rawFrameData)
+                e->raw = rawFrameData();
             QCoreApplication::postEvent(rawImgRequest, e);
             rawImgRequest = nullptr;
         }
@@ -339,7 +347,7 @@ public:
                 prevSaveImg = tm;
                 auto e = new ImageEvent;
                 e->time = frameTimeAbs();
-                e->buf = QByteArray((const char*)c.buf, c.w*c.h*(c.bpp > 8 ? 2 : 1));
+                e->buf = QByteArray((const char*)c.buf, bytesSize(c));
                 QCoreApplication::postEvent(saver, e);
             }
             measurs->time = frameTimeAbs();

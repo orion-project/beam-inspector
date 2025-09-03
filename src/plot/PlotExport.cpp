@@ -2,7 +2,7 @@
 
 #include "app/HelpSystem.h"
 #include "app/ImageUtils.h"
-
+#include "cameras/CameraTypes.h"
 #include "widgets/FileSelector.h"
 
 #include "helpers/OriDialogs.h"
@@ -200,6 +200,7 @@ void exportImageDlg(QCustomPlot* plot, std::function<void()> prepare, std::funct
 struct ExportRawImageProps
 {
     QString fileName;
+    bool showRawFilter = false;
 
     ExportRawImageProps()
     {
@@ -231,6 +232,10 @@ public:
             { tr("PGM Images (*.pgm)"), "pgm" },
             { tr("JPG Images (*.jpg *.jpeg)"), "jpg" }
         });
+        if (props.showRawFilter)
+            fileSelector->addFilter({
+                tr("RAW Data (*.raw)"), "raw"
+            });
 
         double aspect = img.width() / (double)img.height();
         QPixmap pixmap(RAW_PREVIEW_W, RAW_PREVIEW_W/aspect);
@@ -267,8 +272,13 @@ public:
     QSharedPointer<QWidget> content;
 };
 
-void exportImageDlg(QByteArray data, int w, int h, int bpp)
+void exportImageDlg(const ExportImgArg &arg)
 {
+    const QByteArray data = arg.data;
+    const int w = arg.width;
+    const int h = arg.height;
+    const int bpp = arg.bpp;
+
     if (bpp != 8 && bpp != 10 && bpp != 12) {
         // Should not happen
         qWarning() << "Unsupported image bitness" << bpp;
@@ -295,17 +305,33 @@ void exportImageDlg(QByteArray data, int w, int h, int bpp)
     }
     
     ExportRawImageProps props;
+    props.showRawFilter = (bool)arg.raw;
     ExportRawImageDlg dlg(img, props);
     if (!dlg.exec())
         return;
     dlg.fillProps(props);
     props.save();
     bool ok = true;
+    if (props.fileName.endsWith(".raw", Qt::CaseInsensitive)) {
+        QFile f(props.fileName);
+        if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+            qWarning() << "Failed to create" << props.fileName << f.errorString();
+            ok = false;
+        } else if (f.write(arg.raw->data) != arg.raw->data.size()) {
+            qWarning() << "Failed to save data" << props.fileName << f.errorString();
+            ok = false;
+        }
+        f.close();
+        
+        QSettings s(props.fileName + ".info", QSettings::IniFormat);
+        s.setValue("pixelFormat", arg.raw->pixelFormat);
+        s.setValue("cameraModel", arg.raw->cameraModel);
+    }
     // QImage does not support PGM images with more than 8-bit data (Qt 6.2, 6.9).
     // It can load them, but they are scaled down to 8-bit during loading.
     // QImage can save 16 bit PNG, so we just do img.save() 
     // but when saving as PGM, the data gets converted to 8-bit, so do save PGM manually
-    if (props.fileName.endsWith(".pgm", Qt::CaseInsensitive)) {
+    else if (props.fileName.endsWith(".pgm", Qt::CaseInsensitive)) {
         QString err = ImageUtils::savePgm(props.fileName, data, w, h, bpp);
         if (!err.isEmpty()) {
             qWarning() << "Failed to save image" << props.fileName << err;

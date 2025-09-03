@@ -19,8 +19,9 @@ public:
 
     void setFileName(const QString &fileName);
     void setSelectedDir(const QString &dir) { _selectedDir = dir; }
-    void setFilters(const QList<QPair<QString, QString>> &filters);
     void setSaveDlg(bool on) { _saveDlg = true; }
+    void setFilters(const QList<QPair<QString, QString>> &filters);
+    void addFilter(const QPair<QString, QString> &filter);
 
     bool selectFile();
 

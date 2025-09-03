@@ -4,6 +4,7 @@ history:
   changes:
   - text: Can toggle beam info via plot's context menu
   - text: Increase font size of the beam info text
+  - text: Can save raw data blob when exporting raw image
 
 - version: 0.0.28
   date: 2026-05-19
