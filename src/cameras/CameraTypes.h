@@ -160,7 +160,21 @@ struct RawFrameData
 {
     QByteArray data;
     int pixelFormat;
+    QString cameraType;
     QString cameraModel;
+    
+    static bool isRawFileName(const QString &fileName);
+    static QString infoFileName(const QString &fileName);
+    static QString fileExt() { return QStringLiteral("birf"); }
+    static QString infoFileExt() { return QStringLiteral("info"); }
+    static QString keyWidth() { return QStringLiteral("width"); }
+    static QString keyHeight() { return QStringLiteral("height"); }
+    static QString keySize() { return QStringLiteral("size"); }
+    static QString keyPixelFormat() { return QStringLiteral("pixelFormat"); }
+    static QString keyCameraType() { return QStringLiteral("cameraType"); }
+    static QString keyCameraModel() { return QStringLiteral("cameraModel"); }
+    static QString cameraTypeDemo() { return QStringLiteral("Demo"); }
+    static QString cameraTypeIds() { return QStringLiteral("IDS"); }
 };
 
 class ImageEvent : public QEvent
