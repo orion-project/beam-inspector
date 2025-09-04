@@ -1,6 +1,9 @@
 #include "StillImageCamera.h"
 
 #include "app/ImageUtils.h"
+#ifdef WITH_IDS
+#include "cameras/IdsCamera.h"
+#endif
 #include "widgets/PlotIntf.h"
 #include "widgets/StabilityIntf.h"
 #include "widgets/TableIntf.h"
@@ -9,10 +12,6 @@
 
 #include "tools/OriSettings.h"
 #include "helpers/OriDialogs.h"
-
-#include "beam_calc.h"
-
-#include <ids_peak_comfort_c/ids_peak_comfort_c.h>
 
 #include <QApplication>
 #include <QDebug>
@@ -32,14 +31,18 @@ StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table, StabilityIn
     Ori::Settings s;
     s.beginGroup(_configGroup);
 
+    QString recentFilter = s.strValue("recentFilter");
+    
     QString fileName = QFileDialog::getOpenFileName(qApp->activeWindow(),
                                 qApp->tr("Open Beam Image"),
                                 s.strValue("recentDir"),
-                                CameraCommons::supportedImageFilters());
+                                CameraCommons::supportedImageFilters(),
+                                &recentFilter);
     if (!fileName.isEmpty()) {
         _fileName = fileName;
         s.setValue("recentDir", QFileInfo(fileName).dir().absolutePath());
         s.setValue("recentFile", fileName);
+        s.setValue("recentFilter", recentFilter);
     }
 }
 
@@ -123,9 +126,9 @@ void StillImageCamera::startCapture()
         _width = info.value(RawFrameData::keyWidth()).toInt();
         _height = info.value(RawFrameData::keyHeight()).toInt();
         const auto size = info.value(RawFrameData::keySize()).toInt();
-        const auto fmt = info.value(RawFrameData::keyPixelFormat()).toInt();
+        const auto pixelFormat = info.value(RawFrameData::keyPixelFormat()).toString();
         const auto camType = info.value(RawFrameData::keyCameraType()).toString();
-        qDebug() << LOG_ID << _fileName << "Raw" << camType << "frame" << _width << 'x' << _height << "pixelFormat:" << fmt;
+        qDebug() << LOG_ID << _fileName << "Raw" << camType << "frame" << _width << 'x' << _height << "pixelFormat:" << pixelFormat;
         if (_width <= 0 || _height <= 0) {
             Ori::Dlg::error(qApp->tr("Invalid image size %1 x %2").arg(_width).arg(_height));
             return;
@@ -141,19 +144,24 @@ void StillImageCamera::startCapture()
             return;
         }
         if (camType == RawFrameData::cameraTypeDemo()) {
-            if (fmt != QImage::Format_Grayscale8 && fmt != QImage::Format_Grayscale16) {
-                Ori::Dlg::error(qApp->tr("Wrong image format, only grayscale images are supported"));
-                return;
-            }
-            _bpp = fmt == QImage::Format_Grayscale16 ? 16 : 8;
-        } else if (camType == RawFrameData::cameraTypeIds()) {
-            if (fmt == PEAK_PIXEL_FORMAT_MONO8) {
+            _bpp = 8;
+        }
+    #ifdef WITH_IDS
+        else if (camType == RawFrameData::cameraTypeIds()) {
+            int fmt = 0;
+            auto fmts = IdsCamera::pixelFormats();
+            for (const auto &f : std::as_const(fmts))
+                if (f.name == pixelFormat) {
+                    fmt = f.code;
+                    break;
+                }
+            if (fmt == IdsCamera::supportedPixelFormat_Mono8()) {
                 _bpp = 8;
-            } else if (fmt == PEAK_PIXEL_FORMAT_MONO10G40_IDS) {
+            } else if (fmt == IdsCamera::supportedPixelFormat_Mono10G40()) {
                 _bpp = 10;
                 pgmData = QByteArray(_width * _height * sizeof(uint16_t), 0);
                 cgn_convert_10g40_to_u16((uint8_t*)pgmData.data(), (uint8_t*)rawData.data(), rawData.size());
-            } else if (fmt == PEAK_PIXEL_FORMAT_MONO12G24_IDS) {
+            } else if (fmt == IdsCamera::supportedPixelFormat_Mono12G24()) {
                 _bpp = 12;
                 pgmData = QByteArray(_width * _height * sizeof(uint16_t), 0);
                 cgn_convert_12g24_to_u16((uint8_t*)pgmData.data(), (uint8_t*)rawData.data(), rawData.size());
@@ -161,7 +169,9 @@ void StillImageCamera::startCapture()
                 Ori::Dlg::error(qApp->tr("Unsupported pixel format"));
                 return;
             }
-        } else {
+        }
+     #endif
+        else {
             Ori::Dlg::error(qApp->tr("Unsupported file type"));
             return;
         }

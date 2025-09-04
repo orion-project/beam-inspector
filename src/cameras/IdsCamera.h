@@ -58,6 +58,17 @@ public:
     static void unloadLib();
 
     IdsCameraConfig* idsConfig() { return _cfg.data(); }
+    
+    struct PixelFormat {
+        int code;
+        QString name;
+        QString descr;
+    };
+    
+    static QList<PixelFormat> pixelFormats();
+    static int supportedPixelFormat_Mono8();
+    static int supportedPixelFormat_Mono10G40();
+    static int supportedPixelFormat_Mono12G24();
 
 signals:
     void ready();

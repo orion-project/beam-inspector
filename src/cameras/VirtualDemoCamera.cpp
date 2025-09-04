@@ -77,7 +77,6 @@ public:
         rawFrameData = [this]{
             return RawFrameData {
                 .data = QByteArray((const char*)c.buf, c.w*c.h),
-                .pixelFormat = QImage::Format_Grayscale8,
                 .cameraType = RawFrameData::cameraTypeDemo(),
                 .cameraModel = this->cam->name(),
             };
