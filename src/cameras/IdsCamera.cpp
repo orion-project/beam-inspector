@@ -379,9 +379,16 @@ public:
         togglePowerMeter();
 
         rawFrameData = [this]{
+            auto fmts = IdsCamera::pixelFormats();
+            QString formatName;
+            for (const auto &f : std::as_const(fmts))
+                if (f.code == pixelFormat) {
+                    formatName = f.name;
+                    break;
+                }
             return RawFrameData {
                 .data = QByteArray((const char*)buf.memoryAddress, buf.memorySize),
-                .pixelFormat = pixelFormat,
+                .pixelFormat = formatName,
                 .cameraType = RawFrameData::cameraTypeIds(),
                 .cameraModel = cam->_descr,
             };
@@ -777,6 +784,76 @@ void IdsCamera::requestExpWarning()
 {
     if (_peak)
         _peak->requestExpWarning(_plot->eventsTarget());
+}
+
+QList<IdsCamera::PixelFormat> IdsCamera::pixelFormats()
+{
+    return QList<PixelFormat>{
+        {PEAK_PIXEL_FORMAT_BAYER_GR8, "BayerGR8", "BayerGR8"},
+        {PEAK_PIXEL_FORMAT_BAYER_GR10, "BayerGR10", "BayerGR10"},
+        {PEAK_PIXEL_FORMAT_BAYER_GR12, "BayerGR12", "BayerGR12"},
+        {PEAK_PIXEL_FORMAT_BAYER_RG8, "BayerRG8", "BayerRG8"},
+        {PEAK_PIXEL_FORMAT_BAYER_RG10, "BayerRG10", "BayerRG10"},
+        {PEAK_PIXEL_FORMAT_BAYER_RG12, "BayerRG12", "BayerRG12"},
+        {PEAK_PIXEL_FORMAT_BAYER_GB8, "BayerGB8", "BayerGB8"},
+        {PEAK_PIXEL_FORMAT_BAYER_GB10, "BayerGB10", "BayerGB10"},
+        {PEAK_PIXEL_FORMAT_BAYER_GB12, "BayerGB12", "BayerGB12"},
+        {PEAK_PIXEL_FORMAT_BAYER_BG8, "BayerBG8", "BayerBG8"},
+        {PEAK_PIXEL_FORMAT_BAYER_BG10, "BayerBG10", "BayerBG10"},
+        {PEAK_PIXEL_FORMAT_BAYER_BG12, "BayerBG12", "BayerBG12"},
+        {PEAK_PIXEL_FORMAT_MONO8, "Mono8", "Mono8"},
+        {PEAK_PIXEL_FORMAT_MONO10, "Mono10", "Mono10"},
+        {PEAK_PIXEL_FORMAT_MONO12, "Mono12", "Mono12"},
+        {PEAK_PIXEL_FORMAT_RGB8, "RGB8", "RGB8"},
+        {PEAK_PIXEL_FORMAT_RGB10, "RGB10", "RGB10"},
+        {PEAK_PIXEL_FORMAT_RGB12, "RGB12", "RGB12"},
+        {PEAK_PIXEL_FORMAT_BGR8, "BGR8", "BGR8"},
+        {PEAK_PIXEL_FORMAT_BGR10, "BGR10", "BGR10"},
+        {PEAK_PIXEL_FORMAT_BGR12, "BGR12", "BGR12"},
+        {PEAK_PIXEL_FORMAT_RGBA8, "RGBa8", "RGBa8"},
+        {PEAK_PIXEL_FORMAT_RGBA10, "RGBa10", "RGBa10"},
+        {PEAK_PIXEL_FORMAT_RGBA12, "RGBa12", "RGBa12"},
+        {PEAK_PIXEL_FORMAT_BGRA8, "BGRa8", "BGRa8"},
+        {PEAK_PIXEL_FORMAT_BGRA10, "BGRa10", "BGRa10"},
+        {PEAK_PIXEL_FORMAT_BGRA12, "BGRa12", "BGRa12"},
+        {PEAK_PIXEL_FORMAT_BAYER_GR10P, "BayerGR10P", "BayerGR10 packed"},
+        {PEAK_PIXEL_FORMAT_BAYER_GR12P, "BayerGR12P", "BayerGR12 packed"},
+        {PEAK_PIXEL_FORMAT_BAYER_RG10P, "BayerRG10P", "BayerRG10 packed"},
+        {PEAK_PIXEL_FORMAT_BAYER_RG12P, "BayerRG12P", "BayerRG12 packed"},
+        {PEAK_PIXEL_FORMAT_BAYER_GB10P, "BayerGB10P", "BayerGB10 packed"},
+        {PEAK_PIXEL_FORMAT_BAYER_GB12P, "BayerGB12P", "BayerGB12 packed"},
+        {PEAK_PIXEL_FORMAT_BAYER_BG10P, "BayerBG10P", "BayerBG10 packed"},
+        {PEAK_PIXEL_FORMAT_BAYER_BG12P, "BayerBG12P", "BayerBG12 packed"},
+        {PEAK_PIXEL_FORMAT_MONO10P, "Mono10P", "Mono10 packed"},
+        {PEAK_PIXEL_FORMAT_MONO12P, "Mono12P", "Mono12 packed"},
+        {PEAK_PIXEL_FORMAT_RGB10P32, "RGB10P32", "RGB10 packed 32"},
+        {PEAK_PIXEL_FORMAT_BGR10P32, "BGR10P32", "BGR10 packed 32"},
+        {PEAK_PIXEL_FORMAT_BAYER_GR10G40_IDS, "BayerGR10G40_IDS", "BayerGR10 grouped 40"},
+        {PEAK_PIXEL_FORMAT_BAYER_RG10G40_IDS, "BayerRG10G40_IDS", "BayerRG10 grouped 40"},
+        {PEAK_PIXEL_FORMAT_BAYER_GB10G40_IDS, "BayerGB10G40_IDS", "BayerGB10 grouped 40"},
+        {PEAK_PIXEL_FORMAT_BAYER_BG10G40_IDS, "BayerBG10G40_IDS", "BayerBG grouped 40"},
+        {PEAK_PIXEL_FORMAT_BAYER_GR12G24_IDS, "BayerGR12G24_IDS", "BayerGR12 grouped 24"},
+        {PEAK_PIXEL_FORMAT_BAYER_RG12G24_IDS, "BayerRG12G24_IDS", "BayerRG12 grouped 24"},
+        {PEAK_PIXEL_FORMAT_BAYER_GB12G24_IDS, "BayerGB12G24_IDS", "BayerGB12 grouped 24"},
+        {PEAK_PIXEL_FORMAT_BAYER_BG12G24_IDS, "BayerBG12G24_IDS", "BayerBG12 grouped 24"},
+        {PEAK_PIXEL_FORMAT_MONO10G40_IDS, "Mono10G40_IDS", "Mono10 grouped 40"},
+        {PEAK_PIXEL_FORMAT_MONO12G24_IDS, "Mono12G24_IDS", "Mono12 grouped 24"},
+    };
+}
+
+int IdsCamera::supportedPixelFormat_Mono8()
+{
+    return PEAK_PIXEL_FORMAT_MONO8;
+}
+
+int IdsCamera::supportedPixelFormat_Mono10G40()
+{
+    return PEAK_PIXEL_FORMAT_MONO10G40_IDS;
+}
+
+int IdsCamera::supportedPixelFormat_Mono12G24()
+{
+    return PEAK_PIXEL_FORMAT_MONO12G24_IDS;
 }
 
 #endif // WITH_IDS

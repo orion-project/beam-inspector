@@ -160,7 +160,7 @@ struct CamTableData
 struct RawFrameData
 {
     QByteArray data;
-    int pixelFormat;
+    QString pixelFormat;
     QString cameraType;
     QString cameraModel;
     
