@@ -1,6 +1,6 @@
 #include "StillImageCamera.h"
 
-#include "plot/PlotExport.h"
+#include "app/ImageUtils.h"
 #include "widgets/PlotIntf.h"
 #include "widgets/StabilityIntf.h"
 #include "widgets/TableIntf.h"
@@ -9,7 +9,10 @@
 
 #include "tools/OriSettings.h"
 #include "helpers/OriDialogs.h"
-#include "app/ImageUtils.h"
+
+#include "beam_calc.h"
+
+#include <ids_peak_comfort_c/ids_peak_comfort_c.h>
 
 #include <QApplication>
 #include <QDebug>
@@ -107,11 +110,69 @@ void StillImageCamera::startCapture()
     CgnBeamCalc c;
     QImage image;
     QByteArray pgmData;
+    QByteArray rawData;
     qint64 loadTime;
     
+    if (RawFrameData::isRawFileName(_fileName)) {
+        QString infoFile = RawFrameData::infoFileName(_fileName);
+        if (!QFile::exists(infoFile)) {
+            Ori::Dlg::error(qApp->tr("Info file not found for this raw frame data file"));
+            return;
+        }
+        QSettings info(infoFile, QSettings::IniFormat);
+        _width = info.value(RawFrameData::keyWidth()).toInt();
+        _height = info.value(RawFrameData::keyHeight()).toInt();
+        const auto size = info.value(RawFrameData::keySize()).toInt();
+        const auto fmt = info.value(RawFrameData::keyPixelFormat()).toInt();
+        const auto camType = info.value(RawFrameData::keyCameraType()).toString();
+        qDebug() << LOG_ID << _fileName << "Raw" << camType << "frame" << _width << 'x' << _height << "pixelFormat:" << fmt;
+        if (_width <= 0 || _height <= 0) {
+            Ori::Dlg::error(qApp->tr("Invalid image size %1 x %2").arg(_width).arg(_height));
+            return;
+        }
+        QFile f(_fileName);
+        if (!f.open(QIODevice::ReadOnly)) {
+            Ori::Dlg::error(qApp->tr("Unable to open raw file: %1").arg(f.errorString()));
+            return;
+        }
+        rawData = f.readAll();
+        if (rawData.size() != size) {
+            Ori::Dlg::error(qApp->tr("Invalid read data size %1, expected %2").arg(rawData.size()).arg(size));
+            return;
+        }
+        if (camType == RawFrameData::cameraTypeDemo()) {
+            if (fmt != QImage::Format_Grayscale8 && fmt != QImage::Format_Grayscale16) {
+                Ori::Dlg::error(qApp->tr("Wrong image format, only grayscale images are supported"));
+                return;
+            }
+            _bpp = fmt == QImage::Format_Grayscale16 ? 16 : 8;
+        } else if (camType == RawFrameData::cameraTypeIds()) {
+            if (fmt == PEAK_PIXEL_FORMAT_MONO8) {
+                _bpp = 8;
+            } else if (fmt == PEAK_PIXEL_FORMAT_MONO10G40_IDS) {
+                _bpp = 10;
+                pgmData = QByteArray(_width * _height * sizeof(uint16_t), 0);
+                cgn_convert_10g40_to_u16((uint8_t*)pgmData.data(), (uint8_t*)rawData.data(), rawData.size());
+            } else if (fmt == PEAK_PIXEL_FORMAT_MONO12G24_IDS) {
+                _bpp = 12;
+                pgmData = QByteArray(_width * _height * sizeof(uint16_t), 0);
+                cgn_convert_12g24_to_u16((uint8_t*)pgmData.data(), (uint8_t*)rawData.data(), rawData.size());
+            } else {
+                Ori::Dlg::error(qApp->tr("Unsupported pixel format"));
+                return;
+            }
+        } else {
+            Ori::Dlg::error(qApp->tr("Unsupported file type"));
+            return;
+        }
+        c.w = _width;
+        c.h = _height;
+        c.bpp = _bpp;
+        c.buf = (uint8_t*)(pgmData.size() > 0 ? pgmData.data() : rawData.data());
+    }
     // QImage does not support PGM images with more than 8-bit data (Qt 6.2, 6.9).
     // It can load them, but they are scaled down to 8-bit during loading.
-    if (_fileName.endsWith(".pgm", Qt::CaseInsensitive)) {
+    else if (_fileName.endsWith(".pgm", Qt::CaseInsensitive)) {
         ImageUtils::PgmData pgm = ImageUtils::loadPgm(_fileName);
         if (!pgm.error.isEmpty()) {
             Ori::Dlg::error(qApp->tr("Unable to load PGM file: %1").arg(pgm.error));
@@ -129,7 +190,6 @@ void StillImageCamera::startCapture()
         c.h = pgm.height;
         c.bpp = pgm.bpp;
         c.buf = (uint8_t*)pgmData.data();
- 
     } else {
         image = QImage(_fileName);
         if (image.isNull()) {

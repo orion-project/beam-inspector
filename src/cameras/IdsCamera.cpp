@@ -382,6 +382,7 @@ public:
             return RawFrameData {
                 .data = QByteArray((const char*)buf.memoryAddress, buf.memorySize),
                 .pixelFormat = pixelFormat,
+                .cameraType = RawFrameData::cameraTypeIds(),
                 .cameraModel = cam->_descr,
             };
         };

@@ -234,7 +234,7 @@ public:
         });
         if (props.showRawFilter)
             fileSelector->addFilter({
-                tr("RAW Data (*.raw)"), "raw"
+                tr("Raw Frame Data (*.%1)").arg(RawFrameData::fileExt()), RawFrameData::fileExt()
             });
 
         double aspect = img.width() / (double)img.height();
@@ -312,7 +312,7 @@ void exportImageDlg(const ExportImgArg &arg)
     dlg.fillProps(props);
     props.save();
     bool ok = true;
-    if (props.fileName.endsWith(".raw", Qt::CaseInsensitive)) {
+    if (RawFrameData::isRawFileName(props.fileName)) {
         QFile f(props.fileName);
         if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
             qWarning() << "Failed to create" << props.fileName << f.errorString();
@@ -323,9 +323,13 @@ void exportImageDlg(const ExportImgArg &arg)
         }
         f.close();
         
-        QSettings s(props.fileName + ".info", QSettings::IniFormat);
-        s.setValue("pixelFormat", arg.raw->pixelFormat);
-        s.setValue("cameraModel", arg.raw->cameraModel);
+        QSettings s(RawFrameData::infoFileName(props.fileName), QSettings::IniFormat);
+        s.setValue(RawFrameData::keyWidth(), w);
+        s.setValue(RawFrameData::keyHeight(), h);
+        s.setValue(RawFrameData::keySize(), arg.raw->data.size());
+        s.setValue(RawFrameData::keyPixelFormat(), arg.raw->pixelFormat);
+        s.setValue(RawFrameData::keyCameraType(), arg.raw->cameraType);
+        s.setValue(RawFrameData::keyCameraModel(), arg.raw->cameraModel);
     }
     // QImage does not support PGM images with more than 8-bit data (Qt 6.2, 6.9).
     // It can load them, but they are scaled down to 8-bit during loading.
