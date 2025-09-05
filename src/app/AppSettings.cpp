@@ -61,6 +61,9 @@ void AppSettings::load()
     LOAD(saveLogFile, Bool, false);
     LOAD(showGoodnessTextOnPlot, Bool, false);
     LOAD(showGoodnessRelative, Bool, false);
+#ifdef SHOW_ALL_PIXEL_FORMATS
+    LOAD(showAllPixelFormats, Bool, false);
+#endif
 
 #ifdef WITH_IDS
     s.beginGroup("IdsCamera");
@@ -110,6 +113,9 @@ void AppSettings::save()
     SAVE(saveLogFile);
     SAVE(showGoodnessTextOnPlot);
     SAVE(showGoodnessRelative);
+#ifdef SHOW_ALL_PIXEL_FORMATS
+    SAVE(showAllPixelFormats);
+#endif
 
 #ifdef WITH_IDS
     s.beginGroup("IdsCamera");
@@ -228,6 +234,11 @@ bool AppSettings::edit()
         new ConfigItemBool(cfgDbg, tr("Show goodness values on plot"), &showGoodnessTextOnPlot),
         (new ConfigItemBool(cfgDbg, tr("Show goodness in relative units"), &showGoodnessRelative))
             ->withParent(&showGoodnessTextOnPlot),
+        new ConfigItemSection(cfgDbg, tr("Cameras")),
+    #ifdef SHOW_ALL_PIXEL_FORMATS
+        (new ConfigItemBool(cfgDbg, tr("Allow to select any pixel format"), &showAllPixelFormats))
+            ->withHint(tr("Even if its decoding is not supported")),
+    #endif
 
         (new ConfigItemDropDown(cfgOpts, tr("Automatically check for updates"), (int*)&updateCheckInterval))
             ->withOption(int(UpdateCheckInterval::None), tr("None"))

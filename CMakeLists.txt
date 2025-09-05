@@ -32,6 +32,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(WITH_IDS "Add support for cameras from IDS (SDK must be installed)" ON)
 option(CHECK_UPDATES_WITH_CURL "Use external curl program for updates checking" ON)
+option(SHOW_ALL_PIXEL_FORMATS "Use all pixel formats provided by camera even if they can not be decoded" ON)
 
 #add_compile_options(
 #    -O3
@@ -162,6 +163,9 @@ endif()
 
 if(CHECK_UPDATES_WITH_CURL)
     add_definitions(-DCHECK_UPDATES_WITH_CURL)
+endif()
+if(SHOW_ALL_PIXEL_FORMATS)
+    add_definitions(-DSHOW_ALL_PIXEL_FORMATS)
 endif()
 
 if(QT_VERSION_MAJOR EQUAL 6)

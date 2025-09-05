@@ -32,8 +32,15 @@ public:
     };
 
     int bpp = 0;
+#ifdef SHOW_ALL_PIXEL_FORMATS
+    int pixelFormat = 0;
+    int oldPixelFormat = 0;
+    QList<PixelFormat> camFormats;
+#else
     int oldBpp = 0;
     bool bpp8, bpp10, bpp12;
+    QSet<int> supportedBpp;
+#endif
     bool intoRequested = false;
     QString infoModelName;
     QString infoFamilyName;
@@ -44,7 +51,6 @@ public:
     QString infoFirmwareVer;
     FactorXY binning, decimation;
     FactorXY oldBinning, oldDecimation;
-    QSet<int> supportedBpp;
     bool showBrightness = false;
     bool saveBrightness = false;
     int autoExpLevel = 80;

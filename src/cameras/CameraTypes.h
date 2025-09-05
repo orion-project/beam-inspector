@@ -246,4 +246,13 @@ using AnyRecords = QList<AnyRecord>;
 
 #define HEX(v) QStringLiteral("0x%1").arg(v, 0, 16)
 
+struct PixelFormat {
+    int code;
+    QString name;
+    QString descr;
+    
+    inline bool operator == (int c) { return c == code; }
+};
+inline bool operator == (int c, const PixelFormat &fmt) { return c == fmt.code; }
+
 #endif // CAMERA_TYPES_H

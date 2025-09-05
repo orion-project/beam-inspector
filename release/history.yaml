@@ -4,6 +4,7 @@ history:
   changes:
   - text: Can save raw data blob when exporting raw image
   - text: Can load raw data blob when opening image file
+  - text: Can select any pixel format supported by camera (for testing)
 
 - version: 0.0.26
   date: 2025-06-23
