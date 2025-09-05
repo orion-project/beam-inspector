@@ -356,6 +356,38 @@ public:
     }
 #endif
 
+#ifdef ADJUST_PIXEL_CLOCK
+    QString adjustPixelClock()
+    {
+        if (IDS.peak_PixelClock_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE) {
+            qDebug() << LOG_ID << "Pixel clock is not configurable";
+            return {};
+        }
+        double max = 0;
+        if (IDS.peak_PixelClock_HasRange(hCam)) {
+            double min, inc;
+            res = IDS.peak_PixelClock_GetRange(hCam, &min, &max, &inc);
+            CHECK_ERR("Unable to get pixel clock range")
+            qDebug() << LOG_ID << "Pixel clock range" << min << max << inc;
+        } else {
+            size_t clockCount = 0;
+            res = IDS.peak_PixelClock_GetList(hCam, nullptr, &clockCount);
+            CHECK_ERR("Unable to get pixel clock count");
+            QVector<double> pixelClocks(clockCount);
+            res = IDS.peak_PixelClock_GetList(hCam, pixelClocks.data(), &clockCount);
+            CHECK_ERR("Unable to get pixel clock list");
+            for (double pc : std::as_const(pixelClocks))
+                if (pc > max) max = pc;
+        }
+        if (max > 0) {
+            qDebug() << LOG_ID << "Set pixel clock" << max << "MHz";
+            res = IDS.peak_PixelClock_Set(hCam, max);
+            CHECK_ERR("Unable to maximize pixel clock")
+        }
+        return {};
+    }
+#endif
+
     QString showCurrProps()
     {
         size_t chanCount;
@@ -376,6 +408,7 @@ public:
         }
         SHOW_CAM_PROP("FPS", IDS.peak_FrameRate_Get, double);
         SHOW_CAM_PROP("Exposure", IDS.peak_ExposureTime_Get, double);
+        SHOW_CAM_PROP("PixelClock", IDS.peak_PixelClock_Get, double);
         #undef SHOW_CAM_PROP
         
         double min, max, inc;
@@ -418,6 +451,9 @@ public:
         if (auto err = initResolution(); !err.isEmpty()) return err;
         if (auto err = getImageSize(); !err.isEmpty()) return err;
         if (auto err = initPixelFormat(); !err.isEmpty()) return err;
+    #ifdef ADJUST_PIXEL_CLOCK
+        if (auto err = adjustPixelClock(); !err.isEmpty()) return err;
+    #endif
         if (auto err = showCurrProps(); !err.isEmpty()) return err;
 
         plot->initGraph(c.w, c.h);

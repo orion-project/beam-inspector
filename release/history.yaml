@@ -7,6 +7,7 @@ history:
   - text: Can save raw data blob when exporting raw image
   - text: Can load raw data blob when opening image file
   - text: Can select any pixel format supported by camera (for testing)
+  - text: Maximize pixel clock on IDS camera connection
 
 - version: 0.0.28
   date: 2026-05-19
