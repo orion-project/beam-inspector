@@ -256,6 +256,58 @@ public:
         return {};
     }
 
+#ifdef SHOW_ALL_PIXEL_FORMATS
+    QString initPixelFormat()
+    {
+        bool canDecode = true;
+        pixelFormat = (peak_pixel_format)cam->_cfg->pixelFormat;
+        if (pixelFormat == PEAK_PIXEL_FORMAT_MONO12G24_IDS) {
+            hdrBuf = QByteArray(c.w*c.h*2, 0);
+            c.buf = (uint8_t*)hdrBuf.data();
+            c.bpp = cam->_cfg->bpp = 12;
+        } else if (pixelFormat == PEAK_PIXEL_FORMAT_MONO10G40_IDS) {
+            hdrBuf = QByteArray(c.w*c.h*2, 0);
+            c.buf = (uint8_t*)hdrBuf.data();
+            c.bpp = cam->_cfg->bpp = 10;
+        } else if (pixelFormat == PEAK_PIXEL_FORMAT_MONO8) {
+            // Camera frame buffer will be used directly
+            c.bpp = cam->_cfg->bpp = 8;
+        } else {
+            canDecode = false;
+            // Decoding of this format is not supported
+            // Init dummy buffer to make calculations working
+            hdrBuf = QByteArray(c.w*c.h, 0);
+            c.buf = (uint8_t*)hdrBuf.data();
+            c.bpp = cam->_cfg->bpp = 8;
+        }
+    
+        size_t formatCount = 0;
+        res = IDS.peak_PixelFormat_GetList(hCam, nullptr, &formatCount);
+        CHECK_ERR("Unable to get pixel format count");
+        QVector<peak_pixel_format> pixelFormats(formatCount);
+        res = IDS.peak_PixelFormat_GetList(hCam, pixelFormats.data(), &formatCount);
+        CHECK_ERR("Unable to get pixel formats");
+
+        auto allFormats = IdsCamera::pixelFormats();
+        for (int i = 0; i < formatCount; i++) {
+            auto pf = pixelFormats.at(i);
+            qDebug().noquote() << LOG_ID << "Supported pixel format" << HEX(pf);
+            // List of all formats provided by camera
+            // is used for format selector in camera config dialog
+            for (const auto &f : std::as_const(allFormats))
+                if (f.code == pf) {
+                    cam->_cfg->camFormats << f;
+                    break;
+                }
+        }
+        qDebug().noquote() << LOG_ID << "Set pixel format" << HEX(pixelFormat) << c.bpp << "bpp"
+            << (canDecode ? "" : "(decoding is not supported)");
+        res = IDS.peak_PixelFormat_Set(hCam, pixelFormat);
+        CHECK_ERR("Unable to set pixel format");
+
+        return {};
+    }
+#else
     QString initPixelFormat()
     {
         size_t formatCount = 0;
@@ -297,9 +349,12 @@ public:
         if (c.bpp > 8) {
             hdrBuf = QByteArray(c.w*c.h*2, 0);
             c.buf = (uint8_t*)hdrBuf.data();
+        } else {
+            // camera frame buffer will be used directly
         }
         return {};
     }
+#endif
 
     QString showCurrProps()
     {
@@ -440,12 +495,26 @@ public:
 
             if (res == PEAK_STATUS_SUCCESS) {
                 tm = timer.elapsed();
+        #ifdef SHOW_ALL_PIXEL_FORMATS
+                if (pixelFormat == PEAK_PIXEL_FORMAT_MONO8) {
+                    c.buf = buf.memoryAddress;
+                } else if (pixelFormat == PEAK_PIXEL_FORMAT_MONO10G40_IDS) {
+                    cgn_convert_10g40_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
+                } else if (pixelFormat == PEAK_PIXEL_FORMAT_MONO12G24_IDS) {
+                    cgn_convert_12g24_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
+                } else {
+                    // Decoding of this format is not supported
+                    // c.buf is empty 8-bit buffer (see initPixelFormat)
+                    // so all the below code should be working and giving empty results
+                }
+        #else
                 if (c.bpp == 12)
                     cgn_convert_12g24_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
                 else if (c.bpp == 10)
                     cgn_convert_10g40_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
                 else
                     c.buf = buf.memoryAddress;
+        #endif
                 calcResult();
                 markCalcTime();
 
@@ -786,7 +855,7 @@ void IdsCamera::requestExpWarning()
         _peak->requestExpWarning(_plot->eventsTarget());
 }
 
-QList<IdsCamera::PixelFormat> IdsCamera::pixelFormats()
+QList<PixelFormat> IdsCamera::pixelFormats()
 {
     return QList<PixelFormat>{
         {PEAK_PIXEL_FORMAT_BAYER_GR8, "BayerGR8", "BayerGR8"},
@@ -801,7 +870,7 @@ QList<IdsCamera::PixelFormat> IdsCamera::pixelFormats()
         {PEAK_PIXEL_FORMAT_BAYER_BG8, "BayerBG8", "BayerBG8"},
         {PEAK_PIXEL_FORMAT_BAYER_BG10, "BayerBG10", "BayerBG10"},
         {PEAK_PIXEL_FORMAT_BAYER_BG12, "BayerBG12", "BayerBG12"},
-        {PEAK_PIXEL_FORMAT_MONO8, "Mono8", "Mono8"},
+        supportedPixelFormat_Mono8(),
         {PEAK_PIXEL_FORMAT_MONO10, "Mono10", "Mono10"},
         {PEAK_PIXEL_FORMAT_MONO12, "Mono12", "Mono12"},
         {PEAK_PIXEL_FORMAT_RGB8, "RGB8", "RGB8"},
@@ -836,24 +905,24 @@ QList<IdsCamera::PixelFormat> IdsCamera::pixelFormats()
         {PEAK_PIXEL_FORMAT_BAYER_RG12G24_IDS, "BayerRG12G24_IDS", "BayerRG12 grouped 24"},
         {PEAK_PIXEL_FORMAT_BAYER_GB12G24_IDS, "BayerGB12G24_IDS", "BayerGB12 grouped 24"},
         {PEAK_PIXEL_FORMAT_BAYER_BG12G24_IDS, "BayerBG12G24_IDS", "BayerBG12 grouped 24"},
-        {PEAK_PIXEL_FORMAT_MONO10G40_IDS, "Mono10G40_IDS", "Mono10 grouped 40"},
-        {PEAK_PIXEL_FORMAT_MONO12G24_IDS, "Mono12G24_IDS", "Mono12 grouped 24"},
+        supportedPixelFormat_Mono10G40(),
+        supportedPixelFormat_Mono12G24(),
     };
 }
 
-int IdsCamera::supportedPixelFormat_Mono8()
+PixelFormat IdsCamera::supportedPixelFormat_Mono8()
 {
-    return PEAK_PIXEL_FORMAT_MONO8;
+    return {PEAK_PIXEL_FORMAT_MONO8, "Mono8", "Mono8"};
 }
 
-int IdsCamera::supportedPixelFormat_Mono10G40()
+PixelFormat IdsCamera::supportedPixelFormat_Mono10G40()
 {
-    return PEAK_PIXEL_FORMAT_MONO10G40_IDS;
+    return {PEAK_PIXEL_FORMAT_MONO10G40_IDS, "Mono10G40_IDS", "Mono10 grouped 40"};
 }
 
-int IdsCamera::supportedPixelFormat_Mono12G24()
+PixelFormat IdsCamera::supportedPixelFormat_Mono12G24()
 {
-    return PEAK_PIXEL_FORMAT_MONO12G24_IDS;
+    return {PEAK_PIXEL_FORMAT_MONO12G24_IDS, "Mono12G24_IDS", "Mono12 grouped 24"};
 }
 
 #endif // WITH_IDS
