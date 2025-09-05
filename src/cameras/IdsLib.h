@@ -87,6 +87,14 @@ public:
     PROC_S(peak_Decimation_FactorY_GetList)(peak_camera_handle, uint32_t*, size_t*);
     PROC_S(peak_Decimation_Set)(peak_camera_handle, uint32_t, uint32_t);
     PROC_S(peak_Decimation_Get)(peak_camera_handle, uint32_t*, uint32_t*);
+#ifdef ADJUST_PIXEL_CLOCK
+    PROC_A(peak_PixelClock_GetAccessStatus)(peak_camera_handle);
+    PROC_B(peak_PixelClock_HasRange)(peak_camera_handle);
+    PROC_S(peak_PixelClock_GetRange)(peak_camera_handle, double*, double*, double*);
+    PROC_S(peak_PixelClock_GetList)(peak_camera_handle, double*, size_t*);
+    PROC_S(peak_PixelClock_Get)(peak_camera_handle, double*);
+    PROC_S(peak_PixelClock_Set)(peak_camera_handle, double);
+#endif
 
     #undef PROC_S
     #undef PROC_A
