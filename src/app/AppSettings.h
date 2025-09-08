@@ -42,6 +42,11 @@ public:
     bool isDevMode = false;
     bool showGoodnessTextOnPlot = false;
     bool showGoodnessRelative = false;
+#ifdef SHOW_ALL_PIXEL_FORMATS
+    // In camera settings dialog, show all pixel formats provided by camera (see IdsCameraConfig::camFormats)
+    // Otherwise, show only formats whose decoding is supported (see IdsCamera::supportedFormats)
+    bool showAllPixelFormats = false;
+#endif
     UpdateCheckInterval updateCheckInterval = UpdateCheckInterval::Weekly;
     bool roundHardConfigFps = true;
     bool roundHardConfigExp = true;

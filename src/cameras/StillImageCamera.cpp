@@ -1,6 +1,9 @@
 #include "StillImageCamera.h"
 
-#include "plot/PlotExport.h"
+#include "app/ImageUtils.h"
+#ifdef WITH_IDS
+#include "cameras/IdsCamera.h"
+#endif
 #include "widgets/PlotIntf.h"
 #include "widgets/StabilityIntf.h"
 #include "widgets/TableIntf.h"
@@ -9,7 +12,6 @@
 
 #include "tools/OriSettings.h"
 #include "helpers/OriDialogs.h"
-#include "app/ImageUtils.h"
 
 #include <QApplication>
 #include <QDebug>
@@ -29,14 +31,18 @@ StillImageCamera::StillImageCamera(PlotIntf *plot, TableIntf *table, StabilityIn
     Ori::Settings s;
     s.beginGroup(_configGroup);
 
+    QString recentFilter = s.strValue("recentFilter");
+    
     QString fileName = QFileDialog::getOpenFileName(qApp->activeWindow(),
                                 qApp->tr("Open Beam Image"),
                                 s.strValue("recentDir"),
-                                CameraCommons::supportedImageFilters());
+                                CameraCommons::supportedImageFilters(),
+                                &recentFilter);
     if (!fileName.isEmpty()) {
         _fileName = fileName;
         s.setValue("recentDir", QFileInfo(fileName).dir().absolutePath());
         s.setValue("recentFile", fileName);
+        s.setValue("recentFilter", recentFilter);
     }
 }
 
@@ -107,11 +113,86 @@ void StillImageCamera::startCapture()
     CgnBeamCalc c;
     QImage image;
     QByteArray pgmData;
+    QByteArray rawData;
     qint64 loadTime;
     
+    if (RawFrameData::isRawFileName(_fileName)) {
+        QString infoFile = RawFrameData::infoFileName(_fileName);
+        if (!QFile::exists(infoFile)) {
+            Ori::Dlg::error(qApp->tr("Info file not found for this raw frame data file"));
+            return;
+        }
+        QSettings info(infoFile, QSettings::IniFormat);
+        _width = info.value(RawFrameData::keyWidth()).toInt();
+        _height = info.value(RawFrameData::keyHeight()).toInt();
+        const auto size = info.value(RawFrameData::keySize()).toInt();
+        const auto pixelFormat = info.value(RawFrameData::keyPixelFormat()).toString();
+        const auto camType = info.value(RawFrameData::keyCameraType()).toString();
+        qDebug() << LOG_ID << _fileName << "Raw" << camType << "frame" << _width << 'x' << _height << "pixelFormat:" << pixelFormat;
+        if (_width <= 0 || _height <= 0) {
+            Ori::Dlg::error(qApp->tr("Invalid image size %1 x %2").arg(_width).arg(_height));
+            return;
+        }
+        QFile f(_fileName);
+        if (!f.open(QIODevice::ReadOnly)) {
+            Ori::Dlg::error(qApp->tr("Unable to open raw file: %1").arg(f.errorString()));
+            return;
+        }
+        rawData = f.readAll();
+        if (rawData.size() != size) {
+            Ori::Dlg::error(qApp->tr("Invalid read data size %1, expected %2").arg(rawData.size()).arg(size));
+            return;
+        }
+        if (camType == RawFrameData::cameraTypeDemo()) {
+            _bpp = 8;
+        }
+    #ifdef WITH_IDS
+        else if (camType == RawFrameData::cameraTypeIds()) {
+            auto srcBuf = (uint8_t*)rawData.data();
+            auto srcSize = rawData.size();
+            int fmt = 0;
+            auto fmts = IdsCamera::pixelFormats();
+            for (const auto &f : std::as_const(fmts))
+                if (f.name == pixelFormat) {
+                    fmt = f.code;
+                    break;
+                }
+            if (fmt == IdsCamera::supportedPixelFormat_Mono8()) {
+                _bpp = 8;
+            } else if (fmt == IdsCamera::supportedPixelFormat_Mono10()) {
+                _bpp = 10;
+                pgmData = QByteArray(_width*_height*2, 0);
+                cgn_convert_10_to_u16((uint8_t*)pgmData.data(), srcBuf, srcSize);
+            } else if (fmt == IdsCamera::supportedPixelFormat_Mono12()) {
+                _bpp = 12;
+                pgmData = QByteArray(_width*_height*2, 0);
+                cgn_convert_12_to_u16((uint8_t*)pgmData.data(), srcBuf, srcSize);
+            } else if (fmt == IdsCamera::supportedPixelFormat_Mono10G40()) {
+                _bpp = 10;
+                pgmData = QByteArray(_width*_height*2, 0);
+                cgn_convert_10g40_to_u16((uint8_t*)pgmData.data(), srcBuf, srcSize);
+            } else if (fmt == IdsCamera::supportedPixelFormat_Mono12G24()) {
+                _bpp = 12;
+                pgmData = QByteArray(_width*_height*2, 0);
+                cgn_convert_12g24_to_u16((uint8_t*)pgmData.data(), srcBuf, srcSize);
+            } else {
+                Ori::Dlg::error(qApp->tr("Unsupported pixel format"));
+                return;
+            }
+        }
+     #endif
+        else {
+            Ori::Dlg::error(qApp->tr("Unsupported file type"));
+            return;
+        }
+        c.w = _width;
+        c.h = _height;
+        c.bpp = _bpp;
+        c.buf = (uint8_t*)(pgmData.size() > 0 ? pgmData.data() : rawData.data());
+    }
     // QImage does not support PGM images with more than 8-bit data (Qt 6.2, 6.9).
     // It can load them, but they are scaled down to 8-bit during loading.
-    if (_fileName.endsWith(".pgm", Qt::CaseInsensitive)) {
+    else if (_fileName.endsWith(".pgm", Qt::CaseInsensitive)) {
         ImageUtils::PgmData pgm = ImageUtils::loadPgm(_fileName);
         if (!pgm.error.isEmpty()) {
             Ori::Dlg::error(qApp->tr("Unable to load PGM file: %1").arg(pgm.error));
@@ -129,7 +210,6 @@ void StillImageCamera::startCapture()
         c.h = pgm.height;
         c.bpp = pgm.bpp;
         c.buf = (uint8_t*)pgmData.data();
- 
     } else {
         image = QImage(_fileName);
         if (image.isNull()) {

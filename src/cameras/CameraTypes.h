@@ -156,6 +156,37 @@ struct CamTableData
     bool warn = false;
 };
 
+struct RawFrameData
+{
+    QByteArray data;
+    QString pixelFormat;
+    QString cameraType;
+    QString cameraModel;
+    
+    static bool isRawFileName(const QString &fileName);
+    static QString infoFileName(const QString &fileName);
+    static QString fileExt() { return QStringLiteral("birf"); }
+    static QString infoFileExt() { return QStringLiteral("info"); }
+    static QString keyWidth() { return QStringLiteral("width"); }
+    static QString keyHeight() { return QStringLiteral("height"); }
+    static QString keySize() { return QStringLiteral("size"); }
+    static QString keyPixelFormat() { return QStringLiteral("pixelFormat"); }
+    static QString keyCameraType() { return QStringLiteral("cameraType"); }
+    static QString keyCameraModel() { return QStringLiteral("cameraModel"); }
+    static QString cameraTypeDemo() { return QStringLiteral("Demo"); }
+    static QString cameraTypeIds() { return QStringLiteral("IDS"); }
+};
+
+class ImageEvent : public QEvent
+{
+public:
+    ImageEvent() : QEvent(QEvent::Type(QEvent::registerEventType())) {}
+
+    qint64 time;
+    QByteArray buf;
+    std::optional<RawFrameData> raw;
+};
+
 class BrightEvent : public QEvent
 {
 public:
@@ -214,5 +245,14 @@ using AnyRecord = QMap<QString, QVariant>;
 using AnyRecords = QList<AnyRecord>;
 
 #define HEX(v) QStringLiteral("0x%1").arg(v, 0, 16)
+
+struct PixelFormat {
+    int code;
+    QString name;
+    QString descr;
+    
+    inline bool operator == (int c) { return c == code; }
+};
+inline bool operator == (int c, const PixelFormat &fmt) { return c == fmt.code; }
 
 #endif // CAMERA_TYPES_H

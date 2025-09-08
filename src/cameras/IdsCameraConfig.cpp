@@ -2,6 +2,8 @@
 
 #ifdef WITH_IDS
 
+#include "app/AppSettings.h"
+#include "cameras/IdsCamera.h"
 #include "cameras/IdsLib.h"
 
 #include "dialogs/OriConfigDlg.h"
@@ -82,10 +84,33 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
     int pageHard = maxPageId + 1;
     int pageInfo = maxPageId + 2;
     int pageMisc = maxPageId + 3;
+    opts.pages << ConfigPage(pageHard, tr("Hardware"), ":/toolbar/hardware").withHelpTopic("cam_settings_hard");
+    opts.items
+        << new ConfigItemInfo(pageHard, tr("Reselect camera to apply these options"))
+        << new ConfigItemSpace(pageHard, 12);
+
+#ifdef SHOW_ALL_PIXEL_FORMATS
+    auto formatsItem = new ConfigItemDropDown(pageHard, tr("Pixel format"), &pixelFormat);
+    auto supportedFmts = IdsCamera::supportedFormats();
+    for (const auto &f : std::as_const(camFormats)) {
+        if (AppSettings::instance().showAllPixelFormats) {
+            // Add format even if we don't know how to decode it
+            formatsItem->withOption(f.code, f.descr);
+        } else {
+            // Add format only if we support its decoding
+            for (const auto &sf : std::as_const(supportedFmts)) {
+                if (sf.code == f.code) {
+                    formatsItem->withOption(f.code, f.descr);
+                    break;
+                }
+            }
+        }
+    }
+    opts.items << formatsItem;
+#else
     bpp8 = bpp == 8;
     bpp10 = bpp == 10;
     bpp12 = bpp == 12;
-    opts.pages << ConfigPage(pageHard, tr("Hardware"), ":/toolbar/hardware").withHelpTopic("cam_settings_hard");
     opts.items
         << (new ConfigItemSection(pageHard, tr("Pixel format")))
             ->withHint(tr("Reselect camera to apply"))
@@ -95,11 +120,17 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
             ->setDisabled(!supportedBpp.contains(10))->withRadioGroup("pixel_format")
         << (new ConfigItemBool(pageHard, tr("12 bit"), &bpp12))
             ->setDisabled(!supportedBpp.contains(12))->withRadioGroup("pixel_format")
+#endif
     ;
+#ifdef ADJUST_PIXEL_CLOCK
+    opts.items
+        << new ConfigItemSpace(pageHard, 12)
+        << new ConfigItemBool(pageHard, tr("Maximize pixel clock frequency"), &adjustPixelClock);
+#endif
 
     opts.items
         << new ConfigItemSpace(pageHard, 12)
-        << (new ConfigItemSection(pageHard, tr("Resolution reduction")))->withHint(tr("Reselect camera to apply"));
+        << new ConfigItemSection(pageHard, tr("Resolution reduction"));
     ConfigEditorFactorXY *binnigEditor = nullptr;
     if (binning.configurable) {
         binnigEditor = new ConfigEditorFactorXY(&binning, nullptr);
@@ -146,7 +177,11 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
         << (new ConfigItemInt(pageMisc, tr("Frame count for averaging"), &autoExpFramesAvg))
             ->withMinMax(1, 100)
     ;
+#ifdef SHOW_ALL_PIXEL_FORMATS
+    oldPixelFormat = pixelFormat;
+#else
     oldBpp = bpp;
+#endif
     oldBinning = binning;
     oldDecimation = decimation;
     hasPowerWarning = false;
@@ -154,7 +189,22 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
 
 void IdsCameraConfig::save(QSettings *s)
 {
+#ifdef SHOW_ALL_PIXEL_FORMATS
+    s->setValue("hard.pixelFormat", pixelFormat);
+    if (pixelFormat == IdsCamera::supportedPixelFormat_Mono12G24())
+        bpp = 12;
+    else if (pixelFormat == IdsCamera::supportedPixelFormat_Mono10G40())
+        bpp = 10;
+    else if (pixelFormat == IdsCamera::supportedPixelFormat_Mono8())
+        bpp = 8;
+    else {
+        // For formats we can not decode, an empty 8-bit buffer will be used
+        // for calculations (see IdsCamera::initPixelFormat)
+        bpp = 8;
+    }
+#else
     bpp = bpp12 ? 12 : bpp10 ? 10 : 8;
+#endif
     s->setValue("hard.bpp", bpp);
     s->setValue("hard.binning.x", binning.x);
     s->setValue("hard.binning.y", binning.y);
@@ -165,8 +215,16 @@ void IdsCameraConfig::save(QSettings *s)
     s->setValue("autoExpLevel", autoExpLevel);
     s->setValue("autoExpFramesAvg", autoExpFramesAvg);
     s->setValue("fpsLock", fpsLock);
+#ifdef ADJUST_PIXEL_CLOCK
+    s->setValue("adjustPixelClock", adjustPixelClock);
+#endif
 
-    hasPowerWarning = oldBpp != bpp ||
+    hasPowerWarning = 
+#ifdef SHOW_ALL_PIXEL_FORMATS
+        oldPixelFormat != pixelFormat ||
+#else
+        oldBpp != bpp ||
+#endif
         oldBinning.x != binning.x || oldBinning.y != binning.y ||
         oldDecimation.x != decimation.x || oldDecimation.y != decimation.y;
 
@@ -183,6 +241,17 @@ void IdsCameraConfig::save(QSettings *s)
 void IdsCameraConfig::load(QSettings *s)
 {
     bpp = s->value("hard.bpp", 8).toInt();
+#ifdef SHOW_ALL_PIXEL_FORMATS
+    pixelFormat = s->value("hard.pixelFormat").toInt();
+    if (pixelFormat <= 0) {
+        if (bpp == 12)
+            pixelFormat = IdsCamera::supportedPixelFormat_Mono12G24().code;
+        else if (bpp == 10)
+            pixelFormat = IdsCamera::supportedPixelFormat_Mono10G40().code;
+        else
+            pixelFormat = IdsCamera::supportedPixelFormat_Mono8().code;
+    }
+#endif
     binning.x = qMax(1u, s->value("hard.binning.x", 1).toUInt());
     binning.y = qMax(1u, s->value("hard.binning.y", 1).toUInt());
     decimation.x = qMax(1u, s->value("hard.decimation.x", 1).toUInt());
@@ -194,6 +263,9 @@ void IdsCameraConfig::load(QSettings *s)
     autoExpLevel = s->value("autoExpLevel").toInt();
     autoExpFramesAvg = s->value("autoExpFramesAvg", 4).toInt();
     fpsLock = s->value("fpsLock", 0).toDouble();
+#ifdef ADJUST_PIXEL_CLOCK
+    adjustPixelClock = s->value("adjustPixelClock", false).toBool();
+#endif
 
     AnyRecords presets;
     int size = s->beginReadArray("exp_presets");

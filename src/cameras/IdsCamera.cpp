@@ -56,6 +56,7 @@ public:
     peak_status res;
     peak_buffer buf;
     peak_frame_handle frame;
+    peak_pixel_format pixelFormat;
     QByteArray hdrBuf;
 
     int framesErr = 0;
@@ -255,6 +256,60 @@ public:
         return {};
     }
 
+#ifdef SHOW_ALL_PIXEL_FORMATS
+    QString initPixelFormat()
+    {
+        bool canDecode = true;
+        pixelFormat = (peak_pixel_format)cam->_cfg->pixelFormat;
+        if (pixelFormat == PEAK_PIXEL_FORMAT_MONO12 || 
+            pixelFormat == PEAK_PIXEL_FORMAT_MONO12G24_IDS) {
+            hdrBuf = QByteArray(c.w*c.h*2, 0);
+            c.buf = (uint8_t*)hdrBuf.data();
+            c.bpp = cam->_cfg->bpp = 12;
+        } else if (pixelFormat == PEAK_PIXEL_FORMAT_MONO10 || 
+            pixelFormat == PEAK_PIXEL_FORMAT_MONO10G40_IDS) {
+            hdrBuf = QByteArray(c.w*c.h*2, 0);
+            c.buf = (uint8_t*)hdrBuf.data();
+            c.bpp = cam->_cfg->bpp = 10;
+        } else if (pixelFormat == PEAK_PIXEL_FORMAT_MONO8) {
+            // Camera frame buffer will be used directly
+            c.bpp = cam->_cfg->bpp = 8;
+        } else {
+            canDecode = false;
+            // Decoding of this format is not supported
+            // Init dummy buffer to make calculations working
+            hdrBuf = QByteArray(c.w*c.h, 0);
+            c.buf = (uint8_t*)hdrBuf.data();
+            c.bpp = cam->_cfg->bpp = 8;
+        }
+    
+        size_t formatCount = 0;
+        res = IDS.peak_PixelFormat_GetList(hCam, nullptr, &formatCount);
+        CHECK_ERR("Unable to get pixel format count");
+        QVector<peak_pixel_format> pixelFormats(formatCount);
+        res = IDS.peak_PixelFormat_GetList(hCam, pixelFormats.data(), &formatCount);
+        CHECK_ERR("Unable to get pixel formats");
+
+        auto allFormats = IdsCamera::pixelFormats();
+        for (int i = 0; i < formatCount; i++) {
+            auto pf = pixelFormats.at(i);
+            qDebug().noquote() << LOG_ID << "Supported pixel format" << HEX(pf);
+            // List of all formats provided by camera
+            // is used for format selector in camera config dialog
+            for (const auto &f : std::as_const(allFormats))
+                if (f.code == pf) {
+                    cam->_cfg->camFormats << f;
+                    break;
+                }
+        }
+        qDebug().noquote() << LOG_ID << "Set pixel format" << HEX(pixelFormat) << c.bpp << "bpp"
+            << (canDecode ? "" : "(decoding is not supported)");
+        res = IDS.peak_PixelFormat_Set(hCam, pixelFormat);
+        CHECK_ERR("Unable to set pixel format");
+
+        return {};
+    }
+#else
     QString initPixelFormat()
     {
         size_t formatCount = 0;
@@ -282,24 +337,60 @@ public:
             return "Camera doesn't support any of known gray scale formats (Mono8, Mono10g40, Mono12g24)";
         }
         c.bpp = cam->_cfg->bpp;
-        peak_pixel_format targetFormat;
         if (!supportedFormats.contains(c.bpp)) {
             c.bpp = supportedFormats.firstKey();
-            targetFormat = supportedFormats.first();
+            pixelFormat = supportedFormats.first();
             qWarning() << LOG_ID << "Camera does not support " << cam->_cfg->bpp << "bpp, use " << c.bpp << "bpp";
         } else {
-            targetFormat = supportedFormats[c.bpp];
+            pixelFormat = supportedFormats[c.bpp];
         }
-        qDebug().noquote() << LOG_ID << "Set pixel format" << HEX(targetFormat) << c.bpp << "bpp";
-        res = IDS.peak_PixelFormat_Set(hCam, targetFormat);
+        qDebug().noquote() << LOG_ID << "Set pixel format" << HEX(pixelFormat) << c.bpp << "bpp";
+        res = IDS.peak_PixelFormat_Set(hCam, pixelFormat);
         CHECK_ERR("Unable to set pixel format");
         cam->_cfg->bpp = c.bpp;
         if (c.bpp > 8) {
             hdrBuf = QByteArray(c.w*c.h*2, 0);
             c.buf = (uint8_t*)hdrBuf.data();
+        } else {
+            // camera frame buffer will be used directly
         }
         return {};
     }
+#endif
+
+#ifdef ADJUST_PIXEL_CLOCK
+    QString adjustPixelClock()
+    {
+        if (!cam->_cfg->adjustPixelClock)
+            return {};
+        if (IDS.peak_PixelClock_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE) {
+            qDebug() << LOG_ID << "Pixel clock is not configurable";
+            return {};
+        }
+        double max = 0;
+        if (IDS.peak_PixelClock_HasRange(hCam)) {
+            double min, inc;
+            res = IDS.peak_PixelClock_GetRange(hCam, &min, &max, &inc);
+            CHECK_ERR("Unable to get pixel clock range")
+            qDebug() << LOG_ID << "Pixel clock range" << min << max << inc;
+        } else {
+            size_t clockCount = 0;
+            res = IDS.peak_PixelClock_GetList(hCam, nullptr, &clockCount);
+            CHECK_ERR("Unable to get pixel clock count");
+            QVector<double> pixelClocks(clockCount);
+            res = IDS.peak_PixelClock_GetList(hCam, pixelClocks.data(), &clockCount);
+            CHECK_ERR("Unable to get pixel clock list");
+            for (double pc : std::as_const(pixelClocks))
+                if (pc > max) max = pc;
+        }
+        if (max > 0) {
+            qDebug() << LOG_ID << "Set pixel clock" << max << "MHz";
+            res = IDS.peak_PixelClock_Set(hCam, max);
+            CHECK_ERR("Unable to maximize pixel clock")
+        }
+        return {};
+    }
+#endif
 
     QString showCurrProps()
     {
@@ -321,6 +412,9 @@ public:
         }
         SHOW_CAM_PROP("FPS", IDS.peak_FrameRate_Get, double);
         SHOW_CAM_PROP("Exposure", IDS.peak_ExposureTime_Get, double);
+    #ifdef ADJUST_PIXEL_CLOCK
+        SHOW_CAM_PROP("PixelClock", IDS.peak_PixelClock_Get, double);
+    #endif
         #undef SHOW_CAM_PROP
         
         double min, max, inc;
@@ -363,6 +457,9 @@ public:
         if (auto err = initResolution(); !err.isEmpty()) return err;
         if (auto err = getImageSize(); !err.isEmpty()) return err;
         if (auto err = initPixelFormat(); !err.isEmpty()) return err;
+    #ifdef ADJUST_PIXEL_CLOCK
+        if (auto err = adjustPixelClock(); !err.isEmpty()) return err;
+    #endif
         if (auto err = showCurrProps(); !err.isEmpty()) return err;
 
         plot->initGraph(c.w, c.h);
@@ -377,6 +474,22 @@ public:
         showBrightness = cam->_cfg->showBrightness;
         saveBrightness = cam->_cfg->saveBrightness;
         togglePowerMeter();
+
+        rawFrameData = [this]{
+            auto fmts = IdsCamera::pixelFormats();
+            QString formatName;
+            for (const auto &f : std::as_const(fmts))
+                if (f.code == pixelFormat) {
+                    formatName = f.name;
+                    break;
+                }
+            return RawFrameData {
+                .data = QByteArray((const char*)buf.memoryAddress, buf.memorySize),
+                .pixelFormat = formatName,
+                .cameraType = RawFrameData::cameraTypeIds(),
+                .cameraModel = cam->_descr,
+            };
+        };
 
         return {};
     }
@@ -424,12 +537,30 @@ public:
 
             if (res == PEAK_STATUS_SUCCESS) {
                 tm = timer.elapsed();
+        #ifdef SHOW_ALL_PIXEL_FORMATS
+                if (pixelFormat == PEAK_PIXEL_FORMAT_MONO8) {
+                    c.buf = buf.memoryAddress;
+                } else if (pixelFormat == PEAK_PIXEL_FORMAT_MONO10) {
+                    cgn_convert_10_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
+                } else if (pixelFormat == PEAK_PIXEL_FORMAT_MONO12) {
+                    cgn_convert_12_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
+                } else if (pixelFormat == PEAK_PIXEL_FORMAT_MONO10G40_IDS) {
+                    cgn_convert_10g40_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
+                } else if (pixelFormat == PEAK_PIXEL_FORMAT_MONO12G24_IDS) {
+                    cgn_convert_12g24_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
+                } else {
+                    // Decoding of this format is not supported
+                    // c.buf is empty 8-bit buffer (see initPixelFormat)
+                    // so all the below code should be working and giving empty results
+                }
+        #else
                 if (c.bpp == 12)
                     cgn_convert_12g24_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
                 else if (c.bpp == 10)
                     cgn_convert_10g40_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
                 else
                     c.buf = buf.memoryAddress;
+        #endif
                 calcResult();
                 markCalcTime();
 
@@ -768,6 +899,97 @@ void IdsCamera::requestExpWarning()
 {
     if (_peak)
         _peak->requestExpWarning(_plot->eventsTarget());
+}
+
+QList<PixelFormat> IdsCamera::pixelFormats()
+{
+    return {
+        {PEAK_PIXEL_FORMAT_BAYER_GR8, "BayerGR8", "BayerGR8"},
+        {PEAK_PIXEL_FORMAT_BAYER_GR10, "BayerGR10", "BayerGR10"},
+        {PEAK_PIXEL_FORMAT_BAYER_GR12, "BayerGR12", "BayerGR12"},
+        {PEAK_PIXEL_FORMAT_BAYER_RG8, "BayerRG8", "BayerRG8"},
+        {PEAK_PIXEL_FORMAT_BAYER_RG10, "BayerRG10", "BayerRG10"},
+        {PEAK_PIXEL_FORMAT_BAYER_RG12, "BayerRG12", "BayerRG12"},
+        {PEAK_PIXEL_FORMAT_BAYER_GB8, "BayerGB8", "BayerGB8"},
+        {PEAK_PIXEL_FORMAT_BAYER_GB10, "BayerGB10", "BayerGB10"},
+        {PEAK_PIXEL_FORMAT_BAYER_GB12, "BayerGB12", "BayerGB12"},
+        {PEAK_PIXEL_FORMAT_BAYER_BG8, "BayerBG8", "BayerBG8"},
+        {PEAK_PIXEL_FORMAT_BAYER_BG10, "BayerBG10", "BayerBG10"},
+        {PEAK_PIXEL_FORMAT_BAYER_BG12, "BayerBG12", "BayerBG12"},
+        supportedPixelFormat_Mono8(),
+        supportedPixelFormat_Mono10(),
+        supportedPixelFormat_Mono12(),
+        {PEAK_PIXEL_FORMAT_RGB8, "RGB8", "RGB8"},
+        {PEAK_PIXEL_FORMAT_RGB10, "RGB10", "RGB10"},
+        {PEAK_PIXEL_FORMAT_RGB12, "RGB12", "RGB12"},
+        {PEAK_PIXEL_FORMAT_BGR8, "BGR8", "BGR8"},
+        {PEAK_PIXEL_FORMAT_BGR10, "BGR10", "BGR10"},
+        {PEAK_PIXEL_FORMAT_BGR12, "BGR12", "BGR12"},
+        {PEAK_PIXEL_FORMAT_RGBA8, "RGBa8", "RGBa8"},
+        {PEAK_PIXEL_FORMAT_RGBA10, "RGBa10", "RGBa10"},
+        {PEAK_PIXEL_FORMAT_RGBA12, "RGBa12", "RGBa12"},
+        {PEAK_PIXEL_FORMAT_BGRA8, "BGRa8", "BGRa8"},
+        {PEAK_PIXEL_FORMAT_BGRA10, "BGRa10", "BGRa10"},
+        {PEAK_PIXEL_FORMAT_BGRA12, "BGRa12", "BGRa12"},
+        {PEAK_PIXEL_FORMAT_BAYER_GR10P, "BayerGR10P", "BayerGR10 packed"},
+        {PEAK_PIXEL_FORMAT_BAYER_GR12P, "BayerGR12P", "BayerGR12 packed"},
+        {PEAK_PIXEL_FORMAT_BAYER_RG10P, "BayerRG10P", "BayerRG10 packed"},
+        {PEAK_PIXEL_FORMAT_BAYER_RG12P, "BayerRG12P", "BayerRG12 packed"},
+        {PEAK_PIXEL_FORMAT_BAYER_GB10P, "BayerGB10P", "BayerGB10 packed"},
+        {PEAK_PIXEL_FORMAT_BAYER_GB12P, "BayerGB12P", "BayerGB12 packed"},
+        {PEAK_PIXEL_FORMAT_BAYER_BG10P, "BayerBG10P", "BayerBG10 packed"},
+        {PEAK_PIXEL_FORMAT_BAYER_BG12P, "BayerBG12P", "BayerBG12 packed"},
+        {PEAK_PIXEL_FORMAT_MONO10P, "Mono10P", "Mono10 packed"},
+        {PEAK_PIXEL_FORMAT_MONO12P, "Mono12P", "Mono12 packed"},
+        {PEAK_PIXEL_FORMAT_RGB10P32, "RGB10P32", "RGB10 packed 32"},
+        {PEAK_PIXEL_FORMAT_BGR10P32, "BGR10P32", "BGR10 packed 32"},
+        {PEAK_PIXEL_FORMAT_BAYER_GR10G40_IDS, "BayerGR10G40_IDS", "BayerGR10 grouped 40"},
+        {PEAK_PIXEL_FORMAT_BAYER_RG10G40_IDS, "BayerRG10G40_IDS", "BayerRG10 grouped 40"},
+        {PEAK_PIXEL_FORMAT_BAYER_GB10G40_IDS, "BayerGB10G40_IDS", "BayerGB10 grouped 40"},
+        {PEAK_PIXEL_FORMAT_BAYER_BG10G40_IDS, "BayerBG10G40_IDS", "BayerBG grouped 40"},
+        {PEAK_PIXEL_FORMAT_BAYER_GR12G24_IDS, "BayerGR12G24_IDS", "BayerGR12 grouped 24"},
+        {PEAK_PIXEL_FORMAT_BAYER_RG12G24_IDS, "BayerRG12G24_IDS", "BayerRG12 grouped 24"},
+        {PEAK_PIXEL_FORMAT_BAYER_GB12G24_IDS, "BayerGB12G24_IDS", "BayerGB12 grouped 24"},
+        {PEAK_PIXEL_FORMAT_BAYER_BG12G24_IDS, "BayerBG12G24_IDS", "BayerBG12 grouped 24"},
+        supportedPixelFormat_Mono10G40(),
+        supportedPixelFormat_Mono12G24(),
+    };
+}
+
+QList<PixelFormat> IdsCamera::supportedFormats()
+{
+    return {
+        supportedPixelFormat_Mono8(),
+        supportedPixelFormat_Mono10(),
+        supportedPixelFormat_Mono12(),
+        supportedPixelFormat_Mono10G40(),
+        supportedPixelFormat_Mono12G24(),
+    };
+}
+
+PixelFormat IdsCamera::supportedPixelFormat_Mono8()
+{
+    return {PEAK_PIXEL_FORMAT_MONO8, "Mono8", "Mono8"};
+}
+
+PixelFormat IdsCamera::supportedPixelFormat_Mono10()
+{
+    return {PEAK_PIXEL_FORMAT_MONO10, "Mono10", "Mono10"};
+}
+
+PixelFormat IdsCamera::supportedPixelFormat_Mono12()
+{
+    return {PEAK_PIXEL_FORMAT_MONO12, "Mono12", "Mono12"};
+}
+
+PixelFormat IdsCamera::supportedPixelFormat_Mono10G40()
+{
+    return {PEAK_PIXEL_FORMAT_MONO10G40_IDS, "Mono10G40_IDS", "Mono10 grouped 40"};
+}
+
+PixelFormat IdsCamera::supportedPixelFormat_Mono12G24()
+{
+    return {PEAK_PIXEL_FORMAT_MONO12G24_IDS, "Mono12G24_IDS", "Mono12 grouped 24"};
 }
 
 #endif // WITH_IDS

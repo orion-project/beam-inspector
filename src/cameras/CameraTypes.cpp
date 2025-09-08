@@ -241,6 +241,20 @@ double RandomOffset::next()
 }
 
 //------------------------------------------------------------------------------
+//                               RawFrameData
+//------------------------------------------------------------------------------
+
+bool RawFrameData::isRawFileName(const QString &fileName)
+{
+    return fileName.endsWith("." + fileExt(), Qt::CaseInsensitive);
+}
+
+QString RawFrameData::infoFileName(const QString &fileName)
+{
+    return fileName + '.' + infoFileExt();
+}
+
+//------------------------------------------------------------------------------
 //                               CameraCommons
 //------------------------------------------------------------------------------
 
@@ -255,5 +269,6 @@ QString CameraCommons::supportedImageFilters()
     QStringList filters;
     for (const QString& ext : supportedImageExts())
         filters << QStringLiteral("*.") + ext;
-    return qApp->tr("Images (%1);;All Files (*.*)").arg(filters.join(' '));
+    return qApp->tr("Images (%1);;Raw frame data (*.%2);;All Files (*.*)")
+        .arg(filters.join(' '), RawFrameData::fileExt());
 }
