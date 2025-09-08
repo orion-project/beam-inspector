@@ -60,7 +60,10 @@ public:
     IdsCameraConfig* idsConfig() { return _cfg.data(); }
     
     static QList<PixelFormat> pixelFormats();
+    static QList<PixelFormat> supportedFormats();
     static PixelFormat supportedPixelFormat_Mono8();
+    static PixelFormat supportedPixelFormat_Mono10();
+    static PixelFormat supportedPixelFormat_Mono12();
     static PixelFormat supportedPixelFormat_Mono10G40();
     static PixelFormat supportedPixelFormat_Mono12G24();
 

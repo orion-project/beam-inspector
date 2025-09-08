@@ -88,24 +88,19 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
 #ifdef SHOW_ALL_PIXEL_FORMATS
     auto formatsItem = new ConfigItemDropDown(pageHard, tr("Pixel format"), &pixelFormat);
     formatsItem->withHint(tr("Reselect camera to apply"));
-    if (AppSettings::instance().showAllPixelFormats)
-    {
-        for (const auto &f : std::as_const(camFormats))
+    auto supportedFmts = IdsCamera::supportedFormats();
+    for (const auto &f : std::as_const(camFormats)) {
+        if (AppSettings::instance().showAllPixelFormats) {
+            // Add format even if we don't know how to decode it
             formatsItem->withOption(f.code, f.descr);
-    }
-    else
-    {
-        {
-            auto f = IdsCamera::supportedPixelFormat_Mono8();
-            formatsItem->withOption(f.code, f.descr);
-        }
-        {
-            auto f = IdsCamera::supportedPixelFormat_Mono10G40();
-            formatsItem->withOption(f.code, f.descr);
-        }
-        {
-            auto f = IdsCamera::supportedPixelFormat_Mono12G24();
-            formatsItem->withOption(f.code, f.descr);
+        } else {
+            // Add format only if we support its decoding
+            for (const auto &sf : std::as_const(supportedFmts)) {
+                if (sf.code == f.code) {
+                    formatsItem->withOption(f.code, f.descr);
+                    break;
+                }
+            }
         }
     }
     opts.items << formatsItem;

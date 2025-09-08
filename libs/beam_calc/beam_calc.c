@@ -421,10 +421,32 @@ double cgn_calc_brightness_2(const CgnBeamCalc *c, int xc, int yc) {
     }
 }
 
-typedef struct { uint8_t b0, b1, b2, b3, b4; } PixelGroup10;
-void cgn_convert_10g40_to_u16(uint8_t *dst, uint8_t *src, int sz) {
+typedef struct { uint8_t b0, b1; } PixelGroup10;
+void cgn_convert_10_to_u16(uint8_t *dst, uint8_t *src, int sz) {
     int j = 0;
     PixelGroup10 *g = (PixelGroup10*)src;
+    for (int i = 0; i < sz; i += 2) {
+        dst[j++] = g->b0;
+        dst[j++] = g->b1 & 0b00000011;
+        g++;
+    }
+}
+
+typedef struct { uint8_t b0, b1; } PixelGroup12;
+void cgn_convert_12_to_u16(uint8_t *dst, uint8_t *src, int sz) {
+    int j = 0;
+    PixelGroup12 *g = (PixelGroup12*)src;
+    for (int i = 0; i < sz; i += 2) {
+        dst[j++] = g->b0;
+        dst[j++] = g->b1 & 0b00001111;
+        g++;
+    }
+}
+
+typedef struct { uint8_t b0, b1, b2, b3, b4; } PixelGroup10g40;
+void cgn_convert_10g40_to_u16(uint8_t *dst, uint8_t *src, int sz) {
+    int j = 0;
+    PixelGroup10g40 *g = (PixelGroup10g40*)src;
     for (int i = 0; i < sz; i += 5) {
         dst[j++] = ((g->b4 & 0b00000011) >> 0) | (g->b0 << 2);
         dst[j++] = g->b0 >> 6;
@@ -438,10 +460,10 @@ void cgn_convert_10g40_to_u16(uint8_t *dst, uint8_t *src, int sz) {
     }
 }
 
-typedef struct { uint8_t b0, b1, b2; } PixelGroup12;
+typedef struct { uint8_t b0, b1, b2; } PixelGroup12g24;
 void cgn_convert_12g24_to_u16(uint8_t *dst, uint8_t *src, int sz) {
     int j = 0;
-    PixelGroup12 *g = (PixelGroup12*)src;
+    PixelGroup12g24 *g = (PixelGroup12g24*)src;
     for (int i = 0; i < sz; i += 3) {
         dst[j++] = (g->b2 & 0x0F) | (g->b0 << 4);
         dst[j++] = g->b0 >> 4;
