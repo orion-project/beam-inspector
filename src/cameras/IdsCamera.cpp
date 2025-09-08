@@ -261,11 +261,13 @@ public:
     {
         bool canDecode = true;
         pixelFormat = (peak_pixel_format)cam->_cfg->pixelFormat;
-        if (pixelFormat == PEAK_PIXEL_FORMAT_MONO12G24_IDS) {
+        if (pixelFormat == PEAK_PIXEL_FORMAT_MONO12 || 
+            pixelFormat == PEAK_PIXEL_FORMAT_MONO12G24_IDS) {
             hdrBuf = QByteArray(c.w*c.h*2, 0);
             c.buf = (uint8_t*)hdrBuf.data();
             c.bpp = cam->_cfg->bpp = 12;
-        } else if (pixelFormat == PEAK_PIXEL_FORMAT_MONO10G40_IDS) {
+        } else if (pixelFormat == PEAK_PIXEL_FORMAT_MONO10 || 
+            pixelFormat == PEAK_PIXEL_FORMAT_MONO10G40_IDS) {
             hdrBuf = QByteArray(c.w*c.h*2, 0);
             c.buf = (uint8_t*)hdrBuf.data();
             c.bpp = cam->_cfg->bpp = 10;
@@ -534,6 +536,10 @@ public:
         #ifdef SHOW_ALL_PIXEL_FORMATS
                 if (pixelFormat == PEAK_PIXEL_FORMAT_MONO8) {
                     c.buf = buf.memoryAddress;
+                } else if (pixelFormat == PEAK_PIXEL_FORMAT_MONO10) {
+                    cgn_convert_10_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
+                } else if (pixelFormat == PEAK_PIXEL_FORMAT_MONO12) {
+                    cgn_convert_12_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
                 } else if (pixelFormat == PEAK_PIXEL_FORMAT_MONO10G40_IDS) {
                     cgn_convert_10g40_to_u16(c.buf, buf.memoryAddress, buf.memorySize);
                 } else if (pixelFormat == PEAK_PIXEL_FORMAT_MONO12G24_IDS) {
@@ -893,7 +899,7 @@ void IdsCamera::requestExpWarning()
 
 QList<PixelFormat> IdsCamera::pixelFormats()
 {
-    return QList<PixelFormat>{
+    return {
         {PEAK_PIXEL_FORMAT_BAYER_GR8, "BayerGR8", "BayerGR8"},
         {PEAK_PIXEL_FORMAT_BAYER_GR10, "BayerGR10", "BayerGR10"},
         {PEAK_PIXEL_FORMAT_BAYER_GR12, "BayerGR12", "BayerGR12"},
@@ -907,8 +913,8 @@ QList<PixelFormat> IdsCamera::pixelFormats()
         {PEAK_PIXEL_FORMAT_BAYER_BG10, "BayerBG10", "BayerBG10"},
         {PEAK_PIXEL_FORMAT_BAYER_BG12, "BayerBG12", "BayerBG12"},
         supportedPixelFormat_Mono8(),
-        {PEAK_PIXEL_FORMAT_MONO10, "Mono10", "Mono10"},
-        {PEAK_PIXEL_FORMAT_MONO12, "Mono12", "Mono12"},
+        supportedPixelFormat_Mono10(),
+        supportedPixelFormat_Mono12(),
         {PEAK_PIXEL_FORMAT_RGB8, "RGB8", "RGB8"},
         {PEAK_PIXEL_FORMAT_RGB10, "RGB10", "RGB10"},
         {PEAK_PIXEL_FORMAT_RGB12, "RGB12", "RGB12"},
@@ -946,9 +952,30 @@ QList<PixelFormat> IdsCamera::pixelFormats()
     };
 }
 
+QList<PixelFormat> IdsCamera::supportedFormats()
+{
+    return {
+        supportedPixelFormat_Mono8(),
+        supportedPixelFormat_Mono10(),
+        supportedPixelFormat_Mono12(),
+        supportedPixelFormat_Mono10G40(),
+        supportedPixelFormat_Mono12G24(),
+    };
+}
+
 PixelFormat IdsCamera::supportedPixelFormat_Mono8()
 {
     return {PEAK_PIXEL_FORMAT_MONO8, "Mono8", "Mono8"};
+}
+
+PixelFormat IdsCamera::supportedPixelFormat_Mono10()
+{
+    return {PEAK_PIXEL_FORMAT_MONO10, "Mono10", "Mono10"};
+}
+
+PixelFormat IdsCamera::supportedPixelFormat_Mono12()
+{
+    return {PEAK_PIXEL_FORMAT_MONO12, "Mono12", "Mono12"};
 }
 
 PixelFormat IdsCamera::supportedPixelFormat_Mono10G40()

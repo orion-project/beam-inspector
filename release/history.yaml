@@ -6,6 +6,7 @@ history:
   - text: Can load raw data blob when opening image file
   - text: Can select any pixel format supported by camera (for testing)
   - text: Maximize pixel clock on IDS camera connection
+  - text: Support IDS camera pixel formats Mono10 and Mono12
 
 - version: 0.0.26
   date: 2025-06-23

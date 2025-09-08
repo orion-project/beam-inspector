@@ -148,6 +148,8 @@ void StillImageCamera::startCapture()
         }
     #ifdef WITH_IDS
         else if (camType == RawFrameData::cameraTypeIds()) {
+            auto srcBuf = (uint8_t*)rawData.data();
+            auto srcSize = rawData.size();
             int fmt = 0;
             auto fmts = IdsCamera::pixelFormats();
             for (const auto &f : std::as_const(fmts))
@@ -157,14 +159,22 @@ void StillImageCamera::startCapture()
                 }
             if (fmt == IdsCamera::supportedPixelFormat_Mono8()) {
                 _bpp = 8;
+            } else if (fmt == IdsCamera::supportedPixelFormat_Mono10()) {
+                _bpp = 10;
+                pgmData = QByteArray(_width*_height*2, 0);
+                cgn_convert_10_to_u16((uint8_t*)pgmData.data(), srcBuf, srcSize);
+            } else if (fmt == IdsCamera::supportedPixelFormat_Mono12()) {
+                _bpp = 12;
+                pgmData = QByteArray(_width*_height*2, 0);
+                cgn_convert_12_to_u16((uint8_t*)pgmData.data(), srcBuf, srcSize);
             } else if (fmt == IdsCamera::supportedPixelFormat_Mono10G40()) {
                 _bpp = 10;
-                pgmData = QByteArray(_width * _height * sizeof(uint16_t), 0);
-                cgn_convert_10g40_to_u16((uint8_t*)pgmData.data(), (uint8_t*)rawData.data(), rawData.size());
+                pgmData = QByteArray(_width*_height*2, 0);
+                cgn_convert_10g40_to_u16((uint8_t*)pgmData.data(), srcBuf, srcSize);
             } else if (fmt == IdsCamera::supportedPixelFormat_Mono12G24()) {
                 _bpp = 12;
-                pgmData = QByteArray(_width * _height * sizeof(uint16_t), 0);
-                cgn_convert_12g24_to_u16((uint8_t*)pgmData.data(), (uint8_t*)rawData.data(), rawData.size());
+                pgmData = QByteArray(_width*_height*2, 0);
+                cgn_convert_12g24_to_u16((uint8_t*)pgmData.data(), srcBuf, srcSize);
             } else {
                 Ori::Dlg::error(qApp->tr("Unsupported pixel format"));
                 return;
