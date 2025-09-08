@@ -361,6 +361,8 @@ public:
 #ifdef ADJUST_PIXEL_CLOCK
     QString adjustPixelClock()
     {
+        if (!cam->_cfg->adjustPixelClock)
+            return {};
         if (IDS.peak_PixelClock_GetAccessStatus(hCam) != PEAK_ACCESS_READWRITE) {
             qDebug() << LOG_ID << "Pixel clock is not configurable";
             return {};
@@ -410,7 +412,9 @@ public:
         }
         SHOW_CAM_PROP("FPS", IDS.peak_FrameRate_Get, double);
         SHOW_CAM_PROP("Exposure", IDS.peak_ExposureTime_Get, double);
+    #ifdef ADJUST_PIXEL_CLOCK
         SHOW_CAM_PROP("PixelClock", IDS.peak_PixelClock_Get, double);
+    #endif
         #undef SHOW_CAM_PROP
         
         double min, max, inc;
