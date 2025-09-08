@@ -85,9 +85,12 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
     int pageInfo = maxPageId + 2;
     int pageMisc = maxPageId + 3;
     opts.pages << ConfigPage(pageHard, tr("Hardware"), ":/toolbar/hardware").withHelpTopic("cam_settings_hard");
+    opts.items
+        << new ConfigItemInfo(pageHard, tr("Reselect camera to apply these options"))
+        << new ConfigItemSpace(pageHard, 12);
+
 #ifdef SHOW_ALL_PIXEL_FORMATS
     auto formatsItem = new ConfigItemDropDown(pageHard, tr("Pixel format"), &pixelFormat);
-    formatsItem->withHint(tr("Reselect camera to apply"));
     auto supportedFmts = IdsCamera::supportedFormats();
     for (const auto &f : std::as_const(camFormats)) {
         if (AppSettings::instance().showAllPixelFormats) {
@@ -119,10 +122,15 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
             ->setDisabled(!supportedBpp.contains(12))->withRadioGroup("pixel_format")
 #endif
     ;
+#ifdef ADJUST_PIXEL_CLOCK
+    opts.items
+        << new ConfigItemSpace(pageHard, 12)
+        << new ConfigItemBool(pageHard, tr("Maximize pixel clock frequency"), &adjustPixelClock);
+#endif
 
     opts.items
         << new ConfigItemSpace(pageHard, 12)
-        << (new ConfigItemSection(pageHard, tr("Resolution reduction")))->withHint(tr("Reselect camera to apply"));
+        << new ConfigItemSection(pageHard, tr("Resolution reduction"));
     ConfigEditorFactorXY *binnigEditor = nullptr;
     if (binning.configurable) {
         binnigEditor = new ConfigEditorFactorXY(&binning, nullptr);
@@ -207,6 +215,9 @@ void IdsCameraConfig::save(QSettings *s)
     s->setValue("autoExpLevel", autoExpLevel);
     s->setValue("autoExpFramesAvg", autoExpFramesAvg);
     s->setValue("fpsLock", fpsLock);
+#ifdef ADJUST_PIXEL_CLOCK
+    s->setValue("adjustPixelClock", adjustPixelClock);
+#endif
 
     hasPowerWarning = 
 #ifdef SHOW_ALL_PIXEL_FORMATS
@@ -252,6 +263,9 @@ void IdsCameraConfig::load(QSettings *s)
     autoExpLevel = s->value("autoExpLevel").toInt();
     autoExpFramesAvg = s->value("autoExpFramesAvg", 4).toInt();
     fpsLock = s->value("fpsLock", 0).toDouble();
+#ifdef ADJUST_PIXEL_CLOCK
+    adjustPixelClock = s->value("adjustPixelClock", false).toBool();
+#endif
 
     AnyRecords presets;
     int size = s->beginReadArray("exp_presets");
