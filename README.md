@@ -16,9 +16,19 @@ Main features:
 - Variable color maps
 - Beam profiles with Gaussian fit
 
-See [online help](./bin/help/index.md) for details.
+For details, see [online help](./bin/help/index.md) and these video tutorials from [n2-Photonics](https://www.n2-photonics.de):
 
-![](img/screens/inspector_0.0.19.png)
+<!--
+Each YouTube video has four generated images, see this question:
+https://stackoverflow.com/questions/2068344/how-do-i-get-a-youtube-video-thumbnail-from-the-youtube-api
+-->
+
+| Preview                                           | Link                                                                                                                            |
+|---------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| ![](https://img.youtube.com/vi/nA2NTfY4zzg/2.jpg) | [Beam Inspector Tutorial: Installation and basic features](https://www.youtube.com/watch?v=nA2NTfY4zzg)                         |
+| ![](https://img.youtube.com/vi/WJGz1YlpDeA/1.jpg) | [Setting up Beam Inpector, free laser beam profiling software, with an IDS camera](https://www.youtube.com/watch?v=WJGz1YlpDeA) |
+
+<img width="750px" src="img/screens/inspector_0.0.19.png"/>
 
 ## Build
 
