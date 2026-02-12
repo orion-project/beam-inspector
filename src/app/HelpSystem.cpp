@@ -246,7 +246,20 @@ curl -L --ssl-no-revoke \
         QString report;
         QTextStream stream(&report);
         for (auto r = releases.constBegin(); r != releases.constEnd(); r++)
-            stream << "**" << r->ver.str(3) << "** (" << QLocale::system().toString(r->date, QLocale::ShortFormat) << ")\n\n" << r->descr << "\n\n";
+        {
+            stream << "**" << r->ver.str(3) << "** "
+                << "(" << QLocale::system().toString(r->date, QLocale::ShortFormat) << ")\n\n";
+            static QRegularExpression bugRegex(
+                "https:\\/\\/github.com\\/orion-project\\/beam-inspector\\/issues\\/(\\d+)");
+            for (auto line : r->descr.split('\n'))
+            {
+                if (auto m = bugRegex.match(line); m.hasMatch())
+                    line.replace(m.capturedStart(), m.capturedLength(),
+                        QString("[#%1](%2)").arg(m.captured(1), m.captured()));
+                stream << line;
+            }
+            stream << "\n\n";
+        }
 
         auto button = new QPushButton("      " + tr("Open download page") + "      ");
         connect(button, &QPushButton::clicked, this, []{
@@ -255,6 +268,7 @@ curl -L --ssl-no-revoke \
 
         auto browser = new QTextBrowser;
         browser->setMarkdown(report);
+        browser->setOpenExternalLinks(true);
         auto w = new QDialog;
         w->setAttribute(Qt::WA_DeleteOnClose);
         LayoutV({

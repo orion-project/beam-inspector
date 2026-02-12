@@ -5,6 +5,7 @@ history:
   - text: Add a button to the config dialog for showing logs folder
   - text: Do not automatically open the log window on every message
   - text: Fix profile width text when pixel scale enabled (https://github.com/orion-project/beam-inspector/issues/43)
+  - text: Show GitHub issue links in the update info window
 
 - version: 0.0.26
   date: 2025-06-23
