@@ -63,7 +63,8 @@ private:
         *_actionResultsPanel, *_actionHardConfig, *_actionSaveRaw, *_actionRawView,
         *_actionCrosshairsShow, *_actionCrosshairsEdit, *_actionSetCamCustomName,
         *_actionSetupPowerMeter, *_actionUseMultiRoi, *_actionProfilesView, *_actionStabilityView,
-        *_actionClearCrosshairs, *_actionLoadCrosshairs, *_actionSaveCrosshairs;
+        *_actionClearCrosshairs, *_actionLoadCrosshairs, *_actionSaveCrosshairs,
+        *_actionViewLogWindow;
     QAction *_buttonMeasure, *_buttonOpenImg;
     QActionGroup *_colorMapActions;
     QTableWidget *_table;

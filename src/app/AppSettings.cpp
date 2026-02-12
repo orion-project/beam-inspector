@@ -217,7 +217,7 @@ bool AppSettings::edit()
             ->withHint(tr("Hold Control key for big change")),
 
     #ifdef WITH_IDS
-        new ConfigItemBool(cfgIds, tr("Enable"), &idsEnabled),
+        new ConfigItemBool(cfgIds, tr("Enable (restart required)"), &idsEnabled),
         new ConfigItemDir(cfgIds, tr("Peak comfortC directory (x64)"), &idsSdkDir),
     #endif
 

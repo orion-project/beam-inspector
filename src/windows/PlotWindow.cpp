@@ -24,6 +24,7 @@
 
 #include "helpers/OriDialogs.h"
 #include "helpers/OriWidgets.h"
+#include "tools/OriDebug.h"
 #include "tools/OriMruList.h"
 #include "tools/OriSettings.h"
 #include "widgets/OriFlatToolBar.h"
@@ -292,9 +293,15 @@ void PlotWindow::createMenuBar()
     _actionProfilesView->setCheckable(true);
     _actionStabilityView = A_(tr("Stability View"), this, &PlotWindow::toggleStabGraphView, ":/toolbar/stability");
     _actionStabilityView->setCheckable(true);
+    if (AppSettings::instance().useConsole)
+        _actionViewLogWindow = A_(tr("Log Window"), this, []{ Ori::Debug::consoleWindow(); }, ":/toolbar/window_sm");
+    else {
+        _actionViewLogWindow = new QAction(this);
+        _actionViewLogWindow->setSeparator(true);
+    }
     auto menuView = M_(tr("View"), {
         _actionRawView, 0,
-        _actionResultsPanel, _actionHardConfig, _actionProfilesView, _actionStabilityView, 0,
+        _actionResultsPanel, _actionHardConfig, _actionProfilesView, _actionStabilityView, _actionViewLogWindow, 0,
         _actionBeamInfo, _colorMapMenu, 0,
         _actionZoomFull, _actionZoomRoi,
     });

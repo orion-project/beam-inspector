@@ -40,9 +40,10 @@
         <file alias="stop">../img/toolbar/pause.svg</file>
         <file alias="table">../img/toolbar/table.svg</file>
         <file alias="trash">../img/toolbar/trash.svg</file>
+        <file alias="update">../img/toolbar/update.svg</file>
+        <file alias="window_sm">../img/toolbar/window_sm.svg</file>
         <file alias="zoom_roi">../img/toolbar/zoom_aper.svg</file>
         <file alias="zoom_sensor">../img/toolbar/zoom_sensor.svg</file>
-        <file alias="update">../img/toolbar/update.svg</file>
     </qresource>
     <qresource prefix="/misc">
         <file alias="no_plot">../img/misc/no_plot.svg</file>

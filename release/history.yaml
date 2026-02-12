@@ -3,6 +3,7 @@ history:
   date: 2026-02-12
   changes:
   - text: Add a button to the config dialog for showing logs folder
+  - text: Do not automatically open the log window on every message
 
 - version: 0.0.26
   date: 2025-06-23
