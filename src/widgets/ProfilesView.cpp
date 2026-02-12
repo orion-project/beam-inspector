@@ -415,14 +415,14 @@ void ProfilesView::showResult()
     GaussParams gpX, gpY;
     calcGaussParams(profileX, gpX);
     calcGaussParams(profileY, gpY);
-    _profileX->setName(QStringLiteral("X (FWHM: %1)").arg(_scale.format(gpX.width)));
-    _profileY->setName(QStringLiteral("Y (FWHM: %1)").arg(_scale.format(gpY.width)));
+    _profileX->setName(QStringLiteral("X (FWHM: %1)").arg(_scale.formatScaled(gpX.width)));
+    _profileY->setName(QStringLiteral("Y (FWHM: %1)").arg(_scale.formatScaled(gpY.width)));
 
     if (_showFit) {
         const double wx = calcGaussFit(profileX, _fitX->data()->rawData(), gpX, _MI, _centerFit);
         const double wy = calcGaussFit(profileY, _fitY->data()->rawData(), gpY, _MI, _centerFit);
-        _fitX->setName(QStringLiteral("Gauss fit (1/e²: %1)").arg(_scale.format(wx)));
-        _fitY->setName(QStringLiteral("Gauss fit (1/e²: %1)").arg(_scale.format(wy)));
+        _fitX->setName(QStringLiteral("Gauss fit (1/e²: %1)").arg(_scale.formatScaled(wx)));
+        _fitY->setName(QStringLiteral("Gauss fit (1/e²: %1)").arg(_scale.formatScaled(wy)));
     }
 
     double rangeY = _showFullY ? _plotIntf->rangeMax() : qMax(gpX.amplitude, gpY.amplitude);

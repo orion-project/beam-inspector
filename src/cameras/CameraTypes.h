@@ -63,6 +63,7 @@ struct PixelScale
 
     QString format(const double &v) const;
     QString formatWithMargins(const double &v) const;
+    QString formatScaled(const double &v) const;
 };
 
 struct Background
