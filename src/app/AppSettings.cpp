@@ -4,9 +4,11 @@
 
 #include "dialogs/OriConfigDlg.h"
 #include "helpers/OriDialogs.h"
+#include "tools/OriDebug.h"
 #include "tools/OriSettings.h"
 
 #include <QApplication>
+#include <QDesktopServices>
 #include <QDir>
 #include <QFileDialog>
 
@@ -222,6 +224,8 @@ bool AppSettings::edit()
         new ConfigItemBool(cfgDbg, tr("Show log window (restart required)"), &useConsole),
         (new ConfigItemBool(cfgDbg, tr("Save log into file"), &saveLogFile))
             ->withParent(&useConsole),
+        (new ConfigItemButton(cfgDbg, tr("Show logs folder"), []{ QDesktopServices::openUrl(Ori::Debug::logsDir()); }))
+            ->withParent(&saveLogFile),
         new ConfigItemSpace(cfgDbg, 12),
         (new ConfigItemSection(cfgDbg, tr("Multi-pass cell alignment")))
             ->withHint(tr("Toggle multi-roi mode to apply")),

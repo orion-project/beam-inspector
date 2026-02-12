@@ -40,12 +40,8 @@ option(CHECK_UPDATES_WITH_CURL "Use external curl program for updates checking" 
 #    -msse4.2
 #)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets PrintSupport)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets PrintSupport)
-if(NOT CHECK_UPDATES_WITH_CURL)
-    find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Network)
-    find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Network)
-endif()
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Network PrintSupport)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network PrintSupport)
 
 set(PROJECT_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/version.rc

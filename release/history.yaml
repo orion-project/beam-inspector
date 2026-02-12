@@ -1,4 +1,9 @@
 history:
+- version: 0.0.27
+  date: 2026-02-12
+  changes:
+  - text: Add a button to the config dialog for showing logs folder
+
 - version: 0.0.26
   date: 2025-06-23
   changes:
