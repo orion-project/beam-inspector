@@ -1,5 +1,7 @@
 #include "PlotWindow.h"
 
+#include <windows.h>
+
 #include "app/AppSettings.h"
 #include "app/HelpSystem.h"
 #ifdef WITH_IDS
@@ -191,10 +193,14 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
 
         HelpSystem::instance()->checkForUpdatesAuto();
     });
+    
+    SetThreadExecutionState(ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED);
 }
 
 PlotWindow::~PlotWindow()
 {
+    SetThreadExecutionState(ES_CONTINUOUS);
+
     storeState();
     delete _tableIntf;
     delete _stabilIntf;

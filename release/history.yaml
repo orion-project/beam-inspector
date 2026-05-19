@@ -1,4 +1,9 @@
 history:
+- version: 0.0.28
+  date: 2026-05-19
+  changes:
+  - text: Disable screensaver and sleep mode when app is running
+
 - version: 0.0.27
   date: 2026-02-12
   changes:
