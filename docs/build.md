@@ -33,3 +33,19 @@ TODO: Support SDK version 2.13.0.0 or higher. E.g. when version 2.15 is installe
 Virtual cameras used for development of common (not hardware related) features in the absence of physical device. They are available when the app is running with the `--dev` command line option.
 
 TODO: add explanation
+
+## CMake build using MCVS and Qt from vcpkg 
+
+Prerequisites: [Visual Studio Community](https://visualstudio.microsoft.com/en/vs/community/), [CMake](https://cmake.org/), [vcpkg](https://vcpkg.io/).
+
+```bash
+mkdir build
+cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%/scripts/buildsystems/vcpkg.cmake -DUSE_VCPKG_QT=ON
+
+# Build in debug mode, results will be in build*/Debug
+cmake --build .
+
+# Build in release mode, results will be in build*/Release
+cmake --build . --config Release
+```

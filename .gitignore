@@ -11,9 +11,11 @@ tmp
 out
 build
 *.exe
+*.dll
 calc/**/*.pgm
 calc/.vscode
 CMakeLists.txt.user*
 *.autosave
 track_mem*.csv
 *.log
+qt.conf

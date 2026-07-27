@@ -1,5 +1,15 @@
 cmake_minimum_required(VERSION 3.10)
 
+# Use Qt provided by vcpkg. Configure project as 
+# cmake .. -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%/scripts/buildsystems/vcpkg.cmake -DUSE_VCPKG_QT=ON
+# when none of these options set, it's supposed that Qt is installed globally by its installer
+# and all other dependecies also instlled globally via `vcpkg install` from root `vcpkg.json`
+set(USE_VCPKG_QT OFF CACHE BOOL "Build with Qt installed via vcpkg")
+
+if(USE_VCPKG_QT)
+    set(VCPKG_MANIFEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg_qt")
+endif() 
+
 # set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
 # Remove per-configuration suffix from output directory added by VSCode
@@ -27,10 +37,10 @@ configure_file(
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-option(WITH_IDS "Add support for cameras from IDS (SDK must be installed)" ON)
+option(WITH_IDS "Add support for cameras from IDS (SDK must be installed)" OFF)
 option(CHECK_UPDATES_WITH_CURL "Use external curl program for updates checking" ON)
 
 #add_compile_options(

@@ -15,6 +15,7 @@
 #include <QMutex>
 #include <QQueue>
 #include <QThread>
+#include <QElapsedTimer>
 
 #define PLOT_FRAME_DELAY_MS 200
 #define STAT_DELAY_MS 1000

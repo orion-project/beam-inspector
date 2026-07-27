@@ -1,9 +1,11 @@
-add_compile_options(
-    -O3
-    -ffast-math
-    -funsafe-math-optimizations
-    -msse4.2
-)
+if(NOT MSVC)
+    add_compile_options(
+        -O3
+        -ffast-math
+        -funsafe-math-optimizations
+        -msse4.2
+    )
+endif()
 
 add_library(cgn_beam_render STATIC
     beam_render.h beam_render.c
