@@ -536,6 +536,7 @@ void PlotWindow::createPlot()
         QString coordText = QStringLiteral("%1 @ (%2 × %3)").arg(_camera->formatBrightness(c), scale.format(x), scale.format(y));
         _statusBar->setText(STATUS_MOUSE_POS, coordText);
     });
+    connect(_plot, &Plot::beamInfoToggled, this, [this](bool on){ _actionBeamInfo->setChecked(on); });
     _plot->augmentCrosshairLoadSave(
         [this](QJsonObject &root){ loadCrosshairsMore(root); },
         [this](QJsonObject &root){ saveCrosshairsMore(root); }

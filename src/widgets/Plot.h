@@ -9,6 +9,7 @@
 class QCustomPlot;
 class QCPAxisRect;
 class QCPItemLine;
+class QMenu;
 
 class CrosshairsOverlay;
 class BeamColorMap;
@@ -82,6 +83,7 @@ signals:
     void crosshairsEdited();
     void crosshairsLoaded();
     void mousePositionChanged(double x, double y, double c);
+    void beamInfoToggled(bool on);
 
 protected:
     void resizeEvent(QResizeEvent*) override;
@@ -114,6 +116,8 @@ private:
     int _timerId = 0;
     double _mouseX = 0, _mouseY = 0;
     double _scaleFactor = 1;
+    QMenu *_contextMenu;
+    QAction *_actionBeamInfo;
     
     struct AxisRange
     {

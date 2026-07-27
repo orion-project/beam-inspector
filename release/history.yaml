@@ -1,4 +1,10 @@
 history:
+- version: 0.0.29
+  date: ??
+  changes:
+  - text: Can toggle beam info via plot's context menu
+  - text: Increase font size of the beam info text
+
 - version: 0.0.28
   date: 2026-05-19
   changes:

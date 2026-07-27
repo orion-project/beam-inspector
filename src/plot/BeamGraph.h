@@ -88,6 +88,7 @@ protected:
     void draw(QCPPainter *painter) override;
 
     QString _text;
+    QFont _font;
 };
 
 //------------------------------------------------------------------------------

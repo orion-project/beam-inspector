@@ -41,6 +41,14 @@ Plot::Plot(QWidget *parent) : QWidget{parent}
     connect(_plot, &QWidget::customContextMenuRequested, this, &Plot::showContextMenu);
     connect(_plot, &QCustomPlot::mouseMove, this, &Plot::handleMouseMove);
     
+    _contextMenu = new QMenu(this);
+    _actionBeamInfo = _contextMenu->addAction(tr("Show Beam Info"));
+    _actionBeamInfo->setCheckable(true);
+    connect(_actionBeamInfo, &QAction::triggered, this, [this](){
+        setBeamInfoVisible(_actionBeamInfo->isChecked(), true);
+        emit beamInfoToggled(_actionBeamInfo->isChecked());
+    });
+    
     _axisRect = _plot->axisRect();
 
     auto gridLayer = _plot->xAxis->grid()->layer();
@@ -342,6 +350,7 @@ void Plot::setColorMap(const QString& colorMap, bool replot)
 void Plot::setBeamInfoVisible(bool on, bool replot)
 {
     _showBeamInfo = on;
+    _actionBeamInfo->setChecked(on);
     _beamInfo->setVisible(_showBeamInfo && !_rawView);
     if (on) _plotIntf->showResult();
     if (replot) _plot->replot();
@@ -418,6 +427,8 @@ void Plot::showContextMenu(const QPoint& pos)
 {
     if (_crosshairs->visible() && _crosshairs->isEditing())
         _crosshairs->showContextMenu(pos);
+    else
+        _contextMenu->popup(_plot->mapToGlobal(pos));
 }
 
 void Plot::storeState(QSettings *s)

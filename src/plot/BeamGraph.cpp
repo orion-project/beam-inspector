@@ -137,11 +137,14 @@ void BeamAxes::draw(QCPPainter *painter)
 
 BeamInfoText::BeamInfoText(QCustomPlot *parentPlot) : QCPAbstractItem(parentPlot)
 {
+    _font = parentPlot->font();
+    _font.setPointSize(_font.pointSize()*2);
 }
 
 void BeamInfoText::draw(QCPPainter *painter)
 {
     auto r = parentPlot()->axisRect()->rect();
+    painter->setFont(_font);
     painter->setPen(Qt::white);
     painter->drawText(QRect(r.left()+15, r.top()+10, 10, 10), Qt::TextDontClip, _text);
 }
