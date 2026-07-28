@@ -254,6 +254,12 @@ IdsLib::IdsLib()
     GET_PROC(peak_Decimation_FactorY_GetList);
     GET_PROC(peak_Decimation_Set);
     GET_PROC(peak_Decimation_Get);
+    GET_PROC(peak_PixelClock_GetAccessStatus);
+    GET_PROC(peak_PixelClock_HasRange);
+    GET_PROC(peak_PixelClock_GetRange);
+    GET_PROC(peak_PixelClock_GetList);
+    GET_PROC(peak_PixelClock_Get);
+    GET_PROC(peak_PixelClock_Set);
 
     auto res = IdsLib::peak_Library_Init();
     if (PEAK_ERROR(res)) {

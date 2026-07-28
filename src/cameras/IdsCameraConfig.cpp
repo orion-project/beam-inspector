@@ -87,8 +87,11 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
     bpp12 = bpp == 12;
     opts.pages << ConfigPage(pageHard, tr("Hardware"), ":/toolbar/hardware").withHelpTopic("cam_settings_hard");
     opts.items
-        << (new ConfigItemSection(pageHard, tr("Pixel format")))
-            ->withHint(tr("Reselect camera to apply"))
+        << new ConfigItemInfo(pageHard, tr("Reselect camera to apply these options"))
+        << new ConfigItemSpace(pageHard, 12);
+        
+    opts.items
+        << new ConfigItemSection(pageHard, tr("Pixel format"))
         << (new ConfigItemBool(pageHard, tr("8 bit"), &bpp8))
             ->setDisabled(!supportedBpp.contains(8))->withRadioGroup("pixel_format")
         << (new ConfigItemBool(pageHard, tr("10 bit"), &bpp10))
@@ -96,10 +99,14 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
         << (new ConfigItemBool(pageHard, tr("12 bit"), &bpp12))
             ->setDisabled(!supportedBpp.contains(12))->withRadioGroup("pixel_format")
     ;
+    
+    opts.items
+        << new ConfigItemSpace(pageHard, 12)
+        << new ConfigItemBool(pageHard, tr("Maximize pixel clock frequency"), &adjustPixelClock);
 
     opts.items
         << new ConfigItemSpace(pageHard, 12)
-        << (new ConfigItemSection(pageHard, tr("Resolution reduction")))->withHint(tr("Reselect camera to apply"));
+        << new ConfigItemSection(pageHard, tr("Resolution reduction"));
     ConfigEditorFactorXY *binnigEditor = nullptr;
     if (binning.configurable) {
         binnigEditor = new ConfigEditorFactorXY(&binning, nullptr);
@@ -165,6 +172,7 @@ void IdsCameraConfig::save(QSettings *s)
     s->setValue("autoExpLevel", autoExpLevel);
     s->setValue("autoExpFramesAvg", autoExpFramesAvg);
     s->setValue("fpsLock", fpsLock);
+    s->setValue("adjustPixelClock", adjustPixelClock);
 
     hasPowerWarning = oldBpp != bpp ||
         oldBinning.x != binning.x || oldBinning.y != binning.y ||
@@ -194,6 +202,7 @@ void IdsCameraConfig::load(QSettings *s)
     autoExpLevel = s->value("autoExpLevel").toInt();
     autoExpFramesAvg = s->value("autoExpFramesAvg", 4).toInt();
     fpsLock = s->value("fpsLock", 0).toDouble();
+    adjustPixelClock = s->value("adjustPixelClock", false).toBool();
 
     AnyRecords presets;
     int size = s->beginReadArray("exp_presets");

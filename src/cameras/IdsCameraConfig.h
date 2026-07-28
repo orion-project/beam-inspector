@@ -52,6 +52,7 @@ public:
     bool hasPowerWarning = false;
     AnyRecords expPresets;
     double fpsLock = 0;
+    bool adjustPixelClock = false;
 
     void initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &opts, int maxPageId);
     void save(QSettings *s);
