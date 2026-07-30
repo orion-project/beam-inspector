@@ -16,6 +16,8 @@ Displays model name and shortened serial number of the [selected camera](./cam_s
 
 Shows pixel size and the bit depth of [camera frame](./cam_settings_hard.md) or loaded [static image](./static_img.md).
 
+If this section is shown in <span style="color:red">red color</span>, this means you have selected a pixel format that cannot be decoded and processed. This is possible in a special debug mode activated via [application settings](./app_settings_debug.md). For unsupported pixel formats, the app still receives data from the camera and it's possible to save [raw frames](./export_raw.md) for some external processing.
+
 ### ROI
 
 Shows the region size when [ROI is enabled](./cam_settings_roi.md). The icon turns red when the region does not fit for loaded image or selected camera resolution.

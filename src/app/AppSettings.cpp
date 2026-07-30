@@ -178,7 +178,8 @@ bool AppSettings::edit()
         ConfigPage(cfgIds, tr("IDS Camera"), ":/toolbar/camera")
             .withHelpTopic("app_settings_ids"),
     #endif
-        ConfigPage(cfgDbg, tr("Debug"), ":/toolbar/bug"),
+        ConfigPage(cfgDbg, tr("Debug"), ":/toolbar/bug")
+            .withHelpTopic("app_settings_debug"),
         ConfigPage(cfgOpts, tr("Options"), ":/toolbar/options")
             .withHelpTopic("app_settings_opts"),
         ConfigPage(cfgCrosshair, tr("Crosshairs"), ":/toolbar/crosshair")

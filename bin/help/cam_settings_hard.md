@@ -12,7 +12,9 @@ Camera settings are stored on a per-camera basis, so when another [camera is sel
 
 ### Pixel format
 
-[Bit depth](https://www.1stvision.com/cameras/IDS/IDS-manuals/en/basics-bit-depth.html) is the number of bits used to code the color of a single pixel. For IDS cameras, supported formats are `Mono8` (8 bit), `Mono10G40` (10 bit), and `Mono12G24` (12 bit). See camera specs and [official documentation](https://www.1stvision.com/cameras/IDS/IDS-manuals/en/basics-monochrome-pixel-formats.html) for details.
+[Pixel format](https://www.1stvision.com/cameras/IDS/IDS-manuals/en/basics-image-color-formats.html) defines a way how camera packs pixel data into resulting byte array. For IDS cameras, supported formats are `Mono8` (8 bit), `Mono10` and `Mono10G40` (10 bit), `Mono12` and `Mono12G24` (12 bit). [Bit depth](https://www.1stvision.com/cameras/IDS/IDS-manuals/en/basics-bit-depth.html) is the number of bits used to code the color of a single pixel. See camera specs and [official documentation](https://www.1stvision.com/cameras/IDS/IDS-manuals/en/basics-monochrome-pixel-formats.html) for details.
+
+By default, this list shows all formats that the camera can provide and the app can decode and display. In a special debug mode activated via [application settings](./app_settings_debug.md), it is possible to select a pixel format that cannot be decoded and processed. For unsupported pixel formats, the app still receives data from the camera, and it's possible to save [raw frames](./export_raw.md) for some external processing. Unsupported items are marked with an exclamation icon in the list. When such an unsupported format is selected, the [status bar](./status_bar.md) displays frame resolution in <span style="color:red">red color</span> and shows zero bit depth.
 
 After changing the option, re-select the camera in the [camera selector](./cam_selector.md) to apply.
 

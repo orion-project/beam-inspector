@@ -168,6 +168,8 @@ struct RawFrameData
     static QString infoFileName(const QString &fileName);
     static QString fileExt() { return QStringLiteral("birf"); }
     static QString infoFileExt() { return QStringLiteral("info"); }
+    static QString keyApp() { return QStringLiteral("application"); }
+    static QString keyDate() { return QStringLiteral("date"); }
     static QString keyWidth() { return QStringLiteral("width"); }
     static QString keyHeight() { return QStringLiteral("height"); }
     static QString keySize() { return QStringLiteral("size"); }
@@ -260,5 +262,10 @@ struct PixelFormat {
 };
 inline bool operator == (int c, const PixelFormat &fmt) { return c == fmt.code; }
 inline bool operator == (const PixelFormat &f1, const PixelFormat &f2) { return f1.code == f2.code; }
+
+namespace DateUtils {
+QString nowIsoStr();
+}
+
 
 #endif // CAMERA_TYPES_H

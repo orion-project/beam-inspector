@@ -2,7 +2,6 @@
 
 #include "app/HelpSystem.h"
 #include "app/ImageUtils.h"
-
 #include "cameras/CameraTypes.h"
 #include "widgets/FileSelector.h"
 
@@ -336,6 +335,8 @@ void exportImageDlg(const ExportImgArg &arg)
         f.close();
         
         QSettings s(RawFrameData::infoFileName(props.fileName), QSettings::IniFormat);
+        s.setValue(RawFrameData::keyApp(), QString("%1 %2").arg(qApp->applicationName(), qApp->applicationVersion()));
+        s.setValue(RawFrameData::keyDate(), DateUtils::nowIsoStr());
         s.setValue(RawFrameData::keyWidth(), w);
         s.setValue(RawFrameData::keyHeight(), h);
         s.setValue(RawFrameData::keySize(), arg.raw->data.size());

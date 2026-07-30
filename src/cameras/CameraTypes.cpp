@@ -3,6 +3,7 @@
 #include "core/OriFloatingPoint.h"
 
 #include <QApplication>
+#include <QDateTime>
 #include <QRandomGenerator>
 #include <QSettings>
 
@@ -279,3 +280,21 @@ QString CameraCommons::supportedImageFilters()
     return qApp->tr("Images (%1);;Raw frame data (*.%2);;All Files (*.*)")
         .arg(filters.join(' '), RawFrameData::fileExt());
 }
+
+//------------------------------------------------------------------------------
+//                                DateUtils
+//------------------------------------------------------------------------------
+
+namespace DateUtils {
+
+QString nowIsoStr()
+{
+    // Get the current local date-time 
+    QDateTime now = QDateTime::currentDateTime();
+    // Convert it to a fixed offset representation so the timezone prints
+    now = now.toOffsetFromUtc(now.offsetFromUtc());
+    // Format to ISO 8601 string (Includes timezone offset e.g., "+03:00")
+    return now.toString(Qt::ISODate);
+}
+
+} // namespace DateUtils

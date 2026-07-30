@@ -670,6 +670,13 @@ void PlotWindow::showCamConfig(bool replot, bool autozoom)
 
     _statusBar->setText(STATUS_CAMERA, _camera->name(), _camera->descr());
     _statusBar->setText(STATUS_RESOLUTION, _camera->resolutionStr());
+    if (_camera->bpp() == 0) {
+        _statusBar->setStyleSheet(STATUS_RESOLUTION, QStringLiteral("QLabel{color:red}"));
+        _statusBar->setHint(STATUS_RESOLUTION, tr("Decoding is not supported"));
+    } else {
+        _statusBar->setStyleSheet(STATUS_RESOLUTION, {});
+        _statusBar->setHint(STATUS_RESOLUTION, {});
+    }
 
     const auto &c = _camera->config();
     _actionUseRoi->setChecked(c.roiMode == ROI_SINGLE);
