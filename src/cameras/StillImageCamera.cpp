@@ -151,18 +151,21 @@ void StillImageCamera::startCapture()
         else if (camType == RawFrameData::cameraTypeIds()) {
             const auto& pf = IdsPixelFormat::findByName(pixelFormat);
             if (pf.isUnsupported()) {
+                _bpp = 8;
+                pgmData = QByteArray(_width * _height, 0);
                 Ori::Dlg::error(qApp->tr("Unsupported pixel format"));
-                return;
+            } else {
+                _bpp = pf.bitsPerPixel;
+                pgmData = QByteArray(_width * _height * pf.bytesPerPixel, 0);
+                IdsPixelFormat::getDecodeFunc(pf)
+                    ((uint8_t*)pgmData.data(), (uint8_t*)rawData.data(), rawData.size());
             }
-            _bpp = pf.bitsPerPixel;
-            pgmData = QByteArray(_width * _height * pf.bytesPerPixel, 0);
-            IdsPixelFormat::getDecodeFunc(pf)
-                ((uint8_t*)pgmData.data(), (uint8_t*)rawData.data(), rawData.size());
         }
     #endif
         else {
+            _bpp = 8;
+            pgmData = QByteArray(_width * _height, 0);
             Ori::Dlg::error(qApp->tr("Unsupported file type"));
-            return;
         }
         c.w = _width;
         c.h = _height;

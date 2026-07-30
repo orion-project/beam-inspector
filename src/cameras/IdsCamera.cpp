@@ -820,6 +820,18 @@ const PixelFormat& supported_Mono8()
     return f;
 }
 
+PixelFormat supported_Mono10()
+{
+    static PixelFormat f {PEAK_PIXEL_FORMAT_MONO10, "Mono10", "Mono10", 10, 2};
+    return f;
+}
+
+PixelFormat supported_Mono12()
+{
+    static PixelFormat f {PEAK_PIXEL_FORMAT_MONO12, "Mono12", "Mono12", 12, 2};
+    return f;
+}
+
 const PixelFormat& supported_Mono10G40()
 {
     static PixelFormat f {PEAK_PIXEL_FORMAT_MONO10G40_IDS, "Mono10G40_IDS", "Mono10 grouped 40", 10, 2};
@@ -837,6 +849,8 @@ const QList<PixelFormat>& supported()
     static QList<PixelFormat> formats
     {
         supported_Mono8(),
+        supported_Mono10(),
+        supported_Mono12(),
         supported_Mono10G40(),
         supported_Mono12G24(),
     };
@@ -866,8 +880,8 @@ const QList<PixelFormat>& all()
         {PEAK_PIXEL_FORMAT_BAYER_BG10, "BayerBG10", "BayerBG10"},
         {PEAK_PIXEL_FORMAT_BAYER_BG12, "BayerBG12", "BayerBG12"},
         supported_Mono8(),
-        {PEAK_PIXEL_FORMAT_MONO10, "Mono10", "Mono10"},
-        {PEAK_PIXEL_FORMAT_MONO12, "Mono12", "Mono12"},
+        supported_Mono10(),
+        supported_Mono12(),
         {PEAK_PIXEL_FORMAT_RGB8, "RGB8", "RGB8"},
         {PEAK_PIXEL_FORMAT_RGB10, "RGB10", "RGB10"},
         {PEAK_PIXEL_FORMAT_RGB12, "RGB12", "RGB12"},
@@ -940,6 +954,10 @@ DecodeFrameFunc getDecodeFunc(const PixelFormat& f)
 {
     if (f == supported_Mono8())
         return cgn_convert_u8_to_u8;
+    if (f == supported_Mono10())
+        return cgn_convert_10_to_u16;
+    if (f == supported_Mono12())
+        return cgn_convert_12_to_u16;
     if (f == supported_Mono10G40())
         return cgn_convert_10g40_to_u16;
     if (f == supported_Mono12G24())

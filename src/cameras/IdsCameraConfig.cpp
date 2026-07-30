@@ -87,11 +87,25 @@ void IdsCameraConfig::initDlg(peak_camera_handle hCam, Ori::Dlg::ConfigDlgOpts &
     int pageMisc = maxPageId + 3;
     opts.pages << ConfigPage(pageHard, tr("Hardware"), ":/toolbar/hardware").withHelpTopic("cam_settings_hard");
         
+    bool showUnsupportedFormats = AppSettings::instance().showAllPixelFormats;
     auto pixelFormatSelector = new ConfigItemDropDown(pageHard, QString(), &pixelFormat);
-    auto pixelFormats = AppSettings::instance().showAllPixelFormats
-        ? availablePixelFormats : IdsPixelFormat::supported();
-    for (const auto &f : std::as_const(pixelFormats))
-        pixelFormatSelector->withOption(f.code, f.descr);
+    for (const auto &af : std::as_const(availablePixelFormats)) {
+        bool canDecode = false;
+        for (const auto &sf : IdsPixelFormat::supported()) {
+            if (sf == af) {
+                canDecode = true;
+                break;
+            }
+        }
+        if (canDecode) {
+            // Add format only if we support its decoding
+            pixelFormatSelector->withOption(af.code, af.descr);
+        } else if (showUnsupportedFormats) {
+            // Add format even if we don't know how to decode it
+            pixelFormatSelector->withOption(af.code, af.descr, ":/toolbar/exclame");
+        }
+    }
+        
     opts.items
         << (new ConfigItemSection(pageHard, tr("Pixel format")))->withHint(tr("Reselect camera to apply"))
         << pixelFormatSelector;
