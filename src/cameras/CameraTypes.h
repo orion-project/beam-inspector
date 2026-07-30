@@ -254,7 +254,7 @@ struct PixelFormat {
     int bitsPerPixel = 0;
     int bytesPerPixel = 0;
     
-    bool isUnsupported() const { return bitsPerPixel <= 0 || bytesPerPixel <= 0; }
+    bool canDecode() const { return bitsPerPixel > 0 && bytesPerPixel > 0; }
     
     inline bool operator == (int c) { return c == code; }
 };

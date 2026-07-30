@@ -105,145 +105,179 @@ TableRowsSpec StillImageCamera::tableRows() const
     return rows;
 }
 
+struct LoadResult
+{
+    QString error;
+    QByteArray data;
+    int width = 0;
+    int height = 0;
+    int bpp = 0;
+};
+
+static LoadResult loadRawFrame(const QString& fileName)
+{
+    QString infoFile = RawFrameData::infoFileName(fileName);
+    if (!QFile::exists(infoFile))
+        return { .error = qApp->tr("Info file not found for this raw frame data file") };
+        
+    QSettings info(infoFile, QSettings::IniFormat);
+    int width = info.value(RawFrameData::keyWidth()).toInt();
+    int height = info.value(RawFrameData::keyHeight()).toInt();
+    const auto size = info.value(RawFrameData::keySize()).toInt();
+    const auto pixelFormat = info.value(RawFrameData::keyPixelFormat()).toString();
+    const auto camType = info.value(RawFrameData::keyCameraType()).toString();
+    
+    qDebug() << LOG_ID << fileName << "Raw" << camType << "frame" 
+        << width << 'x' << height << "pixelFormat:" << pixelFormat;
+    
+    if (width <= 0 || height <= 0)
+        return { .error = qApp->tr("Invalid image size %1 x %2").arg(width).arg(height) };
+
+    QFile f(fileName);
+    if (!f.open(QIODevice::ReadOnly))
+        return { .error = qApp->tr("Unable to open raw file: %1").arg(f.errorString()) };
+
+    QByteArray rawData = f.readAll();
+    if (rawData.size() != size)
+        return { .error = qApp->tr("Invalid read data size %1, expected %2").arg(rawData.size()).arg(size) };
+        
+    if (camType == RawFrameData::cameraTypeDemo())
+    {
+        return {
+            .data = rawData,
+            .width = width,
+            .height = height,
+            .bpp = 8,
+        };
+    }
+
+ #ifdef WITH_IDS
+    if (camType == RawFrameData::cameraTypeIds())
+    {
+        const auto& pf = IdsPixelFormat::findByName(pixelFormat);
+        if (!pf.canDecode())
+            return { .error = qApp->tr("Unsupported pixel format") };
+
+        QByteArray data(width * height * pf.bytesPerPixel, 0);
+        IdsPixelFormat::getDecodeFunc(pf)
+            ((uint8_t*)data.data(), (uint8_t*)rawData.data(), rawData.size());
+
+        return {
+            .data = data,
+            .width = width,
+            .height = height,
+            .bpp = pf.bitsPerPixel,
+        };
+    }
+#endif
+    
+    return { .error = qApp->tr("Unsupported file type") };
+}
+
+static LoadResult loadPgmImage(const QString& fileName)
+{
+    // QImage does not support PGM images with more than 8-bit data (Qt 6.2, 6.9).
+    // It can load them, but they are scaled down to 8-bit during loading.
+    // So we load them manually.
+
+    ImageUtils::PgmData pgm = ImageUtils::loadPgm(fileName);
+    if (!pgm.error.isEmpty())
+        return { .error = qApp->tr("Unable to load PGM file: %1").arg(pgm.error) };
+
+    qDebug() << LOG_ID << fileName << "PGM" << "bits:" << pgm.bpp;
+
+    return {
+        .data = pgm.data,
+        .width = pgm.width,
+        .height = pgm.height,
+        .bpp = pgm.bpp,
+    };
+}
+
+static LoadResult loadAnyImage(const QString& fileName)
+{
+    QImage image(fileName);
+    if (image.isNull())
+        return { .error = qApp->tr("Unable to load image file") };
+
+    qDebug() << LOG_ID << fileName << image.format() << "bits:" << image.depth();
+    
+    auto fmt = image.format();
+
+    // TODO: Check for grayscale data layout
+    // QImage can read grayscale jpegs if they saved by QImage
+    // e.g. do "Export raw image", save as jpg, then open - it should be displayed properly.
+    // But it shows something strange for jpg saved by Photoshop (see beams/green_pointer_gray.jpg)
+    // even though visually this image looks ok (check it with exportImageDlg(image)).
+    // It seems there can be different layouts for grayscale images
+    // and sometimes we can not just use image.bits() directly 
+    if (fmt != QImage::Format_Grayscale8 && fmt != QImage::Format_Grayscale16)
+    {
+        return { .error = qApp->tr("Wrong image format, only grayscale images are supported") };
+
+        // TODO: convert colored images to grayscale
+        // It's somehow related to the above issue with different grayscale data layouts
+        // image.convertTo() produces a layout that can not be used directly via image.bits()
+        /*
+        if (image.depth() > 8)
+        {
+            // TODO: image.depth() is 32 for colored RGBA images
+            // but it should be converted to 8-bit grayscale
+            fmt = QImage::Format_Grayscale16;
+        }
+        else
+            fmt = QImage::Format_Grayscale8;
+
+        image.convertTo(fmt, Qt::ColorOnly);
+        if (image.isNull())
+            return { .error = qApp->tr("Unsupported image format") };
+            
+        qDebug() << LOG_ID << fileName << "converted to" << image.format() << "bits:" << image.depth();
+        */
+    }
+
+    // display image for visual check
+    // #include "plot/PlotExport.h"
+    // exportImageDlg(image); 
+    
+    QByteArray data((const char*)image.constBits(), image.sizeInBytes());
+
+    return {
+        .data = data,
+        .width = image.width(),
+        .height = image.height(),
+        .bpp = image.depth(),
+    };
+}
+
+static LoadResult loadImage(const QString& fileName)
+{
+    if (RawFrameData::isRawFileName(fileName))
+        return loadRawFrame(fileName);
+        
+    if (fileName.endsWith(".pgm", Qt::CaseInsensitive))
+        return loadPgmImage(fileName);
+    
+    return loadAnyImage(fileName);
+}
+
 void StillImageCamera::startCapture()
 {
     QElapsedTimer timer;
     timer.start();
-    
-    CgnBeamCalc c;
-    QImage image;
-    QByteArray pgmData;
-    QByteArray rawData;
-    qint64 loadTime;
-    
-    if (RawFrameData::isRawFileName(_fileName)) {
-        QString infoFile = RawFrameData::infoFileName(_fileName);
-        if (!QFile::exists(infoFile)) {
-            Ori::Dlg::error(qApp->tr("Info file not found for this raw frame data file"));
-            return;
-        }
-        QSettings info(infoFile, QSettings::IniFormat);
-        _width = info.value(RawFrameData::keyWidth()).toInt();
-        _height = info.value(RawFrameData::keyHeight()).toInt();
-        const auto size = info.value(RawFrameData::keySize()).toInt();
-        const auto pixelFormat = info.value(RawFrameData::keyPixelFormat()).toString();
-        const auto camType = info.value(RawFrameData::keyCameraType()).toString();
-        qDebug() << LOG_ID << _fileName << "Raw" << camType << "frame" << _width << 'x' << _height << "pixelFormat:" << pixelFormat;
-        if (_width <= 0 || _height <= 0) {
-            Ori::Dlg::error(qApp->tr("Invalid image size %1 x %2").arg(_width).arg(_height));
-            return;
-        }
-        QFile f(_fileName);
-        if (!f.open(QIODevice::ReadOnly)) {
-            Ori::Dlg::error(qApp->tr("Unable to open raw file: %1").arg(f.errorString()));
-            return;
-        }
-        rawData = f.readAll();
-        loadTime = timer.elapsed();
-        if (rawData.size() != size) {
-            Ori::Dlg::error(qApp->tr("Invalid read data size %1, expected %2").arg(rawData.size()).arg(size));
-            return;
-        }
-        if (camType == RawFrameData::cameraTypeDemo()) {
-            _bpp = 8;
-        }
-     #ifdef WITH_IDS
-        else if (camType == RawFrameData::cameraTypeIds()) {
-            const auto& pf = IdsPixelFormat::findByName(pixelFormat);
-            if (pf.isUnsupported()) {
-                _bpp = 8;
-                pgmData = QByteArray(_width * _height, 0);
-                Ori::Dlg::error(qApp->tr("Unsupported pixel format"));
-            } else {
-                _bpp = pf.bitsPerPixel;
-                pgmData = QByteArray(_width * _height * pf.bytesPerPixel, 0);
-                IdsPixelFormat::getDecodeFunc(pf)
-                    ((uint8_t*)pgmData.data(), (uint8_t*)rawData.data(), rawData.size());
-            }
-        }
-    #endif
-        else {
-            _bpp = 8;
-            pgmData = QByteArray(_width * _height, 0);
-            Ori::Dlg::error(qApp->tr("Unsupported file type"));
-        }
-        c.w = _width;
-        c.h = _height;
-        c.bpp = _bpp;
-        c.buf = (uint8_t*)(pgmData.size() > 0 ? pgmData.data() : rawData.data());
-    }
-    // QImage does not support PGM images with more than 8-bit data (Qt 6.2, 6.9).
-    // It can load them, but they are scaled down to 8-bit during loading.
-    else if (_fileName.endsWith(".pgm", Qt::CaseInsensitive)) {
-        ImageUtils::PgmData pgm = ImageUtils::loadPgm(_fileName);
-        if (!pgm.error.isEmpty()) {
-            Ori::Dlg::error(qApp->tr("Unable to load PGM file: %1").arg(pgm.error));
-            return;
-        }
-        loadTime = timer.elapsed();
-        qDebug() << LOG_ID << _fileName << "PGM" << "bits:" << pgm.bpp << "loaded in" << loadTime << "ms";
 
-        pgmData = pgm.data;
-        _width = pgm.width;
-        _height = pgm.height;
-        _bpp = pgm.bpp;
-        
-        c.w = pgm.width;
-        c.h = pgm.height;
-        c.bpp = pgm.bpp;
-        c.buf = (uint8_t*)pgmData.data();
-    } else {
-        image = QImage(_fileName);
-        if (image.isNull()) {
-            Ori::Dlg::error(qApp->tr("Unable to load image file"));
-            return;
-        }
-        loadTime = timer.elapsed();
-        qDebug() << LOG_ID << _fileName << image.format() << "bits:" << image.depth() << "loaded in" << loadTime << "ms";
-        
-        auto fmt = image.format();
-        // TODO: Check for grayscale data layout
-        // QImage can read grayscale jpegs if they saved by QImage
-        // e.g. do "Export raw image", save as jpg, then open - it should be displayed properly.
-        // But it shows something strange for the gryascale jpg saved by Photoshop (see beams/green_pointer_gray.jpg)
-        // Though visually this image looks ok (check it with exportImageDlg(image))
-        // It seems there are different layouts for grayscale images
-        // and sometimes we can just use image.bits() directly 
-        if (fmt != QImage::Format_Grayscale8 && fmt != QImage::Format_Grayscale16) {
-            Ori::Dlg::error(qApp->tr("Wrong image format, only grayscale images are supported"));
-            return;
-        
-            // TODO: convert colored images to grayscale
-            // It's somehow related to the above TODO about different grayscale dat alayouts
-            // image.convertTo() produces a layout than can be used directly via image.bits()
-            // TODO: image.depth() is 32 for colored RGBA images but it should be converted to 8-bit gray
-            if (image.depth() > 8) {
-                fmt = QImage::Format_Grayscale16;
-            } else {
-                fmt = QImage::Format_Grayscale8;
-            }
-            image.convertTo(fmt, Qt::ColorOnly);
-            if (image.isNull()) {
-                Ori::Dlg::error(qApp->tr("Unsupported image format"));
-                return;
-            } else {
-                qDebug() << LOG_ID << _fileName << "converted to" << image.format() << "bits:" << image.depth();
-            }
-        }
-        //exportImageDlg(image); // display image for visual check
-        
-        // declare explicitly as const to avoid deep copy
-        const uchar* buf = image.bits();
-        
-        _width = image.width();
-        _height = image.height();
-        _bpp = image.depth();
-        
-        c.w = image.width();
-        c.h = image.height();
-        c.bpp = fmt == QImage::Format_Grayscale16 ? 16 : 8;
-        c.buf = (uint8_t*)buf;
-    }
+    auto res = loadImage(_fileName);
+    if (!res.error.isEmpty())
+        Ori::Dlg::Defer::error(res.error);
+
+    auto loadTime = timer.elapsed();
+    qDebug() << LOG_ID << "Loaded in" << loadTime << "ms";
+
+    CgnBeamCalc c;
+    c.w = _width = res.width;
+    c.h = _height = res.height;
+    c.bpp = _bpp = res.bpp;
+    c.buf = (uint8_t*)res.data.data();
 
     _plot->initGraph(c.w, c.h);
     double *graph = _plot->rawGraph();
