@@ -135,8 +135,10 @@ void cgn_copy_normalized_f64(double *src, double *dst, int sz, double min, doubl
 double cgn_calc_brightness(const CgnBeamCalc *c);
 double cgn_calc_brightness_1(const CgnBeamCalc *c);
 double cgn_calc_brightness_2(const CgnBeamCalc *c, int xc, int yc);
+void cgn_convert_u8_to_u8(uint8_t *dst, uint8_t *src, int sz);
 void cgn_convert_10g40_to_u16(uint8_t *dst, uint8_t *src, int sz);
 void cgn_convert_12g24_to_u16(uint8_t *dst, uint8_t *src, int sz);
+void cgn_convert_dummy(uint8_t *dst, uint8_t *src, int sz);
 void cgn_ext_copy_to_f64(const CgnBeamCalc *c, CgnBeamBkgnd *b, double *dst, int normalize, int full_z, double *min_z, double *max_z);
 double cgn_calc_overexposure(const CgnBeamCalc *c, double th);
 void cgn_calc_profiles(const CgnBeamImage *img, const CgnBeamResult *res, CgnBeamProfiles *prf);

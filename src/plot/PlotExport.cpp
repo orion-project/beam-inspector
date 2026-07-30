@@ -280,16 +280,15 @@ void exportImageDlg(const ExportImgArg &arg)
     const int h = arg.height;
     const int bpp = arg.bpp;
 
-    if (bpp != 8 && bpp != 10 && bpp != 12) {
+    if (bpp > 16) {
         // Should not happen
         qWarning() << "Unsupported image bitness" << bpp;
+        Ori::Gui::PopupMessage::error(qApp->translate("ExportImageDlg", "Unsupported image bitness"));
         return;
     }
 
     QImage img;
-    if (bpp == 8) {
-        img = QImage((const uchar*)data.data(), w, h, QImage::Format_Grayscale8);
-    } else {
+    if (bpp > 8 && bpp <= 16) {
         img = QImage(w, h, QImage::Format_Grayscale16);
 
         // Here we need QImage to be able to display image and save as png (pgm is saved manually)
@@ -303,6 +302,11 @@ void exportImageDlg(const ExportImgArg &arg)
                 line[x] = pixel * scale;
             }
         }
+    } else {
+        // Here we are when `bpp == 0` which means that decoding is not supported
+        // Cameras should create a default empty 8-bit buffer in such cases 
+        // and here we will display black image
+        img = QImage((const uchar*)data.data(), w, h, QImage::Format_Grayscale8);
     }
     
     ExportRawImageProps props;

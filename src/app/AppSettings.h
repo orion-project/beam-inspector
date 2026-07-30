@@ -42,6 +42,7 @@ public:
     bool isDevMode = false;
     bool showGoodnessTextOnPlot = false;
     bool showGoodnessRelative = false;
+    bool showAllPixelFormats = false;
     UpdateCheckInterval updateCheckInterval = UpdateCheckInterval::Weekly;
     bool roundHardConfigFps = true;
     bool roundHardConfigExp = true;

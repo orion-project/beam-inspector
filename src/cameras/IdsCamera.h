@@ -11,6 +11,8 @@ class HardConfigPanel;
 class IdsCameraConfig;
 class PeakIntf;
 
+typedef void (*DecodeFrameFunc)(uint8_t *dst, uint8_t *src, int sz);
+
 class IdsCamera final : public QThread, public Camera
 {
     Q_OBJECT
@@ -59,18 +61,6 @@ public:
 
     IdsCameraConfig* idsConfig() { return _cfg.data(); }
     
-    struct PixelFormat
-    {
-        int code;
-        QString name;
-        QString descr;
-    };
-    
-    static QList<PixelFormat> pixelFormats();
-    static int supportedPixelFormat_Mono8();
-    static int supportedPixelFormat_Mono10G40();
-    static int supportedPixelFormat_Mono12G24();
-
 signals:
     void ready();
     void stats(const CameraStats& stats);
@@ -96,6 +86,16 @@ private:
     HardConfigPanel *_configPanel = nullptr;
     friend class PeakIntf;
 };
+
+namespace IdsPixelFormat
+{
+    const QList<PixelFormat>& all();
+    const QList<PixelFormat>& supported();
+    const PixelFormat& findByName(const QString& name);
+    const PixelFormat& findByCode(int code);
+    const PixelFormat& findByBpp(int bpp);
+    DecodeFrameFunc getDecodeFunc(const PixelFormat& f);
+}
 
 #endif // WITH_IDS
 #endif // IDS_CAMERA_H

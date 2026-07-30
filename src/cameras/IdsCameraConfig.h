@@ -31,9 +31,9 @@ public:
         void reset() { x = 1, y = 1; }
     };
 
-    int bpp = 0;
-    int oldBpp = 0;
-    bool bpp8, bpp10, bpp12;
+    int pixelFormat = 0;
+    int oldPixelFormat = 0;
+    QList<PixelFormat> availablePixelFormats;
     bool intoRequested = false;
     QString infoModelName;
     QString infoFamilyName;
@@ -44,7 +44,6 @@ public:
     QString infoFirmwareVer;
     FactorXY binning, decimation;
     FactorXY oldBinning, oldDecimation;
-    QSet<int> supportedBpp;
     bool showBrightness = false;
     bool saveBrightness = false;
     int autoExpLevel = 80;

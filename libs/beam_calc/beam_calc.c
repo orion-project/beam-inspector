@@ -421,6 +421,14 @@ double cgn_calc_brightness_2(const CgnBeamCalc *c, int xc, int yc) {
     }
 }
 
+void cgn_convert_u8_to_u8(uint8_t *dst, uint8_t *src, int sz) {
+#ifdef _WIN32
+    memcpy_s(dst, sz, src, sz);
+#else
+    memcpy(dst, src, sz);
+#endif
+}
+
 typedef struct { uint8_t b0, b1, b2, b3, b4; } PixelGroup10;
 void cgn_convert_10g40_to_u16(uint8_t *dst, uint8_t *src, int sz) {
     int j = 0;
@@ -449,6 +457,10 @@ void cgn_convert_12g24_to_u16(uint8_t *dst, uint8_t *src, int sz) {
         dst[j++] = g->b1 >> 4;
         g++;
     }
+}
+
+void cgn_convert_dummy(uint8_t *dst, uint8_t *src, int sz) {
+    // Do nothing
 }
 
 #define _cgn_find_max                   \
