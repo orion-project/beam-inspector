@@ -1,6 +1,6 @@
 history:
 - version: 0.0.29
-  date: ??
+  date: 2026-07-31
   changes:
   - text: Can toggle beam info via plot's context menu
   - text: Increase font size of the beam info text
@@ -9,6 +9,7 @@ history:
   - text: Can load raw data blob when opening image file
   - text: Can select any pixel format supported by camera
   - text: Support IDS camera pixel formats Mono10 and Mono12
+  - text: Increase top limit of the stability timeline display window
 
 - version: 0.0.28
   date: 2026-05-19

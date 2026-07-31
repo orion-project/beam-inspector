@@ -162,7 +162,9 @@ bool Camera::editConfig(int page)
     if (hasStability()) {
         opts.items
             << (new ConfigItemInt(cfgStabil, qApp->tr("Timeline display window (min)"), &_config.stabil.displayMins))
-                ->withMinMax(1, 240)
+                ->withMinMax(1, 10000)
+                ->withHint(qApp->tr("Independently on this value, the stability panel accumulates "
+                                    "ALL the data since the observation started."))
             << (new ConfigItemInt(cfgStabil, qApp->tr("Heatmap cell count"), &_config.stabil.heatmapCells))
                 ->withMinMax(5, 100)
             << new ConfigItemStr(cfgStabil, qApp->tr("Axis text"), &_config.stabil.axisText)
