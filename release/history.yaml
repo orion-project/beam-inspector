@@ -2,9 +2,9 @@ history:
 - version: 0.0.30
   date: 2026-08-15
   changes:
-  - text: Don't select any format when camera doesn't not provide the requested one
   - text: Close log window when the main window closed
-  - text: 'Fix: log dir is not opened from the app settings dialog'
+  - text: Fix opening of the log dir from the app settings dialog
+  - text: Fix auto selection of the first available pixel format when the requested one is not available
 
 - version: 0.0.29
   date: 2026-07-31
