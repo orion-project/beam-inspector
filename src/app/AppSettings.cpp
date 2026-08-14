@@ -227,7 +227,9 @@ bool AppSettings::edit()
         new ConfigItemBool(cfgDbg, tr("Show log window (restart required)"), &useConsole),
         (new ConfigItemBool(cfgDbg, tr("Save log into file"), &saveLogFile))
             ->withParent(&useConsole),
-        (new ConfigItemButton(cfgDbg, tr("Show logs folder"), []{ QDesktopServices::openUrl(Ori::Debug::logsDir()); }))
+        (new ConfigItemButton(cfgDbg, tr("Show logs folder"), []{
+            QDesktopServices::openUrl(QString("file:///%1").arg(Ori::Debug::logsDir()));
+        }))
             ->withParent(&saveLogFile),
         new ConfigItemSpace(cfgDbg, 12),
         (new ConfigItemSection(cfgDbg, tr("Multi-pass cell alignment")))

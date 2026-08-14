@@ -559,6 +559,8 @@ void PlotWindow::closeEvent(QCloseEvent* ce)
     if (thread && thread->isRunning()) {
         stopCapture();
     }
+    
+    Ori::Debug::closeConsoleWindow();
 }
 
 void PlotWindow::changeEvent(QEvent* e)

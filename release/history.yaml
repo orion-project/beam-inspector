@@ -1,4 +1,11 @@
 history:
+- version: 0.0.30
+  date: 2026-08-15
+  changes:
+  - text: Don't select any format when camera doesn't not provide the requested one
+  - text: Close log window when the main window closed
+  - text: 'Fix: log dir is not opened from the app settings dialog'
+
 - version: 0.0.29
   date: 2026-07-31
   changes:

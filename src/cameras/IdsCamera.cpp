@@ -46,6 +46,12 @@ static QString makeCustomId(const peak_camera_descriptor &cam, const QString &su
         qCritical() << LOG_ID << msg << err; \
         return QString(msg ": ") + err; \
     }
+    
+#define RETURN_ERR(msg) { \
+        QString text = (msg); \
+        qCritical() << LOG_ID << text; \
+        return text; \
+    }
 
 class PeakIntf : public CameraWorker
 {
@@ -262,6 +268,8 @@ public:
         int bytesPerPixel = 1;
         bool unsupported = true;
         pixelFormat = (peak_pixel_format)cam->_cfg->pixelFormat;
+        QString pixelFormatName = IdsPixelFormat::findByCode(pixelFormat).name;
+        qDebug().noquote() << LOG_ID << "Requested pixel format" << HEX(pixelFormat) << pixelFormatName;
         for (const auto& pf : IdsPixelFormat::supported())
             if (pf == pixelFormat) {
                 bitsPerPixel = pf.bitsPerPixel;
@@ -281,19 +289,31 @@ public:
         res = IDS.peak_PixelFormat_GetList(hCam, pixelFormats.data(), &formatCount);
         CHECK_ERR("Unable to get pixel formats");
         
+        bool selectedIsProvided = false;
         auto allFormats = IdsPixelFormat::all();
         for (int i = 0; i < formatCount; i++) {
             auto pf = pixelFormats.at(i);
-            qDebug().noquote() << LOG_ID << "Available pixel format" << HEX(pf);
+            QString formatName;
             // List of all formats provided by camera
             // is used for format selector in camera config dialog
             for (const auto &f : std::as_const(allFormats))
                 if (f.code == pf) {
                     cam->_cfg->availablePixelFormats << f;
+                    formatName = f.name;
                     break;
                 }
+            qDebug().noquote() << LOG_ID << "Available pixel format" << HEX(pf) << formatName;
+            if (pf == pixelFormat)
+                selectedIsProvided = true;
         }
-        qDebug().noquote() << LOG_ID << "Set pixel format" << HEX(pixelFormat) << c.bpp << "bpp,"
+
+        if (cam->_cfg->availablePixelFormats.isEmpty())
+            RETURN_ERR("Camera has not returned any of known pixel formats");
+        if (!selectedIsProvided)
+            RETURN_ERR(QString("Camera does not provide the requested pixel format %1 %2")
+                .arg(HEX(pixelFormat), pixelFormatName));
+
+        qDebug().noquote() << LOG_ID << "Set pixel format" << HEX(pixelFormat) << pixelFormatName << c.bpp << "bpp,"
             << "buffer size:" << bufSize << (unsupported ? "(decoding is not supported)" : "");
         res = IDS.peak_PixelFormat_Set(hCam, pixelFormat);
         CHECK_ERR("Unable to set pixel format");
