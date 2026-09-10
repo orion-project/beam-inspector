@@ -39,3 +39,7 @@ See [build instructions](./docs/build.md).
 Thanks to our friends who made this possible and available for everyone:
 
 <a href="https://www.n2-photonics.de"><img src="img/logos/n2-photonics.png" alt="n2 Photonics"></a>
+
+##
+
+[![Star History Chart](https://api.star-history.com/svg?repos=orion-project/beam-inspector&type=Date)](https://star-history.com/#orion-project/beam-inspector&Date)
