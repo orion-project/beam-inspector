@@ -8,7 +8,7 @@
     #include "cameras/IdsCamera.h"
     #include "cameras/IdsCameraConfig.h"
 #endif
-#include "cameras/DllAdapter.h"
+#include "cameras/DllCamera.h"
 #include "cameras/HardConfigPanel.h"
 #include "cameras/MeasureSaver.h"
 #include "cameras/StillImageCamera.h"
@@ -159,7 +159,6 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
 
     Ori::Gui::PopupMessage::setTarget(this);
 
-    DllAdapter::loadAdapters();
 
     _mru = new Ori::MruFileList(this);
     connect(_mru, &Ori::MruFileList::clicked, this, &PlotWindow::openImage);
@@ -170,7 +169,6 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     createStatusBar();
     createDockPanel();
     setCentralWidget(_plot);
-    fillCamSelector();
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
     connect(qApp->styleHints(), &QStyleHints::colorSchemeChanged, this, &PlotWindow::updateThemeColors);
@@ -237,6 +235,11 @@ void PlotWindow::restoreState()
     _actionCrosshairsShow->setChecked(_plot->isCrosshairsVisible());
     _profilesView->restoreState(s.settings());
     _stabilityView->restoreState(s.settings());
+
+    s.endGroups();
+    DllCamera::loadAdapters(s.settings());
+
+    fillCamSelector();
 }
 
 void PlotWindow::storeState()
@@ -259,11 +262,11 @@ void PlotWindow::createMenuBar()
 #define M_ Ori::Gui::menu
     if (AppSettings::instance().isDevMode)
     {
-        _actionCamWelcome = A_("Welcome", this, &PlotWindow::activateCamWelcome, ":/toolbar/camera");
+        _actionCamWelcome = A_("Welcome", this, &PlotWindow::activateCamWelcome, ":/toolbar/home");
         _actionCamDemoRender = A_("Demo (render)", this, &PlotWindow::activateCamDemoRender, ":/toolbar/bug");
         _actionCamDemoImage = A_("Demo (image)", this, &PlotWindow::activateCamDemoImage, ":/toolbar/bug");
     }
-    _actionCamImage = A_("Image", this, &PlotWindow::activateCamImage, ":/toolbar/camera");
+    _actionCamImage = A_("Image File", this, &PlotWindow::activateCamImage, ":/toolbar/raw_view");
     _actionRefreshCams = A_("Refresh", this, &PlotWindow::fillCamSelector);
     _camSelectMenu = new QMenu(tr("Active Camera"), this);
 
@@ -406,15 +409,14 @@ void PlotWindow::fillCamSelector()
     _camSelectMenu->addSeparator();
 #endif
 
-    for (auto adapter : DllAdapter::adapters())
+    for (const auto& adapter : DllCamera::getAdapters())
     {
-        QString err = adapter->libError();
-        if (!err.isEmpty()) {
-            _camSelectMenu->addAction(QIcon(":/toolbar/error"), adapter->displayName(), this, [err]{
+        if (auto err = adapter.error; !err.isEmpty()) {
+            _camSelectMenu->addAction(QIcon(":/toolbar/error"), adapter.name, this, [err]{
                 Ori::Dlg::error(err);
             });
         } else {
-            for (const auto& cam : adapter->getCameras())
+            for (const auto& cam : DllCamera::getCameras(adapter.id))
             {
                 auto name = cam.displayName;
                 auto customName = s.value(cam.customId).toString();
@@ -422,7 +424,7 @@ void PlotWindow::fillCamSelector()
                     _camCustomNames.insert(cam.customId, customName);
                     name = customName;
                 }
-                auto a = _camSelectMenu->addAction(QIcon(adapter->iconPath()), name, this, &PlotWindow::activateCamDll);
+                auto a = _camSelectMenu->addAction(QIcon(":/toolbar/connect"), name, this, &PlotWindow::activateCamDll);
                 a->setData(cam.cameraId);
             }
         }

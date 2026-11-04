@@ -863,6 +863,10 @@ void IdsCamera::requestExpWarning()
         _peak->requestExpWarning(_plot->eventsTarget());
 }
 
+//------------------------------------------------------------------------------
+//                             IdsPixelFormat
+//------------------------------------------------------------------------------
+
 namespace IdsPixelFormat {
 
 const PixelFormat& supported_Mono8()

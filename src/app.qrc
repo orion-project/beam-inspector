@@ -5,6 +5,7 @@
         <file alias="camera">../img/toolbar/camera.svg</file>
         <file alias="centroid">../img/toolbar/centroid.svg</file>
         <file alias="check">../img/toolbar/check.svg</file>
+        <file alias="connect">../img/toolbar/connect.svg</file>
         <file alias="copy">../img/toolbar/copy.svg</file>
         <file alias="copy_img">../img/toolbar/copy_img.svg</file>
         <file alias="crosshair">../img/toolbar/crosshair.svg</file>

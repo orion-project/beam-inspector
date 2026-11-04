@@ -67,6 +67,7 @@ set(PROJECT_SOURCES
     src/cameras/CameraWorker.h
     src/cameras/DllAdapter.cpp src/cameras/DllAdapter.h
     src/cameras/DllCamera.cpp src/cameras/DllCamera.h
+    src/cameras/DllHelper.cpp src/cameras/DllHelper.h
     src/cameras/IdsCamera.h src/cameras/IdsCamera.cpp
     src/cameras/IdsCameraConfig.h src/cameras/IdsCameraConfig.cpp
     src/cameras/IdsHardConfig.h src/cameras/IdsHardConfig.cpp

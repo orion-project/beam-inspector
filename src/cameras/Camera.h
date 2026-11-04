@@ -23,7 +23,7 @@ public:
     virtual ~Camera() {}
 
     virtual QString name() const = 0;
-    virtual QString descr() const { return {}; }
+    virtual QString descr() const { return name(); }
     virtual int width() const = 0;
     virtual int height() const = 0;
     virtual int bpp() const = 0;
@@ -52,6 +52,9 @@ public:
     virtual QString customId() const { return {}; }
 
     /// Data rows to be show in the Result table
+    /// Base implementation provides default result rows, like Center, Width, etc
+    /// Deriver camera class can override the method to extend the default set
+    /// with additional results (e.g. Power, Render Time, etc).
     virtual TableRowsSpec tableRows() const;
 
     /// Additional data cols to be saved in measurement file
