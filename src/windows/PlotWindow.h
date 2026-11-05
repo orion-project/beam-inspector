@@ -102,7 +102,8 @@ private:
     void activateCamIds();
 #endif
     void activateCamDll();
-    void stopCurrentCam();
+    void resetCurrentCam();
+    void setCurrentCam(Camera* cam);
     void devResizeWindow();
     void devResizeDock(QDockWidget*);
     void editCamConfig(int pageId = -1);

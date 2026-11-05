@@ -19,6 +19,8 @@ typedef uint32_t IBeam_Status;
 /// Adapter API version
 #define IBEAM_API_V1 1
 
+#define IBEAM_BAD_CAMERA_ID 0
+
 // Standard buffer lengths
 #define IBEAM_NAME_LEN 128
 #define IBEAM_ERROR_LEN 1024

@@ -661,6 +661,8 @@ IdsCamera::IdsCamera(QVariant id, PlotIntf *plot, TableIntf *table, StabilityInt
     auto res = peak->init();
     if (!res.isEmpty())
     {
+        // TODO: move message boxes out of camera object 
+        // TODO: provide a unified way of reporting camera initialization errors
         Ori::Dlg::error(res);
         delete peak;
         return;

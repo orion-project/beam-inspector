@@ -1,7 +1,6 @@
 #include "DllAdapter.h"
 #include "DllHelper.h"
 
-#include <QApplication>
 #include <QDir>
 #include <QFileInfo>
 #include <QSettings>
@@ -9,7 +8,7 @@
 #define LOG_ID "DllAdapter:"
 
 //------------------------------------------------------------------------------
-//                                 DllAdapter
+//                                   Helpers
 //------------------------------------------------------------------------------
 
 template <typename TProc>
@@ -22,6 +21,10 @@ static QString getProc(HMODULE hLib, const char *name, TProc *proc)
     return {};
 }
 
+//------------------------------------------------------------------------------
+//                                 DllAdapter
+//------------------------------------------------------------------------------
+
 DllAdapter::DllAdapter(const QString& libPath)
 {
     QFileInfo libInfo(libPath);
@@ -30,7 +33,7 @@ DllAdapter::DllAdapter(const QString& libPath)
     
     if (!libInfo.exists()) {
         qWarning() << LOG_ID << "File not found" << libInfo.absoluteFilePath();
-        _error = qApp->tr("File not found: %1").arg(libPath);
+        _error = QString("File not found: %1").arg(libPath);
         return;
     }
     
@@ -93,4 +96,53 @@ QString DllAdapter::errorText(IBeam_Status status)
 
     qWarning() << LOG_ID << "Unable to get text for error" << status << "because of error" << res;
     return QString("errcode=%1").arg(status);
+}
+
+QString DllAdapter::makeCustomId(IBeam_CameraId cameraId) const
+{
+    return QStringLiteral("%1:%2").arg(_id).arg(cameraId);
+}
+
+void DllAdapter::splitCustomId(const QString& customId, QString& adapterId, IBeam_CameraId& cameraId)
+{
+    int pos = customId.lastIndexOf(':');
+    if (pos < 0) return;
+    adapterId = customId.left(pos);
+    bool goodId = false;
+    cameraId = QStringView(customId).sliced(pos+1).toInt(&goodId);
+    if (!goodId) cameraId = IBEAM_BAD_CAMERA_ID;
+}
+
+QString DllAdapter::refreshCameras()
+{
+    _cameras.clear();
+
+    if (!loaded())
+        return QString("Adapter not loaded: %1").arg(_error);
+    
+    size_t camCount;
+    auto res = getCameraCount(&camCount);
+    if (IBEAM_ERROR(res))
+        return QString("Unable to get camera count: %1").arg(errorText(res));
+    
+    qDebug() << LOG_ID << "Cameras found:" << camCount;
+    
+    QVector<IBeam_CameraInfo> cams(camCount);
+    memset(cams.data(), 0, sizeof(IBeam_CameraInfo)*camCount);
+    res = getCameraList(cams.data(), camCount);
+    if (IBEAM_ERROR(res))
+        return QString("Unable to get camera list: %1").arg(errorText(res));
+    
+    for (const auto &cam : cams) {
+        qDebug() << LOG_ID << "Camera Id:" << cam.cameraId << "| Name:" << cam.displayName;
+        _cameras << CameraItem {
+            .cameraId = cam.cameraId,
+            .customId = makeCustomId(cam.cameraId),
+            .displayName = cam.flags & IBEAM_CAM_FLAG_NAME_WCHAR
+                ? QString::fromWCharArray((const wchar_t*)cam.displayName)
+                : QString::fromLatin1(cam.displayName),
+        };
+    }
+    
+    return {};
 }

@@ -1,5 +1,9 @@
 #include "DllCamera.h"
-#include "DllAdapter.h"
+
+#include "cameras/CameraWorker.h"
+#include "cameras/DllAdapter.h"
+
+#include "helpers/OriDialogs.h"
 
 #include <QSettings>
 
@@ -8,10 +12,10 @@
 Q_GLOBAL_STATIC(QVector<DllAdapter*>, __adapters__);
 
 //------------------------------------------------------------------------------
-//                                    Helpers
+//                                   Helpers
 //------------------------------------------------------------------------------
 
-static DllAdapter* findAdapter(const QString& adapterId)
+static DllAdapter* getAdapter(const QString& adapterId)
 {
     for (auto adapter : *__adapters__)
         if (adapter->id() == adapterId)
@@ -19,21 +23,47 @@ static DllAdapter* findAdapter(const QString& adapterId)
     return nullptr;
 }
 
-static QString makeCustomId(const QString& adapterId, IBeam_CameraId cameraId)
-{
-    return QStringLiteral("%1:%2").arg(adapterId).arg(cameraId);
-}
+//------------------------------------------------------------------------------
+//                                   DllIntf
+//------------------------------------------------------------------------------
 
-static void splitCustomId(const QString& customId, QString& adapterId, IBeam_CameraId& cameraId)
+class DllIntf : public CameraWorker
 {
-    int pos = customId.lastIndexOf(':');
-    if (pos < 0) return;
-    adapterId = customId.left(pos);
-    cameraId = QStringView(customId).sliced(pos+1).toInt();
-}
+public:
+    IBeam_CameraId id;
+    DllCamera *cam;
+    DllAdapter *adapter;
+
+    DllIntf(DllAdapter *adapter, IBeam_CameraId id, PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, DllCamera *cam)
+        : CameraWorker(plot, table, stabil, cam, cam, LOG_ID), id(id), cam(cam), adapter(adapter)
+    {
+    }
+    
+    QString init()
+    {
+        bool camInfoFound = false;
+        for (const auto& camInfo : adapter->cameras())
+            if (camInfo.cameraId == id)
+            {
+                cam->_name = camInfo.displayName;
+                cam->_customId = camInfo.customId;
+                camInfoFound = true;
+                break;
+            }
+        if (!camInfoFound)
+            return "Unable to get camera descriptor";
+        
+        cam->_configGroup = cam->_customId;
+        cam->loadConfig();
+        
+        // TODO: open camera
+            
+        return {};
+    }
+};
 
 //------------------------------------------------------------------------------
-//                                DllCamera
+//                                  DllCamera
 //------------------------------------------------------------------------------
 
 void DllCamera::loadAdapters(QSettings* s)
@@ -79,7 +109,7 @@ void DllCamera::unloadAdapters()
 
 QVector<DllCamera::AdapterItem> DllCamera::getAdapters()
 {
-    QVector<DllCamera::AdapterItem> items;
+    QVector<AdapterItem> items;
     for (auto adapter : *__adapters__)
         items << AdapterItem {
             .id = adapter->id(),
@@ -89,58 +119,51 @@ QVector<DllCamera::AdapterItem> DllCamera::getAdapters()
     return items;
 }
 
-QVector<CameraItem> DllCamera::getCameras(const QString& adapterId)
+DllCamera::CamerasResult DllCamera::getCameras(const QString& adapterId)
 {
     qDebug() << LOG_ID << "Get cameras via" << adapterId;
 
-    DllAdapter* adapter = findAdapter(adapterId);
+    DllAdapter* adapter = getAdapter(adapterId);
     if (!adapter) {
-        qWarning() << LOG_ID << "Adapter not found";
-        return {};
+        auto err = qApp->tr("Unknown adapter: %1").arg(adapterId);
+        qWarning().noquote() << LOG_ID << err;
+        return CamerasResult::fail(err);
+    }
+
+    auto err = adapter->refreshCameras();
+    if (!err.isEmpty()) {
+        qWarning().noquote() << LOG_ID << err;
+        return CamerasResult::fail(err);
     }
     
-    if (!adapter->loaded()) {
-        qWarning() << LOG_ID << "Adapter not loaded" << adapter->error();
-        return {};
-    }
-    
-    size_t camCount;
-    auto res = adapter->getCameraCount(&camCount);
-    if (IBEAM_ERROR(res)) {
-        qWarning() << LOG_ID << "Unable to get camera count" << adapter->errorText(res);
-        return {};
-    }
-    qDebug() << LOG_ID << "Cameras found:" << camCount;
-    
-    QVector<IBeam_CameraInfo> cams(camCount);
-    memset(cams.data(), 0, sizeof(IBeam_CameraInfo)*camCount);
-    res = adapter->getCameraList(cams.data(), camCount);
-    if (IBEAM_ERROR(res)) {
-        qWarning() << LOG_ID << "Unable to get camera list" << adapter->errorText(res);
-        return {};
-    }
-    
-    QVector<CameraItem> result;
-    for (const auto &cam : cams) {
-        qDebug() << LOG_ID << "Camera Id:" << cam.cameraId << "| Name:" << cam.displayName;
-        QString customId = makeCustomId(adapter->id(), cam.cameraId);
-        result << CameraItem {
-            .cameraId = customId,
-            .customId = customId,
-            .displayName = cam.flags & IBEAM_CAM_FLAG_NAME_WCHAR
-                ? QString::fromWCharArray((const wchar_t*)cam.displayName)
-                : QString::fromLatin1(cam.displayName),
-        };
-    }
-    
-    return result;
+    return CamerasResult::ok(adapter->cameras());
 }
 
-DllCamera::DllCamera(QVariant id, PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, QObject *parent)
+DllCamera::DllCamera(const QString& customId, PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, QObject *parent)
     : Camera(plot, table, stabil, "IdsCamera"), QThread(parent)
 {
     QString adapterId;
     IBeam_CameraId cameraId = 0;
+    DllAdapter::splitCustomId(customId, adapterId, cameraId);
+    auto adapter = getAdapter(adapterId);
+    // TODO: move message boxes out of camera object 
+    // TODO: provide a unified way of reporting camera initialization errors
+    if (!adapter || !adapter->loaded()) {
+        Ori::Dlg::error(qApp->tr("Invalid adapter id: %1").arg(customId));
+        return;
+    }
+    if (cameraId == IBEAM_BAD_CAMERA_ID) {
+        Ori::Dlg::error(qApp->tr("Invalid camera id: %1").arg(customId));
+        return;
+    }
+    auto dll = new DllIntf(adapter, cameraId, plot, table, stabil, this);
+    auto res = dll->init();
+    if (!res.isEmpty()) {
+        Ori::Dlg::error(res);
+        delete dll;
+        return;
+    }
+    _dll.reset(dll);
 }
 
 DllCamera::~DllCamera()

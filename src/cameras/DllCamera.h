@@ -3,14 +3,18 @@
 
 #include "cameras/Camera.h"
 
+#include "core/OriResult.h"
+
 #include <QThread>
 
 class DllIntf;
 
 class DllCamera final : public QThread, public Camera
 {
+    Q_OBJECT
+
 public:
-    DllCamera(QVariant id, PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, QObject *parent);
+    DllCamera(const QString& customId, PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, QObject *parent);
     ~DllCamera();
     
     QString name() const override { return _name; }
@@ -23,22 +27,29 @@ public:
     void startCapture() override;
     void stopCapture() override;
     
+    static void loadAdapters(QSettings*);
+    static void unloadAdapters();
+
     struct AdapterItem
     {
         QString id;
         QString name;
         QString error;
     };
-    
-    static void loadAdapters(QSettings*);
-    static void unloadAdapters();
     static QVector<AdapterItem> getAdapters();
-    static QVector<CameraItem> getCameras(const QString& adapterId);
+
+    using CamerasResult = Ori::Result<QVector<CameraItem>>;
+    static CamerasResult getCameras(const QString& adapterId);
+
+signals:
+    void ready();
+    void error(const QString& err);
     
 private:
-    QString _name, _descr, _customId;
+    QString _name, _customId;
     int _width = 0, _height = 0, _bpp = 0;
     QSharedPointer<DllIntf> _dll;
+    friend class DllIntf;
 };
 
 # endif // DLL_CAMERA_H
