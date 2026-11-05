@@ -27,9 +27,13 @@ typedef uint32_t IBeam_Status;
 #define IBEAM_NAME_LEN 128
 #define IBEAM_ERROR_LEN 1024
 
+// Some predefined status codes that Beam Inspector understands and reacts
+#define IBEAM_STATUS_OK 0
+#define IBEAM_STATUS_ABORT 10000
+
 // Status checks
-#define IBEAM_OK(status) ((status) == 0)
-#define IBEAM_ERROR(status) ((status) != 0)
+#define IBEAM_OK(status) ((status) == IBEAM_STATUS_OK)
+#define IBEAM_ERROR(status) ((status) != IBEAM_STATUS_OK)
 
 /// Camera name is given as unicode string (wchar_t array).
 /// If the flag is not set, simple ASCII string is implied.
@@ -92,10 +96,10 @@ typedef struct {
   /// It's up to the adapter library how to decode particular pixel formats into this plain buffer.
   uint8_t bpp;
 
-  /// Physical pixel width in micrometers. Less than zero if unknown.
+  /// Physical pixel width in micrometers. Zero if unknown.
   float pixelWidth;
 
-  /// Physical pixel height in micrometers. Less than zero if unknown.
+  /// Physical pixel height in micrometers. Zero if unknown.
   float pixelHeight;
 }
 IBeam_FrameInfo;
@@ -149,7 +153,17 @@ IBEAM_API IBeam_openCamera(IBeam_CameraId camId, IBeam_Handle *hCam);
 IBEAM_API IBeam_closeCamera(IBeam_Handle hCam);
 
 /// Returns the currently selected image mode of the opened camera.
+///
 IBEAM_API IBeam_getFrameInfo(IBeam_Handle hCam, IBeam_FrameInfo *info);
+
+/// Acquires the next available frame from the opened camera.
+/// The adapter library is expected to decode the raw frame data
+/// from a pixel format it knows into the plain number array (8 or 16-bit)
+/// and put the decoded data into the given buffer.
+/// The Size of the target buffer is not passed because it is supposeed to match 
+/// the frame size and bpp that were previously returned by IBeam_getFrameInfo.
+///
+IBEAM_API IBeam_getFrame(IBeam_Handle hCam, uint8_t *buf);
 
 #endif // BEAM_INSPECTOR
 

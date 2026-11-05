@@ -60,6 +60,7 @@ DllAdapter::DllAdapter(const QString& libPath)
     GET_PROC(openCamera);
     GET_PROC(closeCamera);
     GET_PROC(getFrameInfo);
+    GET_PROC(getFrame);
 
     IBeam_AdapterInfo info;
     memset(&info, 0, sizeof(IBeam_AdapterInfo));

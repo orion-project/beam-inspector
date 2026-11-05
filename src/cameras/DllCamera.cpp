@@ -15,6 +15,8 @@ Q_GLOBAL_STATIC(QVector<DllAdapter*>, __adapters__);
 //                                   Helpers
 //------------------------------------------------------------------------------
 
+enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME, ROW_FRAME_ERR };
+
 static DllAdapter* getAdapter(const QString& adapterId)
 {
     for (auto adapter : *__adapters__)
@@ -41,11 +43,22 @@ public:
     DllAdapter *adapter;
     IBeam_CameraId id;
     IBeam_Handle hCam = IBEAM_BAD_HANDLE;
+    IBeam_Status res;
     QByteArray hdrBuf;
+    
+    int framesErr = 0;
 
     DllIntf(DllAdapter *adapter, IBeam_CameraId id, PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, DllCamera *cam)
         : CameraWorker(plot, table, stabil, cam, cam, LOG_ID), id(id), cam(cam), adapter(adapter)
     {
+        tableData = [this]{
+            QMap<int, CamTableData> data = {
+                { ROW_RENDER_TIME, {avgAcqTime} },
+                { ROW_CALC_TIME, {avgCalcTime} },
+                { ROW_FRAME_ERR, {framesErr, CamTableData::COUNT, framesErr > 0} },
+            };
+            return data;
+        };
     }
     
     QString getFrameInfo()
@@ -58,6 +71,13 @@ public:
         cam->_width = info.width;
         cam->_height = info.height;
 
+        if (info.pixelWidth != info.pixelHeight)
+            qWarning() << LOG_ID << "Non-square pixels are not supported";
+        else if (info.pixelWidth > 0) {
+            cam->_pixelScale.on = true;
+            cam->_pixelScale.factor = info.pixelWidth;
+        }
+        
         c.w = info.width;
         c.h = info.height;
         c.bpp = info.bpp > 8 ? 16 : 8;
@@ -114,13 +134,34 @@ public:
     {
         startCapture();
         while (true) {
-            // Calc FPS
             tm = timer.elapsed();
             avgFrameCount++;
             avgFrameTime += tm - prevFrame;
             prevFrame = tm;
             
-            // TODO: get frame
+            tm = timer.elapsed();
+            res = adapter->getFrame(hCam, c.buf);
+            if (res == IBEAM_STATUS_ABORT) {
+                auto err = adapter->errorText(res);
+                qCritical() << LOG_ID << "Interrupted" << err;
+                emit cam->error("Interrupted: " + err);
+                return;
+            }
+            markAcqTime();
+            
+            if (res == IBEAM_STATUS_OK) {
+                tm = timer.elapsed();
+                calcResult();
+                markCalcTime();
+
+                if (showResults())
+                    emit cam->ready();
+            } else {
+                framesErr++;
+                stats[QStringLiteral("frameErrors")] = framesErr;
+                QString errKey = QStringLiteral("frameError_") + QString::number(res, 16);
+                stats[errKey] = stats[errKey].toInt() + 1;
+            }
             
             if (tm - prevStat >= STAT_DELAY_MS) {
                 prevStat = tm;
@@ -254,6 +295,16 @@ DllCamera::~DllCamera()
     qDebug() << LOG_ID << "Deleted";
 }
 
+TableRowsSpec DllCamera::tableRows() const
+{
+    auto rows = Camera::tableRows();
+    rows.aux
+        << qMakePair(ROW_RENDER_TIME, qApp->tr("Acq. time"))
+        << qMakePair(ROW_CALC_TIME, qApp->tr("Calc time"))
+        << qMakePair(ROW_FRAME_ERR, qApp->tr("Errors"));
+    return rows;
+}
+
 void DllCamera::startCapture()
 {
     start();
@@ -270,5 +321,3 @@ void DllCamera::run()
     if (_dll)
         _dll->run();
 }
-
-

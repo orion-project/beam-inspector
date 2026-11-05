@@ -22,6 +22,8 @@ public:
     int height() const override { return _height; }
     int bpp() const override { return _bpp; }
     QString customId() const override { return _customId; }
+    PixelScale sensorScale() const override { return _pixelScale; }
+    TableRowsSpec tableRows() const override;
     
     bool isCapturing() const override { return (bool)_dll; }
     void startCapture() override;
@@ -52,6 +54,7 @@ protected:
 private:
     QString _name, _customId;
     int _width = 0, _height = 0, _bpp = 0;
+    PixelScale _pixelScale;
     QSharedPointer<DllIntf> _dll;
     friend class DllIntf;
 };

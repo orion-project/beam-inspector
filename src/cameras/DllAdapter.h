@@ -38,6 +38,7 @@ public:
     PROC(openCamera)(IBeam_CameraId cameraId, IBeam_Handle *hCam);
     PROC(closeCamera)(IBeam_Handle hCam);
     PROC(getFrameInfo)(IBeam_Handle hCam, IBeam_FrameInfo *info);
+    PROC(getFrame)(IBeam_Handle hCam, uint8_t *buf);
 
     #undef PROC
 
