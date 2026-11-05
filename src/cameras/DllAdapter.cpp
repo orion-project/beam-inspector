@@ -32,7 +32,7 @@ DllAdapter::DllAdapter(const QString& libPath)
     _name = libInfo.fileName();
     
     if (!libInfo.exists()) {
-        qWarning() << LOG_ID << "File not found" << libInfo.absoluteFilePath();
+        qCritical() << LOG_ID << "File not found" << libInfo.absoluteFilePath();
         _error = QString("File not found: %1").arg(libPath);
         return;
     }
@@ -57,13 +57,16 @@ DllAdapter::DllAdapter(const QString& libPath)
     GET_PROC(getCameraCount)
     GET_PROC(getCameraList)
     GET_PROC(getStatusText)
+    GET_PROC(openCamera);
+    GET_PROC(closeCamera);
+    GET_PROC(getFrameInfo);
 
     IBeam_AdapterInfo info;
     memset(&info, 0, sizeof(IBeam_AdapterInfo));
     auto res = getAdapterInfo(&info);
     if (IBEAM_ERROR(res)) {
         _error = QString("Unable to get adapter info: %1").arg(errorText(res));
-        qWarning().noquote() << LOG_ID << _error;
+        qCritical().noquote() << LOG_ID << _error;
         return;
     }
 
@@ -71,7 +74,7 @@ DllAdapter::DllAdapter(const QString& libPath)
     
     if (info.apiVersion != IBEAM_API_V1) {
         _error = QString("Unsupported API version %1, expected %2").arg(info.apiVersion).arg(IBEAM_API_V1);
-        qWarning().noquote() << LOG_ID << _error;
+        qCritical().noquote() << LOG_ID << _error;
         return;
     }
 
@@ -82,7 +85,7 @@ DllAdapter::DllAdapter(const QString& libPath)
     res = init();
     if (IBEAM_ERROR(res)) {
         _error = QString("Unable to initialize adapter: %1").arg(errorText(res));
-        qWarning().noquote() << LOG_ID << _error;
+        qCritical().noquote() << LOG_ID << _error;
         return;
     }
 }

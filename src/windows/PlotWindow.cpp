@@ -1181,6 +1181,7 @@ void PlotWindow::activateCamDll()
     auto cam = new DllCamera(customId, _plotIntf, _tableIntf, _stabilIntf, this);
     // TODO: unify signals, move them to base camera, connect in setCurrentCam
     connect(cam, &DllCamera::ready, this, &PlotWindow::dataReady);
+    connect(cam, &DllCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &DllCamera::finished, this, &PlotWindow::captureStopped);
     connect(cam, &DllCamera::error, this, [this, cam](const QString& err){
         stopMeasure(true);

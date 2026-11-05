@@ -27,16 +27,45 @@ static DllAdapter* getAdapter(const QString& adapterId)
 //                                   DllIntf
 //------------------------------------------------------------------------------
 
+#define CHECK_ERR(msg) \
+    if (IBEAM_ERROR(res)) { \
+        auto err = adapter->errorText(res); \
+        qCritical() << LOG_ID << msg << err; \
+        return QString(msg ": ") + err; \
+    }
+    
 class DllIntf : public CameraWorker
 {
 public:
-    IBeam_CameraId id;
     DllCamera *cam;
     DllAdapter *adapter;
+    IBeam_CameraId id;
+    IBeam_Handle hCam = IBEAM_BAD_HANDLE;
+    QByteArray hdrBuf;
 
     DllIntf(DllAdapter *adapter, IBeam_CameraId id, PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, DllCamera *cam)
         : CameraWorker(plot, table, stabil, cam, cam, LOG_ID), id(id), cam(cam), adapter(adapter)
     {
+    }
+    
+    QString getFrameInfo()
+    {
+        IBeam_FrameInfo info = { 0 };
+        auto res = adapter->getFrameInfo(hCam, &info);
+        CHECK_ERR("Unable to get frame info");
+    
+        cam->_bpp = info.bpp;
+        cam->_width = info.width;
+        cam->_height = info.height;
+
+        c.w = info.width;
+        c.h = info.height;
+        c.bpp = info.bpp > 8 ? 16 : 8;
+        int bufSize = c.w * c.h * (info.bpp > 8 ? 2 : 1);
+        hdrBuf = QByteArray(bufSize, 0);
+        c.buf = (uint8_t*)hdrBuf.data();
+        
+        return {};
     }
     
     QString init()
@@ -56,9 +85,63 @@ public:
         cam->_configGroup = cam->_customId;
         cam->loadConfig();
         
-        // TODO: open camera
-            
+        auto res = adapter->openCamera(id, &hCam);
+        CHECK_ERR("Unable to open camera");
+        qDebug() << LOG_ID << " Camera opened | id:" << id << "| hCam:" << hCam;
+        
+        if (auto err = getFrameInfo(); !err.isEmpty()) return err;
+        
+        plot->initGraph(c.w, c.h);
+        graph = plot->rawGraph();
+        
+        configure();
+        
+        togglePowerMeter();
+        
         return {};
+    }
+    
+    ~DllIntf()
+    {
+        auto res = adapter->closeCamera(hCam);
+        if (IBEAM_ERROR(res))
+            qWarning() << LOG_ID << "Unable to close camera" << adapter->errorText(res);
+        else qDebug() << LOG_ID << "Camera closed" << id;
+        hCam = IBEAM_BAD_HANDLE;
+    }
+    
+    void run()
+    {
+        startCapture();
+        while (true) {
+            // Calc FPS
+            tm = timer.elapsed();
+            avgFrameCount++;
+            avgFrameTime += tm - prevFrame;
+            prevFrame = tm;
+            
+            // TODO: get frame
+            
+            if (tm - prevStat >= STAT_DELAY_MS) {
+                prevStat = tm;
+                
+                double ft = avgFrameTime / avgFrameCount;
+                avgFrameTime = 0;
+                avgFrameCount = 0;
+                CameraStats st {
+                    .fps = 1000.0/ft,
+                    .hardFps = 0, 
+                    .measureTime = measureStart > 0 ? timer.elapsed() - measureStart : -1,
+                };
+                emit cam->stats(st);
+                
+                if (cam->isInterruptionRequested()) {
+                    qDebug() << LOG_ID << "Interrupted by user";
+                    return;
+                }
+                checkReconfig();
+            }
+        }
     }
 };
 
@@ -181,4 +264,11 @@ void DllCamera::stopCapture()
     if (_dll)
         _dll.reset(nullptr);
 }
+
+void DllCamera::run()
+{
+    if (_dll)
+        _dll->run();
+}
+
 

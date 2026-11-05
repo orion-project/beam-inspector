@@ -43,7 +43,11 @@ public:
 
 signals:
     void ready();
+    void stats(const CameraStats& stats);
     void error(const QString& err);
+    
+protected:
+    void run() override;
     
 private:
     QString _name, _customId;

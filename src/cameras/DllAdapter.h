@@ -35,6 +35,9 @@ public:
     PROC(getCameraCount)(size_t* count);
     PROC(getCameraList)(IBeam_CameraInfo* cameraList, size_t listSize);
     PROC(getStatusText)(IBeam_Status status, char* buf, size_t bufSize);
+    PROC(openCamera)(IBeam_CameraId cameraId, IBeam_Handle *hCam);
+    PROC(closeCamera)(IBeam_Handle hCam);
+    PROC(getFrameInfo)(IBeam_Handle hCam, IBeam_FrameInfo *info);
 
     #undef PROC
 
