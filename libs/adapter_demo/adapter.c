@@ -6,9 +6,9 @@ similar to how the Virtual Camera in Beam Inspector does.
 The purpose of this library is to develop and test the adapter interface
 and to show the simplest example of how to implement a custom adapter library.
 
-gcc adapter.c -o adapter.dll -shared -Wl,--exclude-all-symbols
+gcc adapter.c -o adapter.dll -shared -Wall -Werror -Wl,--exclude-all-symbols
 */
-#include "adapter.h"
+#include "../adapter/adapter.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -33,11 +33,15 @@ IBEAM_API IBeam_getAdapterInfo(IBeam_AdapterInfo* info)
 IBEAM_API IBeam_init()
 {
   printf("%s: init\n", ADAPTER_NAME);
+  fflush(stdout);
+  return STATUS_OK;
 }
 
 IBEAM_API IBeam_exit()
 {
   printf("%s: exit\n", ADAPTER_NAME);
+  fflush(stdout);
+  return STATUS_OK;
 }
 
 IBEAM_API IBeam_getCameraCount(size_t* count)
@@ -46,9 +50,9 @@ IBEAM_API IBeam_getCameraCount(size_t* count)
   return STATUS_OK;
 }
 
-IBEAM_API IBeam_getCameraList(IBeam_CameraInfo* cameraList, size_t listSize)
+IBEAM_API IBeam_getCameraList(IBeam_CameraInfo* cameraList, size_t cameraCount)
 {
-  if (listSize < CAM_COUNT)
+  if (cameraCount < CAM_COUNT)
     return STATUS_SMALL_BUF;
 
   cameraList[0].cameraId = CAM_ID_LR;

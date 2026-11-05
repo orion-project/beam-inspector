@@ -206,11 +206,14 @@ PlotWindow::~PlotWindow()
     delete _tableIntf;
     delete _stabilIntf;
 
-#ifdef WITH_IDS
-    // Close camera explicitly, otherwise it gets closed after the lib unloaded
+    // Close camera explicitly, before SDK libs deinited and unloaded
     _camera.reset();
+
+#ifdef WITH_IDS
     IdsCamera::unloadLib();
 #endif
+
+    DllCamera::unloadAdapters();
 }
 
 void PlotWindow::restoreState()

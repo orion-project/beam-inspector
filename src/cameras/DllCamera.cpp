@@ -43,7 +43,7 @@ void DllCamera::loadAdapters(QSettings* s)
     s->beginGroup("DllAdapters");
     s->beginGroup("items");
 
-    int successCount = 0;
+    int loadedCount = 0;
     for (const auto& g : s->childGroups())
     {
         s->beginGroup(g);
@@ -51,8 +51,8 @@ void DllCamera::loadAdapters(QSettings* s)
         QString libPath = s->value("libPath").toString();
         qDebug() << LOG_ID << "Adapter" << libPath;
         auto adapter = new DllAdapter(libPath);
-        if (adapter->error().isEmpty())
-            successCount++;
+        if (adapter->loaded())
+            loadedCount++;
         __adapters__->append(adapter);
 
         s->endGroup();
@@ -61,7 +61,20 @@ void DllCamera::loadAdapters(QSettings* s)
     s->endGroup();
     s->endGroup();
 
-    qDebug() << LOG_ID << "Adapters loaded | Total:" << __adapters__->size() << "| Success:" << successCount;
+    qDebug() << LOG_ID << "Adapters found:" << __adapters__->size() << "| loaded:" << loadedCount;
+}
+
+void DllCamera::unloadAdapters()
+{
+    for (auto adapter : *__adapters__)
+    {
+        if (!adapter->loaded())
+            continue;
+        auto res = adapter->exit();
+        if (IBEAM_ERROR(res))
+            qWarning() << LOG_ID << "Unable to deinit adapter" << adapter->id() << adapter->errorText(res);
+        else qDebug() << LOG_ID << "Adapter deinited" << adapter->id();
+    }
 }
 
 QVector<DllCamera::AdapterItem> DllCamera::getAdapters()
@@ -86,8 +99,8 @@ QVector<CameraItem> DllCamera::getCameras(const QString& adapterId)
         return {};
     }
     
-    if (!adapter->error().isEmpty()) {
-        qWarning() << LOG_ID << "Adapter not loaded with error" << adapter->error();
+    if (!adapter->loaded()) {
+        qWarning() << LOG_ID << "Adapter not loaded" << adapter->error();
         return {};
     }
     
@@ -100,6 +113,7 @@ QVector<CameraItem> DllCamera::getCameras(const QString& adapterId)
     qDebug() << LOG_ID << "Cameras found:" << camCount;
     
     QVector<IBeam_CameraInfo> cams(camCount);
+    memset(cams.data(), 0, sizeof(IBeam_CameraInfo)*camCount);
     res = adapter->getCameraList(cams.data(), camCount);
     if (IBEAM_ERROR(res)) {
         qWarning() << LOG_ID << "Unable to get camera list" << adapter->errorText(res);
@@ -113,7 +127,9 @@ QVector<CameraItem> DllCamera::getCameras(const QString& adapterId)
         result << CameraItem {
             .cameraId = customId,
             .customId = customId,
-            .displayName = QString::fromLatin1(cam.displayName),
+            .displayName = cam.flags & IBEAM_CAM_FLAG_NAME_WCHAR
+                ? QString::fromWCharArray((const wchar_t*)cam.displayName)
+                : QString::fromLatin1(cam.displayName),
         };
     }
     

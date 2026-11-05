@@ -31,6 +31,7 @@ public:
     };
     
     static void loadAdapters(QSettings*);
+    static void unloadAdapters();
     static QVector<AdapterItem> getAdapters();
     static QVector<CameraItem> getCameras(const QString& adapterId);
     

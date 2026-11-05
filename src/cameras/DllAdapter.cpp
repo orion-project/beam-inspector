@@ -40,12 +40,11 @@ DllAdapter::DllAdapter(const QString& libPath)
         return;
     }
     
-    _hLib = sdkResult.result();
+    auto hLib = sdkResult.result();
 
     #define GET_PROC(name) \
-        if (auto err = getProc(_hLib, "IBeam_"#name, &name); !err.isEmpty()) { \
+        if (auto err = getProc(hLib, "IBeam_"#name, &name); !err.isEmpty()) { \
             _error = err; \
-            _hLib = 0; \
             return; \
         }
 
@@ -55,11 +54,11 @@ DllAdapter::DllAdapter(const QString& libPath)
     GET_PROC(getCameraCount)
     GET_PROC(getCameraList)
     GET_PROC(getStatusText)
-    
+
     IBeam_AdapterInfo info;
+    memset(&info, 0, sizeof(IBeam_AdapterInfo));
     auto res = getAdapterInfo(&info);
     if (IBEAM_ERROR(res)) {
-        _hLib = 0;
         _error = QString("Unable to get adapter info: %1").arg(errorText(res));
         qWarning().noquote() << LOG_ID << _error;
         return;
@@ -68,15 +67,21 @@ DllAdapter::DllAdapter(const QString& libPath)
     _name = QString::fromLatin1(info.displayName);
     
     if (info.apiVersion != IBEAM_API_V1) {
-        _hLib = 0;
         _error = QString("Unsupported API version %1, expected %2").arg(info.apiVersion).arg(IBEAM_API_V1);
         qWarning().noquote() << LOG_ID << _error;
         return;
     }
-    
+
     qDebug() << LOG_ID << "Adapter loaded" << _name
         << "| Version:" << QString::fromLatin1(info.displayVersion)
         << "| API:" << info.apiVersion;
+
+    res = init();
+    if (IBEAM_ERROR(res)) {
+        _error = QString("Unable to initialize adapter: %1").arg(errorText(res));
+        qWarning().noquote() << LOG_ID << _error;
+        return;
+    }
 }
 
 QString DllAdapter::errorText(IBeam_Status status)
