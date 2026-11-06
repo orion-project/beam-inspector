@@ -29,6 +29,10 @@ public:
     void startCapture() override;
     void stopCapture() override;
     
+    bool canSaveRawImg() const override { return true; }
+    void requestRawImg(QObject *sender) override;
+    void setRawView(bool on, bool reconfig) override;
+    
     static void loadAdapters(QSettings*);
     static void unloadAdapters();
 
@@ -50,6 +54,9 @@ signals:
     
 protected:
     void run() override;
+    
+private slots:
+    void camConfigChanged();
     
 private:
     QString _name, _customId;

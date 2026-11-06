@@ -452,6 +452,7 @@ void PlotWindow::createToolBar()
     _buttonSelectCam->setToolTip(tr("Active camera"));
 
     auto tb = new Ori::Widgets::FlatToolBar;
+    tb->setWindowTitle(tr("Toolbar"));
     tb->setObjectName("ToolBarMain");
     addToolBar(tb);
     tb->setMovable(false);

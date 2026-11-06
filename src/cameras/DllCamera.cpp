@@ -67,9 +67,9 @@ public:
         auto res = adapter->getFrameInfo(hCam, &info);
         CHECK_ERR("Unable to get frame info");
     
-        cam->_bpp = info.bpp;
         cam->_width = info.width;
         cam->_height = info.height;
+        cam->_bpp = info.bpp;
 
         if (info.pixelWidth != info.pixelHeight)
             qWarning() << LOG_ID << "Non-square pixels are not supported";
@@ -80,7 +80,7 @@ public:
         
         c.w = info.width;
         c.h = info.height;
-        c.bpp = info.bpp > 8 ? 16 : 8;
+        c.bpp = info.bpp;
         int bufSize = c.w * c.h * (info.bpp > 8 ? 2 : 1);
         hdrBuf = QByteArray(bufSize, 0);
         c.buf = (uint8_t*)hdrBuf.data();
@@ -288,6 +288,8 @@ DllCamera::DllCamera(const QString& customId, PlotIntf *plot, TableIntf *table, 
         return;
     }
     _dll.reset(dll);
+    
+    connect(parent, SIGNAL(camConfigChanged()), this, SLOT(camConfigChanged()));
 }
 
 DllCamera::~DllCamera()
@@ -320,4 +322,22 @@ void DllCamera::run()
 {
     if (_dll)
         _dll->run();
+}
+
+void DllCamera::camConfigChanged()
+{
+    if (_dll)
+        _dll->reconfigure();
+}
+
+void DllCamera::requestRawImg(QObject *sender)
+{
+    if (_dll)
+        _dll->requestRawImg(sender);
+}
+
+void DllCamera::setRawView(bool on, bool reconfig)
+{
+    if (_dll)
+        _dll->setRawView(on, reconfig);
 }

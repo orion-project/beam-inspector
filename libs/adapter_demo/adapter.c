@@ -232,7 +232,7 @@ static void renderBeam(BeamProps *b, uint8_t *buf) {
 
 static double jitter(BeamOffset *off)
 {
-  #define rnd ((double)rand() / (double)INT_MAX)
+  #define rnd ((double)rand() / (double)RAND_MAX)
   const double bias = off->span / 4.0;
   off->val = fabs(off->val + rnd*bias - bias*0.5);
   if (off->val > off->span)
