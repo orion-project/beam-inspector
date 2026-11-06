@@ -6,15 +6,18 @@ similar to how the Virtual Camera in Beam Inspector does.
 The purpose of this library is to develop and test the adapter interface
 and to show the simplest example of how to implement a custom adapter library.
 
+GCC:
 gcc adapter.c -o adapter.dll -shared -Wall -Werror -Wl,--exclude-all-symbols
+
+MSVC:
+cl /LD /Wall /WX /wd5045 /external:W1 /external:I ../adapter adapter.c
 */
-#include "../adapter/adapter.h"
+#include "adapter.h"
 
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 
 #define ADAPTER_NAME "Demo Dll Adapter"
 #define CAM_COUNT 2
@@ -64,7 +67,7 @@ IBEAM_API IBeam_getStatusText(IBeam_Status status, char* buf, size_t bufSize)
     case s: \
       if (bufSize < strlen(txt)+1) \
         return STATUS_SMALL_BUF; \
-      strcpy(buf, txt); \
+      strcpy_s(buf, bufSize, txt); \
       return STATUS_OK;
   
   switch (status) {
@@ -81,10 +84,8 @@ IBEAM_API IBeam_getStatusText(IBeam_Status status, char* buf, size_t bufSize)
   #undef _
 }
 
-IBEAM_API IBeam_init()
+IBEAM_API IBeam_init(void)
 {
-  srand(time(NULL));
-
   CAM.id = IBEAM_BAD_CAMERA_ID;
   CAM.hCam = IBEAM_BAD_HANDLE;
   CAM.nextHandle = IBEAM_BAD_HANDLE;
@@ -94,7 +95,7 @@ IBEAM_API IBeam_init()
   return STATUS_OK;
 }
 
-IBEAM_API IBeam_exit()
+IBEAM_API IBeam_exit(void)
 {
   printf("%s: exit\n", ADAPTER_NAME);
   fflush(stdout);
@@ -103,8 +104,8 @@ IBEAM_API IBeam_exit()
 
 IBEAM_API IBeam_getAdapterInfo(IBeam_AdapterInfo* info)
 {
-  strcpy(info->displayName, ADAPTER_NAME);
-  strcpy(info->displayVersion, "1.0.0");
+  strcpy_s(info->displayName, IBEAM_NAME_LEN, ADAPTER_NAME);
+  strcpy_s(info->displayVersion, IBEAM_NAME_LEN, "1.0.0");
   info->apiVersion = IBEAM_API_V1;
   return STATUS_OK;
 }
@@ -121,10 +122,10 @@ IBEAM_API IBeam_getCameraList(IBeam_CameraInfo* camList, size_t camCount)
     return STATUS_SMALL_BUF;
 
   camList[0].cameraId = CAM_LR_ID;
-  strcpy(camList[0].displayName, "Low-Res Cam");
+  strcpy_s(camList[0].displayName, IBEAM_NAME_LEN, "Low-Res Cam");
 
   camList[1].cameraId = CAM_HR_ID;
-  strcpy(camList[1].displayName, "High-Res Cam");
+  strcpy_s(camList[1].displayName, IBEAM_NAME_LEN, "High-Res Cam");
 
   return STATUS_OK;
 }
@@ -161,7 +162,7 @@ IBEAM_API IBeam_openCamera(IBeam_CameraId camId, IBeam_Handle *hCam)
   CAM.beam.w = CAM.img.width;
   CAM.beam.h = CAM.img.height;
   CAM.beam.dx = CAM.beam.w/2;
-  CAM.beam.dy = CAM.beam.dx*0.75;
+  CAM.beam.dy = CAM.beam.dx/4*3;
   CAM.beam.xc = CAM.beam.w/2;
   CAM.beam.yc = CAM.beam.h/2;
   CAM.beam.phi = 12;
@@ -207,22 +208,22 @@ static void renderBeam(BeamProps *b, uint8_t *buf) {
   const double cos_phi = cos(b->phi * 3.14159265358979323846 / 180.0);
   const double sin_phi = sin(b->phi * 3.14159265358979323846 / 180.0);
   const double el = b->dx / (double)(b->dy);
-  const int x_min = -b->dx*0.6, x_max = b->dx*0.6;
-  const int y_min = -b->dy*0.6, y_max = b->dy*0.6;
+  const int x_min = -b->dx*6/10, x_max = b->dx*6/10;
+  const int y_min = -b->dy*6/10, y_max = b->dy*6/10;
   const double p = b->p;
   for (int y = y_min; y < y_max; y++) {
     const double y2 = sqr(y*el);
     for (int x = x_min; x < x_max; x++) {
-      const int x1 = b->xc + x*cos_phi - y*sin_phi;
-      const int y1 = b->yc + x*sin_phi + y*cos_phi;
+      const int x1 = (int)(b->xc + x*cos_phi - y*sin_phi);
+      const int y1 = (int)(b->yc + x*sin_phi + y*cos_phi);
       if (y1 >= 0 && y1 < b->h && x1 >= 0 && x1 < b->w) {
         const double t = 1+ (-2*(sqr(x) + y2)/r2) /5.0;
         const double v = p * t*t*t*t*t;
         const int i = y1*b->w + x1;
         if (b->bpp > 1) {
-          ((uint16_t*)buf)[i] = v;
+          ((uint16_t*)buf)[i] = (uint16_t)v;
         } else {
-          buf[i] = v;
+          buf[i] = (uint8_t)v;
         }
       }
     }
@@ -230,14 +231,14 @@ static void renderBeam(BeamProps *b, uint8_t *buf) {
   #undef sqr
 }
 
-static double jitter(BeamOffset *off)
+static int jitter(BeamOffset *off)
 {
   #define rnd ((double)rand() / (double)RAND_MAX)
   const double bias = off->span / 4.0;
   off->val = fabs(off->val + rnd*bias - bias*0.5);
   if (off->val > off->span)
     off->val = off->span - rnd*bias;
-  return off->val + off->min;
+  return (int)(off->val + off->min);
   #undef rnd
 }
 

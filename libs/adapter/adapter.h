@@ -74,6 +74,8 @@ typedef struct {
 
   /// A set of various boolean properties.
   uint32_t flags;
+
+  uint32_t padding;
 }
 IBeam_CameraInfo;
 
@@ -94,7 +96,7 @@ typedef struct {
   /// For example, it means that when bpp=12, Beam Inspector displays it as 12 for users
   /// but prepares a 16-bit data buffer for recieving the image data.
   /// It's up to the adapter library how to decode particular pixel formats into this plain buffer.
-  uint8_t bpp;
+  uint32_t bpp;
 
   /// Physical pixel width in micrometers. Zero if unknown.
   float pixelWidth;
@@ -111,12 +113,12 @@ IBeam_FrameInfo;
 /// Intialize internal adapter structures.
 /// Beam Inspector calls this function once after loading adapter DLL.
 ///
-IBEAM_API IBeam_init();
+IBEAM_API IBeam_init(void);
 
 /// Clear and free internal adapter structures.
 /// Beam Inspector calls this function while closing the main window.
 ///
-IBEAM_API IBeam_exit();
+IBEAM_API IBeam_exit(void);
 
 /// Returns basic information about the adapter library.
 /// Beam Inspector calls the function with zero-filled buffer.

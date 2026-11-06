@@ -13,6 +13,9 @@ out
 build
 *.exe
 *.dll
+*.lib
+*.obj
+*.exp
 calc/**/*.pgm
 calc/.vscode
 CMakeLists.txt.user*
