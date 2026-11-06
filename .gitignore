@@ -23,3 +23,5 @@ CMakeLists.txt.user*
 track_mem*.csv
 *.log
 qt.conf
+adapters.json
+adapters

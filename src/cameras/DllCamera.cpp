@@ -5,11 +5,9 @@
 
 #include "helpers/OriDialogs.h"
 
-#include <QSettings>
+#include <QFileInfo>
 
 #define LOG_ID "DllCamera:"
-
-Q_GLOBAL_STATIC(QVector<DllAdapter*>, __adapters__);
 
 //------------------------------------------------------------------------------
 //                                   Helpers
@@ -17,25 +15,17 @@ Q_GLOBAL_STATIC(QVector<DllAdapter*>, __adapters__);
 
 enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME, ROW_FRAME_ERR };
 
-static DllAdapter* getAdapter(const QString& adapterId)
-{
-    for (auto adapter : *__adapters__)
-        if (adapter->id() == adapterId)
-            return adapter;
-    return nullptr;
-}
-
-//------------------------------------------------------------------------------
-//                                   DllIntf
-//------------------------------------------------------------------------------
-
 #define CHECK_ERR(msg) \
     if (IBEAM_ERROR(res)) { \
         auto err = adapter->errorText(res); \
         qCritical() << LOG_ID << msg << err; \
         return QString(msg ": ") + err; \
     }
-    
+
+//------------------------------------------------------------------------------
+//                                   DllIntf
+//------------------------------------------------------------------------------
+
 class DllIntf : public CameraWorker
 {
 public:
@@ -190,51 +180,13 @@ public:
 //                                  DllCamera
 //------------------------------------------------------------------------------
 
-void DllCamera::loadAdapters(QSettings* s)
-{
-    qDebug() << LOG_ID << "Loading adapters";
-
-    s->beginGroup("DllAdapters");
-    s->beginGroup("items");
-
-    int loadedCount = 0;
-    for (const auto& g : s->childGroups())
-    {
-        s->beginGroup(g);
-
-        QString libPath = s->value("libPath").toString();
-        qDebug() << LOG_ID << "Adapter" << libPath;
-        auto adapter = new DllAdapter(libPath);
-        if (adapter->loaded())
-            loadedCount++;
-        __adapters__->append(adapter);
-
-        s->endGroup();
-    }
-
-    s->endGroup();
-    s->endGroup();
-
-    qDebug() << LOG_ID << "Adapters found:" << __adapters__->size() << "| loaded:" << loadedCount;
-}
-
-void DllCamera::unloadAdapters()
-{
-    for (auto adapter : *__adapters__)
-    {
-        if (!adapter->loaded())
-            continue;
-        auto res = adapter->exit();
-        if (IBEAM_ERROR(res))
-            qWarning() << LOG_ID << "Unable to deinit adapter" << adapter->id() << adapter->errorText(res);
-        else qDebug() << LOG_ID << "Adapter deinited" << adapter->id();
-    }
-}
+void DllCamera::loadAdapters() { DllAdapter::loadAdapters(); }
+void DllCamera::unloadAdapters() { DllAdapter::unloadAdapters(); }
 
 QVector<DllCamera::AdapterItem> DllCamera::getAdapters()
 {
     QVector<AdapterItem> items;
-    for (auto adapter : *__adapters__)
+    for (auto adapter : DllAdapter::getAdapters())
         items << AdapterItem {
             .id = adapter->id(),
             .name = adapter->name(),
@@ -247,18 +199,13 @@ DllCamera::CamerasResult DllCamera::getCameras(const QString& adapterId)
 {
     qDebug() << LOG_ID << "Get cameras via" << adapterId;
 
-    DllAdapter* adapter = getAdapter(adapterId);
-    if (!adapter) {
-        auto err = qApp->tr("Unknown adapter: %1").arg(adapterId);
-        qWarning().noquote() << LOG_ID << err;
-        return CamerasResult::fail(err);
-    }
+    DllAdapter* adapter = DllAdapter::getAdapter(adapterId);
+    if (!adapter)
+        return CamerasResult::fail(qApp->tr("Unknown adapter"));
 
     auto err = adapter->refreshCameras();
-    if (!err.isEmpty()) {
-        qWarning().noquote() << LOG_ID << err;
+    if (!err.isEmpty())
         return CamerasResult::fail(err);
-    }
     
     return CamerasResult::ok(adapter->cameras());
 }
@@ -269,7 +216,7 @@ DllCamera::DllCamera(const QString& customId, PlotIntf *plot, TableIntf *table, 
     QString adapterId;
     IBeam_CameraId cameraId = 0;
     DllAdapter::splitCustomId(customId, adapterId, cameraId);
-    auto adapter = getAdapter(adapterId);
+    auto adapter = DllAdapter::getAdapter(adapterId);
     // TODO: move message boxes out of camera object 
     // TODO: provide a unified way of reporting camera initialization errors
     if (!adapter || !adapter->loaded()) {

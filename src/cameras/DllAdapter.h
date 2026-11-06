@@ -42,6 +42,11 @@ public:
 
     #undef PROC
 
+    static void loadAdapters();
+    static void unloadAdapters();
+    static const QVector<DllAdapter*>& getAdapters();
+    static DllAdapter* getAdapter(const QString& adapterId);
+
 private:
     QString _id, _name, _error;
     QVector<CameraItem> _cameras;

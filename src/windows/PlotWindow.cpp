@@ -239,9 +239,7 @@ void PlotWindow::restoreState()
     _profilesView->restoreState(s.settings());
     _stabilityView->restoreState(s.settings());
 
-    s.endGroups();
-    DllCamera::loadAdapters(s.settings());
-
+    DllCamera::loadAdapters();
     fillCamSelector();
 }
 

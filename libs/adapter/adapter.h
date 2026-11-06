@@ -74,8 +74,6 @@ typedef struct {
 
   /// A set of various boolean properties.
   uint32_t flags;
-
-  uint32_t padding;
 }
 IBeam_CameraInfo;
 
@@ -96,7 +94,7 @@ typedef struct {
   /// For example, it means that when bpp=12, Beam Inspector displays it as 12 for users
   /// but prepares a 16-bit data buffer for recieving the image data.
   /// It's up to the adapter library how to decode particular pixel formats into this plain buffer.
-  uint32_t bpp;
+  uint8_t bpp;
 
   /// Physical pixel width in micrometers. Zero if unknown.
   float pixelWidth;

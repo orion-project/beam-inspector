@@ -6,12 +6,15 @@
 
 static QString getSysError(DWORD err)
 {
-    const int bufSize = 1024;
-    wchar_t buf[bufSize];
-    auto size = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM, 0, err, 0, buf, bufSize, 0);
+    LPWSTR buf = NULL;
+    auto size = FormatMessageW(
+        FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&buf, 0, NULL);
     if (size == 0)
         return QStringLiteral("code: 0x%1").arg(err, 0, 16);
-    return QString::fromWCharArray(buf, size).trimmed();
+    QString text = QString::fromWCharArray(buf, size).trimmed();
+    LocalFree(buf);
+    return text;
 }
 
 ProcResult resolveProc(const char* logId, HMODULE hLib, const char* name)
@@ -84,11 +87,11 @@ static QString findLibDeps(const char* logId, const QString &sdkDir, const QStri
         return "Library not found: " + libPath;
     }
     
-    auto hLib = LoadLibraryExA(libPath.toStdString().c_str(), NULL, DONT_RESOLVE_DLL_REFERENCES);
+    auto hLib = LoadLibraryExW(libPath.toStdWString().c_str(), NULL, DONT_RESOLVE_DLL_REFERENCES);
     if (!hLib)
     {
         auto err = getSysError(GetLastError());
-        qWarning() << logId << "Failed to load" << libPath << err;
+        qWarning() << logId << "Failed to load library" << libPath << err;
         return QString("Unable to load library %1: %2").arg(libPath, err);
     }
     
@@ -171,7 +174,7 @@ SdkResult loadSdk(const char* logId, const QString& sdkDir, const QString& mainD
         if (hLib == 0)
         {
             auto err = getSysError(GetLastError());
-            qWarning() << logId << "Failed to load" << libPath << err;
+            qWarning() << logId << "Unable to load library" << libPath << err;
             return SdkResult::fail(QString("Unable to load library %1: %2").arg(libPath, err));
         }
     }

@@ -33,7 +33,7 @@ public:
     void requestRawImg(QObject *sender) override;
     void setRawView(bool on, bool reconfig) override;
     
-    static void loadAdapters(QSettings*);
+    static void loadAdapters();
     static void unloadAdapters();
 
     struct AdapterItem

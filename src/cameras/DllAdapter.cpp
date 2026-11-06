@@ -1,11 +1,16 @@
 #include "DllAdapter.h"
 #include "DllHelper.h"
 
+#include <QApplication>
 #include <QDir>
-#include <QFileInfo>
-#include <QSettings>
+#include <QFile>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 #define LOG_ID "DllAdapter:"
+
+Q_GLOBAL_STATIC(QVector<DllAdapter*>, __adapters__);
 
 //------------------------------------------------------------------------------
 //                                   Helpers
@@ -25,11 +30,111 @@ static QString getProc(HMODULE hLib, const char *name, TProc *proc)
 //                                 DllAdapter
 //------------------------------------------------------------------------------
 
+static void loadAdaptersFromJson(int& loadedCount)
+{
+    QFile jsonConfig(qApp->applicationDirPath() + QStringLiteral("/adapters.json"));
+    if (!jsonConfig.exists())
+        return;
+
+    qDebug() << LOG_ID << "Loading adapters from json config";
+
+    if (!jsonConfig.open(QIODevice::ReadOnly)) {
+        qCritical() << LOG_ID << "Unable to open json config" << jsonConfig.errorString();
+        return;
+    }
+
+    QJsonParseError jErr;
+    auto jDoc = QJsonDocument::fromJson(jsonConfig.readAll(), &jErr);
+    if (jErr.error != QJsonParseError::NoError) {
+        qCritical() << LOG_ID << "Unable to parse json config" << jErr.errorString();
+        return;
+    }
+
+    if (!jDoc.isArray()) {
+        qWarning() << LOG_ID << "Invalid json format, array expected";
+        return;
+    }
+
+    auto jArr = jDoc.array();
+    for (auto it = jArr.cbegin(); it != jArr.cend(); it++) {
+        auto jObj = it->toObject();
+        QString libPath = jObj["libPath"].toString();
+        qDebug() << LOG_ID << "Adapter" << libPath;
+        auto adapter = new DllAdapter(libPath);
+        if (adapter->loaded())
+            loadedCount++;
+        __adapters__->append(adapter);
+    }
+}
+
+static void loadAdaptersFromSubdir(int& loadedCount)
+{
+    QString adaptersDir = qApp->applicationDirPath() + QStringLiteral("/adapters/");
+    if (!QDir(adaptersDir).exists())
+        return;
+
+    qDebug() << LOG_ID << "Loading adapters from subdirs";
+
+    QStringList nameFilter { QStringLiteral("*adapter*.dll") };
+    for (const auto& subdir : QDir(adaptersDir).entryList(QDir::Dirs|QDir::NoDotAndDotDot))
+    {
+        QString adapterDir = adaptersDir + subdir;
+        qDebug() << LOG_ID << "Loading adapters from subdir" << adapterDir;
+        for (const auto& dll : QDir(adapterDir).entryList(nameFilter, QDir::Files))
+        {
+            QString libPath = QStringLiteral("./adapters/") + subdir + '/' + dll;
+            qDebug() << LOG_ID << "Adapter" << libPath;
+            auto adapter = new DllAdapter(libPath);
+            if (adapter->loaded())
+                loadedCount++;
+            __adapters__->append(adapter);
+        }
+    }
+}
+
+void DllAdapter::loadAdapters()
+{
+    int loadedCount = 0;
+    loadAdaptersFromJson(loadedCount);
+    loadAdaptersFromSubdir(loadedCount);
+    qDebug() << LOG_ID << "Adapters found:" << __adapters__->size() << "| loaded:" << loadedCount;
+}
+
+void DllAdapter::unloadAdapters()
+{
+    for (auto adapter : *__adapters__)
+    {
+        if (!adapter->loaded())
+            continue;
+        auto res = adapter->exit();
+        if (IBEAM_ERROR(res))
+            qWarning() << LOG_ID << "Unable to deinit adapter" << adapter->id() << adapter->errorText(res);
+        else qDebug() << LOG_ID << "Adapter deinited" << adapter->id();
+    }
+}
+
+const QVector<DllAdapter*>& DllAdapter::getAdapters()
+{
+    return *__adapters__;
+}
+
+DllAdapter* DllAdapter::getAdapter(const QString& adapterId)
+{
+    for (auto adapter : *__adapters__)
+        if (adapter->id() == adapterId)
+            return adapter;
+    qWarning() << "Unknown adapter" << adapterId;
+    return nullptr;
+}
+
 DllAdapter::DllAdapter(const QString& libPath)
 {
     QFileInfo libInfo(libPath);
     _id = libPath;
     _name = libInfo.fileName();
+
+    if (!libInfo.isAbsolute())
+        libInfo = QFileInfo(qApp->applicationDirPath() + '/' + libPath);
     
     if (!libInfo.exists()) {
         qCritical() << LOG_ID << "File not found" << libInfo.absoluteFilePath();
@@ -121,21 +226,27 @@ QString DllAdapter::refreshCameras()
 {
     _cameras.clear();
 
-    if (!loaded())
+    if (!loaded()) {
+        qWarning() << "Adapter not loaded" << _error;
         return QString("Adapter not loaded: %1").arg(_error);
+    }
     
     size_t camCount;
     auto res = getCameraCount(&camCount);
-    if (IBEAM_ERROR(res))
+    if (IBEAM_ERROR(res)) {
+        qWarning() << "Unable to get camera count" << errorText(res);
         return QString("Unable to get camera count: %1").arg(errorText(res));
+    }
     
     qDebug() << LOG_ID << "Cameras found:" << camCount;
     
     QVector<IBeam_CameraInfo> cams(camCount);
     memset(cams.data(), 0, sizeof(IBeam_CameraInfo)*camCount);
     res = getCameraList(cams.data(), camCount);
-    if (IBEAM_ERROR(res))
+    if (IBEAM_ERROR(res)) {
+        qWarning() << "Unable to get camera list" << errorText(res);
         return QString("Unable to get camera list: %1").arg(errorText(res));
+    }
     
     for (const auto &cam : cams) {
         qDebug() << LOG_ID << "Camera Id:" << cam.cameraId << "| Name:" << cam.displayName;
