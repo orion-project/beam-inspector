@@ -39,9 +39,9 @@ static DllAdapter* getAdapter(const QString& adapterId)
 class DllIntf : public CameraWorker
 {
 public:
+    IBeam_CameraId id;
     DllCamera *cam;
     DllAdapter *adapter;
-    IBeam_CameraId id;
     IBeam_Handle hCam = IBEAM_BAD_HANDLE;
     IBeam_Status res;
     QByteArray hdrBuf;
@@ -264,7 +264,7 @@ DllCamera::CamerasResult DllCamera::getCameras(const QString& adapterId)
 }
 
 DllCamera::DllCamera(const QString& customId, PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, QObject *parent)
-    : Camera(plot, table, stabil, "IdsCamera"), QThread(parent)
+    : QThread(parent), Camera(plot, table, stabil, "IdsCamera")
 {
     QString adapterId;
     IBeam_CameraId cameraId = 0;

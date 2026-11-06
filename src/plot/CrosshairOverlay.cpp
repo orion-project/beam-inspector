@@ -98,7 +98,7 @@ void CrosshairsOverlay::draw(QCPPainter *painter)
     QFont f;
     f.setPixelSize(s.crosshaitTextSize);
     painter->setFont(f);
-    for (const auto& c : qAsConst(_items)) {
+    for (const auto& c : std::as_const(_items)) {
         painter->setBrush(Qt::NoBrush);
         painter->setPen(QPen(c.color, s.crosshairPenWidth, Qt::SolidLine));
         const double x = parentPlot()->xAxis->coordToPixel(c.unitX);
@@ -210,7 +210,6 @@ void CrosshairsOverlay::changeItemColor()
 void CrosshairsOverlay::changeItemLabel()
 {
     auto &c = _items[_selectedIdx];
-    bool ok;
     Ori::Dlg::InputTextOptions opts;
     opts.label = qApp->tr("Crosshair label");
     opts.value = c.label;
@@ -234,7 +233,7 @@ void CrosshairsOverlay::removeItem()
 void CrosshairsOverlay::addItem()
 {
     int maxLabel = 0;
-    for (const auto& c : qAsConst(_items)) {
+    for (const auto& c : std::as_const(_items)) {
         bool ok;
         int label = c.label.toInt(&ok);
         if (ok && label > maxLabel)
@@ -279,7 +278,7 @@ void CrosshairsOverlay::load(QSettings *s)
     s->beginGroup("Crosshairs");
     s->beginGroup("items");
     auto groups = s->childGroups();
-    for (const auto& g : qAsConst(groups)) {
+    for (const auto& g : std::as_const(groups)) {
         s->beginGroup(g);
         Crosshair c;
         c.x = s->value("x").toDouble();
@@ -304,7 +303,7 @@ void CrosshairsOverlay::clear()
 QString CrosshairsOverlay::save(const QString& fileName)
 {
     QJsonArray items;
-    for (const auto &c : qAsConst(_items)) {
+    for (const auto &c : std::as_const(_items)) {
         items << QJsonObject {
             {"x", c.x},
             {"y", c.y},
