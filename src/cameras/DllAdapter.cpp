@@ -59,8 +59,11 @@ static void loadAdaptersFromJson(int& loadedCount)
     for (auto it = jArr.cbegin(); it != jArr.cend(); it++) {
         auto jObj = it->toObject();
         QString libPath = jObj["libPath"].toString();
-        qDebug() << LOG_ID << "Adapter" << libPath;
-        auto adapter = new DllAdapter(libPath);
+        QString sdkPath = jObj["sdkPath"].toString();
+        if (libPath.isEmpty())
+            continue;
+        qDebug() << LOG_ID << "Adapter" << libPath << sdkPath;
+        auto adapter = new DllAdapter(libPath, sdkPath);
         if (adapter->loaded())
             loadedCount++;
         __adapters__->append(adapter);
@@ -84,7 +87,7 @@ static void loadAdaptersFromSubdir(int& loadedCount)
         {
             QString libPath = QStringLiteral("./adapters/") + subdir + '/' + dll;
             qDebug() << LOG_ID << "Adapter" << libPath;
-            auto adapter = new DllAdapter(libPath);
+            auto adapter = new DllAdapter(libPath, {});
             if (adapter->loaded())
                 loadedCount++;
             __adapters__->append(adapter);
@@ -127,22 +130,46 @@ DllAdapter* DllAdapter::getAdapter(const QString& adapterId)
     return nullptr;
 }
 
-DllAdapter::DllAdapter(const QString& libPath)
+DllAdapter::DllAdapter(const QString& libPath, const QString& sdkPath)
 {
-    QFileInfo libInfo(libPath);
+    // Adapter ID is always its libPath as it given in the config (either relative or not).
+    // Using relative paths (like `../libs/adapter_demo/adapter_demo.dll`) could be useful
+    // as this allows to move/reinstall the application into a different directory
+    // while not spoiling the camera settings saved in the user profile (`AppData\Roaming`).
+    // Their settings key is the relative path and it's still valid after reinstalling.
     _id = libPath;
+
+    QFileInfo libInfo(libPath);
+    
+    // Default adapter display name is it's library file name (without path).
+    // Will be overridden (see below) if the adapter is loaded successfully
+    // and provides some user-friendly name.
     _name = libInfo.fileName();
 
     if (!libInfo.isAbsolute())
         libInfo = QFileInfo(qApp->applicationDirPath() + '/' + libPath);
-    
+
     if (!libInfo.exists()) {
         qCritical() << LOG_ID << "File not found" << libInfo.absoluteFilePath();
         _error = QString("File not found: %1").arg(libPath);
         return;
     }
     
-    auto sdkResult = loadSdk(LOG_ID, libInfo.absoluteDir().absolutePath(), libInfo.fileName());
+    QString mainDll = libInfo.absoluteFilePath();
+
+    QString sdkDir = sdkPath.isEmpty()
+        ? libInfo.absoluteDir().absolutePath()
+        : !QDir(sdkPath).isAbsolute()
+            ? QDir(qApp->applicationDirPath() + '/' + sdkPath).absolutePath()
+            : sdkPath;
+    
+    if (!QDir(sdkDir).exists()) {
+        qCritical() << LOG_ID << "Directory not found" << sdkDir;
+        _error = QString("Directory not found: %1").arg(sdkDir);
+        return;
+    }
+    
+    auto sdkResult = loadSdk(LOG_ID, sdkDir, mainDll);
     if (!sdkResult.ok()) {
         _error = sdkResult.error();
         return;
@@ -167,8 +194,7 @@ DllAdapter::DllAdapter(const QString& libPath)
     GET_PROC(getFrameInfo);
     GET_PROC(getFrame);
 
-    IBeam_AdapterInfo info;
-    memset(&info, 0, sizeof(IBeam_AdapterInfo));
+    IBeam_AdapterInfo info = { 0 };
     auto res = getAdapterInfo(&info);
     if (IBEAM_ERROR(res)) {
         _error = QString("Unable to get adapter info: %1").arg(errorText(res));
@@ -176,7 +202,8 @@ DllAdapter::DllAdapter(const QString& libPath)
         return;
     }
 
-    _name = QString::fromLatin1(info.displayName);
+    if (auto name = QString::fromLatin1(info.displayName).trimmed(); !name.isEmpty())
+        _name = name;
     
     if (info.apiVersion != IBEAM_API_V1) {
         _error = QString("Unsupported API version %1, expected %2").arg(info.apiVersion).arg(IBEAM_API_V1);

@@ -79,7 +79,7 @@ static VerResult getLibVer(const QString &libPath)
 
 static QString findLibDeps(const char* logId, const QString &sdkDir, const QString &libName, QStringList &deps)
 {
-    QString libPath = sdkDir + '/' + libName;
+    QString libPath = QFileInfo(libName).isAbsolute() ? libName : (sdkDir + '/' + libName);
     qDebug() << logId << "Resolve deps for" << libPath;
     if (!QFile::exists(libPath))
     {

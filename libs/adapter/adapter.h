@@ -30,6 +30,7 @@ typedef uint32_t IBeam_Status;
 // Some predefined status codes that Beam Inspector understands and reacts
 #define IBEAM_STATUS_OK 0
 #define IBEAM_STATUS_ABORT 10000
+#define IBEAM_STATUS_SMALL_BUF 10001
 
 // Status checks
 #define IBEAM_OK(status) ((status) == IBEAM_STATUS_OK)
@@ -134,7 +135,7 @@ IBEAM_API IBeam_getCameraCount(size_t* count);
 /// previously returned by the IBeam_getCameraCount function.
 /// Beam Inspector calls the function with zero-filled buffer.
 ///
-IBEAM_API IBeam_getCameraList(IBeam_CameraInfo* camList, size_t camCount);
+IBEAM_API IBeam_getCameraList(IBeam_CameraInfo* camList, size_t listSize);
 
 /// Fills the given buffer with a message text corresponding to the given status.
 /// Should return an error status if the buffer is too small for the message.

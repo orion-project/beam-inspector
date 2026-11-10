@@ -1081,6 +1081,8 @@ void PlotWindow::resetCurrentCam()
     if (imgCam) _prevImage = imgCam->fileName();
 
     cleanResults();
+    
+    _camera.reset(nullptr);
 }
 
 void PlotWindow::setCurrentCam(Camera* cam)

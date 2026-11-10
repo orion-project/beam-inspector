@@ -7,10 +7,10 @@ The purpose of this library is to develop and test the adapter interface
 and to show the simplest example of how to implement a custom adapter library.
 
 GCC:
-gcc adapter.c -o adapter.dll -shared -Wall -Werror -Wl,--exclude-all-symbols
+gcc adapter_demo.c -shared -Wall -Werror -Wl,--exclude-all-symbols -I ../adapter -o adapter_demo.dll
 
 MSVC:
-cl /LD /Wall /WX /wd5045 /external:W1 /external:I ../adapter adapter.c
+cl /LD /Wall /WX /wd5045 /external:W1 /external:I ../adapter adapter_demo.c
 */
 #include "adapter.h"
 
@@ -116,9 +116,9 @@ IBEAM_API IBeam_getCameraCount(size_t* count)
   return STATUS_OK;
 }
 
-IBEAM_API IBeam_getCameraList(IBeam_CameraInfo* camList, size_t camCount)
+IBEAM_API IBeam_getCameraList(IBeam_CameraInfo* camList, size_t listSize)
 {
-  if (camCount < CAM_COUNT)
+  if (listSize < CAM_COUNT)
     return STATUS_SMALL_BUF;
 
   camList[0].cameraId = CAM_LR_ID;

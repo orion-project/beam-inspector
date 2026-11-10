@@ -11,7 +11,7 @@
 class DllAdapter
 {
 public:
-    DllAdapter(const QString& libPath);
+    DllAdapter(const QString& libPath, const QString& sdkPath);
 
     QString id() const { return _id; }
     QString name() const { return _name; }
