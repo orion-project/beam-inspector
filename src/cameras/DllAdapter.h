@@ -21,24 +21,22 @@ public:
     QString refreshCameras();
     const QVector<CameraItem>& cameras() const { return _cameras; }
 
-    QString errorText(IBeam_Status status);
+    static QString errorText(IBeamStatus* status);
     
-    QString makeCustomId(IBeam_CameraId cameraId) const;
-    static void splitCustomId(const QString& customId, QString& adapterId, IBeam_CameraId& cameraId);
+    QString makeCustomId(IBeamCamId cameraId) const;
+    static void splitCustomId(const QString& customId, QString& adapterId, IBeamCamId& cameraId);
 
     // Resolved functons
-    #define PROC(name) IBeam_Status (__cdecl *name)
+    #define PROC(name) IBeamStatus* (__cdecl *name)
 
     PROC(init)();
     PROC(exit)();
-    PROC(getAdapterInfo)(IBeam_AdapterInfo* info);
-    PROC(getCameraCount)(size_t* count);
-    PROC(getCameraList)(IBeam_CameraInfo* cameraList, size_t listSize);
-    PROC(getStatusText)(IBeam_Status status, char* buf, size_t bufSize);
-    PROC(openCamera)(IBeam_CameraId cameraId, IBeam_Handle *hCam);
-    PROC(closeCamera)(IBeam_Handle hCam);
-    PROC(getFrameInfo)(IBeam_Handle hCam, IBeam_FrameInfo *info);
-    PROC(getFrame)(IBeam_Handle hCam, uint8_t *buf);
+    PROC(getAdapterInfo)(IBeamAdapterInfo* info);
+    PROC(getCameraList)(IBeamCamList* camList, size_t* camCount);
+    PROC(openCamera)(IBeamCamId camId, IBeamCamPtr* camPtr);
+    PROC(closeCamera)(IBeamCamPtr camPtr);
+    PROC(getFrameInfo)(IBeamCamPtr camPtr, IBeamFrameInfo* frameInfo);
+    PROC(getFrame)(IBeamCamPtr camPtr, uint8_t* frameBuf);
 
     #undef PROC
 

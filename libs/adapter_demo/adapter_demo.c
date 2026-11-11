@@ -38,57 +38,39 @@ typedef struct {
 
 typedef struct { double val, min, span; } BeamOffset;
 
+// For demo, all info about cameras is preallocated and doesn't change.
+IBeamCamInfo _cams[2];
+
 // Beam Inspector opens only one camera at time.
 // So for demo we don't bother with anything harder than single camera instance.
 struct {
-  IBeam_CameraId id;
-  IBeam_Handle hCam;
-  IBeam_Handle nextHandle;
-  IBeam_FrameInfo img;
+  IBeamCamId id;
+  IBeamStatus status;
+  IBeamFrameInfo frame;
   BeamProps beam;
   struct {
     BeamOffset dx, dy, xc, yc, phi;
   } offset;
-} CAM;
+} _cam;
 
-enum {
-  STATUS_OK = IBEAM_STATUS_OK,
-  STATUS_UNKNOWN,
-  STATUS_SMALL_BUF,
-  STATUS_UNKNOWN_CAM_ID,
-  STATUS_ALREADY_OPENED,
-  STATUS_NOT_OPENED,
-  STATUS_ABORT = IBEAM_STATUS_ABORT,
-};
+#define STATUS_OK NULL
 
-IBEAM_API IBeam_getStatusText(IBeam_Status status, char* buf, size_t bufSize)
+static IBeamStatus* errorStatus(const char* text)
 {
-  #define _(s, txt) \
-    case s: \
-      if (bufSize < strlen(txt)+1) \
-        return STATUS_SMALL_BUF; \
-      strcpy_s(buf, bufSize, txt); \
-      return STATUS_OK;
-  
-  switch (status) {
-    _(STATUS_OK, "OK")
-    _(STATUS_SMALL_BUF,
-      "Buffer addressed by function argument is too small "
-      "to receive all the data the function is going to put")
-    _(STATUS_UNKNOWN_CAM_ID, "Unknown camera ID")
-    _(STATUS_ALREADY_OPENED, "Camera is already opened")
-    _(STATUS_NOT_OPENED, "Camera is not opened")
-    _(STATUS_ABORT, "Camera stopped unexpectedly")
-  }
-  return STATUS_UNKNOWN;
-  #undef _
+  strcpy_s(_cam.status.text, IBEAM_ERROR_LEN, text);
+  _cam.status.code = IBEAM_STATUS_ERROR;
+  return &_cam.status;
 }
 
 IBEAM_API IBeam_init(void)
 {
-  CAM.id = IBEAM_BAD_CAMERA_ID;
-  CAM.hCam = IBEAM_BAD_HANDLE;
-  CAM.nextHandle = IBEAM_BAD_HANDLE;
+  _cams[0].id = CAM_LR_ID;
+  strcpy_s(_cams[0].displayName, IBEAM_NAME_LEN, "Low-Res Cam");
+
+  _cams[1].id = CAM_HR_ID;
+  strcpy_s(_cams[1].displayName, IBEAM_NAME_LEN, "High-Res Cam");
+
+  _cam.id = IBEAM_BAD_CAMERA_ID;
 
   printf("%s: init\n", ADAPTER_NAME);
   fflush(stdout);
@@ -102,7 +84,7 @@ IBEAM_API IBeam_exit(void)
   return STATUS_OK;
 }
 
-IBEAM_API IBeam_getAdapterInfo(IBeam_AdapterInfo* info)
+IBEAM_API IBeam_getAdapterInfo(IBeamAdapterInfo* info)
 {
   strcpy_s(info->displayName, IBEAM_NAME_LEN, ADAPTER_NAME);
   strcpy_s(info->displayVersion, IBEAM_NAME_LEN, "1.0.0");
@@ -110,94 +92,79 @@ IBEAM_API IBeam_getAdapterInfo(IBeam_AdapterInfo* info)
   return STATUS_OK;
 }
 
-IBEAM_API IBeam_getCameraCount(size_t* count)
+IBEAM_API IBeam_getCameraList(IBeamCamList* camList, size_t* camCount)
 {
-  *count = CAM_COUNT;
+  *camList = _cams;
+  *camCount = CAM_COUNT;
   return STATUS_OK;
 }
 
-IBEAM_API IBeam_getCameraList(IBeam_CameraInfo* camList, size_t listSize)
-{
-  if (listSize < CAM_COUNT)
-    return STATUS_SMALL_BUF;
-
-  camList[0].cameraId = CAM_LR_ID;
-  strcpy_s(camList[0].displayName, IBEAM_NAME_LEN, "Low-Res Cam");
-
-  camList[1].cameraId = CAM_HR_ID;
-  strcpy_s(camList[1].displayName, IBEAM_NAME_LEN, "High-Res Cam");
-
-  return STATUS_OK;
-}
-
-IBEAM_API IBeam_openCamera(IBeam_CameraId camId, IBeam_Handle *hCam)
+IBEAM_API IBeam_openCamera(IBeamCamId camId, IBeamCamPtr *camPtr)
 {
   if (camId != CAM_LR_ID && camId != CAM_HR_ID)
-    return STATUS_UNKNOWN_CAM_ID;
+    return errorStatus("Unknown camera ID");
 
-  if (CAM.id == camId && CAM.hCam != IBEAM_BAD_HANDLE)
-    return STATUS_ALREADY_OPENED;
+  if (_cam.id == camId)
+    return errorStatus("Camera is already opened");
 
   // Beam Inspector opens only one camera at time.
   // So for demo we don't bother with anything harder than single camera object.
-  CAM.id = camId;
-  CAM.hCam = ++CAM.nextHandle;
-  if (CAM.id == CAM_LR_ID) {
-    CAM.img.pixelWidth = 0;
-    CAM.img.pixelHeight = 0;
-    CAM.img.width = 640;
-    CAM.img.height = 480;
-    CAM.img.bpp = 8;
-    CAM.beam.bpp = 1;
-    CAM.beam.p = 250;
+  _cam.id = camId;
+  if (_cam.id == CAM_LR_ID) {
+    _cam.frame.pixelWidth = 0;
+    _cam.frame.pixelHeight = 0;
+    _cam.frame.width = 640;
+    _cam.frame.height = 480;
+    _cam.frame.bpp = 8;
+    _cam.beam.bpp = 1;
+    _cam.beam.p = 250;
   } else {
-    CAM.img.pixelWidth = 2.5;
-    CAM.img.pixelHeight = 2.5;
-    CAM.img.width = 2592;
-    CAM.img.height = 2048;
-    CAM.img.bpp = 12;
-    CAM.beam.bpp = 2;
-    CAM.beam.p = 2500;
+    _cam.frame.pixelWidth = 2.5;
+    _cam.frame.pixelHeight = 2.5;
+    _cam.frame.width = 2592;
+    _cam.frame.height = 2048;
+    _cam.frame.bpp = 12;
+    _cam.beam.bpp = 2;
+    _cam.beam.p = 2500;
   }
-  CAM.beam.w = CAM.img.width;
-  CAM.beam.h = CAM.img.height;
-  CAM.beam.dx = CAM.beam.w/2;
-  CAM.beam.dy = CAM.beam.dx/4*3;
-  CAM.beam.xc = CAM.beam.w/2;
-  CAM.beam.yc = CAM.beam.h/2;
-  CAM.beam.phi = 12;
+  _cam.beam.w = _cam.frame.width;
+  _cam.beam.h = _cam.frame.height;
+  _cam.beam.dx = _cam.beam.w/2;
+  _cam.beam.dy = _cam.beam.dx/4*3;
+  _cam.beam.xc = _cam.beam.w/2;
+  _cam.beam.yc = _cam.beam.h/2;
+  _cam.beam.phi = 12;
 
   #define OFFSET(off, start, factor) \
     off.val = start; \
     off.span = off.val * factor; \
     off.min = off.val - off.span/2.0;
 
-  OFFSET(CAM.offset.dx, CAM.beam.dx, 0.03);
-  OFFSET(CAM.offset.dy, CAM.beam.dy, 0.03);
-  OFFSET(CAM.offset.xc, CAM.beam.xc, 0.03);
-  OFFSET(CAM.offset.yc, CAM.beam.yc, 0.03);
-  OFFSET(CAM.offset.phi, CAM.beam.phi, 2);
+  OFFSET(_cam.offset.dx, _cam.beam.dx, 0.03);
+  OFFSET(_cam.offset.dy, _cam.beam.dy, 0.03);
+  OFFSET(_cam.offset.xc, _cam.beam.xc, 0.03);
+  OFFSET(_cam.offset.yc, _cam.beam.yc, 0.03);
+  OFFSET(_cam.offset.phi, _cam.beam.phi, 2);
 
   #undef OFFSET
 
-  *hCam = CAM.hCam;
+  *camPtr = &_cam;
   return STATUS_OK;
 }
 
-#define IF_OPEN if (CAM.hCam != hCam) return STATUS_NOT_OPENED;
+#define IF_OPEN if (&_cam != camPtr) return errorStatus("Camera is not opened");
 
-IBEAM_API IBeam_closeCamera(IBeam_Handle hCam)
+IBEAM_API IBeam_closeCamera(IBeamCamPtr camPtr)
 {
   IF_OPEN
-  CAM.id = IBEAM_BAD_CAMERA_ID;
-  CAM.hCam = IBEAM_BAD_HANDLE;
+  _cam.id = IBEAM_BAD_CAMERA_ID;
   return STATUS_OK;
 }
 
-IBEAM_API IBeam_getFrameInfo(IBeam_Handle hCam, IBeam_FrameInfo *info)
+IBEAM_API IBeam_getFrameInfo(IBeamCamPtr camPtr, IBeamFrameInfo *info)
 {
   IF_OPEN
-  *info = CAM.img;
+  *info = _cam.frame;
   return STATUS_OK;
 }
 
@@ -242,14 +209,14 @@ static int jitter(BeamOffset *off)
   #undef rnd
 }
 
-IBEAM_API IBeam_getFrame(IBeam_Handle hCam, uint8_t *buf)
+IBEAM_API IBeam_getFrame(IBeamCamPtr camPtr, uint8_t *buf)
 {
   IF_OPEN
-  CAM.beam.dx = jitter(&CAM.offset.dx);
-  CAM.beam.dy = jitter(&CAM.offset.dy);
-  CAM.beam.xc = jitter(&CAM.offset.xc);
-  CAM.beam.yc = jitter(&CAM.offset.yc);
-  CAM.beam.phi = jitter(&CAM.offset.phi);
-  renderBeam(&CAM.beam, buf);
+  _cam.beam.dx = jitter(&_cam.offset.dx);
+  _cam.beam.dy = jitter(&_cam.offset.dy);
+  _cam.beam.xc = jitter(&_cam.offset.xc);
+  _cam.beam.yc = jitter(&_cam.offset.yc);
+  _cam.beam.phi = jitter(&_cam.offset.phi);
+  renderBeam(&_cam.beam, buf);
   return STATUS_OK;
 }

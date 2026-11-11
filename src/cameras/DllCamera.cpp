@@ -16,7 +16,7 @@
 enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME, ROW_FRAME_ERR };
 
 #define CHECK_ERR(msg) \
-    if (IBEAM_ERROR(res)) { \
+    if (res) { \
         auto err = adapter->errorText(res); \
         qCritical() << LOG_ID << msg << err; \
         return QString(msg ": ") + err; \
@@ -29,16 +29,16 @@ enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME, ROW_FRAME_ERR };
 class DllIntf : public CameraWorker
 {
 public:
-    IBeam_CameraId id;
+    IBeamCamId id;
     DllCamera *cam;
     DllAdapter *adapter;
-    IBeam_Handle hCam = IBEAM_BAD_HANDLE;
-    IBeam_Status res;
+    IBeamCamPtr camPtr = nullptr;
+    IBeamStatus* res;
     QByteArray hdrBuf;
     
     int framesErr = 0;
 
-    DllIntf(DllAdapter *adapter, IBeam_CameraId id, PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, DllCamera *cam)
+    DllIntf(DllAdapter *adapter, IBeamCamId id, PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, DllCamera *cam)
         : CameraWorker(plot, table, stabil, cam, cam, LOG_ID), id(id), cam(cam), adapter(adapter)
     {
         tableData = [this]{
@@ -53,8 +53,8 @@ public:
     
     QString getFrameInfo()
     {
-        IBeam_FrameInfo info = { 0 };
-        auto res = adapter->getFrameInfo(hCam, &info);
+        IBeamFrameInfo info = { 0 };
+        auto res = adapter->getFrameInfo(camPtr, &info);
         CHECK_ERR("Unable to get frame info");
     
         cam->_width = info.width;
@@ -95,9 +95,9 @@ public:
         cam->_configGroup = cam->_customId;
         cam->loadConfig();
         
-        auto res = adapter->openCamera(id, &hCam);
+        auto res = adapter->openCamera(id, &camPtr);
         CHECK_ERR("Unable to open camera");
-        qDebug() << LOG_ID << " Camera opened | id:" << id << "| hCam:" << hCam;
+        qDebug() << LOG_ID << " Camera opened | id:" << id << "| hCam:" << camPtr;
         
         if (auto err = getFrameInfo(); !err.isEmpty()) return err;
         
@@ -113,11 +113,11 @@ public:
     
     ~DllIntf()
     {
-        auto res = adapter->closeCamera(hCam);
-        if (IBEAM_ERROR(res))
+        auto res = adapter->closeCamera(camPtr);
+        if (res)
             qWarning() << LOG_ID << "Unable to close camera" << adapter->errorText(res);
         else qDebug() << LOG_ID << "Camera closed" << id;
-        hCam = IBEAM_BAD_HANDLE;
+        camPtr = nullptr;
     }
     
     void run()
@@ -130,8 +130,8 @@ public:
             prevFrame = tm;
             
             tm = timer.elapsed();
-            res = adapter->getFrame(hCam, c.buf);
-            if (res == IBEAM_STATUS_ABORT) {
+            res = adapter->getFrame(camPtr, c.buf);
+            if (res && res->code == IBeamStatus::IBEAM_STATUS_ABORT) {
                 auto err = adapter->errorText(res);
                 qCritical() << LOG_ID << "Interrupted" << err;
                 emit cam->error("Interrupted: " + err);
@@ -139,7 +139,7 @@ public:
             }
             markAcqTime();
             
-            if (res == IBEAM_STATUS_OK) {
+            if (!res) {
                 tm = timer.elapsed();
                 calcResult();
                 markCalcTime();
@@ -149,7 +149,7 @@ public:
             } else {
                 framesErr++;
                 stats[QStringLiteral("frameErrors")] = framesErr;
-                QString errKey = QStringLiteral("frameError_") + QString::number(res, 16);
+                QString errKey = QStringLiteral("frameError_") + QString::number(res->code, 16);
                 stats[errKey] = stats[errKey].toInt() + 1;
             }
             
@@ -214,7 +214,7 @@ DllCamera::DllCamera(const QString& customId, PlotIntf *plot, TableIntf *table, 
     : QThread(parent), Camera(plot, table, stabil, "IdsCamera")
 {
     QString adapterId;
-    IBeam_CameraId cameraId = 0;
+    IBeamCamId cameraId = 0;
     DllAdapter::splitCustomId(customId, adapterId, cameraId);
     auto adapter = DllAdapter::getAdapter(adapterId);
     // TODO: move message boxes out of camera object 

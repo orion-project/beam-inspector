@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 #ifndef BEAM_INSPECTOR
-#define IBEAM_API __declspec(dllexport) IBeam_Status __cdecl
+#define IBEAM_API __declspec(dllexport) IBeamStatus* __cdecl
 #endif // BEAM_INSPECTOR
 
 #ifdef __cplusplus
@@ -13,28 +13,47 @@ extern "C"
 {
 #endif
 
-typedef uint64_t IBeam_CameraId;
-typedef uint64_t IBeam_Handle;
-typedef uint32_t IBeam_Status;
+typedef uint64_t IBeamCamId;
+typedef void* IBeamCamPtr;
 
 /// Adapter API version
 #define IBEAM_API_V1 1
 
 #define IBEAM_BAD_CAMERA_ID 0
-#define IBEAM_BAD_HANDLE 0
 
 // Standard buffer lengths
 #define IBEAM_NAME_LEN 128
 #define IBEAM_ERROR_LEN 1024
 
-// Some predefined status codes that Beam Inspector understands and reacts
-#define IBEAM_STATUS_OK 0
-#define IBEAM_STATUS_ABORT 10000
-#define IBEAM_STATUS_SMALL_BUF 10001
+/// Any adapter function returns a pointer to some preallocated status object
+/// which is guaranteed to be valid until the next call of any other function.
+/// Beam Inspector copies it into its internals but does not free the object.
+typedef struct {
+  // Some predefined status codes that Beam Inspector understands and reacts.
+  // Beam Inspector doesn't know how to deal with internal error codes of the underlying SDK.
+  // The adapter should provide a helpful describing message that could be used for logging 
+  // and troubleshooting and include the low-level error code to that message if consides it useful.
+  enum {
+    // Successfull status.
+    // Kind of useless, functions should return NULL in case of success.
+    IBEAM_STATUS_OK = 0,
 
-// Status checks
-#define IBEAM_OK(status) ((status) == IBEAM_STATUS_OK)
-#define IBEAM_ERROR(status) ((status) != IBEAM_STATUS_OK)
+    // When startng a camera, any error is considered as a generic failure
+    // and causes Beam Inspector to immediately break the camera initialization.
+    // While capturing, frame errors are counted and reported in the measurement file.
+    IBEAM_STATUS_ERROR = 1,
+
+    // While capturing, this code is considered as an irrecoverable failure
+    // and stops the camera thread.
+    IBEAM_STATUS_ABORT = 2,
+  } code;
+
+  /// A message corresponding to the given status code.
+  /// In case of error, the called function should put a zero-terminated ASCII-string 
+  /// into this buffer and Beam Inspector will report it in the log.
+  char text[IBEAM_ERROR_LEN];
+}
+IBeamStatus;
 
 /// Camera name is given as unicode string (wchar_t array).
 /// If the flag is not set, simple ASCII string is implied.
@@ -58,14 +77,14 @@ typedef struct {
   /// A set of various boolean properties.
   uint32_t flags;
 }
-IBeam_AdapterInfo;
+IBeamAdapterInfo;
 
 typedef struct {
   /// SDK-agnostic unique identifier for a camera.
   /// SDK-specific IDs can be of different kind - string, index, etc.
-  /// Adapter library converts SDK-specific IDs into the into simple IBeam_CameraId type 
+  /// Adapter library converts SDK-specific IDs into the into simple IBeamCamId type 
   /// via some internal transformations; the client app should not care about them.
-  IBeam_CameraId cameraId;
+  IBeamCamId id;
   
   /// Camera display name.
   /// Zero-terminated string.
@@ -76,7 +95,9 @@ typedef struct {
   /// A set of various boolean properties.
   uint32_t flags;
 }
-IBeam_CameraInfo;
+IBeamCamInfo;
+
+typedef IBeamCamInfo* IBeamCamList;
 
 typedef struct {
   /// Width in pixes.
@@ -103,7 +124,7 @@ typedef struct {
   /// Physical pixel height in micrometers. Zero if unknown.
   float pixelHeight;
 }
-IBeam_FrameInfo;
+IBeamFrameInfo;
 
 // Beam Inspector doesn't need funcion declarations because
 // it resolves them in runtime from loaded DLL by symbol names
@@ -122,40 +143,29 @@ IBEAM_API IBeam_exit(void);
 /// Returns basic information about the adapter library.
 /// Beam Inspector calls the function with zero-filled buffer.
 ///
-IBEAM_API IBeam_getAdapterInfo(IBeam_AdapterInfo* info);
+IBEAM_API IBeam_getAdapterInfo(IBeamAdapterInfo* info);
 
-/// Returns a number of attached cameras.
-/// This is a companion function for IBeam_getCameraList,
-/// use it to prepare a buffer for information about cameras.
+/// Returns a number of attached cameras and meta-data about them.
+/// The adapter should request the information from the underlying SDK
+/// and provide it as a pointer to some preallocated buffer
+/// which is guaranteed to be valid until the next call of any adapter function.
+/// Beam Inspector copies info into its internals but does not free the buffer.
 ///
-IBEAM_API IBeam_getCameraCount(size_t* count);
-
-/// Fills the given buffer with information about attached cameras.
-/// The size of the given buffer should match the number of cameras 
-/// previously returned by the IBeam_getCameraCount function.
-/// Beam Inspector calls the function with zero-filled buffer.
-///
-IBEAM_API IBeam_getCameraList(IBeam_CameraInfo* camList, size_t listSize);
-
-/// Fills the given buffer with a message text corresponding to the given status.
-/// Should return an error status if the buffer is too small for the message.
-/// The message must be zero-terminated ASCII string.
-///
-IBEAM_API IBeam_getStatusText(IBeam_Status status, char* buf, size_t bufSize);
+IBEAM_API IBeam_getCameraList(IBeamCamList* camList, size_t* camCount);
 
 /// Opens a camera by the given ID and assigns a handle to the opened camera object.
 /// The handle should be used for all subsequent operations with the opened camera.
 ///
-IBEAM_API IBeam_openCamera(IBeam_CameraId camId, IBeam_Handle *hCam);
+IBEAM_API IBeam_openCamera(IBeamCamId camId, IBeamCamPtr *camPtr);
 
 /// Closes the camera with the given handle.
 /// The handle is gets invalid after the camera is closed.
 ///
-IBEAM_API IBeam_closeCamera(IBeam_Handle hCam);
+IBEAM_API IBeam_closeCamera(IBeamCamPtr camPtr);
 
 /// Returns the currently selected image mode of the opened camera.
 ///
-IBEAM_API IBeam_getFrameInfo(IBeam_Handle hCam, IBeam_FrameInfo *info);
+IBEAM_API IBeam_getFrameInfo(IBeamCamPtr camPtr, IBeamFrameInfo *info);
 
 /// Acquires the next available frame from the opened camera.
 /// The adapter library is expected to decode the raw frame data
@@ -164,7 +174,7 @@ IBEAM_API IBeam_getFrameInfo(IBeam_Handle hCam, IBeam_FrameInfo *info);
 /// The Size of the target buffer is not passed because it is supposeed to match 
 /// the frame size and bpp that were previously returned by IBeam_getFrameInfo.
 ///
-IBEAM_API IBeam_getFrame(IBeam_Handle hCam, uint8_t *buf);
+IBEAM_API IBeam_getFrame(IBeamCamPtr camPtr, uint8_t *buf);
 
 #endif // BEAM_INSPECTOR
 

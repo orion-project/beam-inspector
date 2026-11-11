@@ -110,8 +110,8 @@ void DllAdapter::unloadAdapters()
         if (!adapter->loaded())
             continue;
         auto res = adapter->exit();
-        if (IBEAM_ERROR(res))
-            qWarning() << LOG_ID << "Unable to deinit adapter" << adapter->id() << adapter->errorText(res);
+        if (res)
+            qWarning() << LOG_ID << "Unable to deinit adapter" << adapter->id() << errorText(res);
         else qDebug() << LOG_ID << "Adapter deinited" << adapter->id();
     }
 }
@@ -186,17 +186,15 @@ DllAdapter::DllAdapter(const QString& libPath, const QString& sdkPath)
     GET_PROC(init);
     GET_PROC(exit);
     GET_PROC(getAdapterInfo);
-    GET_PROC(getCameraCount)
     GET_PROC(getCameraList)
-    GET_PROC(getStatusText)
     GET_PROC(openCamera);
     GET_PROC(closeCamera);
     GET_PROC(getFrameInfo);
     GET_PROC(getFrame);
 
-    IBeam_AdapterInfo info = { 0 };
+    IBeamAdapterInfo info = { 0 };
     auto res = getAdapterInfo(&info);
-    if (IBEAM_ERROR(res)) {
+    if (res) {
         _error = QString("Unable to get adapter info: %1").arg(errorText(res));
         qCritical().noquote() << LOG_ID << _error;
         return;
@@ -216,30 +214,27 @@ DllAdapter::DllAdapter(const QString& libPath, const QString& sdkPath)
         << "| API:" << info.apiVersion;
 
     res = init();
-    if (IBEAM_ERROR(res)) {
+    if (res) {
         _error = QString("Unable to initialize adapter: %1").arg(errorText(res));
         qCritical().noquote() << LOG_ID << _error;
         return;
     }
 }
 
-QString DllAdapter::errorText(IBeam_Status status)
+QString DllAdapter::errorText(IBeamStatus* status)
 {
-    QByteArray buf(IBEAM_ERROR_LEN, 0);
-    auto res = getStatusText(status, buf.data(), buf.size());
-    if (IBEAM_OK(res))
-        return QString::fromLatin1(buf.data());
-
-    qWarning() << LOG_ID << "Unable to get text for error" << status << "because of error" << res;
-    return QString("errcode=%1").arg(status);
+    QString text = QString::fromLatin1(status->text).trimmed();
+    if (text.isEmpty())
+        return QString("errcode=%1").arg(status->code);
+    return text;
 }
 
-QString DllAdapter::makeCustomId(IBeam_CameraId cameraId) const
+QString DllAdapter::makeCustomId(IBeamCamId cameraId) const
 {
     return QStringLiteral("%1:%2").arg(_id).arg(cameraId);
 }
 
-void DllAdapter::splitCustomId(const QString& customId, QString& adapterId, IBeam_CameraId& cameraId)
+void DllAdapter::splitCustomId(const QString& customId, QString& adapterId, IBeamCamId& cameraId)
 {
     int pos = customId.lastIndexOf(':');
     if (pos < 0) return;
@@ -259,30 +254,24 @@ QString DllAdapter::refreshCameras()
     }
     
     size_t camCount;
-    auto res = getCameraCount(&camCount);
-    if (IBEAM_ERROR(res)) {
-        qWarning() << "Unable to get camera count" << errorText(res);
-        return QString("Unable to get camera count: %1").arg(errorText(res));
-    }
-    
-    qDebug() << LOG_ID << "Cameras found:" << camCount;
-    
-    QVector<IBeam_CameraInfo> cams(camCount);
-    memset(cams.data(), 0, sizeof(IBeam_CameraInfo)*camCount);
-    res = getCameraList(cams.data(), camCount);
-    if (IBEAM_ERROR(res)) {
+    IBeamCamList camList;
+    auto res = getCameraList(&camList, &camCount);
+    if (res) {
         qWarning() << "Unable to get camera list" << errorText(res);
         return QString("Unable to get camera list: %1").arg(errorText(res));
     }
     
-    for (const auto &cam : cams) {
-        qDebug() << LOG_ID << "Camera Id:" << cam.cameraId << "| Name:" << cam.displayName;
+    qDebug() << LOG_ID << "Cameras found:" << camCount;
+
+    for (int i = 0; i < camCount; i++) {
+        IBeamCamInfo *cam = camList + i;
+        qDebug() << LOG_ID << "Camera Id:" << cam->id << "| Name:" << cam->displayName;
         _cameras << CameraItem {
-            .cameraId = cam.cameraId,
-            .customId = makeCustomId(cam.cameraId),
-            .displayName = cam.flags & IBEAM_CAM_FLAG_NAME_WCHAR
-                ? QString::fromWCharArray((const wchar_t*)cam.displayName)
-                : QString::fromLatin1(cam.displayName),
+            .cameraId = cam->id,
+            .customId = makeCustomId(cam->id),
+            .displayName = cam->flags & IBEAM_CAM_FLAG_NAME_WCHAR
+                ? QString::fromWCharArray((const wchar_t*)(cam->displayName))
+                : QString::fromLatin1(cam->displayName),
         };
     }
     
