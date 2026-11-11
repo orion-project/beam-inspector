@@ -265,13 +265,14 @@ QString DllAdapter::refreshCameras()
 
     for (int i = 0; i < camCount; i++) {
         IBeamCamInfo *cam = camList + i;
-        qDebug() << LOG_ID << "Camera Id:" << cam->id << "| Name:" << cam->displayName;
+        QString displayName = cam->flags & IBEAM_CAM_FLAG_NAME_WCHAR
+            ? QString::fromWCharArray((const wchar_t*)(cam->displayName))
+            : QString::fromLatin1(cam->displayName);
+        qDebug() << LOG_ID << "Camera Id:" << cam->id << "| Name:" << displayName << cam->displayName;
         _cameras << CameraItem {
             .cameraId = cam->id,
             .customId = makeCustomId(cam->id),
-            .displayName = cam->flags & IBEAM_CAM_FLAG_NAME_WCHAR
-                ? QString::fromWCharArray((const wchar_t*)(cam->displayName))
-                : QString::fromLatin1(cam->displayName),
+            .displayName = displayName,
         };
     }
     

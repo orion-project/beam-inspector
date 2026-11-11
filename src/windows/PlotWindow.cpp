@@ -433,6 +433,7 @@ void PlotWindow::fillCamSelector()
             auto a = _camSelectMenu->addAction(QIcon(":/toolbar/connect"), name, this, &PlotWindow::activateCamDll);
             a->setData(cam.customId);
         }
+        _camSelectMenu->addSeparator();
     }
     _camSelectMenu->addSeparator();
 
