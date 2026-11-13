@@ -447,42 +447,43 @@ public:
             plot->setResult({}, 0, rangeTop);
             table->setResult({}, {}, tableData());
             stabil->setResult(frameTimeAbs(), {});
-            return;
         }
+        else
+        {
+            double minZ, maxZ;
+            cgn_ext_copy_to_f64(&c, &g, graph, normalize, fullRange, &minZ, &maxZ);
+            plot->invalidateGraph();
+            plot->setResult(results, minZ, maxZ);
 
-        double minZ, maxZ;
-        cgn_ext_copy_to_f64(&c, &g, graph, normalize, fullRange, &minZ, &maxZ);
-        plot->invalidateGraph();
-        plot->setResult(results, minZ, maxZ);
+            table->setResult(results, sdevs, tableData());
 
-        table->setResult(results, sdevs, tableData());
-        
-        // Stability plotter accepts the latest instant results (not averaged)
-        if (doMavg) {
-            QList<CgnBeamResult> res;
-            if (multiRoi) {
-                for (int i = 0; i < rois.size(); i++) {
-                    const QQueue<CgnBeamResult> &q = mavgs.at(i);
+            // Stability plotter accepts the latest instant results (not averaged)
+            if (doMavg) {
+                QList<CgnBeamResult> res;
+                if (multiRoi) {
+                    for (int i = 0; i < rois.size(); i++) {
+                        const QQueue<CgnBeamResult> &q = mavgs.at(i);
+                        if (q.isEmpty())
+                            res << CgnBeamResult { .nan = true };
+                        else res << q.last();
+                    }
+                } else {
+                    const QQueue<CgnBeamResult> &q = mavgs.at(0);
                     if (q.isEmpty())
                         res << CgnBeamResult { .nan = true };
                     else res << q.last();
                 }
+                stabil->setResult(frameTimeAbs(), res);
             } else {
-                const QQueue<CgnBeamResult> &q = mavgs.at(0);
-                if (q.isEmpty())
-                    res << CgnBeamResult { .nan = true };
-                else res << q.last();
+                stabil->setResult(frameTimeAbs(), results);
             }
-            stabil->setResult(frameTimeAbs(), res);
-        } else {
-            stabil->setResult(frameTimeAbs(), results);
         }
         
         camera->sendResults();
         markShowTime();
     }
 
-    bool tick()
+    inline bool tick()
     {
         tm = timer.elapsed();
         if (tm - prevStat < STAT_DELAY_MS)
