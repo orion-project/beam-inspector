@@ -65,7 +65,6 @@ public:
     peak_pixel_format pixelFormat;
     QByteArray hdrBuf;
 
-    int framesErr = 0;
     int framesDropped = 0;
     int framesUnderrun = 0;
     int framesIncomplete = 0;
@@ -77,7 +76,7 @@ public:
             QMap<int, CamTableData> data = {
                 { ROW_RENDER_TIME, {avgAcqTime} },
                 { ROW_CALC_TIME, {avgCalcTime} },
-                { ROW_FRAME_ERR, {framesErr, CamTableData::COUNT, framesErr > 0} },
+                { ROW_FRAME_ERR, {errorsFrames, CamTableData::COUNT, errorsFrames > 0} },
                 { ROW_FRAME_DROPPED, {framesDropped, CamTableData::COUNT, framesDropped > 0} },
                 { ROW_FRAME_UNDERRUN, {framesUnderrun, CamTableData::COUNT, framesUnderrun > 0} },
                 { ROW_FRAME_INCOMPLETE, {framesIncomplete, CamTableData::COUNT, framesIncomplete > 0} },
@@ -95,6 +94,26 @@ public:
                     hasPowerWarning
                 };
             return data;
+        };
+
+        getHardFps = [this]{
+            double fps = 0;
+            IDS.peak_FrameRate_Get(hCam, &fps);
+            return fps;
+        };
+
+        extendStats = [this]{
+            peak_acquisition_info info;
+            memset(&info, 0, sizeof(info));
+            res = IDS.peak_Acquisition_GetInfo(hCam, &info);
+            if (PEAK_SUCCESS(res)) {
+                framesDropped = info.numDropped;
+                framesUnderrun = info.numUnderrun;
+                framesIncomplete = info.numIncomplete;
+                stats[QStringLiteral("framesDropped")] = framesDropped;
+                stats[QStringLiteral("framesUnderrun")] = framesUnderrun;
+                stats[QStringLiteral("framesIncomplete")] = framesIncomplete;
+            }
         };
     }
 
@@ -500,10 +519,7 @@ public:
     
         startCapture();
         while (true) {
-            tm = timer.elapsed();
-            avgFrameCount++;
-            avgFrameTime += tm - prevFrame;
-            prevFrame = tm;
+            markFrameTime();
 
             tm = timer.elapsed();
             res = IDS.peak_Acquisition_WaitForFrame(hCam, FRAME_TIMEOUT, &frame);
@@ -519,14 +535,11 @@ public:
 
             if (res == PEAK_STATUS_SUCCESS) {
                 tm = timer.elapsed();
-                
                 decodeFrame(c.buf, buf.memoryAddress, buf.memorySize);
-                
                 calcResult();
                 markCalcTime();
 
-                if (showResults())
-                    emit cam->ready();
+                showResults();
 
                 res = IDS.peak_Frame_Release(hCam, frame);
                 if (PEAK_ERROR(res)) {
@@ -536,59 +549,14 @@ public:
                     return;
                 }
             } else {
-                framesErr++;
-                stats[QStringLiteral("frameErrors")] = framesErr;
+                errorsFrames++;
+                stats[QStringLiteral("frameErrors")] = errorsFrames;
                 QString errKey = QStringLiteral("frameError_") + QString::number(res, 16);
                 stats[errKey] = stats[errKey].toInt() + 1;
             }
 
-            if (tm - prevStat >= STAT_DELAY_MS) {
-                prevStat = tm;
-
-                peak_acquisition_info info;
-                memset(&info, 0, sizeof(info));
-                res = IDS.peak_Acquisition_GetInfo(hCam, &info);
-                if (PEAK_SUCCESS(res)) {
-                    framesDropped = info.numDropped;
-                    framesUnderrun = info.numUnderrun;
-                    framesIncomplete = info.numIncomplete;
-                    stats[QStringLiteral("framesDropped")] = framesDropped;
-                    stats[QStringLiteral("framesUnderrun")] = framesUnderrun;
-                    stats[QStringLiteral("framesIncomplete")] = framesIncomplete;
-                }
-
-                double hardFps;
-                res = IDS.peak_FrameRate_Get(hCam, &hardFps);
-                if (PEAK_ERROR(res)) {
-                    hardFps = 0;
-                }
-
-                double ft = avgFrameTime / avgFrameCount;
-                avgFrameTime = 0;
-                avgFrameCount = 0;
-                CameraStats st {
-                    .fps = 1000.0/ft,
-                    .hardFps = hardFps,
-                    .measureTime = measureStart > 0 ? timer.elapsed() - measureStart : -1,
-                };
-                emit cam->stats(st);
-
-                if (logFrameTime) {
-                    qDebug()
-                        << "FPS:" << st.fps
-                        << "avgFrameTime:" << qRound(ft)
-                        << "avgAcqTime:" << qRound(avgAcqTime)
-                        << "avgCalcTime:" << qRound(avgCalcTime)
-                        << "framesErr: " << framesErr
-                        << IDS.getPeakError(res);
-                }
-
-                if (cam->isInterruptionRequested()) {
-                    qDebug() << LOG_ID << "Interrupted by user";
-                    return;
-                }
-                checkReconfig();
-            }
+            if (!tick())
+                break;
         }
     }
 };

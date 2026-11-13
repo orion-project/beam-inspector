@@ -47,6 +47,8 @@ public:
                 };
             return data;
         };
+
+        getHardFps = []{ return CAMERA_HARD_FPS; };
     }
 
     QString init()
@@ -87,18 +89,14 @@ public:
     inline bool waitFrame()
     {
         tm = timer.elapsed();
-        if (tm - prevFrame < CAMERA_FRAME_DELAY_MS) {
-            // Sleep gives a bad precision because OS decides how long the thread should sleep.
-            // When we disable sleep, its possible to get an exact number of FPS,
-            // e.g. 40 FPS when CAMERA_FRAME_DELAY_MS=25, but at cost of increased CPU usage.
-            // Sleep allows to get about 30 FPS, which is enough, and relaxes CPU loading
-            thread->msleep(CAMERA_LOOP_TICK_MS);
-            return true;
-        }
-        avgFrameCount++;
-        avgFrameTime += tm - prevFrame;
-        prevFrame = tm;
-        return false;
+        if (tm - prevFrame >= CAMERA_FRAME_DELAY_MS)
+            return false;
+        // Sleep gives a bad precision because OS decides how long the thread should sleep.
+        // When we disable sleep, its possible to get an exact number of FPS,
+        // e.g. 40 FPS when CAMERA_FRAME_DELAY_MS=25, but at cost of increased CPU usage.
+        // Sleep allows to get about 30 FPS, which is enough, and relaxes CPU loading
+        thread->msleep(CAMERA_LOOP_TICK_MS);
+        return true;
     }
 
     void makeJitterImg() {
@@ -120,6 +118,7 @@ public:
         startCapture();
         while (true) {
             if (waitFrame()) continue;
+            markFrameTime();
 
             tm = timer.elapsed();
             makeJitterImg();
@@ -129,42 +128,16 @@ public:
             calcResult();
             markCalcTime();
 
-            if (showResults())
-                emit cam->ready();
+            showResults();
 
-            if (tm - prevStat >= STAT_DELAY_MS) {
-                prevStat = tm;
-
-                double ft = avgFrameTime / avgFrameCount;
-                avgFrameTime = 0;
-                avgFrameCount = 0;
-                CameraStats st {
-                    .fps = 1000.0/ft,
-                    .hardFps = CAMERA_HARD_FPS,
-                    .measureTime = measureStart > 0 ? timer.elapsed() - measureStart : -1,
-                };
-                emit cam->stats(st);
-
-                if (logFrameTime) {
-                    qDebug()
-                        << "FPS:" << st.fps
-                        << "avgFrameTime:" << qRound(ft)
-                        << "avgRenderTime:" << qRound(avgAcqTime)
-                        << "avgCalcTime:" << qRound(avgCalcTime);
-                }
-
-                if (cam->isInterruptionRequested()) {
-                    qDebug() << LOG_ID << "Interrupted by user";
-                    return;
-                }
-                checkReconfig();
-            }
+            if (!tick())
+                break;
         }
     }
 };
 
 VirtualImageCamera::VirtualImageCamera(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, QObject *parent) :
-    Camera(plot, table, stabil, "VirtualImageCamera"), QThread(parent)
+    QThread(parent), Camera(plot, table, stabil, "VirtualImageCamera")
 {
     loadConfig();
 

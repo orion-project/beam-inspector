@@ -86,6 +86,9 @@ public:
     void loadConfig();
     void saveConfig(bool saveMore = false);
 
+    virtual void sendStats(const CameraStats&) {}
+    virtual void sendResults() {}
+
 protected:
     PlotIntf *_plot;
     TableIntf *_table;

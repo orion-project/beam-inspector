@@ -36,8 +36,6 @@ public:
     IBeamStatus* res;
     QByteArray hdrBuf;
     
-    int framesErr = 0;
-
     DllIntf(DllAdapter *adapter, IBeamCamId id, PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, DllCamera *cam)
         : CameraWorker(plot, table, stabil, cam, cam, LOG_ID), id(id), cam(cam), adapter(adapter)
     {
@@ -45,7 +43,7 @@ public:
             QMap<int, CamTableData> data = {
                 { ROW_RENDER_TIME, {avgAcqTime} },
                 { ROW_CALC_TIME, {avgCalcTime} },
-                { ROW_FRAME_ERR, {framesErr, CamTableData::COUNT, framesErr > 0} },
+                { ROW_FRAME_ERR, {errorsFrames, CamTableData::COUNT, errorsFrames > 0} },
             };
             return data;
         };
@@ -124,11 +122,8 @@ public:
     {
         startCapture();
         while (true) {
-            tm = timer.elapsed();
-            avgFrameCount++;
-            avgFrameTime += tm - prevFrame;
-            prevFrame = tm;
-            
+            markFrameTime();
+
             tm = timer.elapsed();
             res = adapter->getFrame(camPtr, c.buf);
             if (res && res->code == IBeamStatus::IBEAM_STATUS_ABORT) {
@@ -144,43 +139,16 @@ public:
                 calcResult();
                 markCalcTime();
 
-                if (showResults())
-                    emit cam->ready();
+                showResults();
             } else {
-                framesErr++;
-                stats[QStringLiteral("frameErrors")] = framesErr;
+                errorsFrames++;
+                stats[QStringLiteral("frameErrors")] = errorsFrames;
                 QString errKey = QStringLiteral("frameError_") + QString::number(res->code, 16);
                 stats[errKey] = stats[errKey].toInt() + 1;
             }
-            
-            if (tm - prevStat >= STAT_DELAY_MS) {
-                prevStat = tm;
-                
-                double ft = avgFrameTime / avgFrameCount;
-                avgFrameTime = 0;
-                avgFrameCount = 0;
-                CameraStats st {
-                    .fps = 1000.0/ft,
-                    .hardFps = 0, 
-                    .measureTime = measureStart > 0 ? timer.elapsed() - measureStart : -1,
-                };
-                emit cam->stats(st);
 
-                if (logFrameTime) {
-                    qDebug()
-                        << "FPS:" << st.fps
-                        << "avgFrameTime:" << qRound(ft)
-                        << "avgAcqTime:" << qRound(avgAcqTime)
-                        << "avgCalcTime:" << qRound(avgCalcTime)
-                        << "frameErrors: " << framesErr;
-                }
-
-                if (cam->isInterruptionRequested()) {
-                    qDebug() << LOG_ID << "Interrupted by user";
-                    return;
-                }
-                checkReconfig();
-            }
+            if (!tick())
+                break;
         }
     }
 };

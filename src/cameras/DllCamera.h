@@ -47,6 +47,9 @@ public:
     using CamerasResult = Ori::Result<QVector<CameraItem>>;
     static CamerasResult getCameras(const QString& adapterId);
 
+    void sendStats(const CameraStats& s) override { emit stats(s); }
+    void sendResults() override { emit ready(); }
+
 signals:
     void ready();
     void stats(const CameraStats& stats);
