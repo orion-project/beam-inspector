@@ -1,6 +1,7 @@
 #ifndef CAMERA_WORKER
 #define CAMERA_WORKER
 
+#include "app/AppSettings.h"
 #include "cameras/Camera.h"
 #include "cameras/CameraTypes.h"
 #include "cameras/MeasureSaver.h"
@@ -107,6 +108,7 @@ public:
     std::function<RawFrameData()> rawFrameData;
 
     const char *logId;
+    bool logFrameTime = false;
 
     CameraWorker(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, Camera *cam, QThread *thread, const char *logId)
         : plot(plot), table(table), stabil(stabil), camera(cam), thread(thread), logId(logId)
@@ -154,6 +156,8 @@ public:
             mavgs.clear();
             sdevs.clear();
         }
+
+        logFrameTime = AppSettings::instance().logFrameTime;
     }
 
     void setRoi(const RoiRect &roi)

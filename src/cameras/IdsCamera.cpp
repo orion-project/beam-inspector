@@ -14,7 +14,6 @@
 
 #define LOG_ID "IdsCamera:"
 #define FRAME_TIMEOUT 5000
-//#define LOG_FRAME_TIME
 //#define FAKE_CAM_ID 100
 
 enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME,
@@ -574,15 +573,16 @@ public:
                 };
                 emit cam->stats(st);
 
-#ifdef LOG_FRAME_TIME
-                qDebug()
-                    << "FPS:" << st.fps
-                    << "avgFrameTime:" << qRound(ft)
-                    << "avgAcqTime:" << qRound(avgAcqTime)
-                    << "avgCalcTime:" << qRound(avgCalcTime)
-                    << "errCount: " << errCount
-                    << IDS.getPeakError(res);
-#endif
+                if (logFrameTime) {
+                    qDebug()
+                        << "FPS:" << st.fps
+                        << "avgFrameTime:" << qRound(ft)
+                        << "avgAcqTime:" << qRound(avgAcqTime)
+                        << "avgCalcTime:" << qRound(avgCalcTime)
+                        << "framesErr: " << framesErr
+                        << IDS.getPeakError(res);
+                }
+
                 if (cam->isInterruptionRequested()) {
                     qDebug() << LOG_ID << "Interrupted by user";
                     return;

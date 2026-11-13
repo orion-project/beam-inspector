@@ -165,7 +165,16 @@ public:
                     .measureTime = measureStart > 0 ? timer.elapsed() - measureStart : -1,
                 };
                 emit cam->stats(st);
-                
+
+                if (logFrameTime) {
+                    qDebug()
+                        << "FPS:" << st.fps
+                        << "avgFrameTime:" << qRound(ft)
+                        << "avgAcqTime:" << qRound(avgAcqTime)
+                        << "avgCalcTime:" << qRound(avgCalcTime)
+                        << "frameErrors: " << framesErr;
+                }
+
                 if (cam->isInterruptionRequested()) {
                     qDebug() << LOG_ID << "Interrupted by user";
                     return;

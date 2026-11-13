@@ -10,7 +10,6 @@
 #define CAMERA_LOOP_TICK_MS 5
 #define CAMERA_FRAME_DELAY_MS 30
 #define CAMERA_HARD_FPS 30
-//#define LOG_FRAME_TIME
 
 enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME, ROW_POWER };
 
@@ -136,13 +135,15 @@ public:
                     .measureTime = measureStart > 0 ? timer.elapsed() - measureStart : -1,
                 };
                 emit cam->stats(st);
-            #ifdef LOG_FRAME_TIME
-                qDebug()
-                    << "FPS:" << st.fps
-                    << "avgFrameTime:" << qRound(ft)
-                    << "avgRenderTime:" << qRound(avgAcqTime)
-                    << "avgCalcTime:" << qRound(avgCalcTime);
-            #endif
+
+                if (logFrameTime) {
+                    qDebug()
+                        << "FPS:" << st.fps
+                        << "avgFrameTime:" << qRound(ft)
+                        << "avgRenderTime:" << qRound(avgAcqTime)
+                        << "avgCalcTime:" << qRound(avgCalcTime);
+                }
+
                 if (cam->isInterruptionRequested()) {
                     qDebug() << LOG_ID << "Interrupted by user";
                     return;

@@ -10,7 +10,11 @@ GCC:
 gcc adapter_demo.c -shared -Wall -Werror -Wl,--exclude-all-symbols -I ../adapter -o adapter_demo.dll
 
 MSVC:
-cl /LD /Wall /WX /wd5045 /external:W1 /external:I ../adapter adapter_demo.c
+cl /LD /Wall /WX /wd5045 /wd4820 /external:W1 /external:I ../adapter adapter_demo.c
+
+Disabled warinings:
+5045 - something about Spectre protection has been automatically added
+4820 - X bytes padding added after data member Y
 */
 #include "adapter.h"
 
@@ -20,9 +24,11 @@ cl /LD /Wall /WX /wd5045 /external:W1 /external:I ../adapter adapter_demo.c
 #include <string.h>
 
 #define ADAPTER_NAME "Demo Dll Adapter"
-#define CAM_COUNT 2
+#define ADAPTER_VER "1.0.0"
+#define CAM_COUNT 3
 #define CAM_LR_ID 1
-#define CAM_HR_ID 2
+#define CAM_MR_ID 2
+#define CAM_HR_ID 3
 
 typedef struct {
   int w;
@@ -33,7 +39,7 @@ typedef struct {
   int yc;
   int p;
   int phi;
-  int bpp; // here it's Bytes Per Pixel (not Bits)
+  int bpp;
 } BeamProps;
 
 typedef struct { double val, min, span; } BeamOffset;
@@ -67,8 +73,11 @@ IBEAM_API IBeam_init(void)
   _cams[0].id = CAM_LR_ID;
   strcpy_s(_cams[0].displayName, IBEAM_NAME_LEN, "Low-Res Cam");
 
-  _cams[1].id = CAM_HR_ID;
-  strcpy_s(_cams[1].displayName, IBEAM_NAME_LEN, "High-Res Cam");
+  _cams[1].id = CAM_MR_ID;
+  strcpy_s(_cams[1].displayName, IBEAM_NAME_LEN, "Mid-Res Cam");
+
+  _cams[2].id = CAM_HR_ID;
+  strcpy_s(_cams[2].displayName, IBEAM_NAME_LEN, "High-Res Cam");
 
   _cam.id = IBEAM_BAD_CAMERA_ID;
 
@@ -87,7 +96,7 @@ IBEAM_API IBeam_exit(void)
 IBEAM_API IBeam_getAdapterInfo(IBeamAdapterInfo* info)
 {
   strcpy_s(info->displayName, IBEAM_NAME_LEN, ADAPTER_NAME);
-  strcpy_s(info->displayVersion, IBEAM_NAME_LEN, "1.0.0");
+  strcpy_s(info->displayVersion, IBEAM_NAME_LEN, ADAPTER_VER);
   info->apiVersion = IBEAM_API_V1;
   return STATUS_OK;
 }
@@ -101,31 +110,44 @@ IBEAM_API IBeam_getCameraList(IBeamCamList* camList, size_t* camCount)
 
 IBEAM_API IBeam_openCamera(IBeamCamId camId, IBeamCamPtr *camPtr)
 {
-  if (camId != CAM_LR_ID && camId != CAM_HR_ID)
-    return errorStatus("Unknown camera ID");
-
-  if (_cam.id == camId)
-    return errorStatus("Camera is already opened");
+  if (_cam.id != IBEAM_BAD_CAMERA_ID) {
+    if (_cam.id == camId)
+      return errorStatus("Camera is already opened");
+    return errorStatus("Another camera is already opened");
+  }
 
   // Beam Inspector opens only one camera at time.
   // So for demo we don't bother with anything harder than single camera object.
-  _cam.id = camId;
-  if (_cam.id == CAM_LR_ID) {
-    _cam.frame.pixelWidth = 0;
-    _cam.frame.pixelHeight = 0;
-    _cam.frame.width = 640;
-    _cam.frame.height = 480;
-    _cam.frame.bpp = 8;
-    _cam.beam.bpp = 1;
-    _cam.beam.p = 250;
-  } else {
-    _cam.frame.pixelWidth = 2.5;
-    _cam.frame.pixelHeight = 2.5;
-    _cam.frame.width = 2592;
-    _cam.frame.height = 2048;
-    _cam.frame.bpp = 12;
-    _cam.beam.bpp = 2;
-    _cam.beam.p = 2500;
+  switch (camId) {
+    case CAM_LR_ID:
+      _cam.frame.pixelWidth = 0;
+      _cam.frame.pixelHeight = 0;
+      _cam.frame.width = 640;
+      _cam.frame.height = 480;
+      _cam.frame.bpp = 8;
+      _cam.beam.bpp = 8;
+      _cam.beam.p = 250;
+      break;
+    case CAM_MR_ID:
+      _cam.frame.pixelWidth = 2.5;
+      _cam.frame.pixelHeight = 2.5;
+      _cam.frame.width = 2592;
+      _cam.frame.height = 2048;
+      _cam.frame.bpp = 12;
+      _cam.beam.bpp = 12;
+      _cam.beam.p = 2500;
+      break;
+    case CAM_HR_ID:
+      _cam.frame.pixelWidth = 4.5;
+      _cam.frame.pixelHeight = 4.5;
+      _cam.frame.width = 5120;
+      _cam.frame.height = 5120;
+      _cam.frame.bpp = 16;
+      _cam.beam.bpp = 16;
+      _cam.beam.p = 50000;
+      break;
+    default:
+      return errorStatus("Unknown camera ID");
   }
   _cam.beam.w = _cam.frame.width;
   _cam.beam.h = _cam.frame.height;
@@ -148,6 +170,7 @@ IBEAM_API IBeam_openCamera(IBeamCamId camId, IBeamCamPtr *camPtr)
 
   #undef OFFSET
 
+  _cam.id = camId;
   *camPtr = &_cam;
   return STATUS_OK;
 }
@@ -170,7 +193,7 @@ IBEAM_API IBeam_getFrameInfo(IBeamCamPtr camPtr, IBeamFrameInfo *info)
 
 static void renderBeam(BeamProps *b, uint8_t *buf) {
   #define sqr(s) ((s)*(s))
-  memset(buf, 0, b->w * b->h * b->bpp);
+  memset(buf, 0, b->w * b->h * (b->bpp > 8 ? 2 : 1));
   const double r2 = sqr(b->dx/2.0);
   const double cos_phi = cos(b->phi * 3.14159265358979323846 / 180.0);
   const double sin_phi = sin(b->phi * 3.14159265358979323846 / 180.0);
@@ -187,7 +210,7 @@ static void renderBeam(BeamProps *b, uint8_t *buf) {
         const double t = 1+ (-2*(sqr(x) + y2)/r2) /5.0;
         const double v = p * t*t*t*t*t;
         const int i = y1*b->w + x1;
-        if (b->bpp > 1) {
+        if (b->bpp > 8) {
           ((uint16_t*)buf)[i] = (uint16_t)v;
         } else {
           buf[i] = (uint8_t)v;
