@@ -191,6 +191,9 @@ DllAdapter::DllAdapter(const QString& libPath, const QString& sdkPath)
     GET_PROC(closeCamera);
     GET_PROC(getFrameInfo);
     GET_PROC(getFrame);
+    GET_PROC(getExpoRange);
+    GET_PROC(getExpo);
+    GET_PROC(setExpo);
 
     IBeamAdapterInfo info = { 0 };
     auto res = getAdapterInfo(&info);

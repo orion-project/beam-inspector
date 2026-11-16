@@ -416,11 +416,13 @@ void PlotWindow::fillCamSelector()
     {
         if (auto err = adapter.error; !err.isEmpty()) {
             addErrorItem(adapter.name, err);
+            _camSelectMenu->addSeparator();
             continue;
         }
         auto cameras = DllCamera::getCameras(adapter.id);
         if (!cameras.ok()) {
             addErrorItem(adapter.name, cameras.error());
+            _camSelectMenu->addSeparator();
             continue;
         }
         for (const auto& cam : cameras.result()) {
@@ -526,7 +528,8 @@ void PlotWindow::createDockPanel()
     _resultsDock->setWidget(_table);
     addDockWidget(Qt::LeftDockWidgetArea, _resultsDock);
 
-    _stubConfigPanel = new StubHardConfigPanel(this);
+    _stubConfigPanel = new HardConfigPanel(this);
+    _stubConfigPanel->initForNoControls();
     _camConfigPanel = _stubConfigPanel;
     _hardConfigDock = new QDockWidget(tr("Control"));
     _hardConfigDock->setObjectName("DockHardConfig");

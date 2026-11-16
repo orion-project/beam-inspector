@@ -9,7 +9,7 @@ HardConfigPanel::HardConfigPanel(QWidget *parent) : QWidget(parent)
 
 }
 
-StubHardConfigPanel::StubHardConfigPanel(QWidget *parent) : HardConfigPanel(parent)
+void HardConfigPanel::initForNoControls()
 {
     auto icon = new QLabel;
     icon->setPixmap(QIcon(":/misc/dial").pixmap(140));

@@ -2,6 +2,7 @@
 
 #include "cameras/CameraWorker.h"
 #include "cameras/DllAdapter.h"
+#include "cameras/DllHardConfig.h"
 
 #include "helpers/OriDialogs.h"
 
@@ -242,6 +243,18 @@ void DllCamera::stopCapture()
         _dll.reset(nullptr);
 }
 
+void DllCamera::startMeasure(MeasureSaver *saver)
+{
+    if (_dll)
+        _dll->startMeasure(saver);
+}
+
+void DllCamera::stopMeasure()
+{
+    if (_dll)
+        _dll->stopMeasure();
+}
+
 void DllCamera::run()
 {
     if (_dll)
@@ -264,4 +277,14 @@ void DllCamera::setRawView(bool on, bool reconfig)
 {
     if (_dll)
         _dll->setRawView(on, reconfig);
+}
+
+HardConfigPanel* DllCamera::hardConfgPanel(QWidget *parent)
+{
+    if (!_dll)
+        return nullptr;
+    if (!_configPanel) {
+        _configPanel = new DllHardConfigPanel(_dll->camPtr, _dll->adapter, parent);
+    }
+    return _configPanel;
 }

@@ -68,6 +68,13 @@ static IBeamStatus* errorStatus(const char* text)
   return &_cam.status;
 }
 
+static IBeamStatus* notImplemented()
+{
+  strcpy_s(_cam.status.text, IBEAM_ERROR_LEN, "Not implemented");
+  _cam.status.code = IBEAM_STATUS_NOT_IMPLEMENTED;
+  return &_cam.status;
+}
+
 IBEAM_API IBeam_init(void)
 {
   _cams[0].id = CAM_LR_ID;
@@ -242,4 +249,19 @@ IBEAM_API IBeam_getFrame(IBeamCamPtr camPtr, uint8_t *buf)
   _cam.beam.phi = jitter(&_cam.offset.phi);
   renderBeam(&_cam.beam, buf);
   return STATUS_OK;
+}
+
+IBEAM_API IBeam_getExpoRange(IBeamCamPtr camPtr, double* min, double* max, double* step)
+{
+  return notImplemented();
+}
+
+IBEAM_API IBeam_getExpo(IBeamCamPtr camPtr, double* value)
+{
+  return notImplemented();
+}
+
+IBEAM_API IBeam_setExpo(IBeamCamPtr camPtr, double value)
+{
+  return notImplemented();
 }

@@ -29,6 +29,12 @@ public:
     void startCapture() override;
     void stopCapture() override;
     
+    bool canMeasure() const override { return true; }
+    void startMeasure(MeasureSaver *saver) override;
+    void stopMeasure() override;
+    
+    HardConfigPanel* hardConfgPanel(QWidget *parent) override;
+    
     bool canSaveRawImg() const override { return true; }
     void requestRawImg(QObject *sender) override;
     void setRawView(bool on, bool reconfig) override;
@@ -66,6 +72,7 @@ private:
     int _width = 0, _height = 0, _bpp = 0;
     PixelScale _pixelScale;
     QSharedPointer<DllIntf> _dll;
+    HardConfigPanel *_configPanel = nullptr;
     friend class DllIntf;
 };
 

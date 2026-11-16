@@ -46,6 +46,13 @@ typedef struct {
     // While capturing, this code is considered as an irrecoverable failure
     // and stops the camera thread.
     IBEAM_STATUS_ABORT = 2,
+
+    // The requested feature is not implemented in the current adapter.
+    // This could be an expected result if the feature is not supposed to work on camera.
+    // E.g., when Beam Inspector initializes the control panel for the camera,
+    // it asks for the ability to change exposition time, FPS, gain, etc.
+    // When it receives the not implemented status, it silently skips the control.
+    IBEAM_STATUS_NOT_IMPLEMENTED = 3,
   } code;
 
   /// A message corresponding to the given status code.
@@ -175,6 +182,10 @@ IBEAM_API IBeam_getFrameInfo(IBeamCamPtr camPtr, IBeamFrameInfo *info);
 /// the frame size and bpp that were previously returned by IBeam_getFrameInfo.
 ///
 IBEAM_API IBeam_getFrame(IBeamCamPtr camPtr, uint8_t *buf);
+
+IBEAM_API IBeam_getExpoRange(IBeamCamPtr camPtr, double* min, double* max, double* step);
+IBEAM_API IBeam_getExpo(IBeamCamPtr camPtr, double* value);
+IBEAM_API IBeam_setExpo(IBeamCamPtr camPtr, double value);
 
 #endif // BEAM_INSPECTOR
 

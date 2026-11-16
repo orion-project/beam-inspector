@@ -37,6 +37,9 @@ public:
     PROC(closeCamera)(IBeamCamPtr camPtr);
     PROC(getFrameInfo)(IBeamCamPtr camPtr, IBeamFrameInfo* frameInfo);
     PROC(getFrame)(IBeamCamPtr camPtr, uint8_t* frameBuf);
+    PROC(getExpoRange)(IBeamCamPtr camPtr, double* min, double* max, double* step);
+    PROC(getExpo)(IBeamCamPtr camPtr, double* value);
+    PROC(setExpo)(IBeamCamPtr camPtr, double value);
 
     #undef PROC
 
