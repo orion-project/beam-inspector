@@ -1,0 +1,1 @@
+gcc adapter_demo.c -shared -Wall -Werror -Wl,--exclude-all-symbols -I ../adapter -o adapter_demo.dll

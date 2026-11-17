@@ -1,3 +1,10 @@
+/*
+Demo SDK adapter library for Beam Inspector.
+
+The adapter wraps the IDS peak SDK (https://en.ids-imaging.com/ids-peak.html)
+which should be installed separately and path to it provided when building the adapter.
+*/
+
 #include "adapter.h"
 
 #include <ids_peak_comfort_c/ids_peak_comfort_c.h>
@@ -9,7 +16,6 @@
 #define ADAPTER_NAME "Demo IDS Adapter"
 
 #define STATUS_OK NULL
-#define STATUS_UNSUPPORTED_PIXEL_FORMAT (PEAK_STATUS_IO + 1000)
 
 #define FRAME_TIMEOUT 5000
 
@@ -25,7 +31,6 @@ size_t _camCount;
 struct {
   IBeamCamId id;
   IBeamStatus status;
-  peak_camera_id peakId;
   peak_camera_handle peakHandle;
 } _cam;
 
@@ -61,7 +66,6 @@ IBEAM_API IBeam_init(void)
   _camsRaw = NULL;
 
   _cam.id = IBEAM_BAD_CAMERA_ID;
-  _cam.peakId = PEAK_INVALID_CAMERA_ID;
   _cam.peakHandle = NULL;
 
   CHECK_ERR(peak_Library_Init());
@@ -144,7 +148,6 @@ IBEAM_API IBeam_openCamera(IBeamCamId camId, IBeamCamPtr* camPtr)
   }
 
   _cam.id = camId;
-  _cam.peakId = peakId;
   _cam.peakHandle = peakHandle;
   *camPtr = &_cam;
   return STATUS_OK;
@@ -160,7 +163,6 @@ IBEAM_API IBeam_closeCamera(IBeamCamPtr camPtr)
 
   // Reset opened camera even if the closing will fail (have nothing to do wth that)
   _cam.id = IBEAM_BAD_CAMERA_ID;
-  _cam.peakId = PEAK_INVALID_CAMERA_ID;
   _cam.peakHandle = NULL;
 
   if (peak_Acquisition_IsStarted(peakHandle)) {

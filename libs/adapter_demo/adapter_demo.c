@@ -5,17 +5,8 @@ It doesn't really "adapt" any camera SDK. Instead, it renders a synthetic beam i
 similar to how the Virtual Camera in Beam Inspector does.
 The purpose of this library is to develop and test the adapter interface
 and to show the simplest example of how to implement a custom adapter library.
-
-GCC:
-gcc adapter_demo.c -shared -Wall -Werror -Wl,--exclude-all-symbols -I ../adapter -o adapter_demo.dll
-
-MSVC:
-cl /LD /Wall /WX /wd5045 /wd4820 /external:W1 /external:I ../adapter adapter_demo.c
-
-Disabled warinings:
-5045 - something about Spectre protection has been automatically added
-4820 - X bytes padding added after data member Y
 */
+
 #include "adapter.h"
 
 #include <math.h>
@@ -68,7 +59,7 @@ static IBeamStatus* errorStatus(const char* text)
   return &_cam.status;
 }
 
-static IBeamStatus* notImplemented()
+static IBeamStatus* notImplemented(void)
 {
   strcpy_s(_cam.status.text, IBEAM_ERROR_LEN, "Not implemented");
   _cam.status.code = IBEAM_STATUS_NOT_IMPLEMENTED;
