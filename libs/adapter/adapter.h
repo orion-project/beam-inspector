@@ -183,6 +183,12 @@ IBEAM_API IBeam_getFrameInfo(IBeamCamPtr camPtr, IBeamFrameInfo *info);
 ///
 IBEAM_API IBeam_getFrame(IBeamCamPtr camPtr, uint8_t *buf);
 
+/// Returns the range of available values of the exposure time in microseconds.
+/// The first time, the Beam Inspector calls this function with null pointers,
+/// asking if the camera supports the exposition control and the respective widgets
+/// should be shown in the control panel. If the camera does not support such control,
+/// the function should return the NOT_IMPLEMENTED status; otherwise, the OK status.
+/// 
 IBEAM_API IBeam_getExpoRange(IBeamCamPtr camPtr, double* min, double* max, double* step);
 IBEAM_API IBeam_getExpo(IBeamCamPtr camPtr, double* value);
 IBEAM_API IBeam_setExpo(IBeamCamPtr camPtr, double value);

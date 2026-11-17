@@ -221,7 +221,7 @@ public:
     
     void addPropControl_Expo()
     {
-        auto res = adapter->getExpo(camPtr, nullptr);
+        auto res = adapter->getExpoRange(camPtr, nullptr, nullptr, nullptr);
         if (res && res->code == IBeamStatus::IBEAM_STATUS_NOT_IMPLEMENTED)
             return;
         CamPropControl control;

@@ -231,26 +231,27 @@ IBEAM_API IBeam_getFrame(IBeamCamPtr camPtr, uint8_t *buf)
 IBEAM_API IBeam_getExpoRange(IBeamCamPtr camPtr, double* min, double* max, double* step)
 {
   IF_OPEN
+  // This is a test call when BI checks if the camera can change exposure
+  if (!max || !min || !step) {
+    peak_access_status res = peak_ExposureTime_GetAccessStatus(_cam.peakHandle);
+    if (res != PEAK_ACCESS_READWRITE)
+      return notImplemented();
+    return STATUS_OK;
+  }
   CHECK_ERR(peak_ExposureTime_GetRange(_cam.peakHandle, min, max, step));
   return STATUS_OK;
 }
 
 IBEAM_API IBeam_getExpo(IBeamCamPtr camPtr, double* value)
 {
-  // This is a test call when BI checks if the camera can change exposure
-  if (!value) {
-    peak_access_status res = peak_ExposureTime_GetAccessStatus(_cam.peakHandle);
-    if (res != PEAK_ACCESS_READWRITE)
-      return notImplemented();
-    return STATUS_OK;
-  }
-  
+  IF_OPEN
   CHECK_ERR(peak_ExposureTime_Get(_cam.peakHandle, value));
   return STATUS_OK;
 }
 
 IBEAM_API IBeam_setExpo(IBeamCamPtr camPtr, double value)
 {
+  IF_OPEN
   CHECK_ERR(peak_ExposureTime_Set(_cam.peakHandle, value));
   return STATUS_OK;
 }
