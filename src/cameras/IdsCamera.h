@@ -53,8 +53,6 @@ public:
 
     bool canMavg() const override { return true; }
 
-    QString customId() const override { return _customId; }
-
     static QVector<CameraItem> getCameras();
     static QString libError();
     static void unloadLib();
@@ -80,7 +78,7 @@ private slots:
     void camConfigChanged();
 
 private:
-    QString _name, _descr, _customId;
+    QString _name, _descr;
     int _width = 0;
     int _height = 0;
     PixelScale _pixelScale;

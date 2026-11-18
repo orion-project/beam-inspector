@@ -80,7 +80,14 @@ private:
     QDockWidget *_resultsDock, *_hardConfigDock, *_profilesDock, *_stabilityDock;
     HardConfigPanel *_stubConfigPanel = nullptr;
     HardConfigPanel *_camConfigPanel = nullptr;
+
+    /// By default cameras named after their model and probably serial number
+    /// which is not very convenient, so user can rename particular camera.
+    /// This name is not a part camera settings because of the settings
+    /// are loaded when camera gets opened; but custom names are required when
+    /// the Camera Selector is populated and cameras are not opened yet.
     QMap<QString, QString> _camCustomNames;
+
     ProfilesView *_profilesView;
     StabilityView *_stabilityView;
 

@@ -105,6 +105,9 @@ IBEAM_API IBeam_getCameraList(IBeamCamList* camList, size_t* camCount)
   CHECK_ERR(peak_CameraList_Get(_camsRaw, &_camCount));
 
   for (int i = 0; i < _camCount; i++) {
+    // IBeamCamId is expected to be persistent for the camera,
+    // while the peak_camera_id is likely not persistent.
+    // But for the demo we use it directly, for simplisity.
     _cams[i].id = _camsRaw[i].cameraID;
 
     char *serial = _camsRaw[i].serialNumber;

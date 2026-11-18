@@ -21,7 +21,6 @@ public:
     int width() const override { return _width; }
     int height() const override { return _height; }
     int bpp() const override { return _bpp; }
-    QString customId() const override { return _customId; }
     PixelScale sensorScale() const override { return _pixelScale; }
     TableRowsSpec tableRows() const override;
     
@@ -68,12 +67,15 @@ private slots:
     void camConfigChanged();
     
 private:
-    QString _name, _customId;
+    QString _name;
     int _width = 0, _height = 0, _bpp = 0;
     PixelScale _pixelScale;
     QSharedPointer<DllIntf> _dll;
     HardConfigPanel *_configPanel = nullptr;
     friend class DllIntf;
+
+    void loadConfigMore(QSettings*) override;
+    void saveConfigMore(QSettings*) override;
 };
 
 # endif // DLL_CAMERA_H

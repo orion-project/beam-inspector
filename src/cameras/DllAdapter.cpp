@@ -240,6 +240,10 @@ QString DllAdapter::errorText(IBeamStatus* status)
 
 QString DllAdapter::makeCustomId(IBeamCamId cameraId) const
 {
+    // cameraId returned by the adapter library is expected to be persistent.
+    // Such as it's not an index in a list or some connection specific string,
+    // but rather produced from the camera serial number.
+    // So it's already suitable for making custom id.
     return QStringLiteral("%1:%2").arg(_id).arg(cameraId);
 }
 

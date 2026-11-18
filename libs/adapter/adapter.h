@@ -89,8 +89,11 @@ IBeamAdapterInfo;
 typedef struct {
   /// SDK-agnostic unique identifier for a camera.
   /// SDK-specific IDs can be of different kind - string, index, etc.
-  /// Adapter library converts SDK-specific IDs into the into simple IBeamCamId type 
+  /// Adapter library converts SDK-specific IDs the into simple IBeamCamId type 
   /// via some internal transformations; the client app should not care about them.
+  /// Beam Inspector expects this ID to be persistent between OS restarts, camera replugs, etc.,
+  /// because it is used for storing and loading camera settings and custom names.
+  /// So a good idea is to generate this id from the camera serial number.
   IBeamCamId id;
   
   /// Camera display name.

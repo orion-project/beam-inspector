@@ -7,6 +7,7 @@
 #include "helpers/OriDialogs.h"
 
 #include <QFileInfo>
+#include <QSettings>
 
 #define LOG_ID "DllCamera:"
 
@@ -91,7 +92,12 @@ public:
         if (!camInfoFound)
             return "Unable to get camera descriptor";
         
-        cam->_configGroup = cam->_customId;
+        // Can't use raw customId as configGroup because it contains path.
+        // QSettings splits the path and makes a group from its first item
+        // and remaining items are added to key names as nested groups:
+        // [..]
+        // libs\adapter_demo_ids\adapter_demo_ids.dll%3A1\plot.normalize=false
+        cam->_configGroup = QString::number(qHash(cam->_customId));
         cam->loadConfig();
         
         auto res = adapter->openCamera(id, &camPtr);
@@ -287,4 +293,17 @@ HardConfigPanel* DllCamera::hardConfgPanel(QWidget *parent)
         _configPanel = new DllHardConfigPanel(_dll->camPtr, _dll->adapter, parent);
     }
     return _configPanel;
+}
+
+void DllCamera::loadConfigMore(QSettings* s)
+{
+    // Just for user information.
+    // _configGroup is the hashed _customId, hence unreadable,
+    // but it's good to know the id when looking through the config file.
+    s->setValue("customId", _customId);
+}
+
+void DllCamera::saveConfigMore(QSettings* s)
+{
+
 }

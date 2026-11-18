@@ -10,10 +10,14 @@ QString formatSecs(int secs);
 
 struct CameraItem
 {
-    /// Some internal id known by the camera framework using to open a camera.
+    /// Some internal id known by the camera SDK, using to open a camera.
+    /// This id is not guaranteed to be preserved after system restarts 
+    /// or camera replugged to a different port.
     QVariant cameraId;
 
-    /// An id used to get and set a custom name for a camera, should be unique over the system.
+    /// An id used to store and load the camera settings and custom name. 
+    /// Must be unique over the system, so a good idea is to generate
+    /// this id from the vendor prefix and the camera serial number.
     QString customId;
 
     /// Default display name to be shown in the camera selector.

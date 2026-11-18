@@ -49,7 +49,12 @@ public:
     virtual void raisePowerWarning() {}
     bool setupPowerMeter();
 
-    virtual QString customId() const { return {}; }
+    /// An id used to give the camera a custom name (Camera -> Custom Name)
+    /// and to store and load the camera settings.
+    /// This id can not be the same as the regular camera id (given by SDK) 
+    /// because of that is not guaranteed to be the same after system restarts 
+    /// or camera replugged to a different port.
+    QString customId() const { return _customId; }
 
     /// Data rows to be show in the Result table
     /// Base implementation provides default result rows, like Center, Width, etc
@@ -90,6 +95,7 @@ public:
     virtual void sendResults() {}
 
 protected:
+    QString _customId;
     PlotIntf *_plot;
     TableIntf *_table;
     StabilityIntf *_stabil;
