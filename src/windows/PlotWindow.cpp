@@ -8,6 +8,7 @@
     #include "cameras/IdsCamera.h"
     #include "cameras/IdsCameraConfig.h"
 #endif
+#include "cameras/DllCamera.h"
 #include "cameras/HardConfigPanel.h"
 #include "cameras/MeasureSaver.h"
 #include "cameras/StillImageCamera.h"
@@ -158,6 +159,7 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
 
     Ori::Gui::PopupMessage::setTarget(this);
 
+
     _mru = new Ori::MruFileList(this);
     connect(_mru, &Ori::MruFileList::clicked, this, &PlotWindow::openImage);
 
@@ -167,7 +169,6 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     createStatusBar();
     createDockPanel();
     setCentralWidget(_plot);
-    fillCamSelector();
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
     connect(qApp->styleHints(), &QStyleHints::colorSchemeChanged, this, &PlotWindow::updateThemeColors);
@@ -205,11 +206,14 @@ PlotWindow::~PlotWindow()
     delete _tableIntf;
     delete _stabilIntf;
 
-#ifdef WITH_IDS
-    // Close camera explicitly, otherwise it gets closed after the lib unloaded
+    // Close camera explicitly, before SDK libs deinited and unloaded
     _camera.reset();
+
+#ifdef WITH_IDS
     IdsCamera::unloadLib();
 #endif
+
+    DllCamera::unloadAdapters();
 }
 
 void PlotWindow::restoreState()
@@ -234,6 +238,9 @@ void PlotWindow::restoreState()
     _actionCrosshairsShow->setChecked(_plot->isCrosshairsVisible());
     _profilesView->restoreState(s.settings());
     _stabilityView->restoreState(s.settings());
+
+    DllCamera::loadAdapters();
+    fillCamSelector();
 }
 
 void PlotWindow::storeState()
@@ -256,11 +263,11 @@ void PlotWindow::createMenuBar()
 #define M_ Ori::Gui::menu
     if (AppSettings::instance().isDevMode)
     {
-        _actionCamWelcome = A_("Welcome", this, &PlotWindow::activateCamWelcome, ":/toolbar/camera");
+        _actionCamWelcome = A_("Welcome", this, &PlotWindow::activateCamWelcome, ":/toolbar/home");
         _actionCamDemoRender = A_("Demo (render)", this, &PlotWindow::activateCamDemoRender, ":/toolbar/bug");
         _actionCamDemoImage = A_("Demo (image)", this, &PlotWindow::activateCamDemoImage, ":/toolbar/bug");
     }
-    _actionCamImage = A_("Image", this, &PlotWindow::activateCamImage, ":/toolbar/camera");
+    _actionCamImage = A_("Image File", this, &PlotWindow::activateCamImage, ":/toolbar/raw_view");
     _actionRefreshCams = A_("Refresh", this, &PlotWindow::fillCamSelector);
     _camSelectMenu = new QMenu(tr("Active Camera"), this);
 
@@ -379,14 +386,17 @@ void PlotWindow::fillCamSelector()
     _camSelectMenu->addAction(_actionCamImage);
     _camSelectMenu->addSeparator();
 
-#ifdef WITH_IDS
     Ori::Settings s;
     s.beginGroup(INI_GROUP_CAM_NAMES);
     _camCustomNames.clear();
+    
+    auto addErrorItem = [this](const QString& name, const QString& err){
+        _camSelectMenu->addAction(QIcon(":/toolbar/error"), name, this, [err]{ Ori::Dlg::error(err); });
+    };
+
+#ifdef WITH_IDS
     if (auto err = IdsCamera::libError(); !err.isEmpty()) {
-        _camSelectMenu->addAction(QIcon(":/toolbar/error"), tr("IDS Camera"), this, [err]{
-            Ori::Dlg::error(err);
-        });
+        addErrorItem(tr("IDS Camera"), err);
     } else {
         foreach (const auto& cam, IdsCamera::getCameras()) {
             auto name = cam.displayName;
@@ -402,6 +412,33 @@ void PlotWindow::fillCamSelector()
     _camSelectMenu->addSeparator();
 #endif
 
+    for (const auto& adapter : DllCamera::getAdapters())
+    {
+        if (auto err = adapter.error; !err.isEmpty()) {
+            addErrorItem(adapter.name, err);
+            _camSelectMenu->addSeparator();
+            continue;
+        }
+        auto cameras = DllCamera::getCameras(adapter.id);
+        if (!cameras.ok()) {
+            addErrorItem(adapter.name, cameras.error());
+            _camSelectMenu->addSeparator();
+            continue;
+        }
+        for (const auto& cam : cameras.result()) {
+            auto name = cam.displayName;
+            auto customName = s.value(cam.customId).toString();
+            if (!customName.isEmpty()) {
+                _camCustomNames.insert(cam.customId, customName);
+                name = customName;
+            }
+            auto a = _camSelectMenu->addAction(QIcon(":/toolbar/connect"), name, this, &PlotWindow::activateCamDll);
+            a->setData(cam.customId);
+        }
+        _camSelectMenu->addSeparator();
+    }
+    _camSelectMenu->addSeparator();
+
     _camSelectMenu->addAction(_actionRefreshCams);
 }
 
@@ -416,6 +453,7 @@ void PlotWindow::createToolBar()
     _buttonSelectCam->setToolTip(tr("Active camera"));
 
     auto tb = new Ori::Widgets::FlatToolBar;
+    tb->setWindowTitle(tr("Toolbar"));
     tb->setObjectName("ToolBarMain");
     addToolBar(tb);
     tb->setMovable(false);
@@ -490,7 +528,8 @@ void PlotWindow::createDockPanel()
     _resultsDock->setWidget(_table);
     addDockWidget(Qt::LeftDockWidgetArea, _resultsDock);
 
-    _stubConfigPanel = new StubHardConfigPanel(this);
+    _stubConfigPanel = new HardConfigPanel(this);
+    _stubConfigPanel->initForNoControls();
     _camConfigPanel = _stubConfigPanel;
     _hardConfigDock = new QDockWidget(tr("Control"));
     _hardConfigDock->setObjectName("DockHardConfig");
@@ -1038,28 +1077,48 @@ void PlotWindow::toggleMultiRoi()
     doCamConfigChanged();
 }
 
-void PlotWindow::activateCamWelcome()
+void PlotWindow::resetCurrentCam()
 {
-    qDebug() << LOG_ID << "Activate camera: Welcome";
-    
     stopCapture();
 
     auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get());
     if (imgCam) _prevImage = imgCam->fileName();
 
     cleanResults();
-    _camera.reset((Camera*)new WelcomeCamera(_plotIntf, _tableIntf, _stabilIntf));
+    
+    _camera.reset(nullptr);
+}
+
+void PlotWindow::setCurrentCam(Camera* cam)
+{
+    _camera.reset(cam);
+    cam->setRawView(_actionRawView->isChecked(), false);
     showCamConfig(false, true);
     updateHardConfgPanel();
-    showFps(0, 0);
     _camera->startCapture();
+    if (!_camera->isCapturing()) {
+        dataReady();
+    }
     updateControls();
+}
+
+void PlotWindow::activateCamWelcome()
+{
+    qDebug() << LOG_ID << "Activate camera: Welcome";
+    resetCurrentCam();
+    setCurrentCam((Camera*)new WelcomeCamera(_plotIntf, _tableIntf, _stabilIntf));
+    showFps(0, 0);
     dataReady();
 }
 
 void PlotWindow::activateCamImage()
 {
     qDebug() << LOG_ID << "Activate camera: Image";
+    
+    // TODO: refactor so it looks as activation of other camera types:
+    //      resetCurrentCam();
+    //      ...some specifics
+    //      setCurrentCam(cam);
 
     if (_prevImage.isEmpty())
         openImageDlg();
@@ -1069,45 +1128,25 @@ void PlotWindow::activateCamImage()
 void PlotWindow::activateCamDemoRender()
 {
     qDebug() << LOG_ID << "Activate camera: Demo (render)";
-
-    auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get());
-    if (imgCam) _prevImage = imgCam->fileName();
-
-    stopCapture();
-
-    cleanResults();
+    resetCurrentCam();
     auto cam = new VirtualDemoCamera(_plotIntf, _tableIntf, _stabilIntf, this);
+    // TODO: unify signals, move them to base camera, connect in setCurrentCam
     connect(cam, &VirtualDemoCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualDemoCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &VirtualDemoCamera::finished, this, &PlotWindow::captureStopped);
-    cam->setRawView(_actionRawView->isChecked(), false);
-    _camera.reset((Camera*)cam);
-    updateHardConfgPanel();
-    showCamConfig(false, true);
-    _camera->startCapture();
-    updateControls();
+    setCurrentCam(cam);
 }
 
 void PlotWindow::activateCamDemoImage()
 {
     qDebug() << LOG_ID << "Activate camera: Demo (image)";
-
-    auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get());
-    if (imgCam) _prevImage = imgCam->fileName();
-
-    stopCapture();
-
-    cleanResults();
+    resetCurrentCam();
     auto cam = new VirtualImageCamera(_plotIntf, _tableIntf, _stabilIntf, this);
+    // TODO: unify signals, move them to base camera, connect in setCurrentCam
     connect(cam, &VirtualImageCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &VirtualImageCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &VirtualImageCamera::finished, this, &PlotWindow::captureStopped);
-    cam->setRawView(_actionRawView->isChecked(), false);
-    _camera.reset((Camera*)cam);
-    updateHardConfgPanel();
-    showCamConfig(false, true);
-    _camera->startCapture();
-    updateControls();
+    setCurrentCam(cam);
 }
 
 #ifdef WITH_IDS
@@ -1119,14 +1158,9 @@ void PlotWindow::activateCamIds()
     auto camId = action->data();
     qDebug().noquote().nospace() << LOG_ID << " Activate camera: IDS id=" << camId.toString();
 
-    auto imgCam = dynamic_cast<StillImageCamera*>(_camera.get());
-    if (imgCam) _prevImage = imgCam->fileName();
-
-    stopCapture();
-    _camera.reset(nullptr);
-
-    cleanResults();
+    resetCurrentCam();
     auto cam = new IdsCamera(camId, _plotIntf, _tableIntf, _stabilIntf, this);
+    // TODO: unify signals, move them to base camera, connect in setCurrentCam
     connect(cam, &IdsCamera::ready, this, &PlotWindow::dataReady);
     connect(cam, &IdsCamera::stats, this, &PlotWindow::statsReceived);
     connect(cam, &IdsCamera::finished, this, &PlotWindow::captureStopped);
@@ -1136,18 +1170,32 @@ void PlotWindow::activateCamIds()
         updateControls();
         Ori::Dlg::error(err);
     });
-    cam->setRawView(_actionRawView->isChecked(), false);
-    _camera.reset((Camera*)cam);
-    updateHardConfgPanel();
-    showCamConfig(false, true);
-    _camera->startCapture();
-    // Show empty results if it's unable to open the camera
-    if (!_camera->isCapturing()) {
-        dataReady();
-    }
-    updateControls();
+    setCurrentCam(cam);
 }
 #endif
+
+void PlotWindow::activateCamDll()
+{
+    auto action = qobject_cast<QAction*>(sender());
+    if (!action) return;
+
+    auto customId = action->data().toString();
+    qDebug() << LOG_ID << " Activate camera: DLL" << customId;
+
+    resetCurrentCam();
+    auto cam = new DllCamera(customId, _plotIntf, _tableIntf, _stabilIntf, this);
+    // TODO: unify signals, move them to base camera, connect in setCurrentCam
+    connect(cam, &DllCamera::ready, this, &PlotWindow::dataReady);
+    connect(cam, &DllCamera::stats, this, &PlotWindow::statsReceived);
+    connect(cam, &DllCamera::finished, this, &PlotWindow::captureStopped);
+    connect(cam, &DllCamera::error, this, [this, cam](const QString& err){
+        stopMeasure(true);
+        cam->stopCapture();
+        updateControls();
+        Ori::Dlg::error(err);
+    });
+    setCurrentCam(cam);
+}
 
 void PlotWindow::toggleResultsPanel()
 {

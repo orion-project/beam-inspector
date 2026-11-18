@@ -1,4 +1,9 @@
 history:
+- version: 0.0.31
+  date: 2026-??-??
+  changes:
+  - text: Can load custom camera adapter DLLs
+
 - version: 0.0.30
   date: 2026-08-15
   changes:

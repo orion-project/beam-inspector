@@ -64,6 +64,7 @@ void AppSettings::load()
     LOAD(showGoodnessTextOnPlot, Bool, false);
     LOAD(showGoodnessRelative, Bool, false);
     LOAD(showAllPixelFormats, Bool, false);
+    LOAD(logFrameTime, Bool, false);
 
 #ifdef WITH_IDS
     s.beginGroup("IdsCamera");
@@ -114,6 +115,7 @@ void AppSettings::save()
     SAVE(showGoodnessTextOnPlot);
     SAVE(showGoodnessRelative);
     SAVE(showAllPixelFormats);
+    SAVE(logFrameTime);
 
 #ifdef WITH_IDS
     s.beginGroup("IdsCamera");
@@ -224,6 +226,8 @@ bool AppSettings::edit()
         new ConfigItemDir(cfgIds, tr("Peak comfortC directory (x64)"), &idsSdkDir),
     #endif
 
+        (new ConfigItemBool(cfgDbg, tr("Log frame time"), &logFrameTime))
+            ->withHint(tr("      Reconfigure camera to apply")),
         new ConfigItemBool(cfgDbg, tr("Show log window (restart required)"), &useConsole),
         (new ConfigItemBool(cfgDbg, tr("Save log into file"), &saveLogFile))
             ->withParent(&useConsole),

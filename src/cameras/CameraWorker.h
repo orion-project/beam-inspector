@@ -1,6 +1,7 @@
 #ifndef CAMERA_WORKER
 #define CAMERA_WORKER
 
+#include "app/AppSettings.h"
 #include "cameras/Camera.h"
 #include "cameras/CameraTypes.h"
 #include "cameras/MeasureSaver.h"
@@ -56,6 +57,7 @@ public:
     double avgFrameTime = 0;
     double avgAcqTime = 0;
     double avgCalcTime = 0;
+    double avgShowTime = 0;
 
     QMutex cfgMutex;
     bool subtract;
@@ -101,12 +103,22 @@ public:
     double powerSdev = 0;
     bool doMavg = false;
     int mavgFrames = 0;
+    int errorsFrames = 0;
 
+    // Additional statistics that will be saved to measurement file.
     QMap<QString, QVariant> stats;
+    // A camera-specific function that should add its own data to the `stats` object.
+    std::function<void()> extendStats = []{};
+
     std::function<QMap<int, CamTableData>()> tableData;
     std::function<RawFrameData()> rawFrameData;
 
+    // A function returning the FPS value configured in the camera
+    // The value will be sent as CameraStats to be show on UI
+    std::function<double()> getHardFps = []{ return 0; };
+
     const char *logId;
+    bool logFrameTime = false;
 
     CameraWorker(PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, Camera *cam, QThread *thread, const char *logId)
         : plot(plot), table(table), stabil(stabil), camera(cam), thread(thread), logId(logId)
@@ -154,6 +166,8 @@ public:
             mavgs.clear();
             sdevs.clear();
         }
+
+        logFrameTime = AppSettings::instance().logFrameTime;
     }
 
     void setRoi(const RoiRect &roi)
@@ -192,6 +206,14 @@ public:
         cfgMutex.unlock();
     }
 
+    inline void markFrameTime()
+    {
+        tm = timer.elapsed();
+        avgFrameCount++;
+        avgFrameTime += tm - prevFrame;
+        prevFrame = tm;
+    }
+
     inline void markAcqTime()
     {
         avgAcqTime = avgAcqTime*0.9 + (timer.elapsed() - tm)*0.1;
@@ -200,6 +222,11 @@ public:
     inline void markCalcTime()
     {
         avgCalcTime = avgCalcTime*0.9 + (timer.elapsed() - tm)*0.1;
+    }
+
+    inline void markShowTime()
+    {
+        avgShowTime = avgShowTime*0.9 + (timer.elapsed() - tm)*0.1;
     }
 
     inline void calcMavg(int roiIndex)
@@ -401,11 +428,13 @@ public:
         measurIdx = 0;
     }
 
-    inline bool showResults()
+    inline void showResults()
     {
+        tm = timer.elapsed();
         if (tm - prevReady < PLOT_FRAME_DELAY_MS)
-            return false;
+            return;
         prevReady = tm;
+
         const double rangeTop = (1 << c.bpp) - 1;
 
         if (showBrightness)
@@ -418,37 +447,81 @@ public:
             plot->setResult({}, 0, rangeTop);
             table->setResult({}, {}, tableData());
             stabil->setResult(frameTimeAbs(), {});
-            return true;
         }
+        else
+        {
+            double minZ, maxZ;
+            cgn_ext_copy_to_f64(&c, &g, graph, normalize, fullRange, &minZ, &maxZ);
+            plot->invalidateGraph();
+            plot->setResult(results, minZ, maxZ);
 
-        double minZ, maxZ;
-        cgn_ext_copy_to_f64(&c, &g, graph, normalize, fullRange, &minZ, &maxZ);
-        plot->invalidateGraph();
-        plot->setResult(results, minZ, maxZ);
+            table->setResult(results, sdevs, tableData());
 
-        table->setResult(results, sdevs, tableData());
-        
-        // Stability plotter accepts the latest instant results (not averaged)
-        if (doMavg) {
-            QList<CgnBeamResult> res;
-            if (multiRoi) {
-                for (int i = 0; i < rois.size(); i++) {
-                    const QQueue<CgnBeamResult> &q = mavgs.at(i);
+            // Stability plotter accepts the latest instant results (not averaged)
+            if (doMavg) {
+                QList<CgnBeamResult> res;
+                if (multiRoi) {
+                    for (int i = 0; i < rois.size(); i++) {
+                        const QQueue<CgnBeamResult> &q = mavgs.at(i);
+                        if (q.isEmpty())
+                            res << CgnBeamResult { .nan = true };
+                        else res << q.last();
+                    }
+                } else {
+                    const QQueue<CgnBeamResult> &q = mavgs.at(0);
                     if (q.isEmpty())
                         res << CgnBeamResult { .nan = true };
                     else res << q.last();
                 }
+                stabil->setResult(frameTimeAbs(), res);
             } else {
-                const QQueue<CgnBeamResult> &q = mavgs.at(0);
-                if (q.isEmpty())
-                    res << CgnBeamResult { .nan = true };
-                else res << q.last();
+                stabil->setResult(frameTimeAbs(), results);
             }
-            stabil->setResult(frameTimeAbs(), res);
-        } else {
-            stabil->setResult(frameTimeAbs(), results);
         }
         
+        camera->sendResults();
+        markShowTime();
+    }
+
+    inline bool tick()
+    {
+        tm = timer.elapsed();
+        if (tm - prevStat < STAT_DELAY_MS)
+            return true;
+        prevStat = tm;
+
+        extendStats();
+
+        avgFrameTime /= avgFrameCount;
+        const double softFps = 1000.0 / avgFrameTime;
+
+        CameraStats st {
+            .fps = softFps,
+            .hardFps = getHardFps(),
+            .measureTime = measureStart > 0 ? timer.elapsed() - measureStart : -1,
+        };
+        camera->sendStats(st);
+
+        if (logFrameTime) {
+        qDebug()
+            << "softFps:" << softFps
+            << "| frameTime:" << qRound(avgFrameTime)
+            << "| acqTime:" << qRound(avgAcqTime)
+            << "| calcTime:" << qRound(avgCalcTime)
+            << "| showTime:" << qRound(avgShowTime)
+            << "| errorsFrames: " << errorsFrames;
+        }
+
+        // reset soft FPS
+        avgFrameTime = 0;
+        avgFrameCount = 0;
+
+        if (thread->isInterruptionRequested()) {
+            qDebug() << logId << "Interrupted by user";
+            return false;
+        }
+
+        checkReconfig();
         return true;
     }
     

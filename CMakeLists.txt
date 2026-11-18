@@ -65,6 +65,10 @@ set(PROJECT_SOURCES
     src/cameras/HardConfigPanel.h src/cameras/HardConfigPanel.cpp
     src/cameras/CameraTypes.h src/cameras/CameraTypes.cpp
     src/cameras/CameraWorker.h
+    src/cameras/DllAdapter.cpp src/cameras/DllAdapter.h
+    src/cameras/DllCamera.cpp src/cameras/DllCamera.h
+    src/cameras/DllHelper.cpp src/cameras/DllHelper.h
+    src/cameras/DllHardConfig.cpp src/cameras/DllHardConfig.h
     src/cameras/IdsCamera.h src/cameras/IdsCamera.cpp
     src/cameras/IdsCameraConfig.h src/cameras/IdsCameraConfig.cpp
     src/cameras/IdsHardConfig.h src/cameras/IdsHardConfig.cpp
@@ -139,6 +143,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/libs/adapter
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

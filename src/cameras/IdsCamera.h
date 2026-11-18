@@ -61,6 +61,9 @@ public:
 
     IdsCameraConfig* idsConfig() { return _cfg.data(); }
     
+    void sendStats(const CameraStats& s) override { emit stats(s); }
+    void sendResults() override { emit ready(); }
+
 signals:
     void ready();
     void stats(const CameraStats& stats);

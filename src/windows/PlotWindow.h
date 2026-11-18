@@ -101,6 +101,9 @@ private:
 #ifdef WITH_IDS
     void activateCamIds();
 #endif
+    void activateCamDll();
+    void resetCurrentCam();
+    void setCurrentCam(Camera* cam);
     void devResizeWindow();
     void devResizeDock(QDockWidget*);
     void editCamConfig(int pageId = -1);

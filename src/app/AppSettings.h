@@ -64,6 +64,7 @@ public:
     bool tableShowDY = true;
     bool tableShowPhi = true;
     bool tableShowEps = true;
+    bool logFrameTime = false;
 
     enum ConfigPages {
         cfgDev,
