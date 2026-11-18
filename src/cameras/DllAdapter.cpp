@@ -194,6 +194,12 @@ DllAdapter::DllAdapter(const QString& libPath, const QString& sdkPath)
     GET_PROC(getExpoRange);
     GET_PROC(getExpo);
     GET_PROC(setExpo);
+    GET_PROC(getAGainRange);
+    GET_PROC(getAGain);
+    GET_PROC(setAGain);
+    GET_PROC(getDGainRange);
+    GET_PROC(getDGain);
+    GET_PROC(setDGain);
 
     IBeamAdapterInfo info = { 0 };
     auto res = getAdapterInfo(&info);

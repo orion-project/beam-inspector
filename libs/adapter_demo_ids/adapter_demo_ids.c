@@ -228,16 +228,17 @@ IBEAM_API IBeam_getFrame(IBeamCamPtr camPtr, uint8_t *buf)
   return STATUS_OK;
 }
 
+// This is a test call when BI checks if camera can change the parameter
+#define CHECK_SUPPORT(func) \
+  if (!max || !min || !step) { \
+    peak_access_status res = func; \
+    return (res != PEAK_ACCESS_READWRITE) ? notImplemented() : STATUS_OK; \
+  }
+
 IBEAM_API IBeam_getExpoRange(IBeamCamPtr camPtr, double* min, double* max, double* step)
 {
   IF_OPEN
-  // This is a test call when BI checks if the camera can change exposure
-  if (!max || !min || !step) {
-    peak_access_status res = peak_ExposureTime_GetAccessStatus(_cam.peakHandle);
-    if (res != PEAK_ACCESS_READWRITE)
-      return notImplemented();
-    return STATUS_OK;
-  }
+  CHECK_SUPPORT(peak_ExposureTime_GetAccessStatus(_cam.peakHandle));
   CHECK_ERR(peak_ExposureTime_GetRange(_cam.peakHandle, min, max, step));
   return STATUS_OK;
 }
@@ -253,5 +254,53 @@ IBEAM_API IBeam_setExpo(IBeamCamPtr camPtr, double value)
 {
   IF_OPEN
   CHECK_ERR(peak_ExposureTime_Set(_cam.peakHandle, value));
+  return STATUS_OK;
+}
+
+IBEAM_API IBeam_getAGainRange(IBeamCamPtr camPtr, double* min, double* max, double* step)
+{
+  IF_OPEN
+  CHECK_SUPPORT(peak_Gain_GetAccessStatus(
+    _cam.peakHandle, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER))
+  CHECK_ERR(peak_Gain_GetRange(
+    _cam.peakHandle, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, min, max, step));
+  return STATUS_OK;
+}
+
+IBEAM_API IBeam_getAGain(IBeamCamPtr camPtr, double* value)
+{
+  IF_OPEN
+  CHECK_ERR(peak_Gain_Get(_cam.peakHandle, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, value));
+  return STATUS_OK;
+}
+
+IBEAM_API IBeam_setAGain(IBeamCamPtr camPtr, double value)
+{
+  IF_OPEN
+  CHECK_ERR(peak_Gain_Set(_cam.peakHandle, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, value));
+  return STATUS_OK;
+}
+
+IBEAM_API IBeam_getDGainRange(IBeamCamPtr camPtr, double* min, double* max, double* step)
+{
+  IF_OPEN
+  CHECK_SUPPORT(peak_Gain_GetAccessStatus(
+    _cam.peakHandle, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER))
+  CHECK_ERR(peak_Gain_GetRange(
+    _cam.peakHandle, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, min, max, step));
+  return STATUS_OK;
+}
+
+IBEAM_API IBeam_getDGain(IBeamCamPtr camPtr, double* value)
+{
+  IF_OPEN
+  CHECK_ERR(peak_Gain_Get(_cam.peakHandle, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, value));
+  return STATUS_OK;
+}
+
+IBEAM_API IBeam_setDGain(IBeamCamPtr camPtr, double value)
+{
+  IF_OPEN
+  CHECK_ERR(peak_Gain_Set(_cam.peakHandle, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, value));
   return STATUS_OK;
 }

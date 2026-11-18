@@ -242,17 +242,14 @@ IBEAM_API IBeam_getFrame(IBeamCamPtr camPtr, uint8_t *buf)
   return STATUS_OK;
 }
 
-IBEAM_API IBeam_getExpoRange(IBeamCamPtr camPtr, double* min, double* max, double* step)
-{
-  return notImplemented();
-}
+#define NOT_IMPLEMENTED(func) func { return notImplemented(); }
 
-IBEAM_API IBeam_getExpo(IBeamCamPtr camPtr, double* value)
-{
-  return notImplemented();
-}
-
-IBEAM_API IBeam_setExpo(IBeamCamPtr camPtr, double value)
-{
-  return notImplemented();
-}
+NOT_IMPLEMENTED(IBEAM_API IBeam_getExpoRange(IBeamCamPtr camPtr, double* min, double* max, double* step))
+NOT_IMPLEMENTED(IBEAM_API IBeam_getExpo(IBeamCamPtr camPtr, double* value))
+NOT_IMPLEMENTED(IBEAM_API IBeam_setExpo(IBeamCamPtr camPtr, double value))
+NOT_IMPLEMENTED(IBEAM_API IBeam_getAGainRange(IBeamCamPtr camPtr, double* min, double* max, double* step))
+NOT_IMPLEMENTED(IBEAM_API IBeam_getAGain(IBeamCamPtr camPtr, double* value))
+NOT_IMPLEMENTED(IBEAM_API IBeam_setAGain(IBeamCamPtr camPtr, double value))
+NOT_IMPLEMENTED(IBEAM_API IBeam_getDGainRange(IBeamCamPtr camPtr, double* min, double* max, double* step))
+NOT_IMPLEMENTED(IBEAM_API IBeam_getDGain(IBeamCamPtr camPtr, double* value))
+NOT_IMPLEMENTED(IBEAM_API IBeam_setDGain(IBeamCamPtr camPtr, double value))

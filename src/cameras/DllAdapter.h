@@ -40,6 +40,12 @@ public:
     PROC(getExpoRange)(IBeamCamPtr camPtr, double* min, double* max, double* step);
     PROC(getExpo)(IBeamCamPtr camPtr, double* value);
     PROC(setExpo)(IBeamCamPtr camPtr, double value);
+    PROC(getAGainRange)(IBeamCamPtr camPtr, double* min, double* max, double* step);
+    PROC(getAGain)(IBeamCamPtr camPtr, double* value);
+    PROC(setAGain)(IBeamCamPtr camPtr, double value);
+    PROC(getDGainRange)(IBeamCamPtr camPtr, double* min, double* max, double* step);
+    PROC(getDGain)(IBeamCamPtr camPtr, double* value);
+    PROC(setDGain)(IBeamCamPtr camPtr, double value);
 
     #undef PROC
 

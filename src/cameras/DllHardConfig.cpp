@@ -22,7 +22,7 @@ using namespace Ori::Widgets;
 
 namespace {
 
-enum class CamPropId { Expo, Fps };
+enum class CamPropId { Expo, Fps, AGain, DGain };
 
 class CamPropEdit : public ValueEdit
 {
@@ -128,14 +128,11 @@ struct CamPropControl
             if (id == CamPropId::Fps && settings->roundFps) {
                 min = qRound(min * 100.0) / 100.0;
                 max = qRound(max * 100.0) / 100.0;
-                label->setText(QString("<b>Min = %1, Max = %2</b>").arg(min, 0, 'f', 2).arg(max, 0, 'f', 2));
             } else if (id == CamPropId::Expo && settings->roundExpo) {
                 min = qRound(min / 10.0) * 10;
                 max = qRound(max / 10.0) * 10;
-                label->setText(QString("<b>Min = %1, Max = %2</b>").arg(min, 0, 'f', 0).arg(max, 0, 'f', 0));
-            } else {
-                label->setText(QString("<b>Min = %1, Max = %2</b>").arg(min, 0, 'f', 2).arg(max, 0, 'f', 2));
             }
+            label->setText(QString("<b>Min = %1, Max = %2</b>").arg(min, 0, 'f', 2).arg(max, 0, 'f', 2));
             minValue = min;
             maxValue = max;
             valueStep = step;
@@ -206,7 +203,12 @@ public:
     DllHardConfigPanelImpl(IBeamCamPtr camPtr, DllAdapter *adapter) 
         : QWidget(), camPtr(camPtr), adapter(adapter)
     {
-        addPropControl_Expo();
+        addPropControl_Expo(tr("Exposure (us)"));
+        addPropControl_AGain(tr("Analog gain"));
+        addPropControl_DGain(tr("Digital gain"));
+        
+        if (props.contains(CamPropId::Expo))
+            props[CamPropId::Expo].onChanged = exposureChanged;
         
         if (!props.isEmpty())
         {
@@ -219,24 +221,30 @@ public:
         }
     }
     
-    void addPropControl_Expo()
-    {
-        auto res = adapter->getExpoRange(camPtr, nullptr, nullptr, nullptr);
-        if (res && res->code == IBeamStatus::IBEAM_STATUS_NOT_IMPLEMENTED)
-            return;
-        CamPropControl control;
-        control.id = CamPropId::Expo;
-        control.title = tr("Exposure (us)");
-        control.settings = &propSettings;
-        control.getRange = [this](double* min, double* max, double* step) {
-            return adapter->getExpoRange(camPtr, min, max, step); };
-        control.getValue = [this](double* value) {
-            return adapter->getExpo(camPtr, value); };
-        control.setValue = [this](double value) {
-            return adapter->setExpo(camPtr, value); };
-        control.onChanged = exposureChanged;
-        props.insert(control.id, control);
+#define ADD_PROP_CONTROL(Prop) \
+    void addPropControl_##Prop(const QString& title) \
+    { \
+        auto res = adapter->get##Prop##Range(camPtr, nullptr, nullptr, nullptr); \
+        if (res && res->code == IBeamStatus::IBEAM_STATUS_NOT_IMPLEMENTED) \
+            return; \
+        CamPropControl control; \
+        control.id = CamPropId::Prop; \
+        control.title = title; \
+        control.settings = &propSettings; \
+        control.getRange = [this](double* min, double* max, double* step) { \
+            return adapter->get##Prop##Range(camPtr, min, max, step); }; \
+        control.getValue = [this](double* value) { \
+            return adapter->get##Prop(camPtr, value); }; \
+        control.setValue = [this](double value) { \
+            return adapter->set##Prop(camPtr, value); }; \
+        props.insert(control.id, control); \
     }
+
+    ADD_PROP_CONTROL(Expo);
+    ADD_PROP_CONTROL(AGain);
+    ADD_PROP_CONTROL(DGain);
+
+#undef ADD_PROP_CONTROL
     
     void showInitialValues()
     {
@@ -274,7 +282,7 @@ public:
 
     IBeamCamPtr camPtr;
     DllAdapter* adapter;
-    QHash<CamPropId, CamPropControl> props;
+    QMap<CamPropId, CamPropControl> props;
     CamPropSettings propSettings;
     std::function<void()> exposureChanged;    
 };
