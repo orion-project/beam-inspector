@@ -198,7 +198,7 @@ DllCamera::DllCamera(const QString& customId, PlotIntf *plot, TableIntf *table, 
     : QThread(parent), Camera(plot, table, stabil, "IdsCamera")
 {
     QString adapterId;
-    IBeamCamId cameraId = 0;
+    IBeamCamId cameraId = IBEAM_BAD_CAMERA_ID;
     DllAdapter::splitCustomId(customId, adapterId, cameraId);
     auto adapter = DllAdapter::getAdapter(adapterId);
     // TODO: move message boxes out of camera object 

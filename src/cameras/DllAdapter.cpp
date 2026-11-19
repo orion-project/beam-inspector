@@ -253,7 +253,7 @@ void DllAdapter::splitCustomId(const QString& customId, QString& adapterId, IBea
     if (pos < 0) return;
     adapterId = customId.left(pos);
     bool goodId = false;
-    cameraId = QStringView(customId).sliced(pos+1).toInt(&goodId);
+    cameraId = QStringView(customId).sliced(pos+1).toULongLong(&goodId);
     if (!goodId) cameraId = IBEAM_BAD_CAMERA_ID;
 }
 
