@@ -105,6 +105,11 @@ public:
     int mavgFrames = 0;
     int errorsFrames = 0;
 
+    // There are frames captured since the orevious results sent.
+    // Only DllCamera uses this marker, so it's true by default
+    // in order not to break other cameras.
+    bool framesCaptured = true;
+
     // Additional statistics that will be saved to measurement file.
     QMap<QString, QVariant> stats;
     // A camera-specific function that should add its own data to the `stats` object.
@@ -428,14 +433,26 @@ public:
         measurIdx = 0;
     }
 
-    inline void showResults()
+    inline bool showResults()
     {
         tm = timer.elapsed();
         if (tm - prevReady < PLOT_FRAME_DELAY_MS)
-            return;
+            return false;
         prevReady = tm;
 
         const double rangeTop = (1 << c.bpp) - 1;
+
+        // There are no frames captured since the previous results sent,
+        // send empty results to show that something got broken.
+        if (!framesCaptured)
+        {
+            memset(graph, 0, c.w*c.h*sizeof(double));
+            plot->invalidateGraph();
+            plot->setResult({}, 0, rangeTop);
+            table->setResult({}, {}, tableData());
+            stabil->setResult(frameTimeAbs(), {});
+            goto send_results;
+        }
 
         if (showBrightness)
             brightness = cgn_calc_brightness_1(&c);
@@ -478,9 +495,11 @@ public:
                 stabil->setResult(frameTimeAbs(), results);
             }
         }
-        
+
+    send_results:
         camera->sendResults();
         markShowTime();
+        return true;
     }
 
     inline bool tick()
