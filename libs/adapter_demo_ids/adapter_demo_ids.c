@@ -14,6 +14,10 @@ which should be installed separately and path to it provided when building the a
 #include <string.h>
 
 #define ADAPTER_NAME "Demo IDS Adapter"
+#define ADAPTER_VER "1.0.0"
+
+#define LOG_ID "AdapterIDS"
+#define LOG(format, ...) { printf (LOG_ID ": " format "\n", __VA_ARGS__); fflush(stdout); }
 
 #define STATUS_OK NULL
 
@@ -48,13 +52,15 @@ static IBeamStatus* notImplemented()
   return &_cam.status;
 }
 
-#define CHECK_ERR(res) { \
-  peak_status tmp = (res); \
-  if (PEAK_ERROR(tmp)) { \
-    size_t bufSize = IBEAM_ERROR_LEN; \
-    peak_status tmp1 = peak_Library_GetLastError(&tmp, _cam.status.text, &bufSize); \
-    if (PEAK_ERROR(tmp1)) \
-      sprintf(_cam.status.text, "SDK error code %#x", tmp); \
+#define CHECK_ERR(func, res) { \
+  peak_status code = (res); \
+  if (PEAK_ERROR(code)) { \
+    char msg[IBEAM_ERROR_LEN]; \
+    size_t msgSize = IBEAM_ERROR_LEN; \
+    if (PEAK_ERROR(peak_Library_GetLastError(&code, msg, &msgSize))) \
+      snprintf(_cam.status.text, IBEAM_ERROR_LEN, "%s: errcode %#x", func, code); \
+    else \
+      snprintf(_cam.status.text, IBEAM_ERROR_LEN, "%s: %s", func, msg); \
     _cam.status.code = IBEAM_STATUS_ERROR; \
     return &_cam.status; \
   } \
@@ -68,7 +74,7 @@ IBEAM_API IBeam_init(void)
   _cam.id = IBEAM_BAD_CAMERA_ID;
   _cam.peakHandle = NULL;
 
-  CHECK_ERR(peak_Library_Init());
+  CHECK_ERR("iniLibrary", peak_Library_Init());
   return STATUS_OK;
 }
 
@@ -79,14 +85,14 @@ IBEAM_API IBeam_exit(void)
   if (_camsRaw)
     free(_camsRaw);
 
-  CHECK_ERR(peak_Library_Exit());
+  CHECK_ERR("exiLibrary", peak_Library_Exit());
   return STATUS_OK;
 }
 
 IBEAM_API IBeam_getAdapterInfo(IBeamAdapterInfo* info)
 {
   strcpy_s(info->displayName, IBEAM_NAME_LEN, ADAPTER_NAME);
-  strcpy_s(info->displayVersion, IBEAM_NAME_LEN, "1.0.0");
+  strcpy_s(info->displayVersion, IBEAM_NAME_LEN, ADAPTER_VER);
   info->apiVersion = IBEAM_API_V1;
   return STATUS_OK;
 }
@@ -98,11 +104,11 @@ IBEAM_API IBeam_getCameraList(IBeamCamList* camList, size_t* camCount)
   if (_camsRaw)
     free(_camsRaw);
 
-  CHECK_ERR(peak_CameraList_Update(&_camCount));
+  CHECK_ERR("updateCameraList", peak_CameraList_Update(&_camCount));
 
   _cams = malloc(sizeof(IBeamCamInfo) * _camCount);
   _camsRaw = malloc(sizeof(peak_camera_descriptor) * _camCount);
-  CHECK_ERR(peak_CameraList_Get(_camsRaw, &_camCount));
+  CHECK_ERR("getCameraList", peak_CameraList_Get(_camsRaw, &_camCount));
 
   for (int i = 0; i < _camCount; i++) {
     // IBeamCamId is expected to be persistent for the camera,
@@ -141,13 +147,13 @@ IBEAM_API IBeam_openCamera(IBeamCamId camId, IBeamCamPtr* camPtr)
     return errorStatus("Unknown camera ID");
 
   peak_camera_handle peakHandle;
-  CHECK_ERR(peak_Camera_Open(peakId, &peakHandle));
+  CHECK_ERR("openCamera", peak_Camera_Open(peakId, &peakHandle));
 
   peak_status res = peak_Acquisition_Start(peakHandle, PEAK_INFINITE);
   if (PEAK_ERROR(res)) {
     // Ignore possible error when close and return the first occured error
     peak_Camera_Close(peakHandle);
-    CHECK_ERR(res);
+    CHECK_ERR("startAcquisition", res);
   }
 
   _cam.id = camId;
@@ -173,7 +179,7 @@ IBEAM_API IBeam_closeCamera(IBeamCamPtr camPtr)
     peak_Acquisition_Stop(peakHandle);
   }
 
-  CHECK_ERR(peak_Camera_Close(peakHandle));
+  CHECK_ERR("closeCamera", peak_Camera_Close(peakHandle));
   return STATUS_OK;
 }
 
@@ -182,15 +188,16 @@ IBEAM_API IBeam_getFrameInfo(IBeamCamPtr camPtr, IBeamFrameInfo *info)
   IF_OPEN
 
   peak_roi roi;
-  CHECK_ERR(peak_ROI_Get(_cam.peakHandle, &roi));
+  CHECK_ERR("getROI", peak_ROI_Get(_cam.peakHandle, &roi));
 
   info->width = roi.size.width;
   info->height = roi.size.height;
 
-  if (PEAK_IS_READABLE(peak_GFA_Feature_GetAccessStatus(
-    _cam.peakHandle, PEAK_GFA_MODULE_REMOTE_DEVICE, "SensorPixelWidth"))) {
+  if (PEAK_IS_READABLE(peak_GFA_Feature_GetAccessStatus(_cam.peakHandle,
+    PEAK_GFA_MODULE_REMOTE_DEVICE, "SensorPixelWidth"))) {
     double pixelW;
-    peak_status res = peak_GFA_Float_Get(_cam.peakHandle, PEAK_GFA_MODULE_REMOTE_DEVICE, "SensorPixelWidth", &pixelW);
+    peak_status res = peak_GFA_Float_Get(_cam.peakHandle, 
+      PEAK_GFA_MODULE_REMOTE_DEVICE, "SensorPixelWidth", &pixelW);
     if (PEAK_SUCCESS(res)) {
       info->pixelWidth = pixelW;
       info->pixelHeight = pixelW;
@@ -198,7 +205,7 @@ IBEAM_API IBeam_getFrameInfo(IBeamCamPtr camPtr, IBeamFrameInfo *info)
   }
 
   peak_pixel_format pixelFormat;
-  CHECK_ERR(peak_PixelFormat_Get(_cam.peakHandle, &pixelFormat));
+  CHECK_ERR("getPixelFormat", peak_PixelFormat_Get(_cam.peakHandle, &pixelFormat));
 
   // Support only the simplest pixel format in demo
   if (pixelFormat != PEAK_PIXEL_FORMAT_MONO8)
@@ -219,14 +226,14 @@ IBEAM_API IBeam_getFrame(IBeamCamPtr camPtr, uint8_t *buf)
     _cam.status.text[0] = '\0';
     return &_cam.status;
   }
-  CHECK_ERR(res);
+  CHECK_ERR("waitForFrame", res);
 
   peak_buffer peakBuf;
-  CHECK_ERR(peak_Frame_Buffer_Get(peakFrame, &peakBuf));
+  CHECK_ERR("getFrameBuffer", peak_Frame_Buffer_Get(peakFrame, &peakBuf));
 
   memcpy_s(buf, peakBuf.memorySize, peakBuf.memoryAddress, peakBuf.memorySize);
 
-  CHECK_ERR(peak_Frame_Release(_cam.peakHandle, peakFrame));
+  CHECK_ERR("releaseFrame", peak_Frame_Release(_cam.peakHandle, peakFrame));
 
   return STATUS_OK;
 }
@@ -242,68 +249,72 @@ IBEAM_API IBeam_getExpoRange(IBeamCamPtr camPtr, double* min, double* max, doubl
 {
   IF_OPEN
   CHECK_SUPPORT(peak_ExposureTime_GetAccessStatus(_cam.peakHandle));
-  CHECK_ERR(peak_ExposureTime_GetRange(_cam.peakHandle, min, max, step));
+  CHECK_ERR("getExpoRange", peak_ExposureTime_GetRange(_cam.peakHandle, min, max, step));
   return STATUS_OK;
 }
 
 IBEAM_API IBeam_getExpo(IBeamCamPtr camPtr, double* value)
 {
   IF_OPEN
-  CHECK_ERR(peak_ExposureTime_Get(_cam.peakHandle, value));
+  CHECK_ERR("getExpo", peak_ExposureTime_Get(_cam.peakHandle, value));
   return STATUS_OK;
 }
 
 IBEAM_API IBeam_setExpo(IBeamCamPtr camPtr, double value)
 {
   IF_OPEN
-  CHECK_ERR(peak_ExposureTime_Set(_cam.peakHandle, value));
+  CHECK_ERR("setExpo", peak_ExposureTime_Set(_cam.peakHandle, value));
   return STATUS_OK;
 }
 
 IBEAM_API IBeam_getAGainRange(IBeamCamPtr camPtr, double* min, double* max, double* step)
 {
   IF_OPEN
-  CHECK_SUPPORT(peak_Gain_GetAccessStatus(
-    _cam.peakHandle, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER))
-  CHECK_ERR(peak_Gain_GetRange(
-    _cam.peakHandle, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, min, max, step));
+  CHECK_SUPPORT(peak_Gain_GetAccessStatus(_cam.peakHandle,
+    PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER))
+  CHECK_ERR("getAGainRange", peak_Gain_GetRange(_cam.peakHandle,
+    PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, min, max, step));
   return STATUS_OK;
 }
 
 IBEAM_API IBeam_getAGain(IBeamCamPtr camPtr, double* value)
 {
   IF_OPEN
-  CHECK_ERR(peak_Gain_Get(_cam.peakHandle, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, value));
+  CHECK_ERR("getAGain", peak_Gain_Get(_cam.peakHandle, 
+    PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, value));
   return STATUS_OK;
 }
 
 IBEAM_API IBeam_setAGain(IBeamCamPtr camPtr, double value)
 {
   IF_OPEN
-  CHECK_ERR(peak_Gain_Set(_cam.peakHandle, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, value));
+  CHECK_ERR("setAGain", peak_Gain_Set(_cam.peakHandle, 
+    PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, value));
   return STATUS_OK;
 }
 
 IBEAM_API IBeam_getDGainRange(IBeamCamPtr camPtr, double* min, double* max, double* step)
 {
   IF_OPEN
-  CHECK_SUPPORT(peak_Gain_GetAccessStatus(
-    _cam.peakHandle, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER))
-  CHECK_ERR(peak_Gain_GetRange(
-    _cam.peakHandle, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, min, max, step));
+  CHECK_SUPPORT(peak_Gain_GetAccessStatus(_cam.peakHandle,
+    PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER))
+  CHECK_ERR("getDGainRange", peak_Gain_GetRange(_cam.peakHandle,
+    PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, min, max, step));
   return STATUS_OK;
 }
 
 IBEAM_API IBeam_getDGain(IBeamCamPtr camPtr, double* value)
 {
   IF_OPEN
-  CHECK_ERR(peak_Gain_Get(_cam.peakHandle, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, value));
+  CHECK_ERR("getDGain", peak_Gain_Get(_cam.peakHandle, 
+    PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, value));
   return STATUS_OK;
 }
 
 IBEAM_API IBeam_setDGain(IBeamCamPtr camPtr, double value)
 {
   IF_OPEN
-  CHECK_ERR(peak_Gain_Set(_cam.peakHandle, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, value));
+  CHECK_ERR("setDGain", peak_Gain_Set(_cam.peakHandle, 
+    PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, value));
   return STATUS_OK;
 }
