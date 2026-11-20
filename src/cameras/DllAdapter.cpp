@@ -201,7 +201,8 @@ DllAdapter::DllAdapter(const QString& libPath, const QString& sdkPath)
     GET_PROC(getDGain);
     GET_PROC(setDGain);
 
-    IBeamAdapterInfo info = { 0 };
+    IBeamAdapterInfo info;
+    memset(&info, 0, sizeof(IBeamAdapterInfo));
     auto res = getAdapterInfo(&info);
     if (res) {
         _error = QString("Unable to get adapter info: %1").arg(errorText(res));
@@ -222,7 +223,14 @@ DllAdapter::DllAdapter(const QString& libPath, const QString& sdkPath)
         << "| Version:" << QString::fromLatin1(info.displayVersion)
         << "| API:" << info.apiVersion;
 
-    res = init();
+
+    auto libDirBytes = libInfo.absoluteDir().absolutePath().toLocal8Bit();
+    auto sdkDirBytes = sdkDir.toLocal8Bit();
+    IBeamAdapterArgs args {
+        .libDir = libDirBytes.constData(),
+        .sdkDir = sdkDirBytes.constData(),
+    };
+    res = init(&args);
     if (res) {
         _error = QString("Unable to initialize adapter: %1").arg(errorText(res));
         qCritical().noquote() << LOG_ID << _error;

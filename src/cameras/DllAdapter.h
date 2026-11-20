@@ -29,7 +29,7 @@ public:
     // Resolved functons
     #define PROC(name) IBeamStatus* (__cdecl *name)
 
-    PROC(init)();
+    PROC(init)(IBeamAdapterArgs* args);
     PROC(exit)();
     PROC(getAdapterInfo)(IBeamAdapterInfo* info);
     PROC(getCameraList)(IBeamCamList* camList, size_t* camCount);

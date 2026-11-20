@@ -53,7 +53,8 @@ public:
     
     QString getFrameInfo()
     {
-        IBeamFrameInfo info = { 0 };
+        IBeamFrameInfo info;
+        memset(&info, 0, sizeof(IBeamFrameInfo));
         auto res = adapter->getFrameInfo(camPtr, &info);
         CHECK_ERR("Unable to get frame info");
     

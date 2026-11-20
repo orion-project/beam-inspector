@@ -36,7 +36,7 @@ typedef struct {
 typedef struct { double val, min, span; } BeamOffset;
 
 // For demo, all info about cameras is preallocated and doesn't change.
-IBeamCamInfo _cams[2];
+IBeamCamInfo _cams[CAM_COUNT];
 
 // Beam Inspector opens only one camera at time.
 // So for demo we don't bother with anything harder than single camera instance.
@@ -66,7 +66,7 @@ static IBeamStatus* notImplemented(void)
   return &_cam.status;
 }
 
-IBEAM_API IBeam_init(void)
+IBEAM_API IBeam_init(IBeamAdapterArgs *args)
 {
   _cams[0].id = CAM_LR_ID;
   strcpy_s(_cams[0].displayName, IBEAM_NAME_LEN, "Low-Res Cam");
@@ -79,7 +79,8 @@ IBEAM_API IBeam_init(void)
 
   _cam.id = IBEAM_BAD_CAMERA_ID;
 
-  printf("%s: init\n", ADAPTER_NAME);
+  printf("%s: init\n  libDir: %s\n  sdkDir: %s\n",
+    ADAPTER_NAME, args->libDir, args->sdkDir);
   fflush(stdout);
   return STATUS_OK;
 }
