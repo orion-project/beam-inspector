@@ -271,6 +271,28 @@ IBEAM_API IBeam_setExpo(IBeamCamPtr camPtr, double value)
   return STATUS_OK;
 }
 
+IBEAM_API IBeam_getFpsRange(IBeamCamPtr camPtr, double* min, double* max, double* step)
+{
+  IF_OPEN
+  CHECK_SUPPORT(peak_FrameRate_GetAccessStatus(_cam.peakHandle));
+  CHECK_ERR("getFpsRange", peak_FrameRate_GetRange(_cam.peakHandle, min, max, step));
+  return STATUS_OK;
+}
+
+IBEAM_API IBeam_getFps(IBeamCamPtr camPtr, double* value)
+{
+  IF_OPEN
+  CHECK_ERR("getFps", peak_FrameRate_Get(_cam.peakHandle, value));
+  return STATUS_OK;
+}
+
+IBEAM_API IBeam_setFps(IBeamCamPtr camPtr, double value)
+{
+  IF_OPEN
+  CHECK_ERR("setFps", peak_FrameRate_Set(_cam.peakHandle, value));
+  return STATUS_OK;
+}
+
 IBEAM_API IBeam_getAGainRange(IBeamCamPtr camPtr, double* min, double* max, double* step)
 {
   IF_OPEN

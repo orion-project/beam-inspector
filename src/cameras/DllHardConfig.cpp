@@ -60,7 +60,8 @@ struct CamPropControl
 {
     CamPropId id;
     QString title;
-    QLabel *label, *auxLabel;
+    QLabel *label;
+    QLabel *auxLabel = nullptr;
     CamPropEdit *edit;
     QGroupBox *group;
     double curValue = 0;
@@ -94,6 +95,11 @@ struct CamPropControl
         
         group = LayoutV({label, LayoutH({edit, btn})}).makeGroupBox(title);
         
+        if (id == CamPropId::Expo) {
+            auxLabel = new QLabel;
+            group->layout()->addWidget(auxLabel);
+        }
+        
         layout->addWidget(group);
     }
     
@@ -106,6 +112,8 @@ struct CamPropControl
             edit->setValue(0);
             edit->setDisabled(true);
             curValue = 0;
+            if (auxLabel)
+                auxLabel->clear();
             return;
         }
         // Sometimes camera returns not exactly the same that was set
@@ -136,6 +144,16 @@ struct CamPropControl
             minValue = min;
             maxValue = max;
             valueStep = step;
+        }
+
+        if (id == CamPropId::Expo) {
+            double freq = 1e6 / value;
+            QString s;
+            if (freq < 1000)
+                s = QStringLiteral("Corresponds to <b>%1 Hz</b>").arg(freq, 0, 'f', 1);
+            else
+                s = QStringLiteral("Corresponds to <b>%1 kHz</b>").arg(freq/1000.0, 0, 'f', 2);
+            auxLabel->setText(s);
         }
     }
     
@@ -204,14 +222,27 @@ public:
         : QWidget(), camPtr(camPtr), adapter(adapter)
     {
         addPropControl_Expo(tr("Exposure (us)"));
+        addPropControl_Fps(tr("Frame rate"));
         addPropControl_AGain(tr("Analog gain"));
         addPropControl_DGain(tr("Digital gain"));
         
-        if (props.contains(CamPropId::Expo))
+        if (props.contains(CamPropId::Expo) && props.contains(CamPropId::Fps)) {
+            // Exposition and FPS are interconnected properties
+            // so when one of them is changed, the other can change
+            props[CamPropId::Expo].onChanged = [this]{
+                props[CamPropId::Fps].showValue();
+                if (exposureChanged)
+                    exposureChanged();
+            };
+            props[CamPropId::Fps].onChanged = [this]{
+                props[CamPropId::Expo].showValue();
+            };
+        }
+        else if (props.contains(CamPropId::Expo) && exposureChanged) {
             props[CamPropId::Expo].onChanged = exposureChanged;
+        }
         
-        if (!props.isEmpty())
-        {
+        if (!props.isEmpty()) {
             auto layout = new QVBoxLayout(this);
             
             for (auto it = props.begin(); it != props.end(); it++)
@@ -241,6 +272,7 @@ public:
     }
 
     ADD_PROP_CONTROL(Expo);
+    ADD_PROP_CONTROL(Fps);
     ADD_PROP_CONTROL(AGain);
     ADD_PROP_CONTROL(DGain);
 

@@ -49,6 +49,12 @@ public:
             };
             return data;
         };
+        
+        getHardFps = [this]{
+            double fps = 0;
+            this->adapter->getFps(camPtr, &fps);
+            return fps;
+        };
     }
     
     QString getFrameInfo()

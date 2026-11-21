@@ -232,6 +232,10 @@ IBEAM_API IBeam_getExpoRange(IBeamCamPtr camPtr, double* min, double* max, doubl
 IBEAM_API IBeam_getExpo(IBeamCamPtr camPtr, double* value);
 IBEAM_API IBeam_setExpo(IBeamCamPtr camPtr, double value);
 
+IBEAM_API IBeam_getFpsRange(IBeamCamPtr camPtr, double* min, double* max, double* step);
+IBEAM_API IBeam_getFps(IBeamCamPtr camPtr, double* value);
+IBEAM_API IBeam_setFps(IBeamCamPtr camPtr, double value);
+
 IBEAM_API IBeam_getAGainRange(IBeamCamPtr camPtr, double* min, double* max, double* step);
 IBEAM_API IBeam_getAGain(IBeamCamPtr camPtr, double* value);
 IBEAM_API IBeam_setAGain(IBeamCamPtr camPtr, double value);

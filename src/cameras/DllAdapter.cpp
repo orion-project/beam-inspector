@@ -194,6 +194,9 @@ DllAdapter::DllAdapter(const QString& libPath, const QString& sdkPath)
     GET_PROC(getExpoRange);
     GET_PROC(getExpo);
     GET_PROC(setExpo);
+    GET_PROC(getFpsRange);
+    GET_PROC(getFps);
+    GET_PROC(setFps);
     GET_PROC(getAGainRange);
     GET_PROC(getAGain);
     GET_PROC(setAGain);
