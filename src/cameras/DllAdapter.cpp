@@ -224,8 +224,8 @@ DllAdapter::DllAdapter(const QString& libPath, const QString& sdkPath)
         << "| API:" << info.apiVersion;
 
 
-    auto libDirBytes = libInfo.absoluteDir().absolutePath().toLocal8Bit();
-    auto sdkDirBytes = sdkDir.toLocal8Bit();
+    auto libDirBytes = QDir::toNativeSeparators(libInfo.absoluteDir().absolutePath()).toLocal8Bit();
+    auto sdkDirBytes = QDir::toNativeSeparators(sdkDir).toLocal8Bit();
     IBeamAdapterArgs args {
         .libDir = libDirBytes.constData(),
         .sdkDir = sdkDirBytes.constData(),
