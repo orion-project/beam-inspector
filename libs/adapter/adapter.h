@@ -28,32 +28,34 @@ typedef void* IBeamCamPtr;
 /// Any adapter function returns a pointer to some preallocated status object
 /// which is guaranteed to be valid until the next call of any other function.
 /// Beam Inspector copies it into its internals but does not free the object.
+///
 typedef struct {
-  // Some predefined status codes that Beam Inspector understands and reacts.
-  // Beam Inspector doesn't know how to deal with internal error codes of the underlying SDK.
-  // The adapter should provide a helpful describing message that could be used for logging 
-  // and troubleshooting and include the low-level error code to that message if consides it useful.
+  /// Some predefined status codes that Beam Inspector understands and reacts.
+  /// Beam Inspector doesn't know how to deal with internal error codes of the underlying SDK.
+  /// The adapter should provide a helpful describing message that could be used for logging 
+  /// and troubleshooting and include the low-level error code to that message if consides it useful.
   enum {
-    // Successfull status.
-    // Kind of useless, functions should return NULL in case of success.
+    /// Successfull status.
+    /// Kind of useless, functions should return NULL in case of success.
     IBEAM_STATUS_OK = 0,
 
-    // When startng a camera, any error is considered as a generic failure
-    // and causes Beam Inspector to immediately break the camera initialization.
-    // While capturing, frame errors are counted and reported in the measurement file.
+    /// When startng a camera, any error is considered as a generic failure
+    /// and causes Beam Inspector to immediately break the camera initialization.
+    /// While capturing, frame errors are counted and reported in the measurement file.
     IBEAM_STATUS_ERROR = 1,
 
-    // While capturing, this code is considered as an irrecoverable failure
-    // and stops the camera thread.
+    /// While capturing, this code is considered as an irrecoverable failure
+    /// and stops the camera thread.
     IBEAM_STATUS_ABORT = 2,
 
-    // The requested feature is not implemented in the current adapter.
-    // This could be an expected result if the feature is not supposed to work on camera.
-    // E.g., when Beam Inspector initializes the control panel for the camera,
-    // it asks for the ability to change exposition time, FPS, gain, etc.
-    // When it receives the not implemented status, it silently skips the control.
+    /// The requested feature is not implemented in the current adapter.
+    /// This could be an expected result if the feature is not supposed to work on camera.
+    /// E.g., when Beam Inspector initializes the control panel for the camera,
+    /// it asks for the ability to change exposition time, FPS, gain, etc.
+    /// When it receives the not implemented status, it silently skips the control.
     IBEAM_STATUS_NOT_IMPLEMENTED = 3,
-  } code;
+  }
+  code;
 
   /// A message corresponding to the given status code.
   /// In case of error, the called function should put a zero-terminated ASCII-string 
@@ -62,10 +64,29 @@ typedef struct {
 }
 IBeamStatus;
 
-/// Camera name is given as unicode string (wchar_t array).
-/// If the flag is not set, simple ASCII string is implied.
-#define IBEAM_CAM_FLAG_NAME_WCHAR 0x01
+/// Arguments used when initalizing the adapter (@sa IBeam_init).
+///
+typedef struct {
+  /// Absolute path to the adapter, not including the library name.
+  /// Zero-terminated string not longer than MAX_PATH.
+  const char* libDir;
 
+  /// Absolute path to SDK directory, not including any library name.
+  /// If no camera SDK is used, it is the same as libDir.
+  /// Zero-terminated string not longer than MAX_PATH.
+  const char* sdkDir;
+}
+IBeamAdapterArgs;
+
+/// A set of various boolean properties of the whole adapter.
+///
+typedef enum {
+  // reserved
+}
+IBeamAdapterFlags;
+
+/// Meta-information about the adapter.
+///
 typedef struct {
   /// Adapter display name.
   /// Zero-terminated string.
@@ -82,10 +103,21 @@ typedef struct {
   uint32_t apiVersion;
 
   /// A set of various boolean properties.
-  uint32_t flags;
+  IBeamAdapterFlags flags;
 }
 IBeamAdapterInfo;
 
+/// A set of various boolean properties of a camera.
+///
+typedef enum {
+  /// Camera name is given as unicode string (wchar_t array).
+  /// If the flag is not set, simple ASCII string is implied.
+  IBEAM_CAM_FLAG_NAME_WCHAR = 0x01,
+}
+IBeamCamFlags;
+
+/// Information about a camera returning when cameras are enumerated (not opened yet).
+///
 typedef struct {
   /// SDK-agnostic unique identifier for a camera.
   /// SDK-specific IDs can be of different kind - string, index, etc.
@@ -103,12 +135,15 @@ typedef struct {
   char displayName[IBEAM_NAME_LEN];
 
   /// A set of various boolean properties.
-  uint32_t flags;
+  IBeamCamFlags flags;
 }
 IBeamCamInfo;
 
 typedef IBeamCamInfo* IBeamCamList;
 
+/// Information about the current image mode 
+/// used by Beam Inspector when it initializes a frame buffer.
+///
 typedef struct {
   /// Width in pixes.
   uint32_t width;
@@ -143,7 +178,7 @@ IBeamFrameInfo;
 /// Intialize internal adapter structures.
 /// Beam Inspector calls this function once after loading adapter DLL.
 ///
-IBEAM_API IBeam_init(void);
+IBEAM_API IBeam_init(IBeamAdapterArgs *args);
 
 /// Clear and free internal adapter structures.
 /// Beam Inspector calls this function while closing the main window.

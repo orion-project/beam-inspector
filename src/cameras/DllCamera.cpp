@@ -53,7 +53,8 @@ public:
     
     QString getFrameInfo()
     {
-        IBeamFrameInfo info = { 0 };
+        IBeamFrameInfo info;
+        memset(&info, 0, sizeof(IBeamFrameInfo));
         auto res = adapter->getFrameInfo(camPtr, &info);
         CHECK_ERR("Unable to get frame info");
     
@@ -127,31 +128,46 @@ public:
     
     void run()
     {
+        QString lastReportedError;
+
+        framesCaptured = false;
         startCapture();
         while (true) {
             markFrameTime();
 
             tm = timer.elapsed();
             res = adapter->getFrame(camPtr, c.buf);
-            if (res && res->code == IBeamStatus::IBEAM_STATUS_ABORT) {
+            if (res) {
                 auto err = adapter->errorText(res);
-                qCritical() << LOG_ID << "Interrupted" << err;
-                emit cam->error("Interrupted: " + err);
-                return;
+
+                if (res->code == IBeamStatus::IBEAM_STATUS_ABORT) {
+                    qCritical() << LOG_ID << "Interrupted" << err;
+                    emit cam->error("Interrupted: " + err);
+                    return;
+                }
+
+                errorsFrames++;
+                stats[QStringLiteral("frameErrors")] = errorsFrames;
+                QString errKey = QStringLiteral("frameError/") + err;
+                stats[errKey] = stats[errKey].toInt() + 1;
+
+                if (lastReportedError != err) {
+                    lastReportedError = err;
+                    qWarning() << LOG_ID << err;
+                }
             }
             markAcqTime();
             
             if (!res) {
+                framesCaptured = true;
                 tm = timer.elapsed();
                 calcResult();
                 markCalcTime();
+            }
 
-                showResults();
-            } else {
-                errorsFrames++;
-                stats[QStringLiteral("frameErrors")] = errorsFrames;
-                QString errKey = QStringLiteral("frameError_") + QString::number(res->code, 16);
-                stats[errKey] = stats[errKey].toInt() + 1;
+            if (showResults()) {
+                if (framesCaptured)
+                    framesCaptured = false;
             }
 
             if (!tick())
