@@ -82,6 +82,7 @@ IBeamAdapterArgs;
 ///
 typedef enum {
   // reserved
+  IBEAM_ADAPTER_FLAG_RESERVER = 0,
 }
 IBeamAdapterFlags;
 

@@ -3,7 +3,8 @@
 # Variable IDS_COMFORT_SDK must point to the `comfort_sdk` directory
 
 gcc adapter_demo_ids.c \
-  -shared -Wall -Werror -Wl,--exclude-all-symbols \
+  -shared -Wl,--exclude-all-symbols \
+  -fanalyzer -Wall -Wextra -Werror -Wno-unused-parameter \
   -I ../adapter \
   -I ${IDS_COMFORT_SDK}/api/include \
   -L ${IDS_COMFORT_SDK}/api/lib/x86_64 \

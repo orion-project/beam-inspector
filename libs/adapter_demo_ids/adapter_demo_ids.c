@@ -66,13 +66,17 @@ static IBeamStatus* notImplemented()
   } \
 }
 
-IBEAM_API IBeam_init(void)
+IBEAM_API IBeam_init(IBeamAdapterArgs *args)
 {
   _cams = NULL;
   _camsRaw = NULL;
 
   _cam.id = IBEAM_BAD_CAMERA_ID;
   _cam.peakHandle = NULL;
+
+  printf("%s: init\n  libDir: %s\n  sdkDir: %s\n",
+    ADAPTER_NAME, args->libDir, args->sdkDir);
+  fflush(stdout);
 
   CHECK_ERR("iniLibrary", peak_Library_Init());
   return STATUS_OK;
@@ -110,7 +114,7 @@ IBEAM_API IBeam_getCameraList(IBeamCamList* camList, size_t* camCount)
   _camsRaw = malloc(sizeof(peak_camera_descriptor) * _camCount);
   CHECK_ERR("getCameraList", peak_CameraList_Get(_camsRaw, &_camCount));
 
-  for (int i = 0; i < _camCount; i++) {
+  for (size_t i = 0; i < _camCount; i++) {
     // IBeamCamId is expected to be persistent for the camera,
     // while the peak_camera_id is likely not persistent.
     // But for the demo we use it directly, for simplisity.
@@ -138,7 +142,7 @@ IBEAM_API IBeam_openCamera(IBeamCamId camId, IBeamCamPtr* camPtr)
   }
 
   peak_camera_id peakId = PEAK_INVALID_CAMERA_ID;
-  for (int i = 0; i < _camCount; i++)
+  for (size_t i = 0; i < _camCount; i++)
     if (_cams[i].id == camId) {
       peakId = _camsRaw[i].cameraID;
       break;
