@@ -2,6 +2,7 @@
 
 #include "cameras/CameraWorker.h"
 #include "cameras/DllAdapter.h"
+#include "cameras/DllCameraConfig.h"
 #include "cameras/DllHardConfig.h"
 
 #include "helpers/OriDialogs.h"
@@ -22,6 +23,12 @@ enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME, ROW_FRAME_ERR };
         auto err = adapter->errorText(res); \
         qCritical() << LOG_ID << msg << err; \
         return QString(msg ": ") + err; \
+    }
+
+#define RETURN_ERR(msg) { \
+        QString text = (msg); \
+        qCritical() << LOG_ID << text; \
+        return text; \
     }
 
 //------------------------------------------------------------------------------
@@ -59,26 +66,79 @@ public:
     
     QString getFrameInfo()
     {
-        IBeamFrameInfo info;
-        memset(&info, 0, sizeof(IBeamFrameInfo));
-        auto res = adapter->getFrameInfo(camPtr, &info);
-        CHECK_ERR("Unable to get frame info");
-    
-        cam->_width = info.width;
-        cam->_height = info.height;
-        cam->_bpp = info.bpp;
+        cam->_cfg->availablePixelFormats.clear();
+        std::optional<IBeamPixelFormatId> selectedFormat;
+        QString selectedFormatName;
 
-        if (info.pixelWidth != info.pixelHeight)
+        IBeamPixelFormats pixelFormats;
+        size_t pixelFormatCount = 0;
+        auto res = adapter->getPixelFormats(camPtr, &pixelFormats, &pixelFormatCount);
+        // the NOT_IMPLEMENTD status means the camera supports 
+        // only the single 8-bit pixel format, not an error.
+        if (res && res->code != IBeamStatus::IBEAM_STATUS_NOT_IMPLEMENTED)
+            CHECK_ERR("Unable to get pixel formats");
+        for (size_t i = 0; i < pixelFormatCount; i++) {
+            if (pixelFormats[i].bpp > 16) {
+                qWarning() << LOG_ID << "Unsupported bit depth" << pixelFormats[i].bpp 
+                    << "for pixel format" << pixelFormats[i].name << "skip";
+            }
+            int formatCode = (int)pixelFormats[i].id;
+            QString formatName = QString::fromLocal8Bit(pixelFormats[i].name);
+            cam->_cfg->availablePixelFormats << PixelFormat {
+                .code = formatCode,
+                .name = formatName,
+                .descr = formatName,
+                .bitsPerPixel = pixelFormats[i].bpp,
+                .bytesPerPixel = (pixelFormats[i].bpp > 8) ? 2 : 1,
+            };
+            qDebug().noquote() << LOG_ID << "Available pixel format" << HEX(formatCode) << formatName;
+            if (formatCode == cam->_cfg->pixelFormat) {
+                selectedFormat = pixelFormats[i].id;
+                selectedFormatName = formatName;
+            }
+        }
+        // if pixelFormatCount is zero, this means the camera supports 
+        // only the single 8-bit pixel format, not an error.
+        if (pixelFormatCount > 0 && cam->_cfg->availablePixelFormats.isEmpty())
+            RETURN_ERR("Camera has not returned any of known pixel formats");
+            
+        if (!selectedFormat && !cam->_cfg->availablePixelFormats.isEmpty()) {
+            const auto& defaultFormat = cam->_cfg->availablePixelFormats.first();
+            qWarning() << "Required pixel format" << HEX(cam->_cfg->pixelFormat)
+                << "is not provided by the camera, use default format"
+                << HEX(defaultFormat.code) << defaultFormat.name;
+            selectedFormat = defaultFormat.code;
+            cam->_cfg->pixelFormat = *selectedFormat;
+        }
+
+        IBeamCaptureArgs captureArgs;
+        memset(&captureArgs, 0, sizeof(IBeamCaptureArgs));
+        
+        if (selectedFormat) {
+            captureArgs.pixelFormat = *selectedFormat;
+            qDebug().noquote() << LOG_ID << "Set pixel format" << HEX(*selectedFormat) << selectedFormatName;
+        }
+
+        IBeamFrameInfo frameInfo;
+        memset(&frameInfo, 0, sizeof(IBeamFrameInfo));
+        res = adapter->startCapture(camPtr, &captureArgs, &frameInfo);
+        CHECK_ERR("Unable to start capturing");
+    
+        cam->_width = frameInfo.width;
+        cam->_height = frameInfo.height;
+        cam->_bpp = frameInfo.bpp;
+
+        if (frameInfo.pixelWidth != frameInfo.pixelHeight)
             qWarning() << LOG_ID << "Non-square pixels are not supported";
-        else if (info.pixelWidth > 0) {
+        else if (frameInfo.pixelWidth > 0) {
             cam->_pixelScale.on = true;
-            cam->_pixelScale.factor = info.pixelWidth;
+            cam->_pixelScale.factor = frameInfo.pixelWidth;
         }
         
-        c.w = info.width;
-        c.h = info.height;
-        c.bpp = info.bpp;
-        int bufSize = c.w * c.h * (info.bpp > 8 ? 2 : 1);
+        c.w = frameInfo.width;
+        c.h = frameInfo.height;
+        c.bpp = frameInfo.bpp;
+        int bufSize = c.w * c.h * (frameInfo.bpp > 8 ? 2 : 1);
         hdrBuf = QByteArray(bufSize, 0);
         c.buf = (uint8_t*)hdrBuf.data();
         
@@ -109,7 +169,7 @@ public:
         
         auto res = adapter->openCamera(id, &camPtr);
         CHECK_ERR("Unable to open camera");
-        qDebug() << LOG_ID << " Camera opened | id:" << id << "| hCam:" << camPtr;
+        qDebug() << LOG_ID << "Camera opened | id:" << id << "| hCam:" << camPtr;
         
         if (auto err = getFrameInfo(); !err.isEmpty()) return err;
         
@@ -219,6 +279,8 @@ DllCamera::CamerasResult DllCamera::getCameras(const QString& adapterId)
 DllCamera::DllCamera(const QString& customId, PlotIntf *plot, TableIntf *table, StabilityIntf *stabil, QObject *parent)
     : QThread(parent), Camera(plot, table, stabil, "IdsCamera")
 {
+    _cfg.reset(new DllCameraConfig);
+
     QString adapterId;
     IBeamCamId cameraId = IBEAM_BAD_CAMERA_ID;
     DllAdapter::splitCustomId(customId, adapterId, cameraId);
@@ -317,15 +379,24 @@ HardConfigPanel* DllCamera::hardConfgPanel(QWidget *parent)
     return _configPanel;
 }
 
+
+void DllCamera::initConfigMore(Ori::Dlg::ConfigDlgOpts &opts)
+{
+    if (_dll)
+        _cfg->initDlg(opts, cfgPageCount);
+}
+
 void DllCamera::loadConfigMore(QSettings* s)
+{
+    _cfg->load(s);
+}
+
+void DllCamera::saveConfigMore(QSettings* s)
 {
     // Just for user information.
     // _configGroup is the hashed _customId, hence unreadable,
     // but it's good to know the id when looking through the config file.
     s->setValue("customId", _customId);
-}
-
-void DllCamera::saveConfigMore(QSettings* s)
-{
-
+    
+    _cfg->save(s);
 }

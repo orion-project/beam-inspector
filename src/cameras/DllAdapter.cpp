@@ -189,7 +189,8 @@ DllAdapter::DllAdapter(const QString& libPath, const QString& sdkPath)
     GET_PROC(getCameraList)
     GET_PROC(openCamera);
     GET_PROC(closeCamera);
-    GET_PROC(getFrameInfo);
+    GET_PROC(getPixelFormats);
+    GET_PROC(startCapture);
     GET_PROC(getFrame);
     GET_PROC(getExpoRange);
     GET_PROC(getExpo);

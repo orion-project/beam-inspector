@@ -36,6 +36,9 @@ struct {
   IBeamCamId id;
   IBeamStatus status;
   peak_camera_handle peakHandle;
+  IBeamPixelFormats pixelFormats;
+  peak_pixel_format pixelFormat;
+  size_t pixelFormatCount;
 } _cam;
 
 static IBeamStatus* errorStatus(const char* text)
@@ -66,13 +69,15 @@ static IBeamStatus* notImplemented()
   } \
 }
 
-IBEAM_API IBeam_init(IBeamAdapterArgs *args)
+IBEAM_API IBeam_init(const IBeamAdapterArgs *args)
 {
   _cams = NULL;
   _camsRaw = NULL;
 
   _cam.id = IBEAM_BAD_CAMERA_ID;
   _cam.peakHandle = NULL;
+  _cam.pixelFormats = NULL;
+  _cam.pixelFormatCount = 0;
 
   printf("%s: init\n  libDir: %s\n  sdkDir: %s\n",
     ADAPTER_NAME, args->libDir, args->sdkDir);
@@ -153,13 +158,6 @@ IBEAM_API IBeam_openCamera(IBeamCamId camId, IBeamCamPtr* camPtr)
   peak_camera_handle peakHandle;
   CHECK_ERR("openCamera", peak_Camera_Open(peakId, &peakHandle));
 
-  peak_status res = peak_Acquisition_Start(peakHandle, PEAK_INFINITE);
-  if (PEAK_ERROR(res)) {
-    // Ignore possible error when close and return the first occured error
-    peak_Camera_Close(peakHandle);
-    CHECK_ERR("startAcquisition", res);
-  }
-
   _cam.id = camId;
   _cam.peakHandle = peakHandle;
   *camPtr = &_cam;
@@ -177,6 +175,11 @@ IBEAM_API IBeam_closeCamera(IBeamCamPtr camPtr)
   // Reset opened camera even if the closing will fail (have nothing to do wth that)
   _cam.id = IBEAM_BAD_CAMERA_ID;
   _cam.peakHandle = NULL;
+  if (_cam.pixelFormats) {
+    free(_cam.pixelFormats);
+    _cam.pixelFormats = NULL;
+    _cam.pixelFormatCount = 0;
+  }
 
   if (peak_Acquisition_IsStarted(peakHandle)) {
     // Ignore possible error and try to close anyway
@@ -187,16 +190,76 @@ IBEAM_API IBeam_closeCamera(IBeamCamPtr camPtr)
   return STATUS_OK;
 }
 
-IBEAM_API IBeam_getFrameInfo(IBeamCamPtr camPtr, IBeamFrameInfo *info)
+static IBeamStatus* fillPixelFormats(IBeamCamPtr camPtr)
+{
+  size_t peakFormatCount = 0;
+  CHECK_ERR("getPixelFormatCount", peak_PixelFormat_GetList(_cam.peakHandle, NULL, &peakFormatCount));
+  peak_pixel_format* peakFormats = malloc(sizeof(peak_pixel_format) * peakFormatCount);
+  CHECK_ERR("getPixelFormats", peak_PixelFormat_GetList(_cam.peakHandle, peakFormats, &peakFormatCount));
+  // Return non all formats supported by the camera,
+  // but only those we know how to decode
+  _cam.pixelFormatCount = 0;
+  for (size_t i = 0; i < peakFormatCount; i++) {
+    if (peakFormats[i] == PEAK_PIXEL_FORMAT_MONO8 ||
+        peakFormats[i] == PEAK_PIXEL_FORMAT_MONO10G40_IDS ||
+        peakFormats[i] == PEAK_PIXEL_FORMAT_MONO12G24_IDS) {
+      _cam.pixelFormatCount++;
+    }
+  }
+  if (_cam.pixelFormatCount == 0)
+    return errorStatus("Camera does not provide any of supported pixel formats");
+  _cam.pixelFormats = malloc(sizeof(IBeamPixelFormat) * _cam.pixelFormatCount);
+  if (!_cam.pixelFormats)
+    return errorStatus("fillPixelFormats: out of memory");
+  size_t fmtIdx = 0;
+  for (size_t i = 0; i < peakFormatCount; i++) {
+    if (peakFormats[i] == PEAK_PIXEL_FORMAT_MONO8) {
+      _cam.pixelFormats[fmtIdx].id = peakFormats[i];
+      _cam.pixelFormats[fmtIdx].name = "Mono8";
+      _cam.pixelFormats[fmtIdx].bpp = 8;
+      fmtIdx++;
+    } else if (peakFormats[i] == PEAK_PIXEL_FORMAT_MONO10G40_IDS) {
+      _cam.pixelFormats[fmtIdx].id = peakFormats[i];
+      _cam.pixelFormats[fmtIdx].name = "Mono10G40_IDS";
+      _cam.pixelFormats[fmtIdx].bpp = 10;
+      fmtIdx++;
+    } else if (peakFormats[i] == PEAK_PIXEL_FORMAT_MONO12G24_IDS) {
+      _cam.pixelFormats[fmtIdx].id = peakFormats[i];
+      _cam.pixelFormats[fmtIdx].name = "Mono12G24_IDS";
+      _cam.pixelFormats[fmtIdx].bpp = 12;
+      fmtIdx++;
+    }
+  }
+  free(peakFormats);
+  return STATUS_OK;
+}
+
+IBEAM_API IBeam_getPixelFormats(IBeamCamPtr camPtr, IBeamPixelFormats* pfList, size_t* pfCount)
 {
   IF_OPEN
 
+  if (!_cam.pixelFormats) {
+    IBeamStatus* res = fillPixelFormats(camPtr);
+    if (res)
+      return res;
+  }
+
+  *pfList = _cam.pixelFormats;
+  *pfCount = _cam.pixelFormatCount;
+  return STATUS_OK;
+}
+
+IBEAM_API IBeam_startCapture(IBeamCamPtr camPtr, const IBeamCaptureArgs* args, IBeamFrameInfo *info)
+{
+  IF_OPEN
+
+  // Request frame size
   peak_roi roi;
   CHECK_ERR("getROI", peak_ROI_Get(_cam.peakHandle, &roi));
-
   info->width = roi.size.width;
   info->height = roi.size.height;
 
+  // Request pixel size
   if (PEAK_IS_READABLE(peak_GFA_Feature_GetAccessStatus(_cam.peakHandle,
     PEAK_GFA_MODULE_REMOTE_DEVICE, "SensorPixelWidth"))) {
     double pixelW;
@@ -208,15 +271,57 @@ IBEAM_API IBeam_getFrameInfo(IBeamCamPtr camPtr, IBeamFrameInfo *info)
     }
   }
 
-  peak_pixel_format pixelFormat;
-  CHECK_ERR("getPixelFormat", peak_PixelFormat_Get(_cam.peakHandle, &pixelFormat));
-
-  // Support only the simplest pixel format in demo
-  if (pixelFormat != PEAK_PIXEL_FORMAT_MONO8)
+  // Init pixel format
+  if (!_cam.pixelFormats) {
+    IBeamStatus* res = fillPixelFormats(camPtr);
+    if (res)
+      return res;
+  }
+  info->bpp = 0;
+  for (size_t i = 0; i < _cam.pixelFormatCount; i++) {
+    if (_cam.pixelFormats[i].id == args->pixelFormat) {
+      info->bpp = _cam.pixelFormats[i].bpp;
+      _cam.pixelFormat = args->pixelFormat;
+      break;
+    }
+  }
+  if (info->bpp == 0)
     return errorStatus("Unsupported pixel format");
+  CHECK_ERR("setPixelFormat", peak_PixelFormat_Set(_cam.peakHandle, args->pixelFormat));
 
-  info->bpp = 8;
+  // Start capturing
+  CHECK_ERR("startAcquisition", peak_Acquisition_Start(_cam.peakHandle, PEAK_INFINITE));
   return STATUS_OK;
+}
+
+typedef struct { uint8_t b0, b1, b2, b3, b4; } PixelGroup10g40;
+static void cgn_convert_10g40_to_u16(uint8_t *dst, uint8_t *src, int sz) {
+    int j = 0;
+    PixelGroup10g40 *g = (PixelGroup10g40*)src;
+    for (int i = 0; i < sz; i += 5) {
+        dst[j++] = ((g->b4 & 0b00000011) >> 0) | (g->b0 << 2);
+        dst[j++] = g->b0 >> 6;
+        dst[j++] = ((g->b4 & 0b00001100) >> 2) | (g->b1 << 2);
+        dst[j++] = g->b1 >> 6;
+        dst[j++] = ((g->b4 & 0b00110000) >> 4) | (g->b2 << 2);
+        dst[j++] = g->b2 >> 6;
+        dst[j++] = ((g->b4 & 0b11000000) >> 6) | (g->b3 << 2);
+        dst[j++] = g->b3 >> 6;
+        g++;
+    }
+}
+
+typedef struct { uint8_t b0, b1, b2; } PixelGroup12g24;
+static void cgn_convert_12g24_to_u16(uint8_t *dst, uint8_t *src, int sz) {
+    int j = 0;
+    PixelGroup12g24 *g = (PixelGroup12g24*)src;
+    for (int i = 0; i < sz; i += 3) {
+        dst[j++] = (g->b2 & 0x0F) | (g->b0 << 4);
+        dst[j++] = g->b0 >> 4;
+        dst[j++] = (g->b2 >> 4) | (g->b1 << 4);
+        dst[j++] = g->b1 >> 4;
+        g++;
+    }
 }
 
 IBEAM_API IBeam_getFrame(IBeamCamPtr camPtr, uint8_t *buf)
@@ -235,7 +340,12 @@ IBEAM_API IBeam_getFrame(IBeamCamPtr camPtr, uint8_t *buf)
   peak_buffer peakBuf;
   CHECK_ERR("getFrameBuffer", peak_Frame_Buffer_Get(peakFrame, &peakBuf));
 
-  memcpy_s(buf, peakBuf.memorySize, peakBuf.memoryAddress, peakBuf.memorySize);
+  if (_cam.pixelFormat == PEAK_PIXEL_FORMAT_MONO8)
+    memcpy_s(buf, peakBuf.memorySize, peakBuf.memoryAddress, peakBuf.memorySize);
+  else if (_cam.pixelFormat == PEAK_PIXEL_FORMAT_MONO10G40_IDS)
+    cgn_convert_10g40_to_u16(buf, peakBuf.memoryAddress, peakBuf.memorySize);
+  else if (_cam.pixelFormat == PEAK_PIXEL_FORMAT_MONO12G24_IDS)
+    cgn_convert_12g24_to_u16(buf, peakBuf.memoryAddress, peakBuf.memorySize);
 
   CHECK_ERR("releaseFrame", peak_Frame_Release(_cam.peakHandle, peakFrame));
 

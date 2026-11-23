@@ -7,6 +7,7 @@
 
 #include <QThread>
 
+class DllCameraConfig;
 class DllIntf;
 
 class DllCamera final : public QThread, public Camera
@@ -62,6 +63,10 @@ signals:
     
 protected:
     void run() override;
+
+    void initConfigMore(Ori::Dlg::ConfigDlgOpts &opts) override;
+    void loadConfigMore(QSettings*) override;
+    void saveConfigMore(QSettings*) override;
     
 private slots:
     void camConfigChanged();
@@ -71,11 +76,9 @@ private:
     int _width = 0, _height = 0, _bpp = 0;
     PixelScale _pixelScale;
     QSharedPointer<DllIntf> _dll;
+    QSharedPointer<DllCameraConfig> _cfg;
     HardConfigPanel *_configPanel = nullptr;
     friend class DllIntf;
-
-    void loadConfigMore(QSettings*) override;
-    void saveConfigMore(QSettings*) override;
 };
 
 # endif // DLL_CAMERA_H

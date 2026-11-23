@@ -1180,7 +1180,7 @@ void PlotWindow::activateCamDll()
     if (!action) return;
 
     auto customId = action->data().toString();
-    qDebug() << LOG_ID << " Activate camera: DLL" << customId;
+    qDebug() << LOG_ID << "Activate camera: DLL" << customId;
 
     resetCurrentCam();
     auto cam = new DllCamera(customId, _plotIntf, _tableIntf, _stabilIntf, this);

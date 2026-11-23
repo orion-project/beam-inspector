@@ -35,7 +35,8 @@ public:
     PROC(getCameraList)(IBeamCamList* camList, size_t* camCount);
     PROC(openCamera)(IBeamCamId camId, IBeamCamPtr* camPtr);
     PROC(closeCamera)(IBeamCamPtr camPtr);
-    PROC(getFrameInfo)(IBeamCamPtr camPtr, IBeamFrameInfo* frameInfo);
+    PROC(getPixelFormats)(IBeamCamPtr camPtr, IBeamPixelFormats* pfList, size_t* pfCount);
+    PROC(startCapture)(IBeamCamPtr camPtr, const IBeamCaptureArgs* args, IBeamFrameInfo *info);
     PROC(getFrame)(IBeamCamPtr camPtr, uint8_t* frameBuf);
     PROC(getExpoRange)(IBeamCamPtr camPtr, double* min, double* max, double* step);
     PROC(getExpo)(IBeamCamPtr camPtr, double* value);

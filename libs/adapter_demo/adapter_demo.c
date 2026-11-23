@@ -66,7 +66,7 @@ static IBeamStatus* notImplemented(void)
   return &_cam.status;
 }
 
-IBEAM_API IBeam_init(IBeamAdapterArgs *args)
+IBEAM_API IBeam_init(const IBeamAdapterArgs *args)
 {
   _cams[0].id = CAM_LR_ID;
   strcpy_s(_cams[0].displayName, IBEAM_NAME_LEN, "Low-Res Cam");
@@ -183,7 +183,7 @@ IBEAM_API IBeam_closeCamera(IBeamCamPtr camPtr)
   return STATUS_OK;
 }
 
-IBEAM_API IBeam_getFrameInfo(IBeamCamPtr camPtr, IBeamFrameInfo *info)
+IBEAM_API IBeam_startCapture(IBeamCamPtr camPtr, const IBeamCaptureArgs* args, IBeamFrameInfo *info)
 {
   IF_OPEN
   *info = _cam.frame;
@@ -245,6 +245,7 @@ IBEAM_API IBeam_getFrame(IBeamCamPtr camPtr, uint8_t *buf)
 
 #define NOT_IMPLEMENTED(func) func { return notImplemented(); }
 
+NOT_IMPLEMENTED(IBEAM_API IBeam_getPixelFormats(IBeamCamPtr camPtr, IBeamPixelFormats* pfList, size_t* pfCount))
 NOT_IMPLEMENTED(IBEAM_API IBeam_getExpoRange(IBeamCamPtr camPtr, double* min, double* max, double* step))
 NOT_IMPLEMENTED(IBEAM_API IBeam_getExpo(IBeamCamPtr camPtr, double* value))
 NOT_IMPLEMENTED(IBEAM_API IBeam_setExpo(IBeamCamPtr camPtr, double value))

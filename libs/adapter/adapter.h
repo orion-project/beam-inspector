@@ -172,6 +172,34 @@ typedef struct {
 }
 IBeamFrameInfo;
 
+typedef uint32_t IBeamPixelFormatId;
+
+/// Pixel format.
+///
+typedef struct {
+  /// A code used to request the pixel format.
+  /// when starting capture (see IBeamPixelFormat).
+  IBeamPixelFormatId id;
+
+  /// User-friendly name of the pixel format
+  /// shown in the camera configuration dialog.
+  /// Static zero-terminated string.
+  const char* name;
+
+  /// Bit depth of the pixel format.
+  uint8_t bpp;
+}
+IBeamPixelFormat;
+
+typedef IBeamPixelFormat* IBeamPixelFormats;
+
+/// Agruments for the IBeam_startCapture function.
+///
+typedef struct {
+  IBeamPixelFormatId pixelFormat;
+}
+IBeamCaptureArgs;
+
 // Beam Inspector doesn't need funcion declarations because
 // it resolves them in runtime from loaded DLL by symbol names
 #ifndef BEAM_INSPECTOR
@@ -179,7 +207,7 @@ IBeamFrameInfo;
 /// Intialize internal adapter structures.
 /// Beam Inspector calls this function once after loading adapter DLL.
 ///
-IBEAM_API IBeam_init(IBeamAdapterArgs *args);
+IBEAM_API IBeam_init(const IBeamAdapterArgs *args);
 
 /// Clear and free internal adapter structures.
 /// Beam Inspector calls this function while closing the main window.
@@ -209,11 +237,18 @@ IBEAM_API IBeam_openCamera(IBeamCamId camId, IBeamCamPtr *camPtr);
 ///
 IBEAM_API IBeam_closeCamera(IBeamCamPtr camPtr);
 
+/// Returns a list of pixel formats supported by the camera.
+/// If the function returns a zero length list or the NOT_IMPLEMENTED status,
+/// Beam Inspector supposes the camera supports only single 8-bit format.
+///
+IBEAM_API IBeam_getPixelFormats(IBeamCamPtr camPtr, IBeamPixelFormats* pfList, size_t* pfCount);
+
+/// Starts frames capturing.
 /// Returns the currently selected image mode of the opened camera.
 ///
-IBEAM_API IBeam_getFrameInfo(IBeamCamPtr camPtr, IBeamFrameInfo *info);
+IBEAM_API IBeam_startCapture(IBeamCamPtr camPtr, const IBeamCaptureArgs* args, IBeamFrameInfo *info);
 
-/// Acquires the next available frame from the opened camera.
+/// Captures the next available frame from the opened camera.
 /// The adapter library is expected to decode the raw frame data
 /// from a pixel format it knows into the plain number array (8 or 16-bit)
 /// and put the decoded data into the given buffer.
