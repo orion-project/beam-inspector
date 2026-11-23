@@ -7,7 +7,6 @@
 #include <QSharedPointer>
 #include <QThread>
 
-class HardConfigPanel;
 class IdsCameraConfig;
 class PeakIntf;
 
@@ -38,8 +37,8 @@ public:
     void startMeasure(MeasureSaver *saver) override;
     void stopMeasure() override;
 
-    void saveHardConfig(QSettings *s) override;
-    HardConfigPanel* hardConfgPanel(QWidget *parent) override;
+    void saveControlPanel(QSettings *s) override;
+    ControlPanel* controlPanel(QWidget *parent) override;
 
     bool canSaveRawImg() const override { return true; }
     void requestRawImg(QObject *sender) override;
@@ -84,7 +83,7 @@ private:
     PixelScale _pixelScale;
     QSharedPointer<PeakIntf> _peak;
     QSharedPointer<IdsCameraConfig> _cfg;
-    HardConfigPanel *_configPanel = nullptr;
+    ControlPanel *_controlPanel = nullptr;
     friend class PeakIntf;
 };
 

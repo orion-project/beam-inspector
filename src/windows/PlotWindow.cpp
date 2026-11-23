@@ -9,7 +9,7 @@
     #include "cameras/IdsCameraConfig.h"
 #endif
 #include "cameras/DllCamera.h"
-#include "cameras/HardConfigPanel.h"
+#include "cameras/ControlPanel.h"
 #include "cameras/MeasureSaver.h"
 #include "cameras/StillImageCamera.h"
 #include "cameras/VirtualDemoCamera.h"
@@ -182,7 +182,7 @@ PlotWindow::PlotWindow(QWidget *parent) : QMainWindow(parent)
     QTimer::singleShot(0, this, [this]{
         // dock still is not visible when asking in resoreState
         _actionResultsPanel->setChecked(_resultsDock->isVisible());
-        _actionHardConfig->setChecked(_hardConfigDock->isVisible());
+        _actionControlPanel->setChecked(_controlPanelDock->isVisible());
         _actionProfilesView->setChecked(_profilesDock->isVisible());
         _actionStabilityView->setChecked(_stabilityDock->isVisible());
         
@@ -300,8 +300,8 @@ void PlotWindow::createMenuBar()
     _colorMapActions->setExclusive(true);
     _actionResultsPanel = A_(tr("Results Panel"), this, &PlotWindow::toggleResultsPanel, ":/toolbar/table");
     _actionResultsPanel->setCheckable(true);
-    _actionHardConfig = A_(tr("Device Control"), this, &PlotWindow::toggleHardConfig, ":/toolbar/hardware");
-    _actionHardConfig->setCheckable(true);
+    _actionControlPanel = A_(tr("Device Control"), this, &PlotWindow::toggleControlPanel, ":/toolbar/hardware");
+    _actionControlPanel->setCheckable(true);
     _actionProfilesView = A_(tr("Profiles View"), this, &PlotWindow::toggleProfilesView, ":/toolbar/profile");
     _actionProfilesView->setCheckable(true);
     _actionStabilityView = A_(tr("Stability View"), this, &PlotWindow::toggleStabGraphView, ":/toolbar/stability");
@@ -314,7 +314,7 @@ void PlotWindow::createMenuBar()
     }
     auto menuView = M_(tr("View"), {
         _actionRawView, 0,
-        _actionResultsPanel, _actionHardConfig, _actionProfilesView, _actionStabilityView, _actionViewLogWindow, 0,
+        _actionResultsPanel, _actionControlPanel, _actionProfilesView, _actionStabilityView, _actionViewLogWindow, 0,
         _actionBeamInfo, _colorMapMenu, 0,
         _actionZoomFull, _actionZoomRoi,
     });
@@ -322,7 +322,7 @@ void PlotWindow::createMenuBar()
         menuView->addSeparator();
         menuView->addAction("Resize Main Window...", this, &PlotWindow::devResizeWindow);
         menuView->addAction("Resize Results Panel...", this, [this]{ devResizeDock(_resultsDock); });
-        menuView->addAction("Resize Control Panel...", this, [this]{ devResizeDock(_hardConfigDock); });
+        menuView->addAction("Resize Control Panel...", this, [this]{ devResizeDock(_controlPanelDock); });
         menuView->addAction("Show geometry", this, [this]{ qDebug() << geometry(); });
     }
 
@@ -463,7 +463,7 @@ void PlotWindow::createToolBar()
     tb->addAction(_actionRawView);
     tb->addSeparator();
     tb->addAction(_actionResultsPanel);
-    tb->addAction(_actionHardConfig);
+    tb->addAction(_actionControlPanel);
     tb->addAction(_actionProfilesView);
     tb->addAction(_actionStabilityView);
     tb->addSeparator();
@@ -528,15 +528,15 @@ void PlotWindow::createDockPanel()
     _resultsDock->setWidget(_table);
     addDockWidget(Qt::LeftDockWidgetArea, _resultsDock);
 
-    _stubConfigPanel = new HardConfigPanel(this);
-    _stubConfigPanel->initForNoControls();
-    _camConfigPanel = _stubConfigPanel;
-    _hardConfigDock = new QDockWidget(tr("Control"));
-    _hardConfigDock->setObjectName("DockHardConfig");
-    _hardConfigDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
-    _hardConfigDock->setFeatures(QDockWidget::DockWidgetMovable);
-    _hardConfigDock->setWidget(_stubConfigPanel);
-    addDockWidget(Qt::RightDockWidgetArea, _hardConfigDock);
+    _stubControlPanel = new ControlPanel(this);
+    _stubControlPanel->initForNoControls();
+    _camControlPanel = _stubControlPanel;
+    _controlPanelDock = new QDockWidget(tr("Control"));
+    _controlPanelDock->setObjectName("DockHardConfig");
+    _controlPanelDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    _controlPanelDock->setFeatures(QDockWidget::DockWidgetMovable);
+    _controlPanelDock->setWidget(_stubControlPanel);
+    addDockWidget(Qt::RightDockWidgetArea, _controlPanelDock);
 
     _profilesView = new ProfilesView(_plot->plotIntf());
 
@@ -794,7 +794,7 @@ void PlotWindow::updateControls()
     _actionMeasure->setText(started ? tr("Stop Measurements") : tr("Start Measurements"));
     _actionMeasure->setIcon(QIcon(started ? ":/toolbar/stop" : ":/toolbar/start"));
     _actionMeasure->setDisabled(!opened);
-    _camConfigPanel->setReadOnly(started || !opened);
+    _camControlPanel->setReadOnly(started || !opened);
     _actionSetupPowerMeter->setDisabled(started || !opened);
     _actionCrosshairsShow->setDisabled(started || !opened);
     _actionCrosshairsEdit->setDisabled(started || !opened);
@@ -1037,9 +1037,9 @@ void PlotWindow::crosshairsLoaded()
 #ifdef WITH_IDS
     if (auto cam = dynamic_cast<IdsCamera*>(_camera.get()); cam) {
         cam->saveConfig(true);
-        if (_camConfigPanel) {
+        if (_camControlPanel) {
             qDebug() << "Try update hard config panel";
-            QApplication::postEvent(_camConfigPanel, new UpdateSettingsEvent());
+            QApplication::postEvent(_camControlPanel, new UpdateSettingsEvent());
         }
     }
 #endif
@@ -1202,9 +1202,9 @@ void PlotWindow::toggleResultsPanel()
     _resultsDock->setVisible(!_resultsDock->isVisible());
 }
 
-void PlotWindow::toggleHardConfig()
+void PlotWindow::toggleControlPanel()
 {
-    _hardConfigDock->setVisible(!_hardConfigDock->isVisible());
+    _controlPanelDock->setVisible(!_controlPanelDock->isVisible());
     updateHardConfgPanel();
 }
 
@@ -1223,23 +1223,23 @@ void PlotWindow::toggleStabGraphView()
 
 void PlotWindow::updateHardConfgPanel()
 {
-    if (!_hardConfigDock->isVisible())
+    if (!_controlPanelDock->isVisible())
         return;
-    auto panel = _camera->hardConfgPanel(this);
+    auto panel = _camera->controlPanel(this);
     if (!panel) {
-        if (_camConfigPanel != _stubConfigPanel) {
-            if (_camConfigPanel)
-                _camConfigPanel->deleteLater();
-            _camConfigPanel = _stubConfigPanel;
-            _hardConfigDock->setWidget(_camConfigPanel);
+        if (_camControlPanel != _stubControlPanel) {
+            if (_camControlPanel)
+                _camControlPanel->deleteLater();
+            _camControlPanel = _stubControlPanel;
+            _controlPanelDock->setWidget(_camControlPanel);
         }
         return;
     }
-    if (panel != _camConfigPanel) {
-        if (_camConfigPanel && _camConfigPanel != _stubConfigPanel)
-            _camConfigPanel->deleteLater();
-        _camConfigPanel = panel;
-        _hardConfigDock->setWidget(_camConfigPanel);
+    if (panel != _camControlPanel) {
+        if (_camControlPanel && _camControlPanel != _stubControlPanel)
+            _camControlPanel->deleteLater();
+        _camControlPanel = panel;
+        _controlPanelDock->setWidget(_camControlPanel);
     }
 }
 

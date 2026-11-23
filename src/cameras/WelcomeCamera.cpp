@@ -1,6 +1,6 @@
 #include "WelcomeCamera.h"
 
-#include "cameras/HardConfigPanel.h"
+#include "cameras/ControlPanel.h"
 #include "widgets/PlotIntf.h"
 #include "widgets/StabilityIntf.h"
 #include "widgets/TableIntf.h"
@@ -12,12 +12,12 @@
 #include <QVector>
 #include <QElapsedTimer>
 
-class WelcomeHardConfigPanel : public HardConfigPanel
+class WelcomeControlPanel : public ControlPanel
 {
 public:
-    WelcomeHardConfigPanel(QWidget *parent) : HardConfigPanel(parent)
+    WelcomeControlPanel(QWidget *parent) : ControlPanel(parent)
     {
-        //qDebug() << "WelcomeHardConfigPanel created";
+        //qDebug() << "WelcomeControlPanel created";
 
         auto label = new QLabel("WELCOME", this);
         label->setAlignment(Qt::AlignHCenter);
@@ -29,9 +29,9 @@ public:
         layout->addStretch();
     }
 
-    ~WelcomeHardConfigPanel()
+    ~WelcomeControlPanel()
     {
-        //qDebug() << "WelcomeHardConfigPanel deleted";
+        //qDebug() << "WelcomeControlPanel deleted";
     }
 };
 
@@ -72,9 +72,9 @@ void WelcomeCamera::startCapture()
     _stabil->setResult(0, {});
 }
 
-HardConfigPanel* WelcomeCamera::hardConfgPanel(QWidget *parent)
+ControlPanel* WelcomeCamera::controlPanel(QWidget *parent)
 {
-    if (!_hardConfigPanel)
-        _hardConfigPanel = new WelcomeHardConfigPanel(parent);
-    return _hardConfigPanel;
+    if (!_controlPanel)
+        _controlPanel = new WelcomeControlPanel(parent);
+    return _controlPanel;
 }

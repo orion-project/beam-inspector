@@ -1,4 +1,4 @@
-#include "IdsHardConfig.h"
+#include "IdsControlPanel.h"
 
 #ifdef WITH_IDS
 
@@ -25,7 +25,7 @@
 #include <QStyleHints>
 #include <QWheelEvent>
 
-#define LOG_ID "IdsHardConfig:"
+#define LOG_ID "IdsControlPanel:"
 
 // Exposure preset field names
 #define PKEY_NAME "name"
@@ -278,13 +278,15 @@ protected:
 } // namespace
 
 //------------------------------------------------------------------------------
-//                             IdsHardConfigPanelImpl
+//                             IdsControlPanelImpl
 //------------------------------------------------------------------------------
 
-class IdsHardConfigPanelImpl: public QWidget, public IAppSettingsListener
+class IdsControlPanelImpl: public QWidget, public IAppSettingsListener
 {
 public:
-    IdsHardConfigPanelImpl(peak_camera_handle hCam) : QWidget(), hCam(hCam)
+    using Self = IdsControlPanelImpl;
+
+    IdsControlPanelImpl(peak_camera_handle hCam) : QWidget(), hCam(hCam)
     {
         auto layout = new QVBoxLayout(this);
 
@@ -302,13 +304,13 @@ public:
                 if (key == Qt::Key_Return || key == Qt::Key_Enter) autoExposure(); });
             butAutoExp = new QPushButton(tr("Find"));
             butAutoExp->setFixedWidth(50);
-            connect(butAutoExp, &QPushButton::pressed, this, &IdsHardConfigPanelImpl::autoExposure);
+            connect(butAutoExp, &QPushButton::pressed, this, &Self::autoExposure);
             auto group = LayoutV({label, LayoutH({edAutoExp, butAutoExp})}).makeGroupBox(tr("Autoexposure"));
             groups << group;
             layout->addWidget(group);
 
             auto actnCopyLog = new QAction(tr("Copy Report"), this);
-            connect(actnCopyLog, &QAction::triggered, this, &IdsHardConfigPanelImpl::copyAutoExpLog);
+            connect(actnCopyLog, &QAction::triggered, this, &Self::copyAutoExpLog);
             butAutoExp->addAction(actnCopyLog);
             butAutoExp->setContextMenuPolicy(Qt::ActionsContextMenu);
         }
@@ -317,7 +319,7 @@ public:
 
         butFpsLock = new QPushButton(tr("Lock frame rate"));
         butFpsLock->setCheckable(true);
-        connect(butFpsLock, &QPushButton::clicked, this, &IdsHardConfigPanelImpl::toggleFpsLock);
+        connect(butFpsLock, &QPushButton::clicked, this, &Self::toggleFpsLock);
         groupFps->layout()->addWidget(butFpsLock);
 
         PROP_CONTROL(AnalogGain, tr("Analog gain"))
@@ -330,7 +332,7 @@ public:
             vertMirror->setChecked(IDS.peak_IPL_Mirror_UpDown_IsEnabled(hCam));
             vertMirrorIPL = true;
         }
-        connect(vertMirror, &QCheckBox::toggled, this, &IdsHardConfigPanelImpl::toggleVertMirror);
+        connect(vertMirror, &QCheckBox::toggled, this, &Self::toggleVertMirror);
         layout->addWidget(vertMirror);
 
         horzMirror = new QCheckBox(tr("Mirror horizontally"));
@@ -340,7 +342,7 @@ public:
             horzMirror->setChecked(IDS.peak_IPL_Mirror_LeftRight_IsEnabled(hCam));
             horzMirrorIPL = true;
         }
-        connect(horzMirror, &QCheckBox::toggled, this, &IdsHardConfigPanelImpl::toggleHorzMirror);
+        connect(horzMirror, &QCheckBox::toggled, this, &Self::toggleHorzMirror);
         layout->addWidget(horzMirror);
 
         // TODO: mirroring doesn't work, while works in IDS Cockpit for the same camera
@@ -364,11 +366,11 @@ public:
         CHECK_PROP_STATUS(AnalogGain, getAnalogGainAccessStatus)
         CHECK_PROP_STATUS(DigitalGain, getDigitlGainAccessStatus)
 
-        auto level = getCamProp(IdsHardConfigPanel::AUTOEXP_LEVEL).toInt();
+        auto level = getCamProp(IdsControlPanel::AUTOEXP_LEVEL).toInt();
         if (level == 0) level = 80;
         edAutoExp->setValue(level);
 
-        fpsLock = getCamProp(IdsHardConfigPanel::FPS_LOCK).toDouble();
+        fpsLock = getCamProp(IdsControlPanel::FPS_LOCK).toDouble();
         showFpsLock();
 
         bulkSetProps = false;
@@ -394,12 +396,12 @@ public:
         else if (level > 100) level = 100;
         edAutoExp->setValue(level);
 
-        setCamProp(IdsHardConfigPanel::AUTOEXP_LEVEL, level);
+        setCamProp(IdsControlPanel::AUTOEXP_LEVEL, level);
 
         autoExp = AutoExp();
         autoExp->hCam = hCam;
         autoExp->targetLevel = level / 100.0;
-        autoExp->subStepMax = qMax(1, getCamProp(IdsHardConfigPanel::AUTOEXP_FRAMES_AVG).toInt());
+        autoExp->subStepMax = qMax(1, getCamProp(IdsControlPanel::AUTOEXP_FRAMES_AVG).toInt());
         autoExp->getLevel = [this]{ watingBrightness = true; requestBrightness(this); };
         autoExp->showExpFps = [this](double exp, double fps){
             props["Exp"] = exp;
@@ -656,7 +658,7 @@ public:
 
     inline AnyRecords* getPresets()
     {
-        return getCamProp(IdsHardConfigPanel::EXP_PRESETS).value<AnyRecords*>();
+        return getCamProp(IdsControlPanel::EXP_PRESETS).value<AnyRecords*>();
     }
 
     inline AnyRecord makePreset()
@@ -680,7 +682,7 @@ public:
             preset[PKEY_NAME] = opts.value;
             auto presets = getPresets();
             presets->append(preset);
-            setCamProp(IdsHardConfigPanel::EXP_PRESETS, {});
+            setCamProp(IdsControlPanel::EXP_PRESETS, {});
             QApplication::postEvent(this, new UpdateSettingsEvent());
         }
     }
@@ -737,20 +739,20 @@ public:
             auto b = new QPushButton(preset["name"].toString());
             b->setCheckable(true);
             b->setContextMenuPolicy(Qt::ActionsContextMenu);
-            connect(b, &QPushButton::clicked, this, &IdsHardConfigPanelImpl::applyPreset);
+            connect(b, &QPushButton::clicked, this, &Self::applyPreset);
             groupPresets->layout()->addWidget(b);
             presetButtons << b;
 
             auto actInfo = new QAction(QIcon(":/toolbar/info"), tr("Preset info..."), b);
-            connect(actInfo, &QAction::triggered, this, &IdsHardConfigPanelImpl::showPresetInfo);
+            connect(actInfo, &QAction::triggered, this, &Self::showPresetInfo);
             actions << actInfo;
 
             auto actRename = new QAction(tr("Rename preset..."), b);
-            connect(actRename, &QAction::triggered, this, &IdsHardConfigPanelImpl::renamePreset);
+            connect(actRename, &QAction::triggered, this, &Self::renamePreset);
             actions << actRename;
 
             auto actUpdate = new QAction(tr("Save current values to preset..."), b);
-            connect(actUpdate, &QAction::triggered, this, &IdsHardConfigPanelImpl::updatePreset);
+            connect(actUpdate, &QAction::triggered, this, &Self::updatePreset);
             actions << actUpdate;
 
             auto actSep = new QAction(b);
@@ -758,7 +760,7 @@ public:
             actions << actSep;
 
             auto actDel = new QAction(QIcon(":/toolbar/trash"), tr("Remove preset..."), b);
-            connect(actDel, &QAction::triggered, this, &IdsHardConfigPanelImpl::removePreset);
+            connect(actDel, &QAction::triggered, this, &Self::removePreset);
             actions << actDel;
 
             for (auto a : qAsConst(actions)) a->setData(i);
@@ -766,7 +768,7 @@ public:
         }
         auto b = new QPushButton(tr(" Add new preset..."));
         b->setIcon(QIcon(":/toolbar/plus"));
-        connect(b, &QPushButton::clicked, this, &IdsHardConfigPanelImpl::saveNewPreset);
+        connect(b, &QPushButton::clicked, this, &Self::saveNewPreset);
         groupPresets->layout()->addWidget(b);
         presetButtons << b;
         adjustSize();
@@ -807,10 +809,10 @@ public:
     {
         AnyRecords *presets;
         AnyRecord *preset = nullptr;
-        IdsHardConfigPanelImpl *parent;
+        IdsControlPanelImpl *parent;
         int index;
 
-        PresetsHandler(IdsHardConfigPanelImpl *parent, int index) : parent(parent), index(index)
+        PresetsHandler(IdsControlPanelImpl *parent, int index) : parent(parent), index(index)
         {
             presets = parent->getPresets();
             if (index < 0 || index >= presets->size()) {
@@ -856,7 +858,7 @@ public:
             }
             if (auto v = (*preset)[PKEY_AEXP].toInt(&ok); ok) {
                 parent->edAutoExp->setValue(v);
-                parent->setCamProp(IdsHardConfigPanel::AUTOEXP_LEVEL, v);
+                parent->setCamProp(IdsControlPanel::AUTOEXP_LEVEL, v);
             }
             parent->bulkSetProps = false;
             parent->highightPreset();
@@ -880,7 +882,7 @@ public:
             opts.onHelp = []{ HelpSystem::topic("exp_presets"); };
             if (Ori::Dlg::inputText(opts)) {
                 (*preset)[PKEY_NAME] = opts.value;
-                parent->setCamProp(IdsHardConfigPanel::EXP_PRESETS, {});
+                parent->setCamProp(IdsControlPanel::EXP_PRESETS, {});
                 parent->presetButtons.at(index)->setText(opts.value);
             }
         }
@@ -893,7 +895,7 @@ public:
                 tr("<p>Update <b>%1</b> with these values?</p>").arg((*preset)[PKEY_NAME].toString());
             if (Ori::Dlg::yes(confirm)) {
                 (*presets)[index] = newPreset;
-                parent->setCamProp(IdsHardConfigPanel::EXP_PRESETS, {});
+                parent->setCamProp(IdsControlPanel::EXP_PRESETS, {});
                 parent->highightPreset();
             }
         }
@@ -903,7 +905,7 @@ public:
             if (!preset) return;
             if (Ori::Dlg::yes(tr("The preset will be removed:<br><br><b>%1</b>").arg((*preset)[PKEY_NAME].toString()))) {
                 presets->removeAt(index);
-                parent->setCamProp(IdsHardConfigPanel::EXP_PRESETS, {});
+                parent->setCamProp(IdsControlPanel::EXP_PRESETS, {});
                 parent->remakePresetButtons();
             }
         }
@@ -924,7 +926,7 @@ public:
     void toggleFpsLock(bool checked)
     {
         fpsLock = checked ? props["Fps"] : 0;
-        setCamProp(IdsHardConfigPanel::FPS_LOCK, fpsLock);
+        setCamProp(IdsControlPanel::FPS_LOCK, fpsLock);
         showFpsLock();
     }
 
@@ -948,8 +950,8 @@ public:
     double fpsLock = 0;
     QPushButton *butFpsLock;
     std::function<void(QObject*)> requestBrightness;
-    std::function<QVariant(IdsHardConfigPanel::CamProp)> getCamProp;
-    std::function<void(IdsHardConfigPanel::CamProp, QVariant)> setCamProp;
+    std::function<QVariant(IdsControlPanel::CamProp)> getCamProp;
+    std::function<void(IdsControlPanel::CamProp, QVariant)> setCamProp;
     std::function<void()> exposureChanged;
     std::optional<AutoExp> autoExp;
 
@@ -984,17 +986,17 @@ protected:
 };
 
 //------------------------------------------------------------------------------
-//                              IdsHardConfigPanel
+//                               IdsControlPanel
 //-----------------------------------------------------------------------------
 
-IdsHardConfigPanel::IdsHardConfigPanel(peak_camera_handle hCam,
+IdsControlPanel::IdsControlPanel(peak_camera_handle hCam,
     std::function<QVariant(CamProp)> getCamProp,
     std::function<void(CamProp, QVariant)> setCamProp,
     std::function<void(QObject*)> requestBrightness,
     std::function<void()> exposureChanged,
-    QWidget *parent) : HardConfigPanel(parent)
+    QWidget *parent) : ControlPanel(parent)
 {
-    _impl = new IdsHardConfigPanelImpl(hCam);
+    _impl = new IdsControlPanelImpl(hCam);
     _impl->getCamProp = getCamProp;
     _impl->setCamProp = setCamProp;
     _impl->exposureChanged = exposureChanged;
@@ -1015,13 +1017,13 @@ IdsHardConfigPanel::IdsHardConfigPanel(peak_camera_handle hCam,
     layout->addWidget(scroll);
 }
 
-void IdsHardConfigPanel::setReadOnly(bool on)
+void IdsControlPanel::setReadOnly(bool on)
 {
     for (auto group : qAsConst(_impl->groups))
         group->setDisabled(on);
 }
 
-bool IdsHardConfigPanel::event(QEvent *event)
+bool IdsControlPanel::event(QEvent *event)
 {
     if (dynamic_cast<UpdateSettingsEvent*>(event)) {
         _impl->makePresetButtons();

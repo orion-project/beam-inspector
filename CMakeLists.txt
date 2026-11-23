@@ -62,17 +62,17 @@ set(PROJECT_SOURCES
     src/app/HelpSystem.h src/app/HelpSystem.cpp
     src/app/ImageUtils.h src/app/ImageUtils.cpp
     src/cameras/Camera.h src/cameras/Camera.cpp
-    src/cameras/HardConfigPanel.h src/cameras/HardConfigPanel.cpp
+    src/cameras/ControlPanel.h src/cameras/ControlPanel.cpp
     src/cameras/CameraTypes.h src/cameras/CameraTypes.cpp
     src/cameras/CameraWorker.h
     src/cameras/DllAdapter.cpp src/cameras/DllAdapter.h
     src/cameras/DllCamera.cpp src/cameras/DllCamera.h
     src/cameras/DllCameraConfig.cpp src/cameras/DllCameraConfig.h
     src/cameras/DllHelper.cpp src/cameras/DllHelper.h
-    src/cameras/DllHardConfig.cpp src/cameras/DllHardConfig.h
+    src/cameras/DllControlPanel.cpp src/cameras/DllControlPanel.h
     src/cameras/IdsCamera.h src/cameras/IdsCamera.cpp
     src/cameras/IdsCameraConfig.h src/cameras/IdsCameraConfig.cpp
-    src/cameras/IdsHardConfig.h src/cameras/IdsHardConfig.cpp
+    src/cameras/IdsControlPanel.h src/cameras/IdsControlPanel.cpp
     src/cameras/IdsLib.h src/cameras/IdsLib.cpp
     src/cameras/MeasureSaver.h src/cameras/MeasureSaver.cpp
     src/cameras/StillImageCamera.h src/cameras/StillImageCamera.cpp

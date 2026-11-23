@@ -17,10 +17,10 @@ public:
     
     bool hasStability() const override { return false; }
 
-    HardConfigPanel* hardConfgPanel(QWidget *parent) override;
+    ControlPanel* controlPanel(QWidget *parent) override;
 
 private:
-    HardConfigPanel* _hardConfigPanel = nullptr;
+    ControlPanel* _controlPanel = nullptr;
 };
 
 #endif // WELCOME_CAMERA_H

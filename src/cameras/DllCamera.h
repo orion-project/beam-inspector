@@ -33,7 +33,7 @@ public:
     void startMeasure(MeasureSaver *saver) override;
     void stopMeasure() override;
     
-    HardConfigPanel* hardConfgPanel(QWidget *parent) override;
+    ControlPanel* controlPanel(QWidget *parent) override;
     
     bool canSaveRawImg() const override { return true; }
     void requestRawImg(QObject *sender) override;
@@ -77,7 +77,7 @@ private:
     PixelScale _pixelScale;
     QSharedPointer<DllIntf> _dll;
     QSharedPointer<DllCameraConfig> _cfg;
-    HardConfigPanel *_configPanel = nullptr;
+    ControlPanel *_controlPanel = nullptr;
     friend class DllIntf;
 };
 

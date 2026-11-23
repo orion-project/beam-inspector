@@ -15,7 +15,7 @@ class QToolButton;
 
 class Camera;
 struct CameraStats;
-class HardConfigPanel;
+class ControlPanel;
 class MeasureProgressBar;
 class MeasureSaver;
 class Plot;
@@ -60,7 +60,7 @@ private:
         *_actionBeamInfo, *_actionLoadColorMap, *_actionCleanColorMaps,
         *_actionEditRoi, *_actionUseRoi, *_actionZoomFull, *_actionZoomRoi,
         *_actionCamWelcome, *_actionCamImage, *_actionCamDemoRender, *_actionCamDemoImage, *_actionRefreshCams,
-        *_actionResultsPanel, *_actionHardConfig, *_actionSaveRaw, *_actionRawView,
+        *_actionResultsPanel, *_actionControlPanel, *_actionSaveRaw, *_actionRawView,
         *_actionCrosshairsShow, *_actionCrosshairsEdit, *_actionSetCamCustomName,
         *_actionSetupPowerMeter, *_actionUseMultiRoi, *_actionProfilesView, *_actionStabilityView,
         *_actionClearCrosshairs, *_actionLoadCrosshairs, *_actionSaveCrosshairs,
@@ -77,9 +77,9 @@ private:
     QToolButton *_buttonSelectCam;
     QString _prevImage;
     MeasureProgressBar *_measureProgress;
-    QDockWidget *_resultsDock, *_hardConfigDock, *_profilesDock, *_stabilityDock;
-    HardConfigPanel *_stubConfigPanel = nullptr;
-    HardConfigPanel *_camConfigPanel = nullptr;
+    QDockWidget *_resultsDock, *_controlPanelDock, *_profilesDock, *_stabilityDock;
+    ControlPanel *_stubControlPanel = nullptr;
+    ControlPanel *_camControlPanel = nullptr;
 
     /// By default cameras named after their model and probably serial number
     /// which is not very convenient, so user can rename particular camera.
@@ -124,7 +124,7 @@ private:
     void setupPowerMeter();
     void toggleCrosshairsEditing();
     void toggleCrosshairsVisbility();
-    void toggleHardConfig();
+    void toggleControlPanel();
     void toggleMeasure();
     void startMeasure();
     void stopMeasure(bool force);

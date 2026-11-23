@@ -1,4 +1,4 @@
-#include "DllHardConfig.h"
+#include "DllControlPanel.h"
 
 #include "app/AppSettings.h"
 #include "widgets/PlotHelpers.h"
@@ -15,7 +15,7 @@
 #include <QScrollArea>
 #include <QWheelEvent>
 
-#define LOG_ID "DllHardConfig:"
+#define LOG_ID "DllControlPanel:"
 
 using namespace Ori::Layouts;
 using namespace Ori::Widgets;
@@ -89,7 +89,7 @@ struct CamPropControl
             if (key == Qt::Key_Return || key == Qt::Key_Enter) applyValue();
         });
         
-        auto btn = new QPushButton(qApp->tr("Set", "DllHardConfigPanel"));
+        auto btn = new QPushButton(qApp->tr("Set", "DllControlPanel"));
         btn->setFixedWidth(50); \
         btn->connect(btn, &QPushButton::pressed, btn, [this]{ applyValue(); });
         
@@ -212,13 +212,13 @@ struct CamPropControl
 } // namespace
 
 //------------------------------------------------------------------------------
-//                             DllHardConfigPanelImpl
+//                              DllControlPanelImpl
 //------------------------------------------------------------------------------
 
-class DllHardConfigPanelImpl: public QWidget, public IAppSettingsListener
+class DllControlPanelImpl: public QWidget, public IAppSettingsListener
 {
 public:
-    DllHardConfigPanelImpl(IBeamCamPtr camPtr, DllAdapter *adapter) 
+    DllControlPanelImpl(IBeamCamPtr camPtr, DllAdapter *adapter) 
         : QWidget(), camPtr(camPtr), adapter(adapter)
     {
         addPropControl_Expo(tr("Exposure (us)"));
@@ -320,13 +320,13 @@ public:
 };
 
 //------------------------------------------------------------------------------
-//                              DllHardConfigPanel
+//                              DllControlPanel
 //------------------------------------------------------------------------------
 
-DllHardConfigPanel::DllHardConfigPanel(IBeamCamPtr camPtr, DllAdapter *adapter, 
-    QWidget *parent) : HardConfigPanel(parent)
+DllControlPanel::DllControlPanel(IBeamCamPtr camPtr, DllAdapter *adapter, 
+    QWidget *parent) : ControlPanel(parent)
 {
-    auto impl = new DllHardConfigPanelImpl(camPtr, adapter);
+    auto impl = new DllControlPanelImpl(camPtr, adapter);
     if (!impl->props.isEmpty())
     {
         impl->applySettings(false);
@@ -351,7 +351,7 @@ DllHardConfigPanel::DllHardConfigPanel(IBeamCamPtr camPtr, DllAdapter *adapter,
     }
 }
 
-void DllHardConfigPanel::setReadOnly(bool on)
+void DllControlPanel::setReadOnly(bool on)
 {
     if (!_impl)
         return;

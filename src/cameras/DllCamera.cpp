@@ -3,7 +3,7 @@
 #include "cameras/CameraWorker.h"
 #include "cameras/DllAdapter.h"
 #include "cameras/DllCameraConfig.h"
-#include "cameras/DllHardConfig.h"
+#include "cameras/DllControlPanel.h"
 
 #include "helpers/OriDialogs.h"
 
@@ -369,14 +369,14 @@ void DllCamera::setRawView(bool on, bool reconfig)
         _dll->setRawView(on, reconfig);
 }
 
-HardConfigPanel* DllCamera::hardConfgPanel(QWidget *parent)
+ControlPanel* DllCamera::controlPanel(QWidget *parent)
 {
     if (!_dll)
         return nullptr;
-    if (!_configPanel) {
-        _configPanel = new DllHardConfigPanel(_dll->camPtr, _dll->adapter, parent);
+    if (!_controlPanel) {
+        _controlPanel = new DllControlPanel(_dll->camPtr, _dll->adapter, parent);
     }
-    return _configPanel;
+    return _controlPanel;
 }
 
 

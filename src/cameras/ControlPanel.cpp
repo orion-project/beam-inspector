@@ -1,15 +1,15 @@
-#include "HardConfigPanel.h"
+#include "ControlPanel.h"
 
 #include <QIcon>
 #include <QLabel>
 #include <QVBoxLayout>
 
-HardConfigPanel::HardConfigPanel(QWidget *parent) : QWidget(parent)
+ControlPanel::ControlPanel(QWidget *parent) : QWidget(parent)
 {
 
 }
 
-void HardConfigPanel::initForNoControls()
+void ControlPanel::initForNoControls()
 {
     auto icon = new QLabel;
     icon->setPixmap(QIcon(":/misc/dial").pixmap(140));

@@ -1,17 +1,17 @@
-#ifndef IDS_HARD_CONFIG_H
-#define IDS_HARD_CONFIG_H
+#ifndef IDS_COTROL_PANEL_H
+#define IDS_COTROL_PANEL_H
 #ifdef WITH_IDS
 
 #include <ids_peak_comfort_c/ids_peak_comfort_c.h>
 
-#include "cameras/HardConfigPanel.h"
+#include "cameras/ControlPanel.h"
 
-class IdsHardConfigPanel : public HardConfigPanel
+class IdsControlPanel : public ControlPanel
 {
 public:
     enum CamProp { AUTOEXP_LEVEL, AUTOEXP_FRAMES_AVG, EXP_PRESETS, FPS_LOCK };
 
-    IdsHardConfigPanel(peak_camera_handle hCam,
+    IdsControlPanel(peak_camera_handle hCam,
         std::function<QVariant(CamProp)> getCamProp,
         std::function<void(CamProp, QVariant)> setCamProp,
         std::function<void(QObject*)> requestBrightness,
@@ -24,8 +24,8 @@ protected:
     bool event(QEvent *event) override;
 
 private:
-    class IdsHardConfigPanelImpl *_impl;
+    class IdsControlPanelImpl *_impl;
 };
 
 #endif // WITH_IDS
-#endif // IDS_HARD_CONFIG_H
+#endif // IDS_COTROL_PANEL_H

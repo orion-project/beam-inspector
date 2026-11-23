@@ -5,7 +5,7 @@
 #include "app/AppSettings.h"
 #include "cameras/CameraWorker.h"
 #include "cameras/IdsCameraConfig.h"
-#include "cameras/IdsHardConfig.h"
+#include "cameras/IdsControlPanel.h"
 #include "cameras/IdsLib.h"
 
 #include "helpers/OriDialogs.h"
@@ -719,7 +719,7 @@ void IdsCamera::camConfigChanged()
         _peak->reconfigure();
 }
 
-void IdsCamera::saveHardConfig(QSettings *s)
+void IdsCamera::saveControlPanel(QSettings *s)
 {
     if (!_peak)
         return;
@@ -767,38 +767,38 @@ void IdsCamera::loadConfigMore(QSettings *s)
     _cfg->load(s);
 }
 
-HardConfigPanel* IdsCamera::hardConfgPanel(QWidget *parent)
+ControlPanel* IdsCamera::controlPanel(QWidget *parent)
 {
     if (!_peak)
         return nullptr;
-    if (!_configPanel) {
-        auto getCamProp = [this](IdsHardConfigPanel::CamProp prop) -> QVariant {
+    if (!_controlPanel) {
+        auto getCamProp = [this](IdsControlPanel::CamProp prop) -> QVariant {
             switch (prop) {
-            case IdsHardConfigPanel::AUTOEXP_LEVEL:
+            case IdsControlPanel::AUTOEXP_LEVEL:
                 return _cfg->autoExpLevel;
-            case IdsHardConfigPanel::AUTOEXP_FRAMES_AVG:
+            case IdsControlPanel::AUTOEXP_FRAMES_AVG:
                 return _cfg->autoExpFramesAvg;
-            case IdsHardConfigPanel::EXP_PRESETS:
+            case IdsControlPanel::EXP_PRESETS:
                 return QVariant::fromValue(&_cfg->expPresets);
-            case IdsHardConfigPanel::FPS_LOCK:
+            case IdsControlPanel::FPS_LOCK:
                 return _cfg->fpsLock;
             }
             return {};
         };
-        auto setCamProp = [this](IdsHardConfigPanel::CamProp prop, QVariant value) {
+        auto setCamProp = [this](IdsControlPanel::CamProp prop, QVariant value) {
             switch (prop) {
-            case IdsHardConfigPanel::AUTOEXP_LEVEL:
+            case IdsControlPanel::AUTOEXP_LEVEL:
                 _cfg->autoExpLevel = value.toInt();
                 saveConfig(true);
                 break;
-            case IdsHardConfigPanel::AUTOEXP_FRAMES_AVG:
+            case IdsControlPanel::AUTOEXP_FRAMES_AVG:
                 // this is not changed from hard config panel
                 break;
-            case IdsHardConfigPanel::EXP_PRESETS:
+            case IdsControlPanel::EXP_PRESETS:
                 // Presets already updated in the panel via pointer
                 saveConfig(true);
                 break;
-            case IdsHardConfigPanel::FPS_LOCK:
+            case IdsControlPanel::FPS_LOCK:
                 _cfg->fpsLock = value.toDouble();
                 saveConfig(true);
                 break;
@@ -809,10 +809,10 @@ HardConfigPanel* IdsCamera::hardConfgPanel(QWidget *parent)
             raisePowerWarning();
             requestExpWarning();
         };
-        _configPanel = new IdsHardConfigPanel(_peak->hCam,
+        _controlPanel = new IdsControlPanel(_peak->hCam,
             getCamProp, setCamProp, requestBrightness, exposureChanged, parent);
     }
-    return _configPanel;
+    return _controlPanel;
 }
 
 void IdsCamera::togglePowerMeter()
