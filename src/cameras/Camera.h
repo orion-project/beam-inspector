@@ -37,7 +37,10 @@ public:
     virtual void startMeasure(MeasureSaver*) {}
     virtual void stopMeasure() {}
 
-    virtual void saveControlPanel(QSettings*) {}
+    /// Save parameter values given in the Control panel.
+    /// This method is called from the measurement saver
+    /// to report values in the measurement files.
+    virtual void saveControlValues(QSettings*) {}
     virtual ControlPanel* controlPanel(QWidget *parent) { return nullptr; }
 
     virtual bool canSaveRawImg() const { return false; }

@@ -37,7 +37,7 @@ public:
     void startMeasure(MeasureSaver *saver) override;
     void stopMeasure() override;
 
-    void saveControlPanel(QSettings *s) override;
+    void saveControlValues(QSettings *s) override;
     ControlPanel* controlPanel(QWidget *parent) override;
 
     bool canSaveRawImg() const override { return true; }

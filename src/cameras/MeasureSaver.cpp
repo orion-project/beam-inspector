@@ -392,7 +392,7 @@ QString MeasureSaver::saveIniFile(Camera *cam)
         s.setValue("sensorScale.factor", sensorScale.factor);
         s.setValue("sensorScale.unit", sensorScale.unit);
     }
-    cam->saveControlPanel(&s);
+    cam->saveControlValues(&s);
     s.endGroup();
 
     s.beginGroup("CameraSettings");

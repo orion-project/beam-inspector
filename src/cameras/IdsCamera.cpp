@@ -719,7 +719,7 @@ void IdsCamera::camConfigChanged()
         _peak->reconfigure();
 }
 
-void IdsCamera::saveControlPanel(QSettings *s)
+void IdsCamera::saveControlValues(QSettings *s)
 {
     if (!_peak)
         return;
@@ -735,6 +735,14 @@ void IdsCamera::saveControlPanel(QSettings *s)
     if (PEAK_ERROR(res))
         s->setValue("frameRate", IDS.getPeakError(res));
     else s->setValue("frameRate", v);
+    res = IDS.peak_Gain_Get(_peak->hCam, PEAK_GAIN_TYPE_ANALOG, PEAK_GAIN_CHANNEL_MASTER, &v);
+    if (PEAK_ERROR(res))
+        s->setValue("analogGain", IDS.getPeakError(res));
+    else s->setValue("analogGain", v);
+    res = IDS.peak_Gain_Get(_peak->hCam, PEAK_GAIN_TYPE_DIGITAL, PEAK_GAIN_CHANNEL_MASTER, &v);
+    if (PEAK_ERROR(res))
+        s->setValue("digitalGain", IDS.getPeakError(res));
+    else s->setValue("digitalGain", v);
 }
 
 void IdsCamera::requestRawImg(QObject *sender)
