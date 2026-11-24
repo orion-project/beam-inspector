@@ -125,7 +125,7 @@ IBEAM_API IBeam_openCamera(IBeamCamId camId, IBeamCamPtr *camPtr)
       _cam.frame.height = 480;
       _cam.frame.bpp = 8;
       _cam.beam.bpp = 8;
-      _cam.beam.p = 250;
+      _cam.beam.p = 150;
       break;
     case CAM_MR_ID:
       _cam.frame.pixelWidth = 2.5;
@@ -141,9 +141,9 @@ IBEAM_API IBeam_openCamera(IBeamCamId camId, IBeamCamPtr *camPtr)
       _cam.frame.pixelHeight = 4.5;
       _cam.frame.width = 5120;
       _cam.frame.height = 5120;
-      _cam.frame.bpp = 16;
-      _cam.beam.bpp = 16;
-      _cam.beam.p = 50000;
+      _cam.frame.bpp = 15;
+      _cam.beam.bpp = 15;
+      _cam.beam.p = 20000;
       break;
     default:
       return errorStatus("Unknown camera ID");
@@ -153,8 +153,8 @@ IBEAM_API IBeam_openCamera(IBeamCamId camId, IBeamCamPtr *camPtr)
   _cam.beam.dx = _cam.beam.w/2;
   _cam.beam.dy = _cam.beam.dx/4*3;
   _cam.beam.xc = _cam.beam.w/2;
-  _cam.beam.yc = _cam.beam.h/2;
-  _cam.beam.phi = 12;
+  _cam.beam.yc = _cam.beam.h/4*3;
+  _cam.beam.phi = 25;
 
   #define OFFSET(off, start, factor) \
     off.val = start; \

@@ -50,8 +50,8 @@ option(CHECK_UPDATES_WITH_CURL "Use external curl program for updates checking" 
 #    -msse4.2
 #)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Network PrintSupport)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network PrintSupport)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Network PrintSupport Concurrent)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network PrintSupport Concurrent)
 
 set(PROJECT_SOURCES
     ${CMAKE_CURRENT_BINARY_DIR}/version.rc
@@ -97,6 +97,10 @@ set(PROJECT_SOURCES
     src/windows/PlotWindow.h src/windows/PlotWindow.cpp
 )
 
+set(QCPL_COLORMAP_CONCURRENT ON)
+if (QCPL_COLORMAP_PERFLOG_ID)
+    set(QCPL_COLORMAP_PERFLOG_ID ${QCPL_COLORMAP_PERFLOG_ID})
+endif()
 add_subdirectory(libs/qcustomplot)
 add_subdirectory(libs/beam_render)
 add_subdirectory(libs/beam_calc)
@@ -127,6 +131,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     cgn_beam_calc
     orion
     Qt::Widgets
+    Qt::Concurrent
 )
 if(NOT CHECK_UPDATES_WITH_CURL)
     target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -155,6 +160,11 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     APP_VER_YEAR=${APP_VER_YEAR}
     QT_USE_QSTRINGBUILDER
 )
+if (QCPL_COLORMAP_PERFLOG_ID)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        QCPL_COLORMAP_PERFLOG_ID=${QCPL_COLORMAP_PERFLOG_ID}
+    )
+endif()
 
 if(WITH_IDS)
     if (NOT TARGET ids_peak_comfort_c)

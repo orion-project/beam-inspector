@@ -132,3 +132,10 @@ void PlotIntf::setRawView(bool on)
     toggleVisiblity(_beamShapes, !on);
     toggleVisiblity(_beamAxes, !on);
 }
+
+double PlotIntf::perflog(int id) const
+{
+    if (id < 0)
+        return qRound(_plot->replotTime(true));
+    return qRound(_plot->perflog.value(id));
+}
