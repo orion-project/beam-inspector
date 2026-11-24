@@ -16,7 +16,7 @@
 //                                   Helpers
 //------------------------------------------------------------------------------
 
-enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME, ROW_FRAME_ERR };
+enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME, ROW_FRAME_ERR, ROW_BRIGHTNESS };
 
 #define CHECK_ERR(msg) \
     if (res) { \
@@ -54,6 +54,8 @@ public:
                 { ROW_CALC_TIME, {avgCalcTime} },
                 { ROW_FRAME_ERR, {errorsFrames, CamTableData::COUNT, errorsFrames > 0} },
             };
+            if (showBrightness)
+                data[ROW_BRIGHTNESS] = {brightness, CamTableData::VALUE3};
             return data;
         };
         
@@ -178,6 +180,8 @@ public:
         
         configure();
         
+        showBrightness = cam->_cfg->showBrightness;
+        saveBrightness = cam->_cfg->saveBrightness;
         togglePowerMeter();
         
         return {};
@@ -321,6 +325,8 @@ TableRowsSpec DllCamera::tableRows() const
         << qMakePair(ROW_RENDER_TIME, qApp->tr("Acq. time"))
         << qMakePair(ROW_CALC_TIME, qApp->tr("Calc time"))
         << qMakePair(ROW_FRAME_ERR, qApp->tr("Errors"));
+    if (_cfg->showBrightness)
+        rows.aux << qMakePair(ROW_BRIGHTNESS, qApp->tr("Brightness"));
     return rows;
 }
 
