@@ -3,6 +3,8 @@ history:
   date: 2026-??-??
   changes:
   - text: Can load custom camera adapter DLLs
+  - text: Increase performance of the color map drawing
+  - text: Fix double scaling of mouse position in status bar
 
 - version: 0.0.30
   date: 2026-08-15

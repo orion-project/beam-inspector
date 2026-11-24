@@ -41,6 +41,8 @@ public:
     
     void requestExpoWarning() override;
     
+    bool canMavg() const override { return true; }
+    
     static void loadAdapters();
     static void unloadAdapters();
 

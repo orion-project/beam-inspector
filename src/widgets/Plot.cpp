@@ -602,5 +602,8 @@ void Plot::showLevelAtMouse()
     c /= 9.0;
 
     _colorLevelMarker->end->setCoords(0, c);
-    emit mousePositionChanged(_mouseX, _mouseY, c);
+
+    const double pixelX = _mouseX / _scaleFactor;
+    const double pixelY = _mouseY / _scaleFactor;
+    emit mousePositionChanged(pixelX, pixelY, c);
 }

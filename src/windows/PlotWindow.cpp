@@ -569,10 +569,11 @@ void PlotWindow::createPlot()
     connect(_plot, &Plot::roiEdited, this, &PlotWindow::roiEdited);
     connect(_plot, &Plot::crosshairsEdited, this, &PlotWindow::crosshairsEdited);
     connect(_plot, &Plot::crosshairsLoaded, this, &PlotWindow::crosshairsLoaded);
-    connect(_plot, &Plot::mousePositionChanged, this, [this](double x, double y, double c) {
+    connect(_plot, &Plot::mousePositionChanged, this, [this](double pixelX, double pixelY, double level) {
         if (!_camera) return;
         const PixelScale& scale = _camera->pixelScale();
-        QString coordText = QStringLiteral("%1 @ (%2 × %3)").arg(_camera->formatBrightness(c), scale.format(x), scale.format(y));
+        QString coordText = QStringLiteral("%1 @ (%2 × %3)")
+            .arg(_camera->formatBrightness(level), scale.format(pixelX), scale.format(pixelY));
         _statusBar->setText(STATUS_MOUSE_POS, coordText);
     });
     connect(_plot, &Plot::beamInfoToggled, this, [this](bool on){ _actionBeamInfo->setChecked(on); });

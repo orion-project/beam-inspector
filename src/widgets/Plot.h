@@ -82,7 +82,7 @@ signals:
     void roiEdited();
     void crosshairsEdited();
     void crosshairsLoaded();
-    void mousePositionChanged(double x, double y, double c);
+    void mousePositionChanged(double pixelX, double pixelY, double level);
     void beamInfoToggled(bool on);
 
 protected:
