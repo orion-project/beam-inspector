@@ -18,6 +18,11 @@ class DllCameraConfig
 public:
     int pixelFormat = 0;
     QList<PixelFormat> availablePixelFormats;
+    bool showBrightness = false;
+    bool saveBrightness = false;
+    bool autoExpoEnabled = false;
+    int autoExpoTargetLevel = 80;
+    int autoExpoAvgFrames = 4;
 
     void initDlg(Ori::Dlg::ConfigDlgOpts &opts, int maxPageId);
     void save(QSettings *s);

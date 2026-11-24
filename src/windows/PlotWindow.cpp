@@ -1374,10 +1374,9 @@ void PlotWindow::loadCrosshairsMore(QJsonObject &root)
 
 void PlotWindow::settingsChanged(bool affectsCamera)
 {
-#ifdef WITH_IDS
-    if (auto cam = dynamic_cast<IdsCamera*>(_camera.get()); cam)
-        cam->requestExpWarning();
-#endif
+    // Percentage of hot pixels could be changed
+    _camera->requestExpoWarning();
+    
     if (affectsCamera)
         doCamConfigChanged();
 }

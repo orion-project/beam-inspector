@@ -637,7 +637,7 @@ IdsCamera::IdsCamera(QVariant id, PlotIntf *plot, TableIntf *table, StabilityInt
     }
     _peak.reset(peak);
 
-    requestExpWarning();
+    requestExpoWarning();
 
     connect(parent, SIGNAL(camConfigChanged()), this, SLOT(camConfigChanged()));
 }
@@ -800,7 +800,7 @@ ControlPanel* IdsCamera::controlPanel(QWidget *parent)
                 saveConfig(true);
                 break;
             case IdsControlPanel::AUTOEXP_FRAMES_AVG:
-                // this is not changed from hard config panel
+                // this is not changed from control panel
                 break;
             case IdsControlPanel::EXP_PRESETS:
                 // Presets already updated in the panel via pointer
@@ -815,7 +815,7 @@ ControlPanel* IdsCamera::controlPanel(QWidget *parent)
         auto requestBrightness = [this](QObject *s){ _peak->requestBrightness(s); };
         auto exposureChanged = [this]{
             raisePowerWarning();
-            requestExpWarning();
+            requestExpoWarning();
         };
         _controlPanel = new IdsControlPanel(_peak->hCam,
             getCamProp, setCamProp, requestBrightness, exposureChanged, parent);
@@ -835,10 +835,10 @@ void IdsCamera::raisePowerWarning()
         _peak->hasPowerWarning = true;
 }
 
-void IdsCamera::requestExpWarning()
+void IdsCamera::requestExpoWarning()
 {
     if (_peak)
-        _peak->requestExpWarning(_plot->eventsTarget());
+        _peak->requestExpoWarning(_plot->eventsTarget());
 }
 
 //------------------------------------------------------------------------------

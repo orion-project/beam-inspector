@@ -90,7 +90,7 @@ public:
     qint64 saveImgInterval = 0;
     QObject *rawImgRequest = nullptr;
     QObject *brightRequest = nullptr;
-    QObject *expWarningRequest = nullptr;
+    QObject *expoWarningRequest = nullptr;
     double brightness = 0;
     bool showBrightness = false;
     bool saveBrightness = false;
@@ -368,11 +368,11 @@ public:
             QCoreApplication::postEvent(brightRequest, e);
             brightRequest = nullptr;
         }
-        if (expWarningRequest && !saver) {
-            auto e = new ExpWarningEvent;
+        if (expoWarningRequest && !saver) {
+            auto e = new ExpoWarningEvent;
             e->overexposed = cgn_calc_overexposure(&c, 0.8);
-            QCoreApplication::postEvent(expWarningRequest, e);
-            expWarningRequest = nullptr;
+            QCoreApplication::postEvent(expoWarningRequest, e);
+            expoWarningRequest = nullptr;
         }
         if (!rawView && saver) {
             if (saveImgInterval > 0 and (prevSaveImg == 0 or tm - prevSaveImg >= saveImgInterval)) {
@@ -594,10 +594,10 @@ public:
         saverMutex.unlock();
     }
 
-    void requestExpWarning(QObject *sender)
+    void requestExpoWarning(QObject *sender)
     {
         saverMutex.lock();
-        expWarningRequest = sender;
+        expoWarningRequest = sender;
         saverMutex.unlock();
     }
 

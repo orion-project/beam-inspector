@@ -202,10 +202,10 @@ public:
     double level;
 };
 
-class ExpWarningEvent : public QEvent
+class ExpoWarningEvent : public QEvent
 {
 public:
-    ExpWarningEvent() : QEvent(QEvent::Type(QEvent::registerEventType())) {}
+    ExpoWarningEvent() : QEvent(QEvent::Type(QEvent::registerEventType())) {}
 
     double overexposed;
 };

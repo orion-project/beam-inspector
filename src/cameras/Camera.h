@@ -52,6 +52,8 @@ public:
     virtual void raisePowerWarning() {}
     bool setupPowerMeter();
 
+    virtual void requestExpoWarning() {}
+
     /// An id used to give the camera a custom name (Camera -> Custom Name)
     /// and to store and load the camera settings.
     /// This id can not be the same as the regular camera id (given by SDK) 

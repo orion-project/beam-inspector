@@ -48,7 +48,7 @@ public:
     void togglePowerMeter() override;
     void raisePowerWarning() override;
 
-    void requestExpWarning();
+    void requestExpoWarning() override;
 
     bool canMavg() const override { return true; }
 

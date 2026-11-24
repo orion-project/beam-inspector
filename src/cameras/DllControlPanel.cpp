@@ -1,6 +1,7 @@
 #include "DllControlPanel.h"
 
 #include "app/AppSettings.h"
+#include "cameras/AutoExposure.h"
 #include "widgets/PlotHelpers.h"
 
 #include "core/OriFloatingPoint.h"
@@ -8,6 +9,7 @@
 #include "helpers/OriLayouts.h"
 #include "widgets/OriValueEdit.h"
 
+#include <QAction>
 #include <QApplication>
 #include <QGroupBox>
 #include <QLabel>
@@ -63,7 +65,7 @@ struct CamPropControl
     QLabel *label;
     QLabel *auxLabel = nullptr;
     CamPropEdit *edit;
-    QGroupBox *group;
+    QGroupBox *groupBox;
     double curValue = 0;
     double minValue = 0, maxValue = 0, valueStep = 0;
     CamPropSettings *settings;
@@ -93,14 +95,14 @@ struct CamPropControl
         btn->setFixedWidth(50); \
         btn->connect(btn, &QPushButton::pressed, btn, [this]{ applyValue(); });
         
-        group = LayoutV({label, LayoutH({edit, btn})}).makeGroupBox(title);
+        groupBox = LayoutV({label, LayoutH({edit, btn})}).makeGroupBox(title);
         
         if (id == CamPropId::Expo) {
             auxLabel = new QLabel;
-            group->layout()->addWidget(auxLabel);
+            groupBox->layout()->addWidget(auxLabel);
         }
         
-        layout->addWidget(group);
+        layout->addWidget(groupBox);
     }
     
     void showValue()
@@ -217,7 +219,11 @@ struct CamPropControl
 
 class DllControlPanelImpl: public QWidget, public IAppSettingsListener
 {
+    Q_DECLARE_TR_FUNCTIONS(DllControlPanelImpl)
+
 public:
+    using Self = DllControlPanelImpl;
+
     DllControlPanelImpl(IBeamCamPtr camPtr, DllAdapter *adapter) 
         : QWidget(), camPtr(camPtr), adapter(adapter)
     {
@@ -231,22 +237,26 @@ public:
             // so when one of them is changed, the other can change
             props[CamPropId::Expo].onChanged = [this]{
                 props[CamPropId::Fps].showValue();
-                if (exposureChanged)
-                    exposureChanged();
+                exposureChanged();
             };
             props[CamPropId::Fps].onChanged = [this]{
                 props[CamPropId::Expo].showValue();
             };
         }
-        else if (props.contains(CamPropId::Expo) && exposureChanged) {
+        else if (props.contains(CamPropId::Expo)) {
             props[CamPropId::Expo].onChanged = exposureChanged;
         }
         
         if (!props.isEmpty()) {
             auto layout = new QVBoxLayout(this);
             
-            for (auto it = props.begin(); it != props.end(); it++)
+            for (auto it = props.begin(); it != props.end(); it++) {
                 it.value().makeWidgets(layout);
+                groupBoxes << it.value().groupBox;
+                
+                if (it.value().id == CamPropId::Expo)
+                    addAutoExpoControl(layout);
+            }
                 
             layout->addStretch();
         }
@@ -275,6 +285,32 @@ public:
     ADD_PROP_CONTROL(Fps);
     ADD_PROP_CONTROL(AGain);
     ADD_PROP_CONTROL(DGain);
+    
+    void addAutoExpoControl(QVBoxLayout *layout)
+    {
+        edAutoExpo = new CamPropEdit;
+        edAutoExpo->connect(edAutoExpo, &ValueEdit::keyPressed, this, [this](int key){
+            if (key == Qt::Key_Return || key == Qt::Key_Enter) autoExposure();
+        });
+
+        auto butAutoExpo = new QPushButton(tr("Find"));
+        butAutoExpo->setFixedWidth(50);
+        connect(butAutoExpo, &QPushButton::pressed, this, &Self::autoExposure);
+
+        auto groupBox = LayoutV({
+            tr("Percent of dynamic range:"),
+            LayoutH({ edAutoExpo, butAutoExpo })
+        }).makeGroupBox(tr("Autoexposure"));
+        layout->addWidget(groupBox);
+        groupBoxes << groupBox;
+
+        auto actnCopyLog = new QAction(tr("Copy Report"), this);
+        connect(actnCopyLog, &QAction::triggered, this, [this]{
+            if (autoExpo) autoExpo->copyLog();
+        });
+        butAutoExpo->addAction(actnCopyLog);
+        butAutoExpo->setContextMenuPolicy(Qt::ActionsContextMenu);
+    }
 
 #undef ADD_PROP_CONTROL
     
@@ -282,15 +318,103 @@ public:
     {
         for (auto it = props.begin(); it != props.end(); it++)
             it.value().showValue();
+
+        edAutoExpo->setValue(
+            loadCamProp(DllControlPanel::StoredProp::AutoExpoTargetLevel).toInt());
     }
     
-    // IAppSettingsListener
-    void settingsChanged(bool affectsCamera) override
+    void autoExposure()
     {
-        Q_UNUSED(affectsCamera)
-        applySettings(true);
+        if (!props.contains(CamPropId::Expo))
+            return;
+        auto &prop = props[CamPropId::Expo];
+        if (prop.curValue == 0)
+            return;
+            
+        int targetLevel = edAutoExpo->value();
+        int clampedLevel = targetLevel;
+        if (clampedLevel <= 0) clampedLevel = 1;
+        else if (clampedLevel > 100) clampedLevel = 100;
+        if (targetLevel != clampedLevel) {
+            targetLevel = clampedLevel;
+            edAutoExpo->setValue(targetLevel);
+        }
+        if (targetLevel != loadCamProp(DllControlPanel::StoredProp::AutoExpoTargetLevel).toInt())
+            saveCamProp(DllControlPanel::StoredProp::AutoExpoTargetLevel, targetLevel);
+        
+        auto avgFrames = loadCamProp(DllControlPanel::StoredProp::AutoExpoAvgFrames).toInt();
+        
+        autoExpo = AutoExposure();
+        autoExpo->logId = LOG_ID;
+        autoExpo->targetLevel = targetLevel / 100.0;
+        autoExpo->avgFrames = qMax(1, avgFrames);
+        autoExpo->getExpoRange = [this](double* min, double* max, double* step){
+            auto res = adapter->getExpoRange(camPtr, min, max, step);
+            return res ? adapter->errorText(res) : QString();
+        };
+        autoExpo->setExpo = [this](double value){
+            auto res = adapter->setExpo(camPtr, value);
+            return res ? adapter->errorText(res) : QString();
+        };
+        autoExpo->getExpo = [this](double* value){
+            auto res = adapter->getExpo(camPtr, value);
+            return res ? adapter->errorText(res) : QString();
+        };
+        if (props.contains(CamPropId::Fps)) {
+            autoExpo->getFpsRange = [this](double* min, double* max, double* step){
+                auto res = adapter->getFpsRange(camPtr, min, max, step);
+                return res ? adapter->errorText(res) : QString();
+            };
+            autoExpo->setFps = [this](double value){
+                auto res = adapter->setFps(camPtr, value);
+                return res ? adapter->errorText(res) : QString();
+            };
+            autoExpo->getFps = [this](double* value){
+                auto res = adapter->getFps(camPtr, value);
+                return res ? adapter->errorText(res) : QString();
+            };
+        }
+        autoExpo->expoChanged = [this](double expo, double fps) {
+            props[CamPropId::Expo].curValue = expo;
+            props[CamPropId::Expo].edit->setValue(expo);
+            if (props.contains(CamPropId::Fps)) {
+                props[CamPropId::Fps].curValue = fps;
+                props[CamPropId::Fps].edit->setValue(fps);
+            }
+        };
+        autoExpo->stepRequested = [this]{
+            watingBrightness = true;
+            requestBrightness(this);
+        };
+        autoExpo->finished = [this]{ stopAutoExposure(); };
+        
+        for (auto groupBox : qAsConst(groupBoxes))
+            groupBox->setDisabled(true);
+            
+        if (!autoExpo->start())
+            stopAutoExposure();
     }
+    
+    void stopAutoExposure()
+    {
+        watingBrightness = false;
 
+        for (auto groupBox : qAsConst(groupBoxes))
+            groupBox->setDisabled(false);
+
+        if (props.contains(CamPropId::Fps)) {
+            auto &prop = props[CamPropId::Fps];
+            if (auto res = adapter->setFps(camPtr, prop.curValue); res) {
+                qWarning() << LOG_ID << "Failed to restore FPS after autoexposure" << adapter->errorText(res);
+            }
+            prop.showValue();
+        }
+
+        props[CamPropId::Expo].showValue();
+        
+        exposureChanged();
+    }
+    
     void applySettings(bool updateValues)
     {
         auto &s = AppSettings::instance();
@@ -311,12 +435,52 @@ public:
                 props[CamPropId::Fps].showValue();
         }
     }
+    
+    // IAppSettingsListener
+    void settingsChanged(bool affectsCamera) override
+    {
+        Q_UNUSED(affectsCamera)
+        applySettings(true);
+    }
 
     IBeamCamPtr camPtr;
     DllAdapter* adapter;
     QMap<CamPropId, CamPropControl> props;
+    QList<QGroupBox*> groupBoxes;
     CamPropSettings propSettings;
-    std::function<void()> exposureChanged;    
+    CamPropEdit* edAutoExpo;
+    bool watingBrightness = false;
+    bool closeRequested = false;
+    std::function<void(QObject*)> requestBrightness;
+    std::function<QVariant(DllControlPanel::StoredProp)> loadCamProp;
+    std::function<void(DllControlPanel::StoredProp, QVariant)> saveCamProp;
+    std::function<void()> exposureChanged;
+    std::optional<AutoExposure> autoExpo;
+    
+protected:
+    void closeEvent(QCloseEvent *e) override
+    {
+        QWidget::closeEvent(e);
+        // Event loop will crash if there is no event receiver anymore
+        // Wait for the next brightness event and close after that
+        if (watingBrightness) {
+            closeRequested = true;
+            e->ignore();
+        }
+    }
+
+    bool event(QEvent *event) override
+    {
+        if (auto e = dynamic_cast<BrightEvent*>(event); e) {
+            watingBrightness = false;
+            if (closeRequested)
+                close();
+            else if (autoExpo)
+                autoExpo->doStep(e->level);
+            return true;
+        }
+        return QWidget::event(event);
+    }
 };
 
 //------------------------------------------------------------------------------
@@ -324,11 +488,19 @@ public:
 //------------------------------------------------------------------------------
 
 DllControlPanel::DllControlPanel(IBeamCamPtr camPtr, DllAdapter *adapter, 
+    std::function<QVariant(StoredProp)> loadProp,
+    std::function<void(StoredProp, QVariant)> saveProp,
+    std::function<void(QObject*)> requestBrightness,
+    std::function<void()> exposureChanged,
     QWidget *parent) : ControlPanel(parent)
 {
     auto impl = new DllControlPanelImpl(camPtr, adapter);
     if (!impl->props.isEmpty())
     {
+        impl->loadCamProp = loadProp;
+        impl->saveCamProp = saveProp;
+        impl->exposureChanged = exposureChanged;
+        impl->requestBrightness = requestBrightness;
         impl->applySettings(false);
         impl->showInitialValues();
     
@@ -356,6 +528,6 @@ void DllControlPanel::setReadOnly(bool on)
     if (!_impl)
         return;
         
-    for (auto it = _impl->props.begin(); it != _impl->props.end(); it++)
-        it.value().group->setDisabled(on);
+    for (auto groupBox : std::as_const(_impl->groupBoxes))
+        groupBox->setDisabled(on);
 }

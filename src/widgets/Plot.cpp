@@ -209,7 +209,7 @@ void Plot::keyPressEvent(QKeyEvent *e)
 
 bool Plot::event(QEvent *event)
 {
-    if (auto e = dynamic_cast<ExpWarningEvent*>(event); e) {
+    if (auto e = dynamic_cast<ExpoWarningEvent*>(event); e) {
         bool warn = e->overexposed > AppSettings::instance().overexposedPixelsPercent / 100.0;
         if (_overexpWarn->visible() != warn) {
             _overexpWarn->setVisible(warn);

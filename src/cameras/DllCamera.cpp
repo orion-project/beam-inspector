@@ -304,6 +304,8 @@ DllCamera::DllCamera(const QString& customId, PlotIntf *plot, TableIntf *table, 
     }
     _dll.reset(dll);
     
+    requestExpoWarning();
+    
     connect(parent, SIGNAL(camConfigChanged()), this, SLOT(camConfigChanged()));
 }
 
@@ -374,7 +376,36 @@ ControlPanel* DllCamera::controlPanel(QWidget *parent)
     if (!_dll)
         return nullptr;
     if (!_controlPanel) {
-        _controlPanel = new DllControlPanel(_dll->camPtr, _dll->adapter, parent);
+        auto loadProp = [this](DllControlPanel::StoredProp prop) -> QVariant {
+            switch (prop) {
+            case DllControlPanel::StoredProp::AutoExpoTargetLevel:
+                _cfg->autoExpoEnabled = true;
+                return _cfg->autoExpoTargetLevel;
+            case DllControlPanel::StoredProp::AutoExpoAvgFrames:
+                return _cfg->autoExpoAvgFrames;
+            }
+            return {};
+        };
+        auto saveProp = [this](DllControlPanel::StoredProp prop, QVariant value) {
+            switch (prop) {
+            case DllControlPanel::StoredProp::AutoExpoTargetLevel:
+                _cfg->autoExpoTargetLevel = value.toInt();
+                saveConfig(true);
+                break;
+            case DllControlPanel::StoredProp::AutoExpoAvgFrames:
+                // this is not changed from control panel
+                break;
+            }
+        };
+        auto requestBrightness = [this](QObject *eventTarget){
+            _dll->requestBrightness(eventTarget);
+        };
+        auto exposureChanged = [this]{
+            raisePowerWarning();
+            requestExpoWarning();
+        };
+        _controlPanel = new DllControlPanel(_dll->camPtr, _dll->adapter,
+            loadProp, saveProp, requestBrightness, exposureChanged, parent);
     }
     return _controlPanel;
 }
@@ -399,4 +430,10 @@ void DllCamera::saveConfigMore(QSettings* s)
     s->setValue("customId", _customId);
     
     _cfg->save(s);
+}
+
+void DllCamera::requestExpoWarning()
+{
+    if (_dll)
+        _dll->requestExpoWarning(_plot->eventsTarget());
 }
