@@ -85,6 +85,8 @@ void AppSettings::load()
     LOAD(roundHardConfigFps, Bool, true);
     LOAD(roundHardConfigExp, Bool, true);
     LOAD(overexposedPixelsPercent, Double, 0.1);
+    LOAD(colorMapOptimized, Bool, true);
+    LOAD(colorMapConcurrent, Bool, true);
 
     s.beginGroup("Table");
     LOAD(copyResultsSeparator, Char, ',');

@@ -1,5 +1,7 @@
 #include "BeamGraph.h"
 
+#include "app/AppSettings.h"
+
 #include "qcustomplot/src/core.h"
 #include "qcustomplot/src/painter.h"
 
@@ -17,12 +19,15 @@ BeamColorMap::BeamColorMap(QCPAxis *keyAxis, QCPAxis *valueAxis) : QCPColorMap(k
     // (see QCPColorMap::updateMapImage()).
     // So we just cancel both these behaviours and get big speed boost of color map drawing.
     // Example: 2ms instead of 50ms with flipping (x25 on i7-12700 2.10GHz, image 5120x5120).
-    _ignoreAxisReverseY = true;
-    _invertScanlineIndex = false;
+    if (AppSettings::instance().colorMapOptimized) {
+        _ignoreAxisReverseY = true;
+        _invertScanlineIndex = false;
+    }
 
     // Another part of color map rendering is preparing the buffer image.
     // Example: 7ms instead of 30ms (x4 on i7-12700 2.10GHz, image 5120x5120).
-    _renderConcurrent = true;
+    if (AppSettings::instance().colorMapConcurrent)
+        _renderConcurrent = true;
 }
 
 void BeamColorMap::setGradient(const QCPColorGradient &gradient)

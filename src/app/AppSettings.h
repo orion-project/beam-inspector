@@ -65,6 +65,8 @@ public:
     bool tableShowPhi = true;
     bool tableShowEps = true;
     bool logFrameTime = false;
+    bool colorMapOptimized = true;
+    bool colorMapConcurrent = true;
 
     enum ConfigPages {
         cfgDev,
