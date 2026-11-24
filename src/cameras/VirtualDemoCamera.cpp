@@ -36,7 +36,7 @@ public:
         b.dy = b.dx*0.75;
         b.xc = b.w/2;
         b.yc = b.h/2;
-        b.p = 255;
+        b.p = 150;
         b.phi = 12;
         d = QVector<uint8_t>(b.w * b.h);
         b.buf = d.data();

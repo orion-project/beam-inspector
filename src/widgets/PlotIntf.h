@@ -39,6 +39,7 @@ public:
     int graphH() const { return _h; }
     double rangeMin() const { return _min; }
     double rangeMax() const { return _max; }
+    double perflog(int id) const;
     
     std::function<void()> onDataShown;
 

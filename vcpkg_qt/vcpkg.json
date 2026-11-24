@@ -3,7 +3,7 @@
   "dependencies": [
     {
       "name": "qtbase",
-      "features": [ "widgets" ]
+      "features": [ "widgets", "concurrent" ]
     },
     "qtsvg"
   ],

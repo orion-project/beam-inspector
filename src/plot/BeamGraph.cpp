@@ -9,6 +9,20 @@
 
 BeamColorMap::BeamColorMap(QCPAxis *keyAxis, QCPAxis *valueAxis) : QCPColorMap(keyAxis, valueAxis)
 {
+    // QCPColorMap is rendered in math axes, where Y is directed down-top.
+    // We want the image axes, where Y is directed top-down, so we do yAxis->setRangeReversed(true).
+    // Then QCPColorMap starts flipping the buffer image before painting and this takes long time.
+    // On the other hand, QCPColorMap inverts the scanline order when preparing that buffer image
+    // to bring the math axis orientation into match with the image axis orientation
+    // (see QCPColorMap::updateMapImage()).
+    // So we just cancel both these behaviours and get big speed boost of color map drawing.
+    // Example: 2ms instead of 50ms with flipping (x25 on i7-12700 2.10GHz, image 5120x5120).
+    _ignoreAxisReverseY = true;
+    _invertScanlineIndex = false;
+
+    // Another part of color map rendering is preparing the buffer image.
+    // Example: 7ms instead of 30ms (x4 on i7-12700 2.10GHz, image 5120x5120).
+    _renderConcurrent = true;
 }
 
 void BeamColorMap::setGradient(const QCPColorGradient &gradient)

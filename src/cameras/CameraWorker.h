@@ -58,6 +58,7 @@ public:
     double avgAcqTime = 0;
     double avgCalcTime = 0;
     double avgShowTime = 0;
+    double avgCopyTime = 0;
 
     QMutex cfgMutex;
     bool subtract;
@@ -459,7 +460,10 @@ public:
 
         if (rawView)
         {
+            auto tmCopy = timer.elapsed();
             cgn_copy_to_f64(&c, graph, &g.max);
+            avgCopyTime = avgCopyTime*0.9 + (timer.elapsed() - tmCopy)*0.1;
+
             plot->invalidateGraph();
             plot->setResult({}, 0, rangeTop);
             table->setResult({}, {}, tableData());
@@ -468,7 +472,11 @@ public:
         else
         {
             double minZ, maxZ;
+
+            auto tmCopy = timer.elapsed();
             cgn_ext_copy_to_f64(&c, &g, graph, normalize, fullRange, &minZ, &maxZ);
+            avgCopyTime = avgCopyTime*0.9 + (timer.elapsed() - tmCopy)*0.1;
+
             plot->invalidateGraph();
             plot->setResult(results, minZ, maxZ);
 
@@ -513,22 +521,34 @@ public:
 
         avgFrameTime /= avgFrameCount;
         const double softFps = 1000.0 / avgFrameTime;
+        const double hardFps = getHardFps();
 
         CameraStats st {
             .fps = softFps,
-            .hardFps = getHardFps(),
+            .hardFps = hardFps,
             .measureTime = measureStart > 0 ? timer.elapsed() - measureStart : -1,
         };
         camera->sendStats(st);
 
         if (logFrameTime) {
-        qDebug()
-            << "softFps:" << softFps
-            << "| frameTime:" << qRound(avgFrameTime)
-            << "| acqTime:" << qRound(avgAcqTime)
-            << "| calcTime:" << qRound(avgCalcTime)
-            << "| showTime:" << qRound(avgShowTime)
-            << "| errorsFrames: " << errorsFrames;
+            qDebug()
+                << "softFps:" << softFps
+                << "| hardFps:" << hardFps
+                << "| frameTime:" << qRound(avgFrameTime)
+                << "| acqTime:" << qRound(avgAcqTime)
+                << "| calcTime:" << qRound(avgCalcTime)
+                << "| showTime:" << qRound(avgShowTime)
+                << "| copyTime:" << qRound(avgCopyTime)
+                << "| errorsFrames: " << errorsFrames
+            ;
+        #ifdef QCPL_COLORMAP_PERFLOG_ID
+            qDebug()
+                << "plotTime:" << plot->perflog(-1)
+                << "| ColorMap.totalDraw:" << plot->perflog(QCPL_COLORMAP_PERFLOG_ID)
+                << "| ColorMap.updateImage:" << plot->perflog(QCPL_COLORMAP_PERFLOG_ID+1)
+                << "| ColorMap.drawImage:" << plot->perflog(QCPL_COLORMAP_PERFLOG_ID+2)
+            ;
+        #endif
         }
 
         // reset soft FPS
