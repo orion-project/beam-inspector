@@ -1035,12 +1035,15 @@ void PlotWindow::crosshairsLoaded()
 {
     _camera->setRois(_plot->rois());
     doCamConfigChanged();
+
 #ifdef WITH_IDS
+    // For IDS cameras, exposure presets are saved in crosshair files,
+    // so preset buttons should be recreated in the control panel
     if (auto cam = dynamic_cast<IdsCamera*>(_camera.get()); cam) {
         cam->saveConfig(true);
         if (_camControlPanel) {
             qDebug() << "Try update hard config panel";
-            QApplication::postEvent(_camControlPanel, new UpdateSettingsEvent());
+            QApplication::postEvent(_camControlPanel, new PresetsUpdatedEvent());
         }
     }
 #endif

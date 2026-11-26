@@ -49,6 +49,15 @@ void DllCameraConfig::save(QSettings *s)
     s->setValue("autoExpo.avgFrames", autoExpoAvgFrames);
     s->setValue("showBrightness", showBrightness);
     s->setValue("saveBrightness", saveBrightness);
+
+    s->beginWriteArray("propPresets", propPresets.size());
+    for (int i = 0; i < propPresets.size(); i++) {
+        s->setArrayIndex(i);
+        const auto &preset = propPresets.at(i);
+        for (auto it = preset.constBegin(); it != preset.constEnd(); it++)
+            s->setValue(it.key(), it.value());
+    }
+    s->endArray();
 }
 
 void DllCameraConfig::load(QSettings *s)
@@ -58,4 +67,15 @@ void DllCameraConfig::load(QSettings *s)
     autoExpoAvgFrames = s->value("autoExpo.avgFrames", 4).toInt();
     showBrightness = s->value("showBrightness", false).toBool();
     saveBrightness = s->value("saveBrightness", false).toBool();
+
+    propPresets.clear();
+    int size = s->beginReadArray("propPresets");
+    for (int i = 0; i < size; i++) {
+        s->setArrayIndex(i);
+        AnyRecord preset;
+        foreach (const auto &key, s->allKeys())
+            preset[key] = s->value(key);
+        propPresets << preset;
+    }
+    s->endArray();
 }

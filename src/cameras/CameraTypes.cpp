@@ -298,3 +298,51 @@ QString nowIsoStr()
 }
 
 } // namespace DateUtils
+
+//------------------------------------------------------------------------------
+//                                 CamProp
+//------------------------------------------------------------------------------
+
+namespace CamProp {
+
+const QList<Id>& wellKnownIds()
+{
+    static QList<Id> propIds = { Expo, Fps, AGain, DGain };
+    return propIds;
+}
+
+QString getName(Id id)
+{
+    switch (id)
+    {
+    case Expo: return QStringLiteral("Expo");
+    case Fps: return QStringLiteral("Fps");
+    case AGain: return QStringLiteral("AGain");
+    case DGain: return QStringLiteral("DGain");
+    }
+    return {};
+}
+
+QString getDisplayName(Id id)
+{
+    switch (id)
+    {
+    case Expo: return qApp->tr("Exposure(us)");
+    case Fps: return qApp->tr("Frame rate");
+    case AGain: return qApp->tr("Analog gain");
+    case DGain: return qApp->tr("Digital gain");
+    }
+    return {};
+}
+
+std::optional<Id> parseId(const QString& name)
+{
+    if (getName(Expo) == name) return Expo;
+    if (getName(Fps) == name) return Fps;
+    if (getName(AGain) == name) return AGain;
+    if (getName(DGain) == name) return DGain;
+    return {};
+}
+
+} // namespace CamProp
+

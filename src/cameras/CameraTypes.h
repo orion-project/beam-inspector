@@ -210,10 +210,10 @@ public:
     double overexposed;
 };
 
-class UpdateSettingsEvent : public QEvent
+class PresetsUpdatedEvent : public QEvent
 {
 public:
-    UpdateSettingsEvent() : QEvent(QEvent::Type(QEvent::registerEventType())) {}
+    PresetsUpdatedEvent() : QEvent(QEvent::Type(QEvent::registerEventType())) {}
 };
 
 struct RandomOffset
@@ -271,5 +271,12 @@ namespace DateUtils {
 QString nowIsoStr();
 }
 
+namespace CamProp {
+enum Id { Expo, Fps, AGain, DGain };
+const QList<Id>& wellKnownIds();
+QString getName(Id id);
+QString getDisplayName(Id id);
+std::optional<Id> parseId(const QString& name);
+}
 
 #endif // CAMERA_TYPES_H

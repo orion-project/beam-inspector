@@ -683,7 +683,7 @@ public:
             auto presets = getPresets();
             presets->append(preset);
             setCamProp(IdsControlPanel::EXP_PRESETS, {});
-            QApplication::postEvent(this, new UpdateSettingsEvent());
+            QApplication::postEvent(this, new PresetsUpdatedEvent());
         }
     }
 
@@ -777,7 +777,7 @@ public:
 
     void remakePresetButtons()
     {
-        QApplication::postEvent(this, new UpdateSettingsEvent());
+        QApplication::postEvent(this, new PresetsUpdatedEvent());
     }
 
     void applyPreset()
@@ -891,6 +891,7 @@ public:
         {
             if (!preset) return;
             auto newPreset = parent->makePreset();
+            newPreset[PKEY_NAME] = (*preset)[PKEY_NAME];
             QString confirm = parent->formatPreset(newPreset) +
                 tr("<p>Update <b>%1</b> with these values?</p>").arg((*preset)[PKEY_NAME].toString());
             if (Ori::Dlg::yes(confirm)) {
@@ -959,8 +960,8 @@ protected:
     void closeEvent(QCloseEvent *e) override
     {
         QWidget::closeEvent(e);
-        // Event loop will crash if there is no event receiver anymore
-        // Wait for the next brightness event and close after that
+        // Event loop will crash if there is no event receiver anymore.
+        // Wait for the next brightness event and close only after that.
         if (watingBrightness) {
             closeRequested = true;
             e->ignore();
@@ -977,7 +978,7 @@ protected:
                 autoExp->doStep(e->level);
             return true;
         }
-        if (dynamic_cast<UpdateSettingsEvent*>(event)) {
+        if (dynamic_cast<PresetsUpdatedEvent*>(event)) {
             makePresetButtons();
             return true;
         }
@@ -1025,7 +1026,10 @@ void IdsControlPanel::setReadOnly(bool on)
 
 bool IdsControlPanel::event(QEvent *event)
 {
-    if (dynamic_cast<UpdateSettingsEvent*>(event)) {
+    // For IDS cameras, exposure presets are saved in crosshair files.
+    // This event happens when a crosshair file has been loaded
+    // and preset buttons should be recreated in the control panel.
+    if (dynamic_cast<PresetsUpdatedEvent*>(event)) {
         _impl->makePresetButtons();
         return true;
     }

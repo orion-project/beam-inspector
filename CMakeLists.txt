@@ -71,6 +71,8 @@ set(PROJECT_SOURCES
     src/cameras/DllCameraConfig.cpp src/cameras/DllCameraConfig.h
     src/cameras/DllHelper.cpp src/cameras/DllHelper.h
     src/cameras/DllControlPanel.cpp src/cameras/DllControlPanel.h
+    src/cameras/CamPropControls.cpp src/cameras/CamPropControls.h
+    src/cameras/CamPropPresets.cpp src/cameras/CamPropPresets.h
     src/cameras/IdsCamera.h src/cameras/IdsCamera.cpp
     src/cameras/IdsCameraConfig.h src/cameras/IdsCameraConfig.cpp
     src/cameras/IdsControlPanel.h src/cameras/IdsControlPanel.cpp

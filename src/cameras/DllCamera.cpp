@@ -389,6 +389,8 @@ ControlPanel* DllCamera::controlPanel(QWidget *parent)
                 return _cfg->autoExpoTargetLevel;
             case DllControlPanel::StoredProp::AutoExpoAvgFrames:
                 return _cfg->autoExpoAvgFrames;
+            case DllControlPanel::StoredProp::ExpoPresets:
+                return QVariant::fromValue(&_cfg->propPresets);
             }
             return {};
         };
@@ -400,6 +402,10 @@ ControlPanel* DllCamera::controlPanel(QWidget *parent)
                 break;
             case DllControlPanel::StoredProp::AutoExpoAvgFrames:
                 // this is not changed from control panel
+                break;
+            case DllControlPanel::StoredProp::ExpoPresets:
+                // Presets already updated in the panel via pointer
+                saveConfig(true);
                 break;
             }
         };

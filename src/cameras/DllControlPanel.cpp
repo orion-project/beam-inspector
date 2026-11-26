@@ -2,11 +2,14 @@
 
 #include "app/AppSettings.h"
 #include "cameras/AutoExposure.h"
+#include "cameras/CamPropControls.h"
+#include "cameras/CamPropPresets.h"
 #include "widgets/PlotHelpers.h"
 
 #include "core/OriFloatingPoint.h"
 #include "helpers/OriDialogs.h"
 #include "helpers/OriLayouts.h"
+#include "helpers/OriWidgets.h"
 #include "widgets/OriValueEdit.h"
 
 #include <QAction>
@@ -18,13 +21,13 @@
 #include <QWheelEvent>
 
 #define LOG_ID "DllControlPanel:"
+#define CONTROL_HEIGHT 22
+#define LABEL_HEIGHT 18
 
 using namespace Ori::Layouts;
 using namespace Ori::Widgets;
 
 namespace {
-
-enum class CamPropId { Expo, Fps, AGain, DGain };
 
 class CamPropEdit : public ValueEdit
 {
@@ -60,7 +63,7 @@ struct CamPropSettings
 
 struct CamPropControl
 {
-    CamPropId id;
+    CamProp::Id id;
     QString title;
     QLabel *label;
     QLabel *auxLabel = nullptr;
@@ -74,13 +77,15 @@ struct CamPropControl
     std::function<IBeamStatus*(double)> setValue;
     std::function<void()> onChanged;
     
-    void makeWidgets(QVBoxLayout* layout)
+    void makeWidgets()
     {
         label = new QLabel;
         label->setWordWrap(true);
         label->setForegroundRole(PlotHelpers::isDarkTheme() ? QPalette::Light : QPalette::Mid);
+        label->setFixedHeight(LABEL_HEIGHT);
     
         edit = new CamPropEdit; \
+        edit->setFixedHeight(CONTROL_HEIGHT);
         edit->scrolled = [this](bool wheel, bool inc, bool big){
             applyValueFast(wheel, inc, big);
         };
@@ -88,21 +93,34 @@ struct CamPropControl
             if (!focus) showValue();
         });
         edit->connect(edit, &ValueEdit::keyPressed, edit, [this](int key){
-            if (key == Qt::Key_Return || key == Qt::Key_Enter) applyValue();
+            if (key == Qt::Key_Return || key == Qt::Key_Enter) applyValue(true);
         });
         
         auto btn = new QPushButton(qApp->tr("Set", "DllControlPanel"));
         btn->setFixedWidth(50); \
-        btn->connect(btn, &QPushButton::pressed, btn, [this]{ applyValue(); });
+        btn->setFixedHeight(CONTROL_HEIGHT);
+        btn->connect(btn, &QPushButton::pressed, btn, [this]{ applyValue(true); });
         
         groupBox = LayoutV({label, LayoutH({edit, btn})}).makeGroupBox(title);
         
-        if (id == CamPropId::Expo) {
+        int groupHeight =
+            CamPropControls::groupTitleHeight() 
+            + CamPropControls::layoutTopMargin() 
+            + label->height() 
+            + CamPropControls::layoutSpacing() 
+            + edit->height() 
+            + CamPropControls::layoutBottomMargin();
+        
+        if (id == CamProp::Expo) {
             auxLabel = new QLabel;
+            auxLabel->setFixedHeight(LABEL_HEIGHT);
+            groupHeight = groupHeight
+                + CamPropControls::layoutSpacing()
+                + auxLabel->height();
             groupBox->layout()->addWidget(auxLabel);
         }
         
-        layout->addWidget(groupBox);
+        groupBox->setFixedHeight(groupHeight);
     }
     
     void showValue()
@@ -121,9 +139,9 @@ struct CamPropControl
         // Sometimes camera returns not exactly the same that was set
         // e.g. 14.9988 instead of 15, or 9.9984 instead of 10
         // We are not interested in such small differences
-        if (id == CamPropId::Fps && settings->roundFps) {
+        if (id == CamProp::Fps && settings->roundFps) {
             value = qRound(value * 100.0) / 100.0;
-        } else if (id == CamPropId::Expo && settings->roundExpo) {
+        } else if (id == CamProp::Expo && settings->roundExpo) {
             value = qRound(value / 10.0) * 10;
         }
         edit->setValue(value);
@@ -135,10 +153,10 @@ struct CamPropControl
         if (res)
             label->setText(DllAdapter::errorText(res));
         else {
-            if (id == CamPropId::Fps && settings->roundFps) {
+            if (id == CamProp::Fps && settings->roundFps) {
                 min = qRound(min * 100.0) / 100.0;
                 max = qRound(max * 100.0) / 100.0;
-            } else if (id == CamPropId::Expo && settings->roundExpo) {
+            } else if (id == CamProp::Expo && settings->roundExpo) {
                 min = qRound(min / 10.0) * 10;
                 max = qRound(max / 10.0) * 10;
             }
@@ -148,7 +166,7 @@ struct CamPropControl
             valueStep = step;
         }
 
-        if (id == CamPropId::Expo) {
+        if (id == CamProp::Expo) {
             double freq = 1e6 / value;
             QString s;
             if (freq < 1000)
@@ -159,22 +177,25 @@ struct CamPropControl
         }
     }
     
-    void applyValue()
+    bool applyValue(bool showErr)
     {
         double newValue = edit->value();
         if (Double(curValue).almostEqual(Double(newValue)))
-            return;
+            return true;
 
         auto res = setValue(newValue);
         if (res) {
-            Ori::Dlg::Defer::error(DllAdapter::errorText(res));
-            return;
+            if (showErr)
+                Ori::Dlg::Defer::error(DllAdapter::errorText(res));
+            return false;
         } 
 
         showValue();
 
         if (onChanged)
             onChanged();
+            
+        return true;
     }
     
     void applyValueFast(bool wheel, bool inc, bool big)
@@ -231,35 +252,96 @@ public:
         addPropControl_Fps(tr("Frame rate"));
         addPropControl_AGain(tr("Analog gain"));
         addPropControl_DGain(tr("Digital gain"));
-        
-        if (props.contains(CamPropId::Expo) && props.contains(CamPropId::Fps)) {
+    }
+    
+    void makeWidgets()
+    {
+        if (props.contains(CamProp::Expo) && props.contains(CamProp::Fps)) {
             // Exposition and FPS are interconnected properties
             // so when one of them is changed, the other can change
-            props[CamPropId::Expo].onChanged = [this]{
-                props[CamPropId::Fps].showValue();
+            props[CamProp::Expo].onChanged = [this]{
+                props[CamProp::Fps].showValue();
                 exposureChanged();
             };
-            props[CamPropId::Fps].onChanged = [this]{
-                props[CamPropId::Expo].showValue();
+            props[CamProp::Fps].onChanged = [this]{
+                props[CamProp::Expo].showValue();
             };
+        } else if (props.contains(CamProp::Expo)) {
+            props[CamProp::Expo].onChanged = exposureChanged;
         }
-        else if (props.contains(CamPropId::Expo)) {
-            props[CamPropId::Expo].onChanged = exposureChanged;
+        if (props.contains(CamProp::AGain)) {
+            props[CamProp::AGain].onChanged = exposureChanged;
+        }
+        if (props.contains(CamProp::DGain)) {
+            props[CamProp::DGain].onChanged = exposureChanged;
         }
         
         if (!props.isEmpty()) {
-            auto layout = new QVBoxLayout(this);
+            propPresets = new CamPropPresets(LOG_ID, this);
+            propPresets->loadPresets = [this]{
+                return loadCamProp(DllControlPanel::StoredProp::ExpoPresets).value<AnyRecords*>();
+            };
+            propPresets->savePresets = [this]{
+                // There is no need to pass a value because presets list
+                // is handled by its pointer referencing data in the cam settings
+                saveCamProp(DllControlPanel::StoredProp::ExpoPresets, {});
+            };
+            propPresets->getPropValue = [this](CamProp::Id id){
+                return props.contains(id) ? props[id].curValue : qQNaN();
+            };
+            propPresets->applyProp = [this](CamProp::Id id, double value){
+                if (!props.contains(id))
+                    return false;
+                props[id].edit->setValue(value);
+                return props[id].applyValue(false);
+            };
+            propPresets->adjustParentHeight = [this](){
+                adjustHeight();
+            };
+            propPresets->makeButtons();
+            groupBoxes << propPresets->groupBox();
             
             for (auto it = props.begin(); it != props.end(); it++) {
-                it.value().makeWidgets(layout);
+                it.value().makeWidgets();
                 groupBoxes << it.value().groupBox;
                 
-                if (it.value().id == CamPropId::Expo)
-                    addAutoExpoControl(layout);
+                if (it.value().id == CamProp::Expo)
+                    addAutoExpoControl();
             }
-                
-            layout->addStretch();
         }
+        
+        for (auto g : std::as_const(groupBoxes))
+            g->setParent(this);
+    }
+    
+    void adjustHeight()
+    {
+        int top = CamPropControls::layoutTopMargin();
+        for (auto g : std::as_const(groupBoxes)) {
+            g->move(CamPropControls::layoutLeftMargin(), top);
+            top += g->height() + CamPropControls::layoutSpacing();
+        }
+        
+        int thisHeight = top
+            - CamPropControls::layoutSpacing() // extra spacing after last groupbox
+            + CamPropControls::layoutBottomMargin();
+        
+        setFixedHeight(thisHeight);
+    }
+    
+    void adjustWidth(int parentWidth)
+    {
+        int thisWith = parentWidth -
+            CamPropControls::scrollBarWidth();
+    
+        int groupBoxWidth = thisWith -
+            CamPropControls::layoutLeftMargin() -
+            CamPropControls::layoutRightMargin();
+    
+        for (auto g : std::as_const(groupBoxes))
+            g->setFixedWidth(groupBoxWidth);
+        
+        setFixedWidth(thisWith);
     }
     
 #define ADD_PROP_CONTROL(Prop) \
@@ -269,7 +351,7 @@ public:
         if (res && res->code == IBeamStatus::IBEAM_STATUS_NOT_IMPLEMENTED) \
             return; \
         CamPropControl control; \
-        control.id = CamPropId::Prop; \
+        control.id = CamProp::Prop; \
         control.title = title; \
         control.settings = &propSettings; \
         control.getRange = [this](double* min, double* max, double* step) { \
@@ -286,23 +368,21 @@ public:
     ADD_PROP_CONTROL(AGain);
     ADD_PROP_CONTROL(DGain);
     
-    void addAutoExpoControl(QVBoxLayout *layout)
+    void addAutoExpoControl()
     {
+        auto label = new QLabel(tr("Percent of dynamic range:"));
+        label->setFixedHeight(LABEL_HEIGHT);
+    
         edAutoExpo = new CamPropEdit;
         edAutoExpo->connect(edAutoExpo, &ValueEdit::keyPressed, this, [this](int key){
             if (key == Qt::Key_Return || key == Qt::Key_Enter) autoExposure();
         });
+        edAutoExpo->setFixedHeight(CONTROL_HEIGHT);
 
         auto butAutoExpo = new QPushButton(tr("Find"));
         butAutoExpo->setFixedWidth(50);
+        butAutoExpo->setFixedHeight(CONTROL_HEIGHT);
         connect(butAutoExpo, &QPushButton::pressed, this, &Self::autoExposure);
-
-        auto groupBox = LayoutV({
-            tr("Percent of dynamic range:"),
-            LayoutH({ edAutoExpo, butAutoExpo })
-        }).makeGroupBox(tr("Autoexposure"));
-        layout->addWidget(groupBox);
-        groupBoxes << groupBox;
 
         auto actnCopyLog = new QAction(tr("Copy Report"), this);
         connect(actnCopyLog, &QAction::triggered, this, [this]{
@@ -310,6 +390,20 @@ public:
         });
         butAutoExpo->addAction(actnCopyLog);
         butAutoExpo->setContextMenuPolicy(Qt::ActionsContextMenu);
+
+        auto groupBox = LayoutV({label, LayoutH({ edAutoExpo, butAutoExpo })})
+            .makeGroupBox(tr("Autoexposure"));
+            
+        groupBox->setFixedHeight(
+            CamPropControls::groupTitleHeight() 
+            + CamPropControls::layoutTopMargin() 
+            + label->height() 
+            + CamPropControls::layoutSpacing() 
+            + edAutoExpo->height() 
+            + CamPropControls::layoutBottomMargin()
+        );
+
+        groupBoxes << groupBox;
     }
 
 #undef ADD_PROP_CONTROL
@@ -325,9 +419,9 @@ public:
     
     void autoExposure()
     {
-        if (!props.contains(CamPropId::Expo))
+        if (!props.contains(CamProp::Expo))
             return;
-        auto &prop = props[CamPropId::Expo];
+        auto &prop = props[CamProp::Expo];
         if (prop.curValue == 0)
             return;
             
@@ -360,7 +454,7 @@ public:
             auto res = adapter->getExpo(camPtr, value);
             return res ? adapter->errorText(res) : QString();
         };
-        if (props.contains(CamPropId::Fps)) {
+        if (props.contains(CamProp::Fps)) {
             autoExpo->getFpsRange = [this](double* min, double* max, double* step){
                 auto res = adapter->getFpsRange(camPtr, min, max, step);
                 return res ? adapter->errorText(res) : QString();
@@ -375,11 +469,11 @@ public:
             };
         }
         autoExpo->expoChanged = [this](double expo, double fps) {
-            props[CamPropId::Expo].curValue = expo;
-            props[CamPropId::Expo].edit->setValue(expo);
-            if (props.contains(CamPropId::Fps)) {
-                props[CamPropId::Fps].curValue = fps;
-                props[CamPropId::Fps].edit->setValue(fps);
+            props[CamProp::Expo].curValue = expo;
+            props[CamProp::Expo].edit->setValue(expo);
+            if (props.contains(CamProp::Fps)) {
+                props[CamProp::Fps].curValue = fps;
+                props[CamProp::Fps].edit->setValue(fps);
             }
         };
         autoExpo->stepRequested = [this]{
@@ -402,15 +496,15 @@ public:
         for (auto groupBox : qAsConst(groupBoxes))
             groupBox->setDisabled(false);
 
-        if (props.contains(CamPropId::Fps)) {
-            auto &prop = props[CamPropId::Fps];
+        if (props.contains(CamProp::Fps)) {
+            auto &prop = props[CamProp::Fps];
             if (auto res = adapter->setFps(camPtr, prop.curValue); res) {
                 qWarning() << LOG_ID << "Failed to restore FPS after autoexposure" << adapter->errorText(res);
             }
             prop.showValue();
         }
 
-        props[CamPropId::Expo].showValue();
+        props[CamProp::Expo].showValue();
         
         exposureChanged();
     }
@@ -425,14 +519,14 @@ public:
 
         if (propSettings.roundFps != s.roundHardConfigFps) {
             propSettings.roundFps = s.roundHardConfigFps;
-            if (updateValues && props.contains(CamPropId::Fps))
-                props[CamPropId::Fps].showValue();
+            if (updateValues && props.contains(CamProp::Fps))
+                props[CamProp::Fps].showValue();
         }
 
         if (propSettings.roundExpo != s.roundHardConfigExp) {
            propSettings.roundExpo = s.roundHardConfigExp;
-            if (updateValues && props.contains(CamPropId::Expo))
-                props[CamPropId::Fps].showValue();
+            if (updateValues && props.contains(CamProp::Expo))
+                props[CamProp::Fps].showValue();
         }
     }
     
@@ -445,7 +539,7 @@ public:
 
     IBeamCamPtr camPtr;
     DllAdapter* adapter;
-    QMap<CamPropId, CamPropControl> props;
+    QMap<CamProp::Id, CamPropControl> props;
     QList<QGroupBox*> groupBoxes;
     CamPropSettings propSettings;
     CamPropEdit* edAutoExpo;
@@ -456,13 +550,14 @@ public:
     std::function<void(DllControlPanel::StoredProp, QVariant)> saveCamProp;
     std::function<void()> exposureChanged;
     std::optional<AutoExposure> autoExpo;
+    CamPropPresets* propPresets = nullptr;
     
 protected:
     void closeEvent(QCloseEvent *e) override
     {
         QWidget::closeEvent(e);
-        // Event loop will crash if there is no event receiver anymore
-        // Wait for the next brightness event and close after that
+        // Event loop will crash if there is no event receiver anymore.
+        // Wait for the next brightness event and close only after that.
         if (watingBrightness) {
             closeRequested = true;
             e->ignore();
@@ -501,6 +596,7 @@ DllControlPanel::DllControlPanel(IBeamCamPtr camPtr, DllAdapter *adapter,
         impl->saveCamProp = saveProp;
         impl->exposureChanged = exposureChanged;
         impl->requestBrightness = requestBrightness;
+        impl->makeWidgets();
         impl->applySettings(false);
         impl->showInitialValues();
     
@@ -530,4 +626,15 @@ void DllControlPanel::setReadOnly(bool on)
         
     for (auto groupBox : std::as_const(_impl->groupBoxes))
         groupBox->setDisabled(on);
+}
+
+void DllControlPanel::resizeEvent(QResizeEvent *e)
+{
+    ControlPanel::resizeEvent(e);
+    
+    if (!_impl)
+        return;
+    
+    _impl->adjustWidth(e->size().width());
+    _impl->adjustHeight();
 }

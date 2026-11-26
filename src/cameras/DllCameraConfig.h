@@ -23,6 +23,7 @@ public:
     bool autoExpoEnabled = false;
     int autoExpoTargetLevel = 80;
     int autoExpoAvgFrames = 4;
+    AnyRecords propPresets;
 
     void initDlg(Ori::Dlg::ConfigDlgOpts &opts, int maxPageId);
     void save(QSettings *s);
