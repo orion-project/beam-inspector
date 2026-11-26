@@ -16,7 +16,7 @@
 //                                   Helpers
 //------------------------------------------------------------------------------
 
-enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME, ROW_FRAME_ERR, ROW_BRIGHTNESS };
+enum CamDataRow { ROW_RENDER_TIME, ROW_CALC_TIME, ROW_FRAME_ERR, ROW_BRIGHTNESS, ROW_POWER };
 
 #define CHECK_ERR(msg) \
     if (res) { \
@@ -56,6 +56,16 @@ public:
             };
             if (showBrightness)
                 data[ROW_BRIGHTNESS] = {brightness, CamTableData::VALUE3};
+            if (showPower)
+                data[ROW_POWER] = {
+                    QVariantList{
+                        power * powerScale,
+                        powerSdev * powerScale,
+                        powerDecimalFactor,
+                    },
+                    CamTableData::POWER,
+                    hasPowerWarning
+                };
             return data;
         };
         
@@ -327,6 +337,8 @@ TableRowsSpec DllCamera::tableRows() const
         << qMakePair(ROW_FRAME_ERR, qApp->tr("Errors"));
     if (_cfg->showBrightness)
         rows.aux << qMakePair(ROW_BRIGHTNESS, qApp->tr("Brightness"));
+    if (_config.power.on)
+        rows.aux << qMakePair(ROW_POWER, qApp->tr("Power"));
     return rows;
 }
 
@@ -442,6 +454,21 @@ void DllCamera::saveConfigMore(QSettings* s)
     s->setValue("customId", _customId);
     
     _cfg->save(s);
+
+    if (_cfg->hasPowerWarning)
+        raisePowerWarning();
+}
+
+void DllCamera::togglePowerMeter()
+{
+    if (_dll)
+        _dll->togglePowerMeter();
+}
+
+void DllCamera::raisePowerWarning()
+{
+    if (_dll)
+        _dll->hasPowerWarning = true;
 }
 
 void DllCamera::requestExpoWarning()

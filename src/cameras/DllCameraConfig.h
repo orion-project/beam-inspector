@@ -17,12 +17,14 @@ class DllCameraConfig
 
 public:
     int pixelFormat = 0;
+    int oldPixelFormat = 0;
     QList<PixelFormat> availablePixelFormats;
     bool showBrightness = false;
     bool saveBrightness = false;
     bool autoExpoEnabled = false;
     int autoExpoTargetLevel = 80;
     int autoExpoAvgFrames = 4;
+    bool hasPowerWarning = false;
     AnyRecords propPresets;
 
     void initDlg(Ori::Dlg::ConfigDlgOpts &opts, int maxPageId);

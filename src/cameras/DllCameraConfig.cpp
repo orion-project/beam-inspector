@@ -40,6 +40,9 @@ void DllCameraConfig::initDlg(Ori::Dlg::ConfigDlgOpts &opts, int maxPageId)
             << (new ConfigItemInt(pageMisc, tr("Frame count for averaging"), &autoExpoAvgFrames))
                 ->withMinMax(1, 100);
     }
+    
+    oldPixelFormat = pixelFormat;
+    hasPowerWarning = false;
 }
 
 void DllCameraConfig::save(QSettings *s)
@@ -49,6 +52,8 @@ void DllCameraConfig::save(QSettings *s)
     s->setValue("autoExpo.avgFrames", autoExpoAvgFrames);
     s->setValue("showBrightness", showBrightness);
     s->setValue("saveBrightness", saveBrightness);
+    
+    hasPowerWarning = oldPixelFormat != pixelFormat;
 
     s->beginWriteArray("propPresets", propPresets.size());
     for (int i = 0; i < propPresets.size(); i++) {

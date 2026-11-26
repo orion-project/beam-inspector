@@ -39,6 +39,10 @@ public:
     void requestRawImg(QObject *sender) override;
     void setRawView(bool on, bool reconfig) override;
     
+    bool isPowerMeter() const override { return true; }
+    void togglePowerMeter() override;
+    void raisePowerWarning() override;
+
     void requestExpoWarning() override;
     
     bool canMavg() const override { return true; }
